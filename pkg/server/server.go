@@ -561,6 +561,20 @@ func (s *Server) parseFrame(msgType int, data []byte) (MotionFrame, bool) {
 	return frame, false
 }
 
+// InjectMotionFrame feeds a MotionFrame into the exact same pipeline used for
+// frames received over the phone's WebSocket connection (same onFrame
+// callback, same packet-rate accounting for PacketStats). Non-network motion
+// sources — e.g. a USB serial device implementing the PhoneGyro Hardware
+// Protocol — call this instead of duplicating any downstream logic, so
+// calibration, sensor alignment, AHRS and DSU output behave identically
+// regardless of where the frame came from.
+func (s *Server) InjectMotionFrame(frame MotionFrame) {
+	s.packetCount.Add(1)
+	if s.onFrame != nil {
+		s.onFrame(frame)
+	}
+}
+
 // PacketStats returns total received packets, current active connections, and current polling rate in Hz.
 func (s *Server) PacketStats() (uint64, int32, float64) {
 	total := s.packetCount.Load()

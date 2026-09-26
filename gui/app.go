@@ -182,6 +182,7 @@ type App struct {
 	i18nMgr   *i18n.Manager
 	srv       *server.Server
 	dsuSrv    *dsu.Server
+	usbMgr    *usbDeviceManager
 	caMgr     *ca.CertificateManager
 	isPaused  atomic.Bool
 	hasClient atomic.Bool
@@ -1946,6 +1947,11 @@ func (a *App) startup(ctx context.Context) {
 	srv.SetInputMode(a.GetInputMode())
 	a.srv = srv
 
+	a.usbMgr = newUSBDeviceManager(a)
+	if a.GetInputMode() == "usb" {
+		a.usbMgr.Start()
+	}
+
 	// Orientation heartbeat (15 Hz = 66ms) for smooth main GUI telemetry
 	go func() {
 		ticker := time.NewTicker(66 * time.Millisecond)
@@ -2058,6 +2064,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.dsuSrv != nil {
 		a.dsuSrv.Stop()
+	}
+	if a.usbMgr != nil {
+		a.usbMgr.Stop()
 	}
 	a.liveDebugMu.Lock()
 	for conn := range a.liveDebugClients {
@@ -2980,6 +2989,14 @@ func (a *App) SetInputMode(mode string) string {
 
 	if mode == "usb" && a.hasClient.Load() {
 		a.hasClient.Store(false)
+	}
+
+	if a.usbMgr != nil {
+		if mode == "usb" {
+			a.usbMgr.Start()
+		} else {
+			a.usbMgr.Stop()
+		}
 	}
 
 	if prev != mode {
