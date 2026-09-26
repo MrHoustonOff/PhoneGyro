@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"sync"
+	"time"
 )
 
 // MadgwickAHRS implements the exact IMU orientation filter used by PadTest.exe and BetterJoy.
@@ -10,12 +11,13 @@ import (
 // directly from calibrated gyroscope rates (RotX, RotY, RotZ in °/s)
 // and accelerometer readings (AccX, AccY, AccZ in g).
 type MadgwickAHRS struct {
-	mu   sync.Mutex
-	Q0   float32
-	Q1   float32
-	Q2   float32
-	Q3   float32
-	Beta float32
+	mu       sync.Mutex
+	Q0       float32
+	Q1       float32
+	Q2       float32
+	Q3       float32
+	Beta     float32
+	lastTime time.Time
 }
 
 // NewMadgwickAHRS creates a filter initialized to identity orientation [1, 0, 0, 0].
@@ -41,6 +43,7 @@ func (m *MadgwickAHRS) Reset() {
 	m.Q1 = 0.0
 	m.Q2 = 0.0
 	m.Q3 = 0.0
+	m.lastTime = time.Time{}
 }
 
 // Update runs one integration step matching PadTest.exe (0x140832a67 - 0x140833a00) exactly.
@@ -51,16 +54,16 @@ func (m *MadgwickAHRS) Reset() {
 //   accX (Lateral acceleration in g, left = +, right = -)
 //   accY (Vertical acceleration in g, up = +, down = -)
 //   accZ (Longitudinal acceleration in g, back = +, forward = -)
-//
-// dt is the real elapsed time in seconds since the previous call (the caller
-// derives this from the source's own per-frame timestamp, e.g. the same
-// clamped value attitudeanchor.go computes from frame.TimestampUs). A phone
-// at ~60 Hz and a USB device at ~200 Hz integrate correctly side by side this
-// way; a hardcoded 1/60 here would over-integrate a faster source by exactly
-// the ratio of its real rate to 60 Hz.
-func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ, dt float32) (float32, float32, float32, float32) {
+func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ float32, now time.Time) (float32, float32, float32, float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	// Fixed sensor sample period: iOS devicemotion fires at exactly 60 Hz.
+	// Never use network arrival time delta (now.Sub(lastTime)) because WiFi jitter
+	// causes bursts with 100ms+ deltas that multiply rotation rates by up to 10x,
+	// causing violent spasms/instability during fast movements.
+	const dt float32 = 1.0 / 60.0
+	m.lastTime = now
 
 	const deg2rad = float32(math.Pi / 180.0)
 
