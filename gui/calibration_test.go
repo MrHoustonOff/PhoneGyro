@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestCalibration_StillnessStep0(t *testing.T) {
@@ -243,6 +242,41 @@ func TestMadgwickAHRS_EulerAngleSigns(t *testing.T) {
 	}
 }
 
+// TestAHRSIntegratesRealDtNotFixedRate guards against the exact regression
+// that made the internal 3D viewer spin ~3.3x too fast for a 200Hz USB
+// source: Update used to hardcode dt=1/60 regardless of the caller's actual
+// call rate, so a source calling it more often than 60Hz over-integrated by
+// exactly (its real rate / 60). Simulate the same constant real rotation
+// rate for the same real elapsed time at both 60Hz and 200Hz call rates and
+// require the integrated angle to match -- it must depend on dt, not on how
+// many times Update was called.
+func TestAHRSIntegratesRealDtNotFixedRate(t *testing.T) {
+	const rateDps = 30.0 // constant rotation rate around X, deg/s -- kept
+	// well clear of the +/-90 deg pitch gimbal-lock singularity so the
+	// comparison isn't confounded by asin() clamping near the pole.
+	const totalSeconds = 1.0
+
+	integrate := func(hz float64) float64 {
+		ahrs := NewMadgwickAHRS(0) // pure gyro integration, no accel correction
+		dt := float32(1.0 / hz)
+		steps := int(totalSeconds * hz)
+		for i := 0; i < steps; i++ {
+			// AccZ=-1 keeps a plausible "flat rest" gravity reading fed in
+			// alongside the rotation; beta=0 means it has no effect anyway.
+			ahrs.Update(float32(rateDps), 0, 0, 0, 0, -1, dt)
+		}
+		pitch, _, _ := ahrs.GetEulerAngles()
+		return pitch
+	}
+
+	p60 := integrate(60)
+	p200 := integrate(200)
+
+	if math.Abs(p60-p200) > 2.0 {
+		t.Fatalf("60Hz and 200Hz integration of the same real 1s rotation disagree: 60Hz=%.1f deg, 200Hz=%.1f deg (dt is not being honored)", p60, p200)
+	}
+}
+
 func TestLiveDebug_AssetsAndBroadcast(t *testing.T) {
 	// Verify embedded assets contain livedebug.html and required static assets
 	subFS, err := fs.Sub(assets, "frontend/src")
@@ -368,7 +402,7 @@ func TestPadTest_Convergence(t *testing.T) {
 		ahrs := NewMadgwickAHRS(0.1) // Exact PadTest Beta
 		// Run 300 steps (5 seconds at 60 Hz) of stationary holding
 		for i := 0; i < 300; i++ {
-			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, time.Now())
+			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, 1.0/60.0)
 		}
 		p, r, y := ahrs.GetEulerAngles()
 		t.Logf("[%s] Q: (%+.3f, %+.3f, %+.3f, %+.3f) -> Pitch: %+.1f°, Roll: %+.1f°, Yaw: %+.1f°",

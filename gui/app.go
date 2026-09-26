@@ -1557,22 +1557,13 @@ func (a *App) startup(ctx context.Context) {
 		rawDsuRy := dsuYawSign * float32(ry) // see dsuYawSign / dsuAccSign in sensoralign.go
 		rawDsuRz := float32(rz)
 
-		var ahrsRx, ahrsRy, ahrsRz float32
 		var dsuRx, dsuRy, dsuRz float32
 		if gyroDeadband <= 0 {
-			ahrsRx = float32(rx)
-			ahrsRy = float32(ry)
-			ahrsRz = float32(rz)
-
 			dsuRx = rawDsuRx
 			dsuRy = rawDsuRy
 			dsuRz = rawDsuRz
 		} else if gyroSpeed >= gyroDeadband {
 			scale := float32((gyroSpeed - gyroDeadband) / gyroSpeed)
-			ahrsRx = float32(rx) * scale
-			ahrsRy = float32(ry) * scale
-			ahrsRz = float32(rz) * scale
-
 			dsuRx = rawDsuRx * scale
 			dsuRy = rawDsuRy * scale
 			dsuRz = rawDsuRz * scale
@@ -1581,6 +1572,12 @@ func (a *App) startup(ctx context.Context) {
 		// DSU gets deadbanded but unsmoothed rates: any low-pass on angular velocity adds
 		// lag that clients integrate into overshoot.
 		isStationary := gyroDeadband > 0 && gyroSpeed < gyroDeadband
+
+		// The internal AHRS (3D viewer) must see exactly the same signs PadTest's
+		// own Madgwick would see for the same DSU packet -- captured here, before
+		// the sensitivity multiplier below, since that's a downstream "game feel"
+		// knob and must not distort what the viewer thinks the true orientation is.
+		ahrsRx, ahrsRy, ahrsRz := dsuRx, dsuRy, dsuRz
 
 		// Apply sensitivity multiplier
 		if sens != 1.0 {
@@ -1611,6 +1608,12 @@ func (a *App) startup(ctx context.Context) {
 		finalAy := float32(bank.accFiltered[1])
 		finalAz := float32(bank.accFiltered[2])
 
+		// Same reasoning as ahrsRx/Ry/Rz above: the viewer must see the exact
+		// signs the DSU packet carries, not the pre-correction values.
+		dsuAx := dsuAccSign[0] * finalAx
+		dsuAy := dsuAccSign[1] * finalAy
+		dsuAz := dsuAccSign[2] * finalAz
+
 		corrected := frame
 		corrected.RotX = ahrsRx
 		corrected.RotY = ahrsRy
@@ -1619,10 +1622,13 @@ func (a *App) startup(ctx context.Context) {
 		corrected.AccY = finalAy
 		corrected.AccZ = finalAz
 
-		// Update Madgwick AHRS filter.
+		// Update Madgwick AHRS filter using the source's own real elapsed time
+		// (anchorDt, already derived from frame.TimestampUs above and clamped
+		// to a sane range) instead of assuming a fixed 60Hz sample rate -- a
+		// USB device at 200Hz would otherwise over-integrate by ~3.3x per step.
 		var curP, curR, curY float64
 		if bank.ahrs != nil {
-			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now())
+			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, dsuAx, dsuAy, dsuAz, float32(anchorDt))
 			p, r, y := bank.ahrs.GetEulerAngles()
 			curP, curR, curY = p, r, y
 			bank.curPitch.Store(math.Float64bits(p))
@@ -1676,9 +1682,9 @@ func (a *App) startup(ctx context.Context) {
 			dsuFrame.RotX = dsuRx
 			dsuFrame.RotY = dsuRy
 			dsuFrame.RotZ = dsuRz
-			dsuFrame.AccX = dsuAccSign[0] * finalAx
-			dsuFrame.AccY = dsuAccSign[1] * finalAy
-			dsuFrame.AccZ = dsuAccSign[2] * finalAz
+			dsuFrame.AccX = dsuAx
+			dsuFrame.AccY = dsuAy
+			dsuFrame.AccZ = dsuAz
 			a.dsuSrv.SendMotion(dsuFrame)
 		}
 

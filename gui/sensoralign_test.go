@@ -4,7 +4,6 @@ import (
 	"math"
 	"math/rand"
 	"testing"
-	"time"
 )
 
 // iosQ maps device axes into the gyro packet axes produced by web/index.html on iOS
@@ -133,7 +132,7 @@ func madgwickGravityError(frames []simFrame, gyroMat, accMat [3][3]float64, ys f
 	m := NewMadgwickAHRS(2.0)
 	_, a0 := toDSU(frames[0])
 	for i := 0; i < 2000; i++ {
-		m.Update(0, 0, 0, float32(a0[0]), float32(a0[1]), float32(a0[2]), time.Time{})
+		m.Update(0, 0, 0, float32(a0[0]), float32(a0[1]), float32(a0[2]), 1.0/60.0)
 	}
 	m.Beta = 0
 
@@ -142,7 +141,7 @@ func madgwickGravityError(frames []simFrame, gyroMat, accMat [3][3]float64, ys f
 		_, a := toDSU(f)
 		if i > 0 { // frames[i].acc is the attitude after frames[i-1]'s rate
 			pr, _ := toDSU(frames[i-1])
-			m.Update(float32(pr[0]), float32(pr[1]), float32(pr[2]), 0, 0, 0, time.Time{})
+			m.Update(float32(pr[0]), float32(pr[1]), float32(pr[2]), 0, 0, 0, 1.0/60.0)
 		}
 		q0, q1, q2, q3 := float64(m.Q0), float64(m.Q1), float64(m.Q2), float64(m.Q3)
 		// Madgwick's expected body gravity, mapped back through PadTest's a = (AccX, -AccY, -AccZ)
