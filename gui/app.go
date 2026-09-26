@@ -1031,14 +1031,12 @@ func (a *App) loadProfiles() {
 		if math.Abs(math.Abs(det3x3(a.profiles[i].Matrix))-1.0) > 0.05 {
 			a.profiles[i].Matrix = defaultMatrix3x3()
 		}
-		// One-time migration for profiles saved before Version existed (Version == 0
-		// on disk): a profile that already has everything the current pipeline needs
-		// is not actually outdated, just never stamped — back-fill it explicitly
-		// rather than force a pointless recalibration. One that is missing SensorFrame
-		// stays at 0, correctly Outdated(), and must go through the wizard again.
-		if a.profiles[i].Name != "" && a.profiles[i].Version == 0 && a.profiles[i].SensorFrame != nil {
-			a.profiles[i].Version = CurrentProfileVersion
-		}
+		// Deliberately no "it already has a SensorFrame, so back-fill Version"
+		// shortcut here: a populated SensorFrame isn't proof it was actually earned
+		// under the current wizard for THIS profile (it may be a carry-over — see
+		// initProfileSensorFrame's legacy migration). The only thing that stamps
+		// Version is SaveProfile itself, so a pre-versioning profile simply stays
+		// Outdated() until it goes through the wizard once — explicit, not assumed.
 	}
 	a.activeSlot = stored.ActiveSlot
 
@@ -2356,10 +2354,11 @@ func (a *App) initProfileSensorFrame() {
 	a.profilesMu.Lock()
 	migrate := legacyKnown && a.activeSlot >= 0 && a.activeSlot < len(a.profiles) && a.profiles[a.activeSlot].SensorFrame == nil
 	if migrate {
+		// Seed only — an unattended carry-over from the old global file is not the
+		// same thing as this profile having gone through the current wizard's own
+		// axis-align step, so it must NOT bump Version: leave it Outdated() until
+		// the user actually confirms it there (§3/§5: no silent "trust me" upgrades).
 		a.profiles[a.activeSlot].SensorFrame = &legacy
-		if p := &a.profiles[a.activeSlot]; p.Name != "" && p.Version < CurrentProfileVersion {
-			p.Version = CurrentProfileVersion
-		}
 	}
 	slot := a.activeSlot
 	a.profilesMu.Unlock()
@@ -2370,17 +2369,12 @@ func (a *App) initProfileSensorFrame() {
 }
 
 // SetActiveProfile selects the profile at the given slot (-1 = identity/none)
+// Outdated profiles are still switchable — the wizard shouldn't be forced on someone
+// who's just picking a slot to play with. The outdated warning (banner, highlighted
+// Calibrate button) stays visible once it's active instead of gating the switch.
 func (a *App) SetActiveProfile(slot int) string {
 	if slot < -1 || slot > 5 {
 		return "invalid slot"
-	}
-	if slot >= 0 {
-		a.profilesMu.RLock()
-		outdated := a.profiles[slot].Outdated()
-		a.profilesMu.RUnlock()
-		if outdated {
-			return "error_outdated_profile"
-		}
 	}
 
 	a.profilesMu.Lock()

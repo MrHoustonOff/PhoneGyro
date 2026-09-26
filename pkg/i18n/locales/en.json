@@ -11,7 +11,7 @@
     "accel_axes_unset": "not determined",
     "outdated_badge": "Outdated",
     "outdated_tip": "Profile is outdated — recalibration required",
-    "outdated_blocked": "Profile “{name}” is outdated, recalibration needed",
+    "outdated_warning_banner": "This profile is outdated — recalibrate it so everything works correctly.",
     "axis_pitch": "Pitch",
     "axis_predicted": "{n}% • Predicted",
     "axis_roll": "Roll",

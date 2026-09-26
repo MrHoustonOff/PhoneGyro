@@ -11,7 +11,7 @@
     "accel_axes_unset": "не определено",
     "outdated_badge": "Устарел",
     "outdated_tip": "Профиль устарел — требуется перекалибровка",
-    "outdated_blocked": "Профиль «{name}» устарел, нужна перекалибровка",
+    "outdated_warning_banner": "Профиль устарел — перекалибруйте его, чтобы всё работало правильно.",
     "axis_pitch": "Кивок",
     "axis_predicted": "{n}% • Прогноз",
     "axis_roll": "Крен",

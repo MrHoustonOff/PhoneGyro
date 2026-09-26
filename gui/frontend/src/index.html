@@ -342,6 +342,14 @@
               </div>
             </div>
 
+            <!-- Outdated-profile warning: hidden unless the active profile needs it -->
+            <div class="profile-outdated-warning" id="profile-outdated-warning" style="display: none;">
+              <svg class="cal-save-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-3l-8.18-14.14a2 2 0 0 0-3.42 0z"></path>
+              </svg>
+              <span data-i18n="calibration.outdated_warning_banner">Профиль устарел — перекалибруйте его, чтобы всё работало правильно.</span>
+            </div>
+
             <!-- Profile Calibrate & Manage Bar -->
             <div class="profile-status-bar">
               <div class="profile-status-left">
@@ -7522,6 +7530,14 @@
           ? (I18n.t('calibration.outdated_tip') || 'Профиль устарел — требуется перекалибровка')
           : '';
       }
+      const outdatedWarning = document.getElementById('profile-outdated-warning');
+      if (outdatedWarning) {
+        outdatedWarning.style.display = activeProf.outdated ? 'flex' : 'none';
+      }
+      const calibrateBtn = document.getElementById('btn-open-calibration');
+      if (calibrateBtn) {
+        calibrateBtn.classList.toggle('profile-outdated-highlight', !!activeProf.outdated);
+      }
 
       // 2. Populate Dropdown Menu — only slots that actually hold a profile. Empty
       // slots have nothing to switch to; they only make sense on the save page,
@@ -7594,14 +7610,8 @@
         if (window.go?.main?.App?.SetActiveProfile) {
           result = await window.go.main.App.SetActiveProfile(slot);
         }
-        if (result === 'error_outdated_profile') {
-          const name = this.profiles[slot]?.name || formatSlotName(slot);
-          showToast((I18n.t('calibration.outdated_blocked') || 'Профиль «{name}» устарел, нужна перекалибровка').replace('{name}', name));
-          if (typeof CalibrationWizard !== 'undefined') {
-            CalibrationWizard.openToSlot(slot);
-          }
-          return;
-        }
+        // Outdated profiles switch normally — the warning banner and highlighted
+        // Calibrate button (see render()) do the nudging, not a forced wizard.
         if (result !== 'ok') {
           console.error('Failed to switch profile:', result);
           return;

@@ -3028,7 +3028,8 @@ em {
   font-weight: 700;
 }
 
-/* Outdated profile: same amber warning language as the DSU/save-overwrite banners. */
+/* Outdated profile: red, not amber — this is "unconfirmed data" territory, a step up
+   from the amber advisory tone used elsewhere (DSU/save-overwrite banners). */
 .profile-outdated-badge {
   display: inline-block;
   margin-left: 6px;
@@ -3038,23 +3039,78 @@ em {
   font-weight: 700;
   letter-spacing: 0.02em;
   vertical-align: middle;
-  color: rgb(255, 149, 0);
-  background: rgba(255, 159, 10, 0.14);
-  border: 1px solid rgba(255, 159, 10, 0.3);
+  color: rgb(255, 69, 58);
+  background: rgba(255, 69, 58, 0.16);
+  border: 1px solid rgba(255, 69, 58, 0.35);
 }
 
 [data-theme="light"] .profile-outdated-badge {
-  color: rgb(180, 105, 0);
-  background: rgba(255, 149, 0, 0.12);
-  border-color: rgba(255, 149, 0, 0.3);
+  color: rgb(255, 59, 48);
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.35);
 }
 
 .profile-dropdown-item.profile-outdated {
-  background: rgba(255, 159, 10, 0.045);
+  background: rgba(255, 69, 58, 0.055);
 }
 
 #main-profile-trigger.profile-outdated {
-  box-shadow: 0 0 0 1px rgba(255, 159, 10, 0.35) inset;
+  box-shadow: 0 0 0 1px rgba(255, 69, 58, 0.4) inset;
+}
+
+/* Loud, unmissable: this is a "your controller is running on unconfirmed data,
+   go fix it" state, not a passive label — plus a pulsing highlight on the one
+   button that actually resolves it. Switching profiles is never blocked by this;
+   it's a nudge, not a gate. */
+.profile-outdated-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255, 69, 58, 0.16);
+  border: 1px solid rgba(255, 69, 58, 0.45);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  animation: profileOutdatedFadeIn 0.25s ease;
+}
+
+[data-theme="light"] .profile-outdated-warning {
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.45);
+}
+
+.profile-outdated-warning .cal-save-warning-icon {
+  stroke: #ff453a;
+}
+
+[data-theme="light"] .profile-outdated-warning .cal-save-warning-icon {
+  stroke: #ff3b30;
+}
+
+@keyframes profileOutdatedFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-calibrate-trigger.profile-outdated-highlight {
+  color: #ff453a;
+  border-color: rgba(255, 69, 58, 0.6);
+  background: rgba(255, 69, 58, 0.14);
+  animation: profileOutdatedPulse 1.8s ease-in-out infinite;
+}
+
+[data-theme="light"] .btn-calibrate-trigger.profile-outdated-highlight {
+  color: #ff3b30;
+}
+
+@keyframes profileOutdatedPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 69, 58, 0); }
 }
 
 /* Switch Animation Ripple */
