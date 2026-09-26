@@ -189,6 +189,12 @@ type AxisAlignStatus struct {
 type motionBank struct {
 	hasClient   atomic.Bool
 	connectedAt time.Time
+	// deviceName identifies whatever is actually connected on this source:
+	// the phone's reported model (OnClientDevice), or a USB device's
+	// self-reported name (optional PhoneGyro protocol TYPE=0x02 frame) --
+	// falls back to "Controller" until something sets it, exactly like the
+	// old single global field did.
+	deviceName atomic.Value
 
 	curPitch atomic.Uint64
 	curRoll  atomic.Uint64
@@ -288,6 +294,7 @@ func newMotionBank() *motionBank {
 			Active: false,
 		}
 	}
+	b.deviceName.Store("Controller")
 	return b
 }
 
@@ -305,7 +312,6 @@ type App struct {
 	bankMu    sync.Mutex
 	phoneBank *motionBank
 	usbBank   *motionBank
-	deviceName  atomic.Value
 	clientAddr  string
 	primaryIP   string
 	gamepadURL  string
@@ -672,7 +678,6 @@ func NewApp() *App {
 	app.soundMode = "cute"
 	app.soundVolume.Store(1)
 	app.soundVolumes = defaultSoundVolumes()
-	app.deviceName.Store("Controller")
 	app.minimizeToTray.Store(true)
 	app.hotkeyRecenterEnabled.Store(true)
 	app.hotkeyRecenterKey = "Ctrl+Shift+R"
@@ -1750,7 +1755,7 @@ func (a *App) startup(ctx context.Context) {
 			if c <= 0 {
 				a.phoneBank.hasClient.Store(false)
 				a.phoneBank.connectedAt = time.Time{}
-				a.deviceName.Store("Controller")
+				a.phoneBank.deviceName.Store("Controller")
 				a.emitStateChange()
 				if a.ctx != nil {
 					wailsRuntime.EventsEmit(a.ctx, "device:disconnected", true)
@@ -1774,7 +1779,7 @@ func (a *App) startup(ctx context.Context) {
 
 	srv.OnClientDevice = func(device string) {
 		if device != "" {
-			a.deviceName.Store(device)
+			a.phoneBank.deviceName.Store(device)
 			a.emitStateChange()
 			if device == "iPhone" || device == "iPad" {
 				a.phoneBank.align.SeedGuess(iosSensorFrame())
@@ -2232,7 +2237,7 @@ func (a *App) GetState() AppState {
 	}
 
 	devName := "Controller"
-	if v := a.deviceName.Load(); v != nil {
+	if v := bank.deviceName.Load(); v != nil {
 		if s, ok := v.(string); ok && s != "" {
 			devName = s
 		}
@@ -2456,7 +2461,7 @@ func (a *App) applyProfileSensorFrame(bank *motionBank, slot int) {
 		return
 	}
 	guess := sensorFrame{Q: identity3(), H: -1}
-	if dn, _ := a.deviceName.Load().(string); dn == "iPhone" || dn == "iPad" {
+	if dn, _ := bank.deviceName.Load().(string); dn == "iPhone" || dn == "iPad" {
 		guess = iosSensorFrame()
 	}
 	bank.align.SetFrame(guess, false)

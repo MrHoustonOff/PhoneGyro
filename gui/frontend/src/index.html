@@ -8514,6 +8514,13 @@
       if (st && st.deviceName && st.deviceName !== 'Controller' && st.deviceName !== 'Unknown') {
         return st.deviceName;
       }
+      // No real name reported (a USB device's TYPE=0x02 frame is optional):
+      // "iPhone" is a reasonable phone-mode fallback, but would be actively
+      // wrong for an unnamed USB device -- let SaveProfile's own "Unknown"
+      // default stand for that case instead of guessing a device it isn't.
+      if (typeof AppState !== 'undefined' && AppState.inputMode === 'usb') {
+        return (st && st.deviceName) || '';
+      }
       return (st && st.deviceName) || 'iPhone';
     },
 
@@ -10577,8 +10584,15 @@
 
         const deviceNameEl = document.getElementById('device-name');
         if (isUsbSource) {
+          // Device self-identifies via the protocol's optional TYPE=0x02
+          // frame (see PhoneGyro_hardware_protocol docs/PROTOCOL.md); the
+          // backend defaults deviceName to the generic "Controller" when a
+          // device never sends one, so fall back to a friendlier label here.
           const portLabel = state.usbPort ? ` (${state.usbPort})` : '';
-          deviceNameEl.textContent = (I18n.t('usb_mode.connected_name') || 'USB-контроллер') + portLabel;
+          const knownName = (state.deviceName && state.deviceName !== 'Controller')
+            ? state.deviceName
+            : (I18n.t('usb_mode.connected_name') || 'USB-контроллер');
+          deviceNameEl.textContent = knownName + portLabel;
         } else {
           deviceNameEl.textContent = state.deviceName || 'Controller';
         }

@@ -365,7 +365,7 @@ func (tm *TrayManager) showContextMenu(hwnd uintptr) {
 	isRu := tm.app.GetLang() == "ru"
 	hasPhone := tm.app.activeBank().hasClient.Load()
 	phoneName := ""
-	if v := tm.app.deviceName.Load(); v != nil {
+	if v := tm.app.activeBank().deviceName.Load(); v != nil {
 		if s, ok := v.(string); ok && s != "" {
 			phoneName = s
 		}
@@ -476,7 +476,7 @@ func (tm *TrayManager) refresh() {
 
 	hasPhone := tm.app.activeBank().hasClient.Load()
 	phoneName := ""
-	if v := tm.app.deviceName.Load(); v != nil {
+	if v := tm.app.activeBank().deviceName.Load(); v != nil {
 		if s, ok := v.(string); ok && s != "" {
 			phoneName = s
 		}

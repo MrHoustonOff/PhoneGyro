@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"sync"
 	"time"
 
@@ -27,6 +28,7 @@ const (
 	usbMagic1    = 0x55
 	usbTypeMeta  = 0x00
 	usbTypeData  = 0x01
+	usbTypeName  = 0x02 // optional device name frame (see PhoneGyro_hardware_protocol docs/PROTOCOL.md)
 	usbBaudRate  = 115200
 
 	usbProbeTimeout  = 1500 * time.Millisecond
@@ -49,6 +51,7 @@ type usbFrame struct {
 	Gyro        [3]int16
 	Temp        int16
 	Buttons     uint8
+	Name        string // only set when Type == usbTypeName
 }
 
 // usbCRC8 is CRC-8/SMBUS: poly 0x07, init 0x00, no reflect, no final xor —
@@ -110,6 +113,16 @@ func decodeOneUSBFrame(buf []byte) (usbFrame, int, bool) {
 	var f usbFrame
 	f.Type = frame[2]
 	f.Seq = frame[3]
+	if f.Type == usbTypeName {
+		// Bytes 4..22 (19 bytes) are an ASCII name, zero-padded -- read up to
+		// the first 0x00, or all 19 bytes if there is none.
+		name := frame[4:23]
+		if i := bytes.IndexByte(name, 0); i >= 0 {
+			name = name[:i]
+		}
+		f.Name = string(name)
+		return f, usbFrameSize, true
+	}
 	f.TimestampUs = uint32(frame[4]) | uint32(frame[5])<<8 | uint32(frame[6])<<16 | uint32(frame[7])<<24
 	for k := 0; k < 3; k++ {
 		f.Accel[k] = int16(uint16(frame[8+2*k]) | uint16(frame[9+2*k])<<8)
@@ -133,7 +146,8 @@ type usbConnState struct {
 	lastSeq       uint8
 	droppedFrames uint64
 
-	prevResetHeld bool
+	prevResetHeld    bool
+	lastReportedName string
 }
 
 func newUSBConnState() *usbConnState {
@@ -160,6 +174,16 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		st.accelRangeG = metaRangeOrDefault(f.Accel[0], usbDefaultAccelRangeG)
 		st.gyroRangeDps = metaRangeOrDefault(f.Accel[1], usbDefaultGyroRangeDps)
 		st.haveMeta = true
+	case usbTypeName:
+		// Optional (protocol Level 3): a device may self-identify. Mirrors
+		// the phone's OnClientDevice -- same bank field, same "show it in
+		// the UI and the profile's Device column" treatment.
+		if f.Name != "" && f.Name != st.lastReportedName {
+			st.lastReportedName = f.Name
+			app.usbBank.deviceName.Store(f.Name)
+			app.logEvent("INFO", "USB: device identified as %q", f.Name)
+			app.emitStateChange()
+		}
 	case usbTypeData:
 		if !st.haveMeta && time.Now().After(st.metaDeadline) {
 			st.haveMeta = true // give up waiting; declared/default range stands as-is
@@ -440,6 +464,7 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usb
 		// device" screen instead of showing stale connected/frozen telemetry.
 		m.app.usbBank.hasClient.Store(false)
 		m.app.usbBank.connectedAt = time.Time{}
+		m.app.usbBank.deviceName.Store("Controller")
 		m.app.logEvent("INFO", "USB: %s disconnected (%d frame(s) dropped this session)", name, state.droppedFrames)
 		m.app.emitStateChange()
 	}
