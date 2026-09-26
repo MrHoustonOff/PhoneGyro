@@ -879,6 +879,20 @@ em {
   color: #0071E3;
 }
 
+.apple-status-pill.connected {
+  background: rgba(52, 199, 89, 0.1);
+  border-color: rgba(52, 199, 89, 0.3);
+}
+
+.apple-status-pill.connected .pulse-beacon {
+  background-color: #34C759;
+  animation: none;
+}
+
+.apple-status-pill.connected .status-pill-text {
+  color: #34C759;
+}
+
 /* Apple Inset Contract Card */
 .apple-contract-card {
   display: flex;

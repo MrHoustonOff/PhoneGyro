@@ -459,19 +459,19 @@
           </div>
 
           <!-- Apple Status Capsule -->
-          <div class="apple-status-pill waiting">
+          <div class="apple-status-pill waiting" id="usb-status-pill">
             <span class="pulse-beacon"></span>
-            <span class="status-pill-text" data-i18n="usb_mode.status_scanning">Поиск USB IMU-устройства...</span>
+            <span class="status-pill-text" id="usb-status-pill-text" data-i18n="usb_mode.status_scanning">Поиск USB IMU-устройства...</span>
           </div>
 
           <!-- Apple Inset Contract & Reference Implementation Card -->
           <div class="apple-contract-card">
             <span class="contract-card-hint" data-i18n="usb_mode.contract_hint">Актуальная спецификация контракта и пример реализации:</span>
-            <a href="https://github.com/MrHoustonOff/iphone-gyro-controller" target="_blank" class="apple-repo-btn" id="link-usb-repo" title="GitHub: iphone-gyro-controller">
+            <a href="https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol" target="_blank" class="apple-repo-btn" id="link-usb-repo" title="GitHub: PhoneGyro_hardware_protocol">
               <svg class="github-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
               </svg>
-              <span class="repo-name">iphone-gyro-controller</span>
+              <span class="repo-name">PhoneGyro_hardware_protocol</span>
               <svg class="repo-arrow" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M7 17L17 7M17 7H7M17 7V17"/>
               </svg>
@@ -10205,6 +10205,29 @@
       updateBanner('usb');
     },
 
+    _lastUsbConnected: null,
+    _lastUsbPort: null,
+
+    updateUsbStatus(connected, port) {
+      connected = !!connected;
+      port = port || '';
+      if (this._lastUsbConnected === connected && this._lastUsbPort === port) {
+        return;
+      }
+      this._lastUsbConnected = connected;
+      this._lastUsbPort = port;
+
+      const pill = document.getElementById('usb-status-pill');
+      const text = document.getElementById('usb-status-pill-text');
+      if (!pill || !text) return;
+
+      pill.classList.toggle('waiting', !connected);
+      pill.classList.toggle('connected', connected);
+      text.textContent = connected
+        ? (I18n.t('usb_mode.status_connected') || 'IMU-устройство подключено ({port})').replace('{port}', port)
+        : (I18n.t('usb_mode.status_scanning') || 'Поиск USB IMU-устройства...');
+    },
+
     inputMode: 'phone',
 
     setInputMode(mode, fromBackend = false) {
@@ -10295,6 +10318,10 @@
 
       if (typeof state.dsuClients !== 'undefined' || typeof state.dsuClientList !== 'undefined') {
         this.updateDSU(state.dsuClients, state.dsuClientList);
+      }
+
+      if (typeof state.usbConnected !== 'undefined') {
+        this.updateUsbStatus(state.usbConnected, state.usbPort);
       }
 
       if (window._liveDebugWin && !window._liveDebugWin.closed && window._liveDebugWin.updateFromState) {

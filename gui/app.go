@@ -131,6 +131,8 @@ type AppState struct {
 	DsuClients    int              `json:"dsuClients"`
 	DsuClientList []dsu.ClientInfo `json:"dsuClientList"`
 	InputMode     string           `json:"inputMode"`
+	UsbConnected  bool             `json:"usbConnected"`
+	UsbPort       string           `json:"usbPort"`
 }
 
 // captureSample holds raw 60 Hz gyro and accel readings
@@ -176,52 +178,45 @@ type AxisAlignStatus struct {
 	Mapping  [3]string `json:"mapping"` // e.g. ["+Y", "+Z", "+X"]
 }
 
-// App struct manages desktop backend and GyroBridge services
-type App struct {
-	ctx       context.Context
-	i18nMgr   *i18n.Manager
-	srv       *server.Server
-	dsuSrv    *dsu.Server
-	usbMgr    *usbDeviceManager
-	caMgr     *ca.CertificateManager
-	isPaused  atomic.Bool
-	hasClient atomic.Bool
-	curPitch  atomic.Uint64
-	curRoll   atomic.Uint64
-	curYaw    atomic.Uint64
-	// Raw latest gyro/accel (stored as float64 bits for atomic access)
-	curRotX     atomic.Uint64
-	curRotY     atomic.Uint64
-	curRotZ     atomic.Uint64
-	curAccX     atomic.Uint64
-	curAccY     atomic.Uint64
-	curAccZ     atomic.Uint64
-	curQx       atomic.Uint64
-	curQy       atomic.Uint64
-	curQz       atomic.Uint64
-	curQw       atomic.Uint64
-	deviceName  atomic.Value
+// motionBank holds one input source's fully isolated pipeline state: live
+// connection status, raw/AHRS telemetry, gyro bias, sensor alignment,
+// calibration wizard scratch state, and the 6-slot profile system. "phone"
+// and "usb" input modes each get their own bank (see App.bank/activeBank),
+// so switching modes never leaks calibration, connection status, or learned
+// axis alignment between two physically different devices. Every existing
+// method keeps its exact behavior -- it just now reads/writes through
+// whichever bank is currently active instead of fields directly on App.
+type motionBank struct {
+	hasClient   atomic.Bool
 	connectedAt time.Time
-	clientAddr  string
-	primaryIP   string
-	gamepadURL  string
-	setupURL    string
-	qrCodePNG   string
-	setupQRPNG  string
-	toggleMu    sync.Mutex
-	lastToggle  time.Time
-	// Calibration capture buffer (buffered directly at 60 Hz from WebSocket)
-	isCapturing     atomic.Bool
-	captureMu       sync.Mutex
-	captureBuffer   []captureSample
-	calVectors      [3][3]float64
-	calGravity      [3]float64     // captured gravity unit vector from step 0 rest
+
+	curPitch atomic.Uint64
+	curRoll  atomic.Uint64
+	curYaw   atomic.Uint64
+	// Raw latest gyro/accel (stored as float64 bits for atomic access)
+	curRotX atomic.Uint64
+	curRotY atomic.Uint64
+	curRotZ atomic.Uint64
+	curAccX atomic.Uint64
+	curAccY atomic.Uint64
+	curAccZ atomic.Uint64
+	curQx   atomic.Uint64
+	curQy   atomic.Uint64
+	curQz   atomic.Uint64
+	curQw   atomic.Uint64
+
+	// Calibration capture buffer (buffered directly at the source's live rate)
+	isCapturing   atomic.Bool
+	captureMu     sync.Mutex
+	captureBuffer []captureSample
+	calVectors    [3][3]float64
+	calGravity    [3]float64 // captured gravity unit vector from step 0 rest
 	// wizardGravity stages the rest step's gravity reading the same way wizardAlign
 	// stages axis learning: SaveProfile is the only place that commits it, so an
 	// unsaved/cancelled wizard run never pollutes the live output or a profile.
 	wizardGravity      [3]float64
 	wizardGravityValid bool
-	align           *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
+	align              *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
 	// wizardAlign is a scratch aligner used only by the calibration wizard's explicit
 	// "determine axes" step. It runs alongside `align` (fed the same data) so the
 	// wizard's progress reflects reality, but stays fully separate: nothing here
@@ -234,10 +229,9 @@ type App struct {
 	biasMu   sync.RWMutex
 	gyroBias [3]float64
 	// Profile system
-	profilesMu  sync.RWMutex
-	profiles    [6]Profile // exactly 6 slots, always
-	activeSlot  int        // -1 = identity/none
-	profilesDir string
+	profilesMu sync.RWMutex
+	profiles   [6]Profile // exactly 6 slots, always
+	activeSlot int        // -1 = identity/none
 	// Active calibration matrix (applied to frames before DSU forwarding)
 	matrixMu     sync.RWMutex
 	activeMatrix [3][3]float64 // identity by default
@@ -247,26 +241,86 @@ type App struct {
 	usePreview    bool
 	// Madgwick AHRS filter matching PadTest.exe exactly for 3D viewport synchronization
 	ahrs *MadgwickAHRS
+	// Attitude anchor + accelerometer low-pass state, formerly closure-local
+	// variables in startup() -- moved here so each source keeps its own.
+	anchor         *attitudeAnchor
+	prevAnchorTsUs uint64
+	accFiltered    [3]float64
+	accFilterInit  bool
+	// Stationary auto-bias-refinement accumulator, also formerly closure-local.
+	stillFrames                        int
+	stillSumGx, stillSumGy, stillSumGz float64
 	// Latest AHRS quaternion stored atomically for lock-free read by GetState.
 	// Q0=w, Q1=x, Q2=y, Q3=z (same as AHRS return values).
 	curAhrsQ0 atomic.Uint64
 	curAhrsQ1 atomic.Uint64
 	curAhrsQ2 atomic.Uint64
 	curAhrsQ3 atomic.Uint64
-	// Buffer of last 20 raw frames from mobile device for diagnostics
+	// Buffer of last 20 raw frames from this source for diagnostics
 	recentFramesMu sync.Mutex
 	recentFrames   []RawLogFrame
 	// Full calibration session report buffer
 	calLogMu     sync.Mutex
 	calStepLogs  map[int]StepCaptureLog
 	calValResult ValidationResult
+
+	lastMotionRecvTs   atomic.Int64
+	lastSensorChangeTs atomic.Int64
+}
+
+// newMotionBank returns a bank with the same defaults NewApp used to give
+// the (formerly single, shared) App fields directly.
+func newMotionBank() *motionBank {
+	b := &motionBank{
+		activeSlot:   -1,
+		activeMatrix: defaultMatrix3x3(),
+		ahrs:         NewMadgwickAHRS(0.0), // Pure gyro integration with stationary deadband
+		anchor:       newAttitudeAnchor(),
+		calStepLogs:  make(map[int]StepCaptureLog),
+	}
+	for i := range b.profiles {
+		b.profiles[i] = Profile{
+			Slot:   i,
+			Name:   "",
+			Device: "Unknown",
+			Icon:   "default",
+			Matrix: defaultMatrix3x3(),
+			Active: false,
+		}
+	}
+	return b
+}
+
+// App struct manages desktop backend and GyroBridge services
+type App struct {
+	ctx      context.Context
+	i18nMgr  *i18n.Manager
+	srv      *server.Server
+	dsuSrv   *dsu.Server
+	usbMgr   *usbDeviceManager
+	caMgr    *ca.CertificateManager
+	isPaused atomic.Bool
+	// bankMu guards lazy-initializing phoneBank/usbBank; the banks' own
+	// internal fields have their own finer-grained locks as before.
+	bankMu    sync.Mutex
+	phoneBank *motionBank
+	usbBank   *motionBank
+	deviceName  atomic.Value
+	clientAddr  string
+	primaryIP   string
+	gamepadURL  string
+	setupURL    string
+	qrCodePNG   string
+	setupQRPNG  string
+	toggleMu    sync.Mutex
+	lastToggle  time.Time
+	profilesDir string
 	// LiveDebug standalone window WebSocket clients and process handle
 	liveDebugMu      sync.RWMutex
 	liveDebugClients map[*websocket.Conn]struct{}
 	liveDebugSeq     atomic.Uint64
 	liveDebugCmdMu   sync.Mutex
 	liveDebugCmd     *exec.Cmd
-	lastMotionRecvTs atomic.Int64
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
@@ -288,9 +342,8 @@ type App struct {
 	silenceDisconnect  atomic.Bool
 	soundMode          string
 	soundVolume        atomic.Int32
-	soundVolumesMu     sync.RWMutex
-	soundVolumes       map[string]int
-	lastSensorChangeTs atomic.Int64
+	soundVolumesMu sync.RWMutex
+	soundVolumes   map[string]int
 	// Adaptive 1-Euro DSU filter and dynamic response parameters
 	gyroDeadbandBits    atomic.Uint64 // float64 (deg/s, default 0.10)
 	gyroSensitivityBits atomic.Uint64 // float64 (multiplier, default 1.00)
@@ -310,6 +363,41 @@ type App struct {
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
+}
+
+// bank returns the motion pipeline state for the given mode ("phone" or
+// "usb"), lazily creating it on first use. Every existing profile/AHRS/
+// calibration method goes through this (or activeBank) instead of touching
+// fields on App directly, so the two sources never share state.
+func (a *App) bank(mode string) *motionBank {
+	a.bankMu.Lock()
+	defer a.bankMu.Unlock()
+	if mode == "usb" {
+		if a.usbBank == nil {
+			a.usbBank = newMotionBank()
+		}
+		return a.usbBank
+	}
+	if a.phoneBank == nil {
+		a.phoneBank = newMotionBank()
+	}
+	return a.phoneBank
+}
+
+// activeBank returns the bank for whichever input mode is currently selected.
+func (a *App) activeBank() *motionBank {
+	return a.bank(a.GetInputMode())
+}
+
+// bankDir returns the on-disk directory a given mode's profiles/sensor
+// alignment persist to. "phone" keeps the original root (backward
+// compatible with every existing install); "usb" gets its own subfolder so
+// the two never share a profiles.json or sensor_frame.json.
+func (a *App) bankDir(mode string) string {
+	if mode == "usb" {
+		return filepath.Join(a.profilesDir, "usb")
+	}
+	return a.profilesDir
 }
 
 // AppSettings holds configurable parameters exposed in the settings window
@@ -568,14 +656,12 @@ func NewApp() *App {
 		gamepadURL:   appURL,
 		qrCodePNG:    qrBase64,
 		setupQRPNG:   setupQRBase64,
-		activeSlot:   -1,
-		activeMatrix: defaultMatrix3x3(),
 		profilesDir:  profilesDir,
-		calStepLogs:  make(map[int]StepCaptureLog),
-		ahrs:         NewMadgwickAHRS(0.0), // Pure gyro integration with stationary deadband
 		currentTheme: "dark",
 		currentLang:  "ru",
 	}
+	app.phoneBank = newMotionBank()
+	app.usbBank = newMotionBank()
 	app.gyroDeadzoneBits.Store(math.Float64bits(0.20))
 	app.gyroDeadbandBits.Store(math.Float64bits(0.10))
 	app.gyroSensitivityBits.Store(math.Float64bits(1.00))
@@ -591,25 +677,16 @@ func NewApp() *App {
 	app.hotkeyRecenterEnabled.Store(true)
 	app.hotkeyRecenterKey = "Ctrl+Shift+R"
 
-	// Initialize 6 empty slots with default portrait matrix
-	for i := range app.profiles {
-		app.profiles[i] = Profile{
-			Slot:   i,
-			Name:   "",
-			Device: "Unknown",
-			Icon:   "default",
-			Matrix: defaultMatrix3x3(),
-			Active: false,
-		}
-	}
-
 	// Ensure logs directory exists
 	_ = os.MkdirAll(filepath.Join(profilesDir, "logs"), 0755)
 
-	// Load persisted settings and profiles
+	// Load persisted settings and profiles for BOTH banks up front, so
+	// switching input mode later immediately reflects whatever was saved for
+	// that mode last time, without needing a lazy first-load.
 	app.loadSettings()
 	app.rebuildURLsAndQRCodes()
-	app.loadProfiles()
+	app.loadProfilesInto(app.phoneBank, app.bankDir("phone"))
+	app.loadProfilesInto(app.usbBank, app.bankDir("usb"))
 	app.logEvent("INFO", "GyroBridge initialized: IP=%s, Theme=%s, Lang=%s, DSU=%d, HTTP=%d, HTTPS=%d", primaryIP, app.currentTheme, app.currentLang, app.dsuPort, app.httpPort, app.httpsPort)
 
 	return app
@@ -771,11 +848,11 @@ func (a *App) loadSettings() {
 	a.hideAuthor = s.HideAuthor
 	a.themeMu.Unlock()
 
-	a.profilesMu.Lock()
+	a.phoneBank.profilesMu.Lock()
 	if s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
-		a.activeSlot = s.ActiveSlot
+		a.phoneBank.activeSlot = s.ActiveSlot
 	}
-	a.profilesMu.Unlock()
+	a.phoneBank.profilesMu.Unlock()
 
 	if parsed, err := parseMAC(s.DSUMAC); err == nil {
 		a.setDSUMAC(formatMAC(parsed))
@@ -886,9 +963,9 @@ func (a *App) saveSettings() {
 	hideAuthor := a.hideAuthor
 	a.themeMu.RUnlock()
 
-	a.profilesMu.RLock()
-	slot := a.activeSlot
-	a.profilesMu.RUnlock()
+	a.phoneBank.profilesMu.RLock()
+	slot := a.phoneBank.activeSlot
+	a.phoneBank.profilesMu.RUnlock()
 
 	dsuP := a.dsuPort
 	if dsuP == 0 {
@@ -971,8 +1048,18 @@ func (a *App) saveSettings() {
 }
 
 // loadProfiles reads profiles.json from disk
+// loadProfiles (re)loads the currently active mode's profiles.json from its
+// bank-specific directory. Kept as a no-arg method for backward
+// compatibility with existing call sites (it simply targets a.activeBank()).
 func (a *App) loadProfiles() {
-	path := filepath.Join(a.profilesDir, "profiles.json")
+	a.loadProfilesInto(a.activeBank(), a.bankDir(a.GetInputMode()))
+}
+
+// loadProfilesInto loads dir/profiles.json into the given bank. Both phone
+// and usb banks are loaded explicitly at startup (see NewApp) so switching
+// modes later never needs a lazy first-load.
+func (a *App) loadProfilesInto(bank *motionBank, dir string) {
+	path := filepath.Join(dir, "profiles.json")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return // first run — default profiles are fine
@@ -989,13 +1076,13 @@ func (a *App) loadProfiles() {
 		return
 	}
 
-	a.profilesMu.Lock()
-	defer a.profilesMu.Unlock()
+	bank.profilesMu.Lock()
+	defer bank.profilesMu.Unlock()
 
 	// If schema version is outdated (< 2), reset all profiles to canonical defaults (§5 of spec)
 	if stored.SchemaVersion < CurrentProfileSchemaVersion {
 		for i := 0; i < 6; i++ {
-			a.profiles[i] = Profile{
+			bank.profiles[i] = Profile{
 				Slot:   i,
 				Name:   "",
 				Device: "Unknown",
@@ -1004,15 +1091,15 @@ func (a *App) loadProfiles() {
 				Active: false,
 			}
 		}
-		a.activeSlot = -1
+		bank.activeSlot = -1
 		return
 	}
 
 	for i := 0; i < 6; i++ {
 		if i < len(stored.Profiles) {
-			a.profiles[i] = stored.Profiles[i]
+			bank.profiles[i] = stored.Profiles[i]
 		} else {
-			a.profiles[i] = Profile{
+			bank.profiles[i] = Profile{
 				Slot:   i,
 				Name:   "",
 				Device: "Unknown",
@@ -1021,16 +1108,16 @@ func (a *App) loadProfiles() {
 				Active: false,
 			}
 		}
-		a.profiles[i].Slot = i // ensure slot index is canonical
-		if a.profiles[i].Device == "" {
-			a.profiles[i].Device = "Unknown"
+		bank.profiles[i].Slot = i // ensure slot index is canonical
+		if bank.profiles[i].Device == "" {
+			bank.profiles[i].Device = "Unknown"
 		}
-		if a.profiles[i].Icon == "" {
-			a.profiles[i].Icon = "default"
+		if bank.profiles[i].Icon == "" {
+			bank.profiles[i].Icon = "default"
 		}
 		// Validate matrix: determinant must be |det| ≈ 1.0 (valid signed-permutation matrix)
-		if math.Abs(math.Abs(det3x3(a.profiles[i].Matrix))-1.0) > 0.05 {
-			a.profiles[i].Matrix = defaultMatrix3x3()
+		if math.Abs(math.Abs(det3x3(bank.profiles[i].Matrix))-1.0) > 0.05 {
+			bank.profiles[i].Matrix = defaultMatrix3x3()
 		}
 		// Deliberately no "it already has a SensorFrame, so back-fill Version"
 		// shortcut here: a populated SensorFrame isn't proof it was actually earned
@@ -1039,39 +1126,47 @@ func (a *App) loadProfiles() {
 		// Version is SaveProfile itself, so a pre-versioning profile simply stays
 		// Outdated() until it goes through the wizard once — explicit, not assumed.
 	}
-	a.activeSlot = stored.ActiveSlot
+	bank.activeSlot = stored.ActiveSlot
 
 	// Restore active matrix
-	if a.activeSlot >= 0 && a.activeSlot < 6 {
-		p := a.profiles[a.activeSlot]
-		a.matrixMu.Lock()
-		a.activeMatrix = p.Matrix
-		a.matrixMu.Unlock()
-		a.profiles[a.activeSlot].Active = true
+	if bank.activeSlot >= 0 && bank.activeSlot < 6 {
+		p := bank.profiles[bank.activeSlot]
+		bank.matrixMu.Lock()
+		bank.activeMatrix = p.Matrix
+		bank.matrixMu.Unlock()
+		bank.profiles[bank.activeSlot].Active = true
 	}
 
-	a.biasMu.Lock()
-	a.gyroBias = stored.GyroBias
-	a.biasMu.Unlock()
+	bank.biasMu.Lock()
+	bank.gyroBias = stored.GyroBias
+	bank.biasMu.Unlock()
 
 	if math.Sqrt(stored.CalGravity[0]*stored.CalGravity[0]+stored.CalGravity[1]*stored.CalGravity[1]+stored.CalGravity[2]*stored.CalGravity[2]) > 0.3 {
-		a.calGravity = stored.CalGravity
+		bank.calGravity = stored.CalGravity
 	}
 	// profilesMu is held here: read the active profile's gravity directly.
-	if a.activeSlot >= 0 && a.activeSlot < len(a.profiles) && norm3(a.profiles[a.activeSlot].CalGravity) > 0.3 {
-		a.calGravity = a.profiles[a.activeSlot].CalGravity
+	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && norm3(bank.profiles[bank.activeSlot].CalGravity) > 0.3 {
+		bank.calGravity = bank.profiles[bank.activeSlot].CalGravity
 	}
 }
 
-// saveProfiles writes profiles.json to disk with schemaVersion 2
+// saveProfiles writes the currently active mode's profiles.json with
+// schemaVersion 2. Kept as a no-arg method for backward compatibility; it
+// targets a.activeBank().
 func (a *App) saveProfiles() {
-	if err := os.MkdirAll(a.profilesDir, 0755); err != nil {
+	a.saveProfilesFrom(a.activeBank(), a.bankDir(a.GetInputMode()))
+	a.saveSettings()
+}
+
+// saveProfilesFrom writes the given bank's profiles to dir/profiles.json.
+func (a *App) saveProfilesFrom(bank *motionBank, dir string) {
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return
 	}
-	path := filepath.Join(a.profilesDir, "profiles.json")
+	path := filepath.Join(dir, "profiles.json")
 
-	a.profilesMu.RLock()
-	a.biasMu.RLock()
+	bank.profilesMu.RLock()
+	bank.biasMu.RLock()
 	stored := struct {
 		SchemaVersion int        `json:"schemaVersion"`
 		Profiles      [6]Profile `json:"profiles"`
@@ -1080,20 +1175,19 @@ func (a *App) saveProfiles() {
 		CalGravity    [3]float64 `json:"calGravity,omitempty"`
 	}{
 		SchemaVersion: CurrentProfileSchemaVersion,
-		Profiles:      a.profiles,
-		ActiveSlot:    a.activeSlot,
-		GyroBias:      a.gyroBias,
-		CalGravity:    a.calGravity,
+		Profiles:      bank.profiles,
+		ActiveSlot:    bank.activeSlot,
+		GyroBias:      bank.gyroBias,
+		CalGravity:    bank.calGravity,
 	}
-	a.biasMu.RUnlock()
-	a.profilesMu.RUnlock()
+	bank.biasMu.RUnlock()
+	bank.profilesMu.RUnlock()
 
 	data, err := json.MarshalIndent(stored, "", "  ")
 	if err != nil {
 		return
 	}
 	_ = os.WriteFile(path, data, 0644)
-	a.saveSettings()
 }
 
 // ShowWindow restores and brings the main application window to the foreground.
@@ -1160,17 +1254,18 @@ func (a *App) shouldMinimizeToTray() bool {
 
 // getActiveProfileName returns a human-readable label for the currently active profile.
 func (a *App) getActiveProfileName() string {
-	a.profilesMu.RLock()
-	defer a.profilesMu.RUnlock()
-	if a.activeSlot >= 0 && a.activeSlot < len(a.profiles) {
-		name := a.profiles[a.activeSlot].Name
+	bank := a.activeBank()
+	bank.profilesMu.RLock()
+	defer bank.profilesMu.RUnlock()
+	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) {
+		name := bank.profiles[bank.activeSlot].Name
 		if name != "" {
 			return name
 		}
 		if a.GetLang() == "ru" {
-			return fmt.Sprintf("Слот %d", a.activeSlot+1)
+			return fmt.Sprintf("Слот %d", bank.activeSlot+1)
 		}
-		return fmt.Sprintf("Slot %d", a.activeSlot+1)
+		return fmt.Sprintf("Slot %d", bank.activeSlot+1)
 	}
 	return ""
 }
@@ -1255,31 +1350,29 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.dsuSrv = dsuSrv
 
-	var (
-		accFiltered   [3]float64
-		accFilterInit bool
-		stillFrames   int
-		stillSumGx    float64
-		stillSumGy    float64
-		stillSumGz    float64
-	)
-	align := newSensorAligner(a.profilesDir)
-	a.align = align
-	a.initProfileSensorFrame()
-	anchor := newAttitudeAnchor()
-	var prevAnchorTsUs uint64
+	// Each bank gets its own aligner (own sensor_frame.json) so a learned
+	// axis mapping never leaks between the phone and a USB device.
+	a.phoneBank.align = newSensorAligner(a.bankDir("phone"))
+	a.usbBank.align = newSensorAligner(a.bankDir("usb"))
+	a.initProfileSensorFrame(a.phoneBank, a.bankDir("phone"))
+	a.initProfileSensorFrame(a.usbBank, a.bankDir("usb"))
 
 	// 3. Web & Telemetry Server (HTTP / HTTPS)
 	var srv *server.Server
 	srv = server.NewServer(caMgr, a.httpPort, a.httpsPort, web.IndexHTML, func(frame server.MotionFrame) {
 		startPipe := time.Now()
 		recvTs := startPipe.UnixMilli()
-		a.lastMotionRecvTs.Store(recvTs)
+		// The transport layer guarantees only one source is ever actually
+		// live at a time (phone WS connections are refused/closed while USB
+		// mode is active, and vice versa via usbMgr.Start/Stop), so picking
+		// the bank by current input mode is race-free in practice.
+		bank := a.activeBank()
+		bank.lastMotionRecvTs.Store(recvTs)
 
-		if !a.hasClient.Load() {
-			a.hasClient.Store(true)
-			if a.connectedAt.IsZero() {
-				a.connectedAt = time.Now()
+		if !bank.hasClient.Load() {
+			bank.hasClient.Store(true)
+			if bank.connectedAt.IsZero() {
+				bank.connectedAt = time.Now()
 			}
 			a.emitStateChange()
 			a.broadcastLiveDebugJSON(map[string]any{
@@ -1289,34 +1382,34 @@ func (a *App) startup(ctx context.Context) {
 		}
 
 		// Sensor freeze detection: check if readings actually changed
-		prevRotX := float32(math.Float64frombits(a.curRotX.Load()))
-		prevRotY := float32(math.Float64frombits(a.curRotY.Load()))
-		prevRotZ := float32(math.Float64frombits(a.curRotZ.Load()))
-		prevAccX := float32(math.Float64frombits(a.curAccX.Load()))
-		prevAccY := float32(math.Float64frombits(a.curAccY.Load()))
-		prevAccZ := float32(math.Float64frombits(a.curAccZ.Load()))
+		prevRotX := float32(math.Float64frombits(bank.curRotX.Load()))
+		prevRotY := float32(math.Float64frombits(bank.curRotY.Load()))
+		prevRotZ := float32(math.Float64frombits(bank.curRotZ.Load()))
+		prevAccX := float32(math.Float64frombits(bank.curAccX.Load()))
+		prevAccY := float32(math.Float64frombits(bank.curAccY.Load()))
+		prevAccZ := float32(math.Float64frombits(bank.curAccZ.Load()))
 
 		if frame.RotX != prevRotX || frame.RotY != prevRotY || frame.RotZ != prevRotZ ||
 			frame.AccX != prevAccX || frame.AccY != prevAccY || frame.AccZ != prevAccZ ||
-			a.lastSensorChangeTs.Load() == 0 {
-			a.lastSensorChangeTs.Store(recvTs)
+			bank.lastSensorChangeTs.Load() == 0 {
+			bank.lastSensorChangeTs.Store(recvTs)
 		}
 
 		// Store latest raw gyro/accel/quaternion for calibration wizard
-		a.curRotX.Store(math.Float64bits(float64(frame.RotX)))
-		a.curRotY.Store(math.Float64bits(float64(frame.RotY)))
-		a.curRotZ.Store(math.Float64bits(float64(frame.RotZ)))
-		a.curAccX.Store(math.Float64bits(float64(frame.AccX)))
-		a.curAccY.Store(math.Float64bits(float64(frame.AccY)))
-		a.curAccZ.Store(math.Float64bits(float64(frame.AccZ)))
-		a.curQx.Store(math.Float64bits(float64(frame.Qx)))
-		a.curQy.Store(math.Float64bits(float64(frame.Qy)))
-		a.curQz.Store(math.Float64bits(float64(frame.Qz)))
-		a.curQw.Store(math.Float64bits(float64(frame.Qw)))
+		bank.curRotX.Store(math.Float64bits(float64(frame.RotX)))
+		bank.curRotY.Store(math.Float64bits(float64(frame.RotY)))
+		bank.curRotZ.Store(math.Float64bits(float64(frame.RotZ)))
+		bank.curAccX.Store(math.Float64bits(float64(frame.AccX)))
+		bank.curAccY.Store(math.Float64bits(float64(frame.AccY)))
+		bank.curAccZ.Store(math.Float64bits(float64(frame.AccZ)))
+		bank.curQx.Store(math.Float64bits(float64(frame.Qx)))
+		bank.curQy.Store(math.Float64bits(float64(frame.Qy)))
+		bank.curQz.Store(math.Float64bits(float64(frame.Qz)))
+		bank.curQw.Store(math.Float64bits(float64(frame.Qw)))
 
 		// Record raw frame in rolling 20-frame debug buffer
-		a.recentFramesMu.Lock()
-		a.recentFrames = append(a.recentFrames, RawLogFrame{
+		bank.recentFramesMu.Lock()
+		bank.recentFrames = append(bank.recentFrames, RawLogFrame{
 			Timestamp: frame.Timestamp,
 			RotX:      frame.RotX,
 			RotY:      frame.RotY,
@@ -1329,34 +1422,34 @@ func (a *App) startup(ctx context.Context) {
 			Qz:        frame.Qz,
 			Qw:        frame.Qw,
 		})
-		if len(a.recentFrames) > 20 {
-			a.recentFrames = a.recentFrames[len(a.recentFrames)-20:]
+		if len(bank.recentFrames) > 20 {
+			bank.recentFrames = bank.recentFrames[len(bank.recentFrames)-20:]
 		}
-		a.recentFramesMu.Unlock()
+		bank.recentFramesMu.Unlock()
 
 		// If calibration gesture recording is active, capture every 60 Hz frame
-		if a.isCapturing.Load() {
-			a.captureMu.Lock()
-			a.captureBuffer = append(a.captureBuffer, captureSample{
+		if bank.isCapturing.Load() {
+			bank.captureMu.Lock()
+			bank.captureBuffer = append(bank.captureBuffer, captureSample{
 				rot: [3]float64{float64(frame.RotX), float64(frame.RotY), float64(frame.RotZ)},
 				acc: [3]float64{float64(frame.AccX), float64(frame.AccY), float64(frame.AccZ)},
 			})
-			a.captureMu.Unlock()
+			bank.captureMu.Unlock()
 		}
 
 		// Apply active or preview calibration matrix to the frame
-		a.previewMu.RLock()
-		usePrev := a.usePreview
-		prevMat := a.previewMatrix
-		a.previewMu.RUnlock()
+		bank.previewMu.RLock()
+		usePrev := bank.usePreview
+		prevMat := bank.previewMatrix
+		bank.previewMu.RUnlock()
 
 		var mat [3][3]float64
 		if usePrev {
 			mat = prevMat
 		} else {
-			a.matrixMu.RLock()
-			mat = a.activeMatrix
-			a.matrixMu.RUnlock()
+			bank.matrixMu.RLock()
+			mat = bank.activeMatrix
+			bank.matrixMu.RUnlock()
 		}
 
 		// Automatic resting zero-bias refinement:
@@ -1365,39 +1458,39 @@ func (a *App) startup(ctx context.Context) {
 		accMag := math.Sqrt(float64(frame.AccX*frame.AccX + frame.AccY*frame.AccY + frame.AccZ*frame.AccZ))
 		rawGyroSpeed := math.Sqrt(float64(frame.RotX*frame.RotX + frame.RotY*frame.RotY + frame.RotZ*frame.RotZ))
 
-		if !a.isCapturing.Load() && accMag >= 0.92 && accMag <= 1.08 && rawGyroSpeed < 0.35 {
-			stillFrames++
-			stillSumGx += float64(frame.RotX)
-			stillSumGy += float64(frame.RotY)
-			stillSumGz += float64(frame.RotZ)
-			if stillFrames >= 60 { // 1 full second of stationary rest
-				avgGx := stillSumGx / 60.0
-				avgGy := stillSumGy / 60.0
-				avgGz := stillSumGz / 60.0
-				stillFrames = 0
-				stillSumGx = 0
-				stillSumGy = 0
-				stillSumGz = 0
+		if !bank.isCapturing.Load() && accMag >= 0.92 && accMag <= 1.08 && rawGyroSpeed < 0.35 {
+			bank.stillFrames++
+			bank.stillSumGx += float64(frame.RotX)
+			bank.stillSumGy += float64(frame.RotY)
+			bank.stillSumGz += float64(frame.RotZ)
+			if bank.stillFrames >= 60 { // 1 full second of stationary rest
+				avgGx := bank.stillSumGx / 60.0
+				avgGy := bank.stillSumGy / 60.0
+				avgGz := bank.stillSumGz / 60.0
+				bank.stillFrames = 0
+				bank.stillSumGx = 0
+				bank.stillSumGy = 0
+				bank.stillSumGz = 0
 
 				const alpha = 0.05
-				a.biasMu.Lock()
-				a.gyroBias[0] += alpha * (avgGx - a.gyroBias[0])
-				a.gyroBias[1] += alpha * (avgGy - a.gyroBias[1])
-				a.gyroBias[2] += alpha * (avgGz - a.gyroBias[2])
-				a.biasMu.Unlock()
+				bank.biasMu.Lock()
+				bank.gyroBias[0] += alpha * (avgGx - bank.gyroBias[0])
+				bank.gyroBias[1] += alpha * (avgGy - bank.gyroBias[1])
+				bank.gyroBias[2] += alpha * (avgGz - bank.gyroBias[2])
+				bank.biasMu.Unlock()
 			}
 		} else {
-			stillFrames = 0
-			stillSumGx = 0
-			stillSumGy = 0
-			stillSumGz = 0
+			bank.stillFrames = 0
+			bank.stillSumGx = 0
+			bank.stillSumGy = 0
+			bank.stillSumGz = 0
 		}
 
 		// Subtract gyro zero-bias before applying calibration matrix M (§1, §2 of spec)
-		a.biasMu.RLock()
-		bx, by, bz := a.gyroBias[0], a.gyroBias[1], a.gyroBias[2]
-		calGravity := a.calGravity
-		a.biasMu.RUnlock()
+		bank.biasMu.RLock()
+		bx, by, bz := bank.gyroBias[0], bank.gyroBias[1], bank.gyroBias[2]
+		calGravity := bank.calGravity
+		bank.biasMu.RUnlock()
 
 		rawRx := float64(frame.RotX) - bx
 		rawRy := float64(frame.RotY) - by
@@ -1407,30 +1500,30 @@ func (a *App) startup(ctx context.Context) {
 		// Gyro goes through the gesture calibration matrix; the accelerometer goes through
 		// a matrix derived from it plus the learned gyro↔accel axis relation, so PadTest's
 		// Madgwick sees a gravity vector that agrees with the gyro (see sensoralign.go).
-		align.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
+		bank.align.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
 		if wz := a.getWizardAlign(); wz != nil {
 			wz.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
 		}
-		sf, sfKnown := align.Frame()
+		sf, sfKnown := bank.align.Frame()
 		accMat, yawSign := buildOutputMapping(mat, sf, calGravity)
 
-		// Pull the integrated angle onto the phone's own attitude (see attitudeanchor.go).
+		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).
 		anchorDt := anchorDefaultDtSec
-		if prevAnchorTsUs > 0 && frame.TimestampUs > prevAnchorTsUs {
-			if d := float64(frame.TimestampUs-prevAnchorTsUs) / 1e6; d >= 0.004 && d <= 0.1 {
+		if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
+			if d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6; d >= 0.004 && d <= 0.1 {
 				anchorDt = d
 			} else if d > 1.0 {
-				anchor.Reset() // reconnect / page reload: attitude reference restarted
+				bank.anchor.Reset() // reconnect / page reload: attitude reference restarted
 			}
-		} else if frame.TimestampUs < prevAnchorTsUs {
-			anchor.Reset()
+		} else if frame.TimestampUs < bank.prevAnchorTsUs {
+			bank.anchor.Reset()
 		}
-		prevAnchorTsUs = frame.TimestampUs
+		bank.prevAnchorTsUs = frame.TimestampUs
 		if sfKnown {
 			pk := [3]float64{rawRx * alignDegToRad, rawRy * alignDegToRad, rawRz * alignDegToRad}
 			dev := mulVec3(transpose3(sf.Q), pk)
 			ref := quat{float64(frame.Qw), float64(frame.Qx), float64(frame.Qy), float64(frame.Qz)}
-			corr := mulVec3(sf.Q, anchor.Correction(dev, ref, anchorDt))
+			corr := mulVec3(sf.Q, bank.anchor.Correction(dev, ref, anchorDt))
 			rawRx += corr[0] / alignDegToRad
 			rawRy += corr[1] / alignDegToRad
 			rawRz += corr[2] / alignDegToRad
@@ -1496,22 +1589,22 @@ func (a *App) startup(ctx context.Context) {
 		// When stationary: alpha = 0.04 for rock-solid stability and zero trembling in PadTest.
 		// When moving: alpha = 0.35 for responsive gravity tracking with minimal lag.
 		// Never artificially force [0, -1, 0] which ruined tilted holding angles.
-		if !accFilterInit {
-			accFiltered = [3]float64{ax, ay, az}
-			accFilterInit = true
+		if !bank.accFilterInit {
+			bank.accFiltered = [3]float64{ax, ay, az}
+			bank.accFilterInit = true
 		}
 
 		alpha := 0.35
 		if isStationary {
 			alpha = 0.04
 		}
-		accFiltered[0] += alpha * (ax - accFiltered[0])
-		accFiltered[1] += alpha * (ay - accFiltered[1])
-		accFiltered[2] += alpha * (az - accFiltered[2])
+		bank.accFiltered[0] += alpha * (ax - bank.accFiltered[0])
+		bank.accFiltered[1] += alpha * (ay - bank.accFiltered[1])
+		bank.accFiltered[2] += alpha * (az - bank.accFiltered[2])
 
-		finalAx := float32(accFiltered[0])
-		finalAy := float32(accFiltered[1])
-		finalAz := float32(accFiltered[2])
+		finalAx := float32(bank.accFiltered[0])
+		finalAy := float32(bank.accFiltered[1])
+		finalAz := float32(bank.accFiltered[2])
 
 		corrected := frame
 		corrected.RotX = ahrsRx
@@ -1523,17 +1616,17 @@ func (a *App) startup(ctx context.Context) {
 
 		// Update Madgwick AHRS filter.
 		var curP, curR, curY float64
-		if a.ahrs != nil {
-			q0, q1, q2, q3 := a.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now())
-			p, r, y := a.ahrs.GetEulerAngles()
+		if bank.ahrs != nil {
+			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now())
+			p, r, y := bank.ahrs.GetEulerAngles()
 			curP, curR, curY = p, r, y
-			a.curPitch.Store(math.Float64bits(p))
-			a.curRoll.Store(math.Float64bits(r))
-			a.curYaw.Store(math.Float64bits(y))
-			a.curAhrsQ0.Store(math.Float64bits(float64(q0)))
-			a.curAhrsQ1.Store(math.Float64bits(float64(q1)))
-			a.curAhrsQ2.Store(math.Float64bits(float64(q2)))
-			a.curAhrsQ3.Store(math.Float64bits(float64(q3)))
+			bank.curPitch.Store(math.Float64bits(p))
+			bank.curRoll.Store(math.Float64bits(r))
+			bank.curYaw.Store(math.Float64bits(y))
+			bank.curAhrsQ0.Store(math.Float64bits(float64(q0)))
+			bank.curAhrsQ1.Store(math.Float64bits(float64(q1)))
+			bank.curAhrsQ2.Store(math.Float64bits(float64(q2)))
+			bank.curAhrsQ3.Store(math.Float64bits(float64(q3)))
 
 			var dsuClients int
 			if a.dsuSrv != nil {
@@ -1617,10 +1710,13 @@ func (a *App) startup(ctx context.Context) {
 		}
 		disconnectMu.Unlock()
 
-		a.hasClient.Store(true)
+		// This callback fires only for phone WebSocket connections -- USB has
+		// its own separate lifecycle handling in usbdevice.go -- so it always
+		// targets phoneBank directly, never activeBank().
+		a.phoneBank.hasClient.Store(true)
 		a.clientAddr = remoteAddr
-		if a.connectedAt.IsZero() {
-			a.connectedAt = time.Now()
+		if a.phoneBank.connectedAt.IsZero() {
+			a.phoneBank.connectedAt = time.Now()
 		}
 		a.emitStateChange()
 		if a.ctx != nil {
@@ -1652,8 +1748,8 @@ func (a *App) startup(ctx context.Context) {
 		disconnectTimer = time.AfterFunc(2500*time.Millisecond, func() {
 			_, c, _ := srv.PacketStats()
 			if c <= 0 {
-				a.hasClient.Store(false)
-				a.connectedAt = time.Time{}
+				a.phoneBank.hasClient.Store(false)
+				a.phoneBank.connectedAt = time.Time{}
 				a.deviceName.Store("Controller")
 				a.emitStateChange()
 				if a.ctx != nil {
@@ -1681,7 +1777,7 @@ func (a *App) startup(ctx context.Context) {
 			a.deviceName.Store(device)
 			a.emitStateChange()
 			if device == "iPhone" || device == "iPad" {
-				a.align.SeedGuess(iosSensorFrame())
+				a.phoneBank.align.SeedGuess(iosSensorFrame())
 			}
 		}
 	}
@@ -1856,7 +1952,7 @@ func (a *App) startup(ctx context.Context) {
 					dsuCount = len(dsuClients)
 				}
 				_ = json.NewEncoder(w).Encode(map[string]any{
-					"device_connected": a.hasClient.Load(),
+					"device_connected": a.activeBank().hasClient.Load(),
 					"dsu_clients":      dsuCount,
 					"dsu_client_list":  dsuClients,
 				})
@@ -1898,7 +1994,7 @@ func (a *App) startup(ctx context.Context) {
 					"type":             "sync",
 					"theme":            curT,
 					"lang":             curL,
-					"device_connected": a.hasClient.Load(),
+					"device_connected": a.activeBank().hasClient.Load(),
 					"dsu_clients":      dsuCount,
 					"dsu_client_list":  dsuClients,
 				})
@@ -1957,14 +2053,15 @@ func (a *App) startup(ctx context.Context) {
 		ticker := time.NewTicker(66 * time.Millisecond)
 		defer ticker.Stop()
 		for range ticker.C {
-			if a.hasClient.Load() {
+			bank := a.activeBank()
+			if bank.hasClient.Load() {
 				// Sensor silence & frozen data watchdog (2.0 seconds)
 				if a.silenceDisconnect.Load() && a.srv != nil {
 					nowMs := time.Now().UnixMilli()
-					silenceDuration := nowMs - a.lastMotionRecvTs.Load()
-					frozenDuration := nowMs - a.lastSensorChangeTs.Load()
+					silenceDuration := nowMs - bank.lastMotionRecvTs.Load()
+					frozenDuration := nowMs - bank.lastSensorChangeTs.Load()
 					// Grace period of 2 seconds after initial connection
-					if time.Since(a.connectedAt) > 2*time.Second {
+					if time.Since(bank.connectedAt) > 2*time.Second {
 						if silenceDuration > 2000 || frozenDuration > 2000 {
 							a.srv.DisconnectAllClients()
 						}
@@ -1973,11 +2070,11 @@ func (a *App) startup(ctx context.Context) {
 
 				a.emitStateChange()
 				// Only send fallback heartbeat to 3D window if no live motion packet arrived recently (> 150ms)
-				if time.Now().UnixMilli()-a.lastMotionRecvTs.Load() > 150 {
-					q0 := float32(math.Float64frombits(a.curAhrsQ0.Load()))
-					q1 := float32(math.Float64frombits(a.curAhrsQ1.Load()))
-					q2 := float32(math.Float64frombits(a.curAhrsQ2.Load()))
-					q3 := float32(math.Float64frombits(a.curAhrsQ3.Load()))
+				if time.Now().UnixMilli()-bank.lastMotionRecvTs.Load() > 150 {
+					q0 := float32(math.Float64frombits(bank.curAhrsQ0.Load()))
+					q1 := float32(math.Float64frombits(bank.curAhrsQ1.Load()))
+					q2 := float32(math.Float64frombits(bank.curAhrsQ2.Load()))
+					q3 := float32(math.Float64frombits(bank.curAhrsQ3.Load()))
 					a.liveDebugMu.RLock()
 					numDebug := len(a.liveDebugClients)
 					a.liveDebugMu.RUnlock()
@@ -2085,19 +2182,20 @@ func (a *App) emitStateChange() {
 
 // GetState returns the current unified application state
 func (a *App) GetState() AppState {
+	bank := a.activeBank()
 	status := "offline"
 	hz := 0.0
 	connectedDuration := "00:00:00"
 
-	if a.hasClient.Load() {
+	if bank.hasClient.Load() {
 		if a.isPaused.Load() {
 			status = "paused"
 		} else {
 			status = "online"
 		}
 
-		if !a.connectedAt.IsZero() {
-			dur := time.Since(a.connectedAt)
+		if !bank.connectedAt.IsZero() {
+			dur := time.Since(bank.connectedAt)
 			h := int(dur.Hours())
 			m := int(dur.Minutes()) % 60
 			s := int(dur.Seconds()) % 60
@@ -2110,10 +2208,10 @@ func (a *App) GetState() AppState {
 		}
 	}
 
-	a.profilesMu.RLock()
-	profilesCopy := a.profiles
-	activeSlot := a.activeSlot
-	a.profilesMu.RUnlock()
+	bank.profilesMu.RLock()
+	profilesCopy := bank.profiles
+	activeSlot := bank.activeSlot
+	bank.profilesMu.RUnlock()
 
 	profilesList := make([]ProfileView, 6)
 	for i := 0; i < 6; i++ {
@@ -2123,14 +2221,14 @@ func (a *App) GetState() AppState {
 	}
 
 	// Determine which matrix is currently effective: preview during wizard, or saved active matrix.
-	a.previewMu.RLock()
-	usePrev := a.usePreview
-	effectiveMat := a.previewMatrix
-	a.previewMu.RUnlock()
+	bank.previewMu.RLock()
+	usePrev := bank.usePreview
+	effectiveMat := bank.previewMatrix
+	bank.previewMu.RUnlock()
 	if !usePrev {
-		a.matrixMu.RLock()
-		effectiveMat = a.activeMatrix
-		a.matrixMu.RUnlock()
+		bank.matrixMu.RLock()
+		effectiveMat = bank.activeMatrix
+		bank.matrixMu.RUnlock()
 	}
 
 	devName := "Controller"
@@ -2147,31 +2245,31 @@ func (a *App) GetState() AppState {
 		Hz:            hz,
 		PingMs:        3,
 		ConnectedTime: connectedDuration,
-		Pitch:         math.Float64frombits(a.curPitch.Load()),
-		Roll:          math.Float64frombits(a.curRoll.Load()),
-		Yaw:           math.Float64frombits(a.curYaw.Load()),
+		Pitch:         math.Float64frombits(bank.curPitch.Load()),
+		Roll:          math.Float64frombits(bank.curRoll.Load()),
+		Yaw:           math.Float64frombits(bank.curYaw.Load()),
 		IP:            a.primaryIP,
 		GamepadURL:    a.gamepadURL,
 		SetupURL:      a.setupURL,
 		QRCode:        a.qrCodePNG,
 		SetupQRCode:   a.setupQRPNG,
-		RawRotX:       math.Float64frombits(a.curRotX.Load()),
-		RawRotY:       math.Float64frombits(a.curRotY.Load()),
-		RawRotZ:       math.Float64frombits(a.curRotZ.Load()),
-		RawAccX:       math.Float64frombits(a.curAccX.Load()),
-		RawAccY:       math.Float64frombits(a.curAccY.Load()),
-		RawAccZ:       math.Float64frombits(a.curAccZ.Load()),
-		Qx:            math.Float64frombits(a.curQx.Load()),
-		Qy:            math.Float64frombits(a.curQy.Load()),
-		Qz:            math.Float64frombits(a.curQz.Load()),
-		Qw:            math.Float64frombits(a.curQw.Load()),
+		RawRotX:       math.Float64frombits(bank.curRotX.Load()),
+		RawRotY:       math.Float64frombits(bank.curRotY.Load()),
+		RawRotZ:       math.Float64frombits(bank.curRotZ.Load()),
+		RawAccX:       math.Float64frombits(bank.curAccX.Load()),
+		RawAccY:       math.Float64frombits(bank.curAccY.Load()),
+		RawAccZ:       math.Float64frombits(bank.curAccZ.Load()),
+		Qx:            math.Float64frombits(bank.curQx.Load()),
+		Qy:            math.Float64frombits(bank.curQy.Load()),
+		Qz:            math.Float64frombits(bank.curQz.Load()),
+		Qw:            math.Float64frombits(bank.curQw.Load()),
 		Profiles:      profilesList,
 		ActiveSlot:    activeSlot,
 		ActiveMatrix:  effectiveMat,
-		AhrsQ0:        math.Float64frombits(a.curAhrsQ0.Load()),
-		AhrsQ1:        math.Float64frombits(a.curAhrsQ1.Load()),
-		AhrsQ2:        math.Float64frombits(a.curAhrsQ2.Load()),
-		AhrsQ3:        math.Float64frombits(a.curAhrsQ3.Load()),
+		AhrsQ0:        math.Float64frombits(bank.curAhrsQ0.Load()),
+		AhrsQ1:        math.Float64frombits(bank.curAhrsQ1.Load()),
+		AhrsQ2:        math.Float64frombits(bank.curAhrsQ2.Load()),
+		AhrsQ3:        math.Float64frombits(bank.curAhrsQ3.Load()),
 		FirstLaunch:   !a.firstLaunchDone,
 		HideAuthor:    a.hideAuthor,
 		DsuClients: func() int {
@@ -2187,6 +2285,20 @@ func (a *App) GetState() AppState {
 			return nil
 		}(),
 		InputMode: a.GetInputMode(),
+		UsbConnected: func() bool {
+			if a.usbMgr != nil {
+				connected, _ := a.usbMgr.Status()
+				return connected
+			}
+			return false
+		}(),
+		UsbPort: func() string {
+			if a.usbMgr != nil {
+				_, port := a.usbMgr.Status()
+				return port
+			}
+			return ""
+		}(),
 	}
 }
 
@@ -2211,21 +2323,23 @@ func (a *App) TogglePause() AppState {
 	return a.GetState()
 }
 
-// GetProfiles returns current 6 profile slots
+// GetProfiles returns current 6 profile slots for the active input mode
 func (a *App) GetProfiles() []ProfileView {
-	a.profilesMu.RLock()
-	defer a.profilesMu.RUnlock()
+	bank := a.activeBank()
+	bank.profilesMu.RLock()
+	defer bank.profilesMu.RUnlock()
 
 	result := make([]ProfileView, 6)
 	for i := 0; i < 6; i++ {
-		p := a.profiles[i]
-		p.Active = (i == a.activeSlot)
+		p := bank.profiles[i]
+		p.Active = (i == bank.activeSlot)
 		result[i] = toProfileView(p)
 	}
 	return result
 }
 
-// SaveProfile overwrites a profile slot (slot 0-5) with the given name, device, icon, and matrix.
+// SaveProfile overwrites a profile slot (slot 0-5) with the given name, device, icon, and matrix,
+// on the active input mode's own isolated profile bank.
 // The matrix must be a valid signed-permutation matrix with determinant -1.
 func (a *App) SaveProfile(slot int, name string, device string, icon string, matrix [3][3]float64) string {
 	if slot < 0 || slot > 5 {
@@ -2247,35 +2361,37 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		return fmt.Sprintf("invalid matrix: determinant is %.4f, must be -1.0", det)
 	}
 
-	a.profilesMu.Lock()
-	gravity := a.profiles[slot].CalGravity
-	sensorFrame := a.profiles[slot].SensorFrame
-	a.profilesMu.Unlock()
+	bank := a.activeBank()
+
+	bank.profilesMu.Lock()
+	gravity := bank.profiles[slot].CalGravity
+	sensorFrame := bank.profiles[slot].SensorFrame
+	bank.profilesMu.Unlock()
 
 	// Commit whatever the wizard staged during this session (rest step / axis-align),
 	// if any — never invent or assume either value here (§3: no magic, only what the
 	// wizard actually measured this run, otherwise keep the profile's existing data).
-	a.wizardAlignMu.Lock()
-	if a.wizardGravityValid {
-		gravity = a.wizardGravity
-		a.wizardGravityValid = false
+	bank.wizardAlignMu.Lock()
+	if bank.wizardGravityValid {
+		gravity = bank.wizardGravity
+		bank.wizardGravityValid = false
 	}
-	if a.wizardAlign != nil {
-		if f, known := a.wizardAlign.Frame(); known {
+	if bank.wizardAlign != nil {
+		if f, known := bank.wizardAlign.Frame(); known {
 			cp := f
 			sensorFrame = &cp
 		}
 	}
-	a.wizardAlignMu.Unlock()
+	bank.wizardAlignMu.Unlock()
 
-	a.profilesMu.Lock()
-	a.profiles[slot] = Profile{
+	bank.profilesMu.Lock()
+	bank.profiles[slot] = Profile{
 		Slot:        slot,
 		Name:        name,
 		Device:      device,
 		Icon:        icon,
 		Matrix:      matrix,
-		Active:      (slot == a.activeSlot),
+		Active:      (slot == bank.activeSlot),
 		CalGravity:  gravity,
 		SensorFrame: sensorFrame,
 		// Reaching Save means the wizard's axis-align step already confirmed a
@@ -2283,16 +2399,16 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		// definitely meets the current pipeline's requirements.
 		Version: CurrentProfileVersion,
 	}
-	a.profilesMu.Unlock()
+	bank.profilesMu.Unlock()
 
 	// If this slot is currently active, push the new matrix into the live path immediately.
-	if slot == a.activeSlot {
-		a.matrixMu.Lock()
-		a.activeMatrix = matrix
-		a.matrixMu.Unlock()
-		a.applyProfileGravity(slot)
-		if a.ahrs != nil {
-			a.ahrs.Reset()
+	if slot == bank.activeSlot {
+		bank.matrixMu.Lock()
+		bank.activeMatrix = matrix
+		bank.matrixMu.Unlock()
+		a.applyProfileGravity(bank, slot)
+		if bank.ahrs != nil {
+			bank.ahrs.Reset()
 		}
 	}
 
@@ -2302,116 +2418,121 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 }
 
 // applyProfileGravity makes the profile's own rest gravity the live reference. Profiles
-// calibrated before gravity was stored per profile keep the global value.
-func (a *App) applyProfileGravity(slot int) {
-	if slot < 0 || slot >= len(a.profiles) {
+// calibrated before gravity was stored per profile keep the bank's existing value.
+func (a *App) applyProfileGravity(bank *motionBank, slot int) {
+	if slot < 0 || slot >= len(bank.profiles) {
 		return
 	}
-	a.profilesMu.RLock()
-	g := a.profiles[slot].CalGravity
-	a.profilesMu.RUnlock()
+	bank.profilesMu.RLock()
+	g := bank.profiles[slot].CalGravity
+	bank.profilesMu.RUnlock()
 	if norm3(g) > 0.3 {
-		a.biasMu.Lock()
-		a.calGravity = g
-		a.biasMu.Unlock()
+		bank.biasMu.Lock()
+		bank.calGravity = g
+		bank.biasMu.Unlock()
 	}
 }
 
-// applyProfileSensorFrame loads the profile's learned axis relation into the aligner.
-// Without one the aligner relearns from a few tilts and stores the result there.
+// applyProfileSensorFrame loads the profile's learned axis relation into the bank's
+// aligner. Without one the aligner relearns from a few tilts and stores the result there.
 //
-// Switching profile mid-session (phone stays connected, no new OnClientDevice event)
+// Switching profile mid-session (device stays connected, no new OnClientDevice event)
 // must not silently fall back to the identity guess for a device we already know is
 // an iPhone/iPad: that guess is wrong for iOS, and until physics re-confirms it
 // PadTest's Madgwick fights the mismatched axes (reported as a wildly skewed pad
 // after switching to a profile that had never been through the axis wizard).
-func (a *App) applyProfileSensorFrame(slot int) {
-	if a.align == nil {
+func (a *App) applyProfileSensorFrame(bank *motionBank, slot int) {
+	if bank.align == nil {
 		return
 	}
 	var f *sensorFrame
-	a.profilesMu.RLock()
-	if slot >= 0 && slot < len(a.profiles) {
-		f = a.profiles[slot].SensorFrame
+	bank.profilesMu.RLock()
+	if slot >= 0 && slot < len(bank.profiles) {
+		f = bank.profiles[slot].SensorFrame
 	}
-	a.profilesMu.RUnlock()
+	bank.profilesMu.RUnlock()
 	if f != nil {
-		a.align.SetFrame(*f, true)
+		bank.align.SetFrame(*f, true)
 		return
 	}
 	guess := sensorFrame{Q: identity3(), H: -1}
 	if dn, _ := a.deviceName.Load().(string); dn == "iPhone" || dn == "iPad" {
 		guess = iosSensorFrame()
 	}
-	a.align.SetFrame(guess, false)
+	bank.align.SetFrame(guess, false)
 }
 
-// getWizardAlign returns the calibration wizard's scratch aligner, or nil when no
-// axis-align step is in progress (see wizardAlign field doc).
+// getWizardAlign returns the active bank's calibration wizard scratch aligner, or nil
+// when no axis-align step is in progress (see wizardAlign field doc).
 func (a *App) getWizardAlign() *sensorAligner {
-	a.wizardAlignMu.RLock()
-	defer a.wizardAlignMu.RUnlock()
-	return a.wizardAlign
+	bank := a.activeBank()
+	bank.wizardAlignMu.RLock()
+	defer bank.wizardAlignMu.RUnlock()
+	return bank.wizardAlign
 }
 
-// initProfileSensorFrame hooks the live aligner to the active profile. A frame learned
-// by older builds (global sensor_frame.json) is migrated into the active profile once;
-// this is a one-time explicit upgrade, not the ongoing background writes that used to
-// happen here (removed: see wizardAlign).
-func (a *App) initProfileSensorFrame() {
-	legacy, legacyKnown := a.align.Frame()
-	a.profilesMu.Lock()
-	migrate := legacyKnown && a.activeSlot >= 0 && a.activeSlot < len(a.profiles) && a.profiles[a.activeSlot].SensorFrame == nil
+// initProfileSensorFrame hooks bank's live aligner to its active profile. A frame
+// learned by older builds (global sensor_frame.json) is migrated into the active
+// profile once; this is a one-time explicit upgrade, not the ongoing background
+// writes that used to happen here (removed: see wizardAlign). Called once per bank
+// at startup, since each bank's aligner and profiles are fully independent.
+func (a *App) initProfileSensorFrame(bank *motionBank, dir string) {
+	legacy, legacyKnown := bank.align.Frame()
+	bank.profilesMu.Lock()
+	migrate := legacyKnown && bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && bank.profiles[bank.activeSlot].SensorFrame == nil
 	if migrate {
 		// Seed only — an unattended carry-over from the old global file is not the
 		// same thing as this profile having gone through the current wizard's own
 		// axis-align step, so it must NOT bump Version: leave it Outdated() until
 		// the user actually confirms it there (§3/§5: no silent "trust me" upgrades).
-		a.profiles[a.activeSlot].SensorFrame = &legacy
+		bank.profiles[bank.activeSlot].SensorFrame = &legacy
 	}
-	slot := a.activeSlot
-	a.profilesMu.Unlock()
+	slot := bank.activeSlot
+	bank.profilesMu.Unlock()
 	if migrate {
-		a.saveProfiles()
+		a.saveProfilesFrom(bank, dir)
 	}
-	a.applyProfileSensorFrame(slot)
+	a.applyProfileSensorFrame(bank, slot)
 }
 
-// SetActiveProfile selects the profile at the given slot (-1 = identity/none)
-// Outdated profiles are still switchable — the wizard shouldn't be forced on someone
-// who's just picking a slot to play with. The outdated warning (banner, highlighted
-// Calibrate button) stays visible once it's active instead of gating the switch.
+// SetActiveProfile selects the profile at the given slot (-1 = identity/none) on the
+// active input mode's own bank. Outdated profiles are still switchable — the wizard
+// shouldn't be forced on someone who's just picking a slot to play with. The outdated
+// warning (banner, highlighted Calibrate button) stays visible once it's active
+// instead of gating the switch.
 func (a *App) SetActiveProfile(slot int) string {
 	if slot < -1 || slot > 5 {
 		return "invalid slot"
 	}
 
-	a.profilesMu.Lock()
+	bank := a.activeBank()
+
+	bank.profilesMu.Lock()
 	// Clear previous active flag
-	for i := range a.profiles {
-		a.profiles[i].Active = false
+	for i := range bank.profiles {
+		bank.profiles[i].Active = false
 	}
-	a.activeSlot = slot
+	bank.activeSlot = slot
 	if slot >= 0 {
-		a.profiles[slot].Active = true
+		bank.profiles[slot].Active = true
 	}
-	a.profilesMu.Unlock()
+	bank.profilesMu.Unlock()
 
 	// Update active matrix
-	a.matrixMu.Lock()
+	bank.matrixMu.Lock()
 	if slot >= 0 {
-		a.profilesMu.RLock()
-		a.activeMatrix = a.profiles[slot].Matrix
-		a.profilesMu.RUnlock()
+		bank.profilesMu.RLock()
+		bank.activeMatrix = bank.profiles[slot].Matrix
+		bank.profilesMu.RUnlock()
 	} else {
-		a.activeMatrix = defaultMatrix3x3()
+		bank.activeMatrix = defaultMatrix3x3()
 	}
-	a.matrixMu.Unlock()
-	a.applyProfileGravity(slot)
-	a.applyProfileSensorFrame(slot)
+	bank.matrixMu.Unlock()
+	a.applyProfileGravity(bank, slot)
+	a.applyProfileSensorFrame(bank, slot)
 
-	if a.ahrs != nil {
-		a.ahrs.Reset()
+	if bank.ahrs != nil {
+		bank.ahrs.Reset()
 	}
 
 	a.saveProfiles()
@@ -2419,41 +2540,44 @@ func (a *App) SetActiveProfile(slot int) string {
 	return "ok"
 }
 
-// PreviewMatrix temporarily overrides the active calibration matrix for the 3D viewport.
-// Call this when the calibration wizard shows the confirm or manual screen so the user
-// can see exactly how the candidate matrix behaves before saving.
+// PreviewMatrix temporarily overrides the active bank's calibration matrix for the 3D
+// viewport. Call this when the calibration wizard shows the confirm or manual screen
+// so the user can see exactly how the candidate matrix behaves before saving.
 func (a *App) PreviewMatrix(matrix [3][3]float64) {
-	a.previewMu.Lock()
-	a.previewMatrix = matrix
-	a.usePreview = true
-	a.previewMu.Unlock()
-	if a.ahrs != nil {
-		a.ahrs.Reset()
+	bank := a.activeBank()
+	bank.previewMu.Lock()
+	bank.previewMatrix = matrix
+	bank.usePreview = true
+	bank.previewMu.Unlock()
+	if bank.ahrs != nil {
+		bank.ahrs.Reset()
 	}
 }
 
 // ClearPreview removes the temporary preview matrix and reverts to the saved activeMatrix.
 // Call this when the calibration wizard is closed or cancelled.
 func (a *App) ClearPreview() {
-	a.previewMu.Lock()
-	a.usePreview = false
-	a.previewMu.Unlock()
+	bank := a.activeBank()
+	bank.previewMu.Lock()
+	bank.usePreview = false
+	bank.previewMu.Unlock()
 	// Discard the wizard's scratch axis-align attempt too: whatever it found either
 	// was already captured into the profile by SaveProfile, or the wizard was
 	// cancelled and it must not linger and leak into some later, unrelated Save.
-	a.wizardAlignMu.Lock()
-	a.wizardAlign = nil
-	a.wizardGravityValid = false
-	a.wizardAlignMu.Unlock()
-	if a.ahrs != nil {
-		a.ahrs.Reset()
+	bank.wizardAlignMu.Lock()
+	bank.wizardAlign = nil
+	bank.wizardGravityValid = false
+	bank.wizardAlignMu.Unlock()
+	if bank.ahrs != nil {
+		bank.ahrs.Reset()
 	}
 }
 
-// ResetAHRS zeroes the 3D orientation filter
+// ResetAHRS zeroes the active bank's 3D orientation filter
 func (a *App) ResetAHRS() {
-	if a.ahrs != nil {
-		a.ahrs.Reset()
+	bank := a.activeBank()
+	if bank.ahrs != nil {
+		bank.ahrs.Reset()
 		a.broadcastLiveDebug(1, 0, 0, 0)
 	}
 }
@@ -2521,7 +2645,7 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 	}
 
 	msg := liveDebugMsg{
-		DeviceConnected: a.hasClient.Load(),
+		DeviceConnected: a.activeBank().hasClient.Load(),
 		Q0:              q0,
 		Q1:              q1,
 		Q2:              q2,
@@ -2751,9 +2875,9 @@ func (a *App) GetAppSettings() AppSettings {
 	hideAuthor := a.hideAuthor
 	a.themeMu.RUnlock()
 
-	a.profilesMu.RLock()
-	slot := a.activeSlot
-	a.profilesMu.RUnlock()
+	a.phoneBank.profilesMu.RLock()
+	slot := a.phoneBank.activeSlot
+	a.phoneBank.profilesMu.RUnlock()
 
 	dsuP := a.dsuPort
 	if dsuP == 0 {
@@ -2987,9 +3111,10 @@ func (a *App) SetInputMode(mode string) string {
 		a.srv.SetInputMode(mode)
 	}
 
-	if mode == "usb" && a.hasClient.Load() {
-		a.hasClient.Store(false)
-	}
+	// No manual hasClient reset needed here: it now lives per-bank, so
+	// switching modes naturally shows whatever that bank's own state is
+	// (and the phone's own OnClientDisconnect path clears it for real once
+	// the transport layer actually drops the connection).
 
 	if a.usbMgr != nil {
 		if mode == "usb" {
@@ -3099,16 +3224,18 @@ func (a *App) OpenLiveDebugWindow() {
 }
 
 func (a *App) StartCapture() {
-	a.captureMu.Lock()
-	a.captureBuffer = make([]captureSample, 0, 300)
-	a.captureMu.Unlock()
-	a.isCapturing.Store(true)
+	bank := a.activeBank()
+	bank.captureMu.Lock()
+	bank.captureBuffer = make([]captureSample, 0, 300)
+	bank.captureMu.Unlock()
+	bank.isCapturing.Store(true)
 }
 
-// writeDebugCSV appends a capture session block to gyro_debug_capture.csv in profilesDir.
-// Each session is separated by a blank line and starts with a header and a metadata row.
-func (a *App) writeDebugCSV(step int, samples []captureSample, result CaptureResult) {
-	path := filepath.Join(a.profilesDir, "gyro_debug_capture.csv")
+// writeDebugCSV appends a capture session block to gyro_debug_capture.csv in the
+// active mode's own bank directory. Each session is separated by a blank line and
+// starts with a header and a metadata row.
+func (a *App) writeDebugCSV(bank *motionBank, step int, samples []captureSample, result CaptureResult) {
+	path := filepath.Join(a.bankDir(a.GetInputMode()), "gyro_debug_capture.csv")
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return
@@ -3126,19 +3253,19 @@ func (a *App) writeDebugCSV(step int, samples []captureSample, result CaptureRes
 			s.acc[0], s.acc[1], s.acc[2], speed)
 	}
 
-	a.calLogMu.Lock()
-	if a.calStepLogs == nil {
-		a.calStepLogs = make(map[int]StepCaptureLog)
+	bank.calLogMu.Lock()
+	if bank.calStepLogs == nil {
+		bank.calStepLogs = make(map[int]StepCaptureLog)
 	}
 	samplesCopy := make([]captureSample, len(samples))
 	copy(samplesCopy, samples)
-	a.calStepLogs[step] = StepCaptureLog{
+	bank.calStepLogs[step] = StepCaptureLog{
 		Step:      step,
 		Samples:   samplesCopy,
 		Result:    result,
 		Timestamp: time.Now(),
 	}
-	a.calLogMu.Unlock()
+	bank.calLogMu.Unlock()
 }
 
 // getI18nMsg returns localized message or fallback
@@ -3161,11 +3288,12 @@ func (a *App) getI18nMsg(key string) string {
 // step 2: Roll      / "Самолётик" — bank phone left/right (wing gesture, target RotZ > 0)
 // Yaw is computed automatically in ValidateCalibration with det = -1.0.
 func (a *App) StopCapture(step int) CaptureResult {
-	a.isCapturing.Store(false)
-	a.captureMu.Lock()
-	samples := a.captureBuffer
-	a.captureBuffer = nil
-	a.captureMu.Unlock()
+	bank := a.activeBank()
+	bank.isCapturing.Store(false)
+	bank.captureMu.Lock()
+	samples := bank.captureBuffer
+	bank.captureBuffer = nil
+	bank.captureMu.Unlock()
 
 	if len(samples) < 5 {
 		res := CaptureResult{
@@ -3173,7 +3301,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 			ErrorCode: "error_too_few_samples",
 			ErrorMsg:  a.getI18nMsg("calibration.error_too_few_samples"),
 		}
-		a.writeDebugCSV(step, samples, res)
+		a.writeDebugCSV(bank, step, samples, res)
 		return res
 	}
 
@@ -3185,7 +3313,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 				ErrorCode: "error_too_few_samples",
 				ErrorMsg:  a.getI18nMsg("calibration.error_too_few_samples"),
 			}
-			a.writeDebugCSV(step, samples, res)
+			a.writeDebugCSV(bank, step, samples, res)
 			return res
 		}
 
@@ -3223,14 +3351,14 @@ func (a *App) StopCapture(step int) CaptureResult {
 				SampleCount: len(samples),
 				PeakSpeed:   peakSpeed,
 			}
-			a.writeDebugCSV(step, samples, res)
+			a.writeDebugCSV(bank, step, samples, res)
 			return res
 		}
 
 		// Store verified zero-bias
-		a.biasMu.Lock()
-		a.gyroBias = [3]float64{bX, bY, bZ}
-		a.biasMu.Unlock()
+		bank.biasMu.Lock()
+		bank.gyroBias = [3]float64{bX, bY, bZ}
+		bank.biasMu.Unlock()
 
 		// Capture average gravity unit vector during stillness
 		var sumAccX, sumAccY, sumAccZ float64
@@ -3244,13 +3372,13 @@ func (a *App) StopCapture(step int) CaptureResult {
 		gZ := sumAccZ / n
 		gNorm := math.Sqrt(gX*gX + gY*gY + gZ*gZ)
 		if gNorm > 0.4 {
-			// Stage it (do not touch the live a.calGravity yet): this rest step may
+			// Stage it (do not touch the live bank.calGravity yet): this rest step may
 			// belong to a profile that is not even the active one, and the wizard may
 			// still be cancelled. Only SaveProfile commits it — see wizardGravity.
-			a.wizardAlignMu.Lock()
-			a.wizardGravity = [3]float64{gX / gNorm, gY / gNorm, gZ / gNorm}
-			a.wizardGravityValid = true
-			a.wizardAlignMu.Unlock()
+			bank.wizardAlignMu.Lock()
+			bank.wizardGravity = [3]float64{gX / gNorm, gY / gNorm, gZ / gNorm}
+			bank.wizardGravityValid = true
+			bank.wizardAlignMu.Unlock()
 		}
 
 		res := CaptureResult{
@@ -3262,15 +3390,15 @@ func (a *App) StopCapture(step int) CaptureResult {
 			SampleCount: len(samples),
 			PeakSpeed:   peakSpeed,
 		}
-		a.writeDebugCSV(step, samples, res)
+		a.writeDebugCSV(bank, step, samples, res)
 		return res
 	}
 
 	// ── Step 1 & 2: Dynamic gestures (Pitch / Roll) ──
 	// Subtract calibrated bias first (§1 of spec)
-	a.biasMu.RLock()
-	bx, by, bz := a.gyroBias[0], a.gyroBias[1], a.gyroBias[2]
-	a.biasMu.RUnlock()
+	bank.biasMu.RLock()
+	bx, by, bz := bank.gyroBias[0], bank.gyroBias[1], bank.gyroBias[2]
+	bank.biasMu.RUnlock()
 
 	for i := range samples {
 		samples[i].rot[0] -= bx
@@ -3309,7 +3437,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 			ErrorCode:   "error_too_weak",
 			ErrorMsg:    a.getI18nMsg("calibration.error_too_weak"),
 		}
-		a.writeDebugCSV(step, samples, res)
+		a.writeDebugCSV(bank, step, samples, res)
 		return res
 	}
 
@@ -3322,7 +3450,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 			ErrorCode:   "error_too_weak",
 			ErrorMsg:    a.getI18nMsg("calibration.error_too_weak"),
 		}
-		a.writeDebugCSV(step, samples, res)
+		a.writeDebugCSV(bank, step, samples, res)
 		return res
 	}
 
@@ -3393,7 +3521,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 			ErrorCode:   "error_ambiguous",
 			ErrorMsg:    a.getI18nMsg("calibration.error_ambiguous"),
 		}
-		a.writeDebugCSV(step, samples, res)
+		a.writeDebugCSV(bank, step, samples, res)
 		return res
 	}
 
@@ -3404,8 +3532,8 @@ func (a *App) StopCapture(step int) CaptureResult {
 		// Pitch step: target RotX < 0 when nodding forward -> target = -1.0
 		targetPitchSign := -1.0
 		d[axisIdx] = targetPitchSign * sign
-		a.calVectors[0] = d
-		a.calVectors[1] = [3]float64{0, 0, 0}
+		bank.calVectors[0] = d
+		bank.calVectors[1] = [3]float64{0, 0, 0}
 	} else if step == 2 {
 		// Roll step: target RotZ > 0 when banking right -> target = +1.0
 		targetRollSign := +1.0
@@ -3414,7 +3542,7 @@ func (a *App) StopCapture(step int) CaptureResult {
 		// Verify it's a different physical axis from Pitch
 		pitchAxIdx := -1
 		for i := 0; i < 3; i++ {
-			if math.Abs(a.calVectors[0][i]) > 0.5 {
+			if math.Abs(bank.calVectors[0][i]) > 0.5 {
 				pitchAxIdx = i
 				break
 			}
@@ -3432,10 +3560,10 @@ func (a *App) StopCapture(step int) CaptureResult {
 				ErrorCode:   "error_grip_changed",
 				ErrorMsg:    a.getI18nMsg("calibration.error_grip_changed"),
 			}
-			a.writeDebugCSV(step, samples, res)
+			a.writeDebugCSV(bank, step, samples, res)
 			return res
 		}
-		a.calVectors[1] = d
+		bank.calVectors[1] = d
 	}
 
 	res := CaptureResult{
@@ -3448,13 +3576,14 @@ func (a *App) StopCapture(step int) CaptureResult {
 		PeakSpeed:   peakSpeed,
 		Vector:      d,
 	}
-	a.writeDebugCSV(step, samples, res)
+	a.writeDebugCSV(bank, step, samples, res)
 	return res
 }
 
 // ValidateCalibration builds the calibration matrix from the 2 captured gesture vectors: Pitch and Roll.
 // Yaw is computed as Pitch x Roll with det = -1.0 (Cemuhook DSU left-handed parity convention, §3.3).
 func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
+	bank := a.activeBank()
 	norm := func(v [3]float64) [3]float64 {
 		m := math.Sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
 		if m < 1e-6 {
@@ -3505,9 +3634,9 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 			ErrorCode: "error_grip_changed",
 			ErrorMsg:  a.getI18nMsg("calibration.error_grip_changed"),
 		}
-		a.calLogMu.Lock()
-		a.calValResult = res
-		a.calLogMu.Unlock()
+		bank.calLogMu.Lock()
+		bank.calValResult = res
+		bank.calLogMu.Unlock()
 		return res
 	}
 
@@ -3537,9 +3666,9 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 			ErrorCode: "error_invalid_determinant",
 			ErrorMsg:  a.getI18nMsg("calibration.error_invalid_determinant"),
 		}
-		a.calLogMu.Lock()
-		a.calValResult = res
-		a.calLogMu.Unlock()
+		bank.calLogMu.Lock()
+		bank.calValResult = res
+		bank.calLogMu.Unlock()
 		return res
 	}
 
@@ -3563,9 +3692,9 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 		YawAxis:   formatAxis(mat[1]),
 		RollAxis:  formatAxis(mat[2]),
 	}
-	a.calLogMu.Lock()
-	a.calValResult = res
-	a.calLogMu.Unlock()
+	bank.calLogMu.Lock()
+	bank.calValResult = res
+	bank.calLogMu.Unlock()
 	return res
 }
 
@@ -3579,9 +3708,10 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 // full re-learn from scratch, never a partial confidence check).
 func (a *App) StartAxisAlign(forgetKnown bool) {
 	_ = forgetKnown
-	a.wizardAlignMu.Lock()
-	a.wizardAlign = newSensorAligner("")
-	a.wizardAlignMu.Unlock()
+	bank := a.activeBank()
+	bank.wizardAlignMu.Lock()
+	bank.wizardAlign = newSensorAligner("")
+	bank.wizardAlignMu.Unlock()
 }
 
 // GetAxisAlignStatus reports live progress of the wizard's scratch axis-align attempt
@@ -3635,17 +3765,18 @@ func (a *App) ValidateSync() []string {
 
 // CopyLast20Frames returns the last 20 raw frames formatted as CSV text for clipboard
 func (a *App) CopyLast20Frames() string {
-	a.recentFramesMu.Lock()
-	defer a.recentFramesMu.Unlock()
+	bank := a.activeBank()
+	bank.recentFramesMu.Lock()
+	defer bank.recentFramesMu.Unlock()
 
-	if len(a.recentFrames) == 0 {
+	if len(bank.recentFrames) == 0 {
 		return "No frames received from phone yet"
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Recent %d raw frames from phone:\n", len(a.recentFrames)))
+	sb.WriteString(fmt.Sprintf("# Recent %d raw frames from phone:\n", len(bank.recentFrames)))
 	sb.WriteString("idx,ts,rotX,rotY,rotZ,accX,accY,accZ,qx,qy,qz,qw\n")
-	for i, f := range a.recentFrames {
+	for i, f := range bank.recentFrames {
 		sb.WriteString(fmt.Sprintf("%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n",
 			i+1, f.Timestamp, f.RotX, f.RotY, f.RotZ, f.AccX, f.AccY, f.AccZ, f.Qx, f.Qy, f.Qz, f.Qw))
 	}
@@ -3655,15 +3786,16 @@ func (a *App) CopyLast20Frames() string {
 // CopyCalibrationReport returns a detailed text report of the last calibration session:
 // raw samples from each 2.5s step, algorithm decisions, and final matrix verdict.
 func (a *App) CopyCalibrationReport() string {
-	a.calLogMu.Lock()
-	defer a.calLogMu.Unlock()
+	bank := a.activeBank()
+	bank.calLogMu.Lock()
+	defer bank.calLogMu.Unlock()
 
 	var sb strings.Builder
 	sb.WriteString("=== GYROBRIDGE CALIBRATION FULL REPORT ===\n")
 	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
 
 	// Final Verdict
-	val := a.calValResult
+	val := bank.calValResult
 	sb.WriteString("--- FINAL VERDICT & MATRIX ---\n")
 	sb.WriteString(fmt.Sprintf("Validation Success: %v\n", val.Success))
 	if !val.Success && val.ErrorCode != "" {
@@ -3681,9 +3813,9 @@ func (a *App) CopyCalibrationReport() string {
 	sb.WriteString("\n")
 
 	// Static Gyro Bias
-	a.biasMu.RLock()
-	bias := a.gyroBias
-	a.biasMu.RUnlock()
+	bank.biasMu.RLock()
+	bias := bank.gyroBias
+	bank.biasMu.RUnlock()
 	sb.WriteString(fmt.Sprintf("Static Gyro Bias: [%.4f, %.4f, %.4f] deg/s\n\n", bias[0], bias[1], bias[2]))
 
 	// Steps (0 = Rest/Stillness, 1 = Pitch, 2 = Roll)
@@ -3694,7 +3826,7 @@ func (a *App) CopyCalibrationReport() string {
 	}
 
 	for step := 0; step < 3; step++ {
-		log, exists := a.calStepLogs[step]
+		log, exists := bank.calStepLogs[step]
 		name := stepNames[step]
 		sb.WriteString(fmt.Sprintf("--- %s ---\n", name))
 		if !exists || len(log.Samples) == 0 {

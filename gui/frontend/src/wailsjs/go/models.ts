@@ -183,6 +183,8 @@ export namespace main {
 	    dsuClients: number;
 	    dsuClientList: dsu.ClientInfo[];
 	    inputMode: string;
+	    usbConnected: boolean;
+	    usbPort: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppState(source);
@@ -226,6 +228,8 @@ export namespace main {
 	        this.dsuClients = source["dsuClients"];
 	        this.dsuClientList = this.convertValues(source["dsuClientList"], dsu.ClientInfo);
 	        this.inputMode = source["inputMode"];
+	        this.usbConnected = source["usbConnected"];
+	        this.usbPort = source["usbPort"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

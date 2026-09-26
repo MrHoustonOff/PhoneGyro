@@ -266,6 +266,14 @@ func (m *usbDeviceManager) isConnected() bool {
 	return m.connected
 }
 
+// Status reports whether a PhoneGyro device is currently connected and, if
+// so, which port it's on -- for surfacing in the UI (AppState.UsbConnected).
+func (m *usbDeviceManager) Status() (connected bool, port string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.connected, m.portName
+}
+
 func (m *usbDeviceManager) run(stop chan struct{}) {
 	m.scanOnce(stop)
 	ticker := time.NewTicker(usbRescanEvery)

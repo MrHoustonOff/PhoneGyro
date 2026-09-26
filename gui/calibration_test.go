@@ -16,21 +16,21 @@ func TestCalibration_StillnessStep0(t *testing.T) {
 	// 1. Normal motionless resting on desk (bias test)
 	app.StartCapture()
 	for i := 0; i < 30; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{0.45, -0.25, 0.15},
 			acc: [3]float64{0, 0, 1.0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res := app.StopCapture(0)
 	if !res.Success {
 		t.Fatalf("expected Step 0 stillness to succeed, got error: %s (%s)", res.ErrorCode, res.ErrorMsg)
 	}
 
-	app.biasMu.RLock()
-	bx, by, bz := app.gyroBias[0], app.gyroBias[1], app.gyroBias[2]
-	app.biasMu.RUnlock()
+	app.phoneBank.biasMu.RLock()
+	bx, by, bz := app.phoneBank.gyroBias[0], app.phoneBank.gyroBias[1], app.phoneBank.gyroBias[2]
+	app.phoneBank.biasMu.RUnlock()
 
 	if math.Abs(bx-0.45) > 0.01 || math.Abs(by+0.25) > 0.01 || math.Abs(bz-0.15) > 0.01 {
 		t.Fatalf("unexpected bias values: %f, %f, %f", bx, by, bz)
@@ -39,12 +39,12 @@ func TestCalibration_StillnessStep0(t *testing.T) {
 	// 2. Moving / shaking during Step 0 -> must fail with error_moved_during_rest
 	app.StartCapture()
 	for i := 0; i < 30; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{float64(i % 5) * 3.0, 0.0, 0.0},
 			acc: [3]float64{0, 0, 1.0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	resMoved := app.StopCapture(0)
 	if resMoved.Success {
@@ -133,12 +133,12 @@ func TestCalibration_EndToEnd_StandardPortraitFlow(t *testing.T) {
 	// Step 0: Stillness (Bias)
 	app.StartCapture()
 	for i := 0; i < 25; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{0.1, -0.05, 0.08},
 			acc: [3]float64{0, 1.0, 0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res0 := app.StopCapture(0)
 	if !res0.Success {
@@ -148,12 +148,12 @@ func TestCalibration_EndToEnd_StandardPortraitFlow(t *testing.T) {
 	// Step 1 (Pitch / "Кивни"): Nod phone forward -> raw sensor detects -X
 	app.StartCapture()
 	for i := 0; i < 20; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{-65.0, 0.2, -0.1},
 			acc: [3]float64{0, 1.0, 0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res1 := app.StopCapture(1)
 	if !res1.Success {
@@ -166,12 +166,12 @@ func TestCalibration_EndToEnd_StandardPortraitFlow(t *testing.T) {
 	// Step 2 (Roll / "Самолётик"): Bank right -> raw sensor detects -Z in portrait
 	app.StartCapture()
 	for i := 0; i < 20; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{0.1, 0.2, -58.0},
 			acc: [3]float64{0, 1.0, 0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res2 := app.StopCapture(2)
 	if !res2.Success {
@@ -324,12 +324,12 @@ func TestCalibration_UnconstrainedGestureRecognition(t *testing.T) {
 	// Step 0: Rest on desk
 	app.StartCapture()
 	for i := 0; i < 25; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{0.0, 0.0, 0.0},
 			acc: [3]float64{0, 0, 1.0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res0 := app.StopCapture(0)
 	if !res0.Success {
@@ -339,12 +339,12 @@ func TestCalibration_UnconstrainedGestureRecognition(t *testing.T) {
 	// Step 1: Gesture on any axis succeeds without artificial blocking
 	app.StartCapture()
 	for i := 0; i < 20; i++ {
-		app.captureMu.Lock()
-		app.captureBuffer = append(app.captureBuffer, captureSample{
+		app.phoneBank.captureMu.Lock()
+		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
 			rot: [3]float64{0.1, 0.2, -65.0},
 			acc: [3]float64{0, 0, 1.0},
 		})
-		app.captureMu.Unlock()
+		app.phoneBank.captureMu.Unlock()
 	}
 	res1 := app.StopCapture(1)
 	if !res1.Success {
@@ -415,6 +415,14 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 
 	app := NewApp()
 	app.profilesDir = tempDir
+	// NewApp() already read the real machine's %APPDATA%\gyrobridge\settings.json
+	// (this test's tempDir override happens after construction), so input
+	// mode/firstLaunchDone/hideAuthor could all be left over from a real
+	// session on this dev machine. Reset them explicitly so this test is
+	// hermetic regardless of ambient machine state.
+	app.firstLaunchDone = false
+	app.hideAuthor = false
+	app.SetInputMode("phone") // may persist settings.json into tempDir; reset fields above first
 	app.loadSettings()
 	app.loadProfiles()
 
@@ -448,8 +456,8 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 	if resActive != "ok" {
 		t.Fatalf("failed to set active profile to 5: %s", resActive)
 	}
-	if app.activeSlot != 5 {
-		t.Fatalf("expected activeSlot 5, got %d", app.activeSlot)
+	if app.phoneBank.activeSlot != 5 {
+		t.Fatalf("expected activeSlot 5, got %d", app.phoneBank.activeSlot)
 	}
 
 	// Test settings persistence
