@@ -1686,6 +1686,8 @@
       </div>
     </div>
 
+    <div class="footer-version" id="footer-version" title=""></div>
+
     <div class="footer-actions">
       <a href="https://github.com/MrHoustonOff/iphone-gyro-controller" target="_blank" class="author-signature" id="author-signature" title="GitHub: MrHoustonOff">
         <svg class="github-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
@@ -2658,9 +2660,36 @@
   };
 
   // ── Profile Slot Formatter ──────────────────────────────────────────────────
+  // Fetched once: the version is fixed for the life of the running process.
+  async function initFooterVersion() {
+    const el = document.getElementById('footer-version');
+    if (!el || !window.go?.main?.App?.GetAppVersion) return;
+    try {
+      const v = await window.go.main.App.GetAppVersion();
+      el.innerHTML = `<span>${v.release}.${v.build}</span><span class="footer-version-channel ${v.channel}">${v.channel}</span>`;
+      el.title = `GyroBridge ${v.release} • build ${v.build} • ${v.channel}`;
+    } catch (e) {
+      el.style.display = 'none';
+    }
+  }
+
   function formatSlotName(idx) {
     const prefix = I18n.t('calibration.slot_prefix') || (I18n.currentLang === 'ru' ? 'Слот' : 'Slot');
     return `${prefix} ${idx + 1}`;
+  }
+
+  // Reads a signed-permutation 3x3 matrix (calibration matrix or accelerometer axis
+  // map) as three "which raw axis, which sign" labels — same explicit reading for
+  // both, no separate logic per matrix kind (§3: show what's actually stored).
+  function matrixAxisLabels(m) {
+    const axes = ['X', 'Y', 'Z'];
+    return [0, 1, 2].map((row) => {
+      for (let c = 0; c < 3; c++) {
+        if (m[row][c] > 0.5) return `+${axes[c]}`;
+        if (m[row][c] < -0.5) return `-${axes[c]}`;
+      }
+      return '?';
+    });
   }
 
   // ── Toast Utility ───────────────────────────────────────────────────────────
@@ -7486,20 +7515,34 @@
       if (activeTag) {
         activeTag.textContent = `${formatSlotName(activeIdx)} • ${I18n.t('calibration.slot_active') || 'Активен'}`;
       }
+      const trigger = document.getElementById('main-profile-trigger');
+      if (trigger) {
+        trigger.classList.toggle('profile-outdated', !!activeProf.outdated);
+        trigger.title = activeProf.outdated
+          ? (I18n.t('calibration.outdated_tip') || 'Профиль устарел — требуется перекалибровка')
+          : '';
+      }
 
-      // 2. Populate Dropdown Menu
+      // 2. Populate Dropdown Menu — only slots that actually hold a profile. Empty
+      // slots have nothing to switch to; they only make sense on the save page,
+      // where the point is to pick a place to put a new one.
       const menu = document.getElementById('main-profile-menu');
       if (menu) {
         menu.innerHTML = '';
         for (let i = 0; i < 6; i++) {
-          const p = this.profiles[i] || { name: formatSlotName(i), device: 'Unknown', icon: 'default' };
+          const p = this.profiles[i];
+          if (!p || !p.name) continue;
+
           const item = document.createElement('button');
           item.type = 'button';
-          item.className = 'profile-dropdown-item' + (i === activeIdx ? ' active' : '');
+          item.className = 'profile-dropdown-item' + (i === activeIdx ? ' active' : '') + (p.outdated ? ' profile-outdated' : '');
           item.setAttribute('data-slot', String(i));
 
           const devName = p.device || I18n.t('calibration.device_unknown') || 'Неизвестно';
           const devText = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', devName);
+          const outdatedBadge = p.outdated
+            ? `<span class="profile-outdated-badge">${I18n.t('calibration.outdated_badge') || 'Устарел'}</span>`
+            : '';
 
           item.innerHTML = `
             <div class="profile-item-left">
@@ -7507,7 +7550,7 @@
                 ${getProfileIconSVG(p.icon || 'default', 20)}
               </div>
               <div class="profile-item-meta">
-                <span class="profile-item-title">${p.name || formatSlotName(i)}</span>
+                <span class="profile-item-title">${p.name || formatSlotName(i)}${outdatedBadge}</span>
                 <span class="profile-item-sub">${formatSlotName(i)} • ${devText}</span>
               </div>
             </div>
@@ -7523,24 +7566,22 @@
         }
       }
 
-      // 3. Update Axes description
+      // 3. Update Axes description — both matrices as actually stored, never assumed:
+      // the calibration matrix (gyro→pad axes) and the learned accelerometer axis map.
       const currentDescEl = document.getElementById('profile-current-desc');
       if (currentDescEl) {
         const axesLabel = I18n.t('calibration.axes_label') || (I18n.currentLang === 'ru' ? 'Оси' : 'Axes');
-        if (activeProf && activeProf.matrix) {
-          const m = activeProf.matrix;
-          const axisName = (row) => {
-            const axes = ['X', 'Y', 'Z'];
-            for (let c = 0; c < 3; c++) {
-              if (m[row][c] > 0.5) return `+${axes[c]}`;
-              if (m[row][c] < -0.5) return `-${axes[c]}`;
-            }
-            return '?';
-          };
-          currentDescEl.textContent = `${axesLabel}: Pitch ${axisName(0)} • Yaw ${axisName(1)} • Roll ${axisName(2)}`;
+        const accLabel = I18n.t('calibration.accel_axes_label') || (I18n.currentLang === 'ru' ? 'Акселерометр' : 'Accelerometer');
+        const m = (activeProf && activeProf.matrix) || [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+        const [p, y, r] = matrixAxisLabels(m);
+        let line = `${axesLabel}: Pitch ${p} • Yaw ${y} • Roll ${r}`;
+        if (activeProf && activeProf.sensorFrame && activeProf.sensorFrame.q) {
+          const [ap, ay, ar] = matrixAxisLabels(activeProf.sensorFrame.q);
+          line += `  |  ${accLabel}: Pitch ${ap} • Yaw ${ay} • Roll ${ar}`;
         } else {
-          currentDescEl.textContent = `${axesLabel}: Pitch +X • Yaw +Y • Roll +Z`;
+          line += `  |  ${accLabel}: ${I18n.t('calibration.accel_axes_unset') || 'не определено'}`;
         }
+        currentDescEl.textContent = line;
       }
     },
 
@@ -7549,8 +7590,21 @@
       if (slot === this.activeSlot) return;
 
       try {
+        let result = 'ok';
         if (window.go?.main?.App?.SetActiveProfile) {
-          await window.go.main.App.SetActiveProfile(slot);
+          result = await window.go.main.App.SetActiveProfile(slot);
+        }
+        if (result === 'error_outdated_profile') {
+          const name = this.profiles[slot]?.name || formatSlotName(slot);
+          showToast((I18n.t('calibration.outdated_blocked') || 'Профиль «{name}» устарел, нужна перекалибровка').replace('{name}', name));
+          if (typeof CalibrationWizard !== 'undefined') {
+            CalibrationWizard.openToSlot(slot);
+          }
+          return;
+        }
+        if (result !== 'ok') {
+          console.error('Failed to switch profile:', result);
+          return;
         }
         this.activeSlot = slot;
         this._lastActiveSlot = slot;
@@ -9362,10 +9416,17 @@
       if (triggerIcon) {
         triggerIcon.innerHTML = getProfileIconSVG(targetProf.icon || this.selectedIcon || 'default', 22);
       }
+      const slotIsEmpty = !targetProf.name;
       if (triggerTitle) {
-        triggerTitle.textContent = targetProf.name || formatSlotName(slot);
+        // An empty slot must never read like an existing profile's name (§3: no
+        // magic) — it's a slot number plus a clear "new" marker, not a name yet.
+        triggerTitle.textContent = slotIsEmpty
+          ? `${formatSlotName(slot)} — ${I18n.t('calibration.new_profile_marker') || 'новый профиль'}`
+          : targetProf.name;
       }
-      const devLabel = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', finalDevice);
+      const devLabelKey = slotIsEmpty ? 'calibration.device_label_preview' : 'calibration.device_label';
+      const devLabelFallback = slotIsEmpty ? 'Устройство при сохранении: {device}' : 'Устройство: {device}';
+      const devLabel = (I18n.t(devLabelKey) || devLabelFallback).replace('{device}', finalDevice);
       if (triggerDevice) {
         triggerDevice.textContent = devLabel;
       }
@@ -9402,11 +9463,14 @@
           const p = ProfileManager.profiles[i] || { name: formatSlotName(i), device: 'Unknown', icon: 'default' };
           const item = document.createElement('button');
           item.type = 'button';
-          item.className = 'profile-dropdown-item' + (i === slot ? ' active' : '');
+          item.className = 'profile-dropdown-item' + (i === slot ? ' active' : '') + (p.outdated ? ' profile-outdated' : '');
           item.setAttribute('data-slot', String(i));
 
           const pDev = p.device || I18n.t('calibration.device_unknown') || 'Неизвестно';
           const pDevText = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', pDev);
+          const pOutdatedBadge = p.outdated
+            ? `<span class="profile-outdated-badge">${I18n.t('calibration.outdated_badge') || 'Устарел'}</span>`
+            : '';
 
           item.innerHTML = `
             <div class="profile-item-left">
@@ -9414,7 +9478,7 @@
                 ${getProfileIconSVG(p.icon || 'default', 20)}
               </div>
               <div class="profile-item-meta">
-                <span class="profile-item-title">${p.name || formatSlotName(i)}</span>
+                <span class="profile-item-title">${p.name || formatSlotName(i)}${pOutdatedBadge}</span>
                 <span class="profile-item-sub">${formatSlotName(i)} • ${pDevText}</span>
               </div>
             </div>
@@ -10729,6 +10793,7 @@
       if (fallbackTimer) clearTimeout(fallbackTimer);
       HeaderManager.update();
       await I18n.init();
+      initFooterVersion();
       ProfileManager.init();
       RecenterManager.init();
       SetupWizard.init();

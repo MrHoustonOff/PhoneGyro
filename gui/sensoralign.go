@@ -71,9 +71,6 @@ type sensorAligner struct {
 
 	cur   sensorFrame
 	known bool
-
-	// onLearn receives every newly locked frame (stored in the active profile).
-	onLearn func(sensorFrame)
 }
 
 // newSensorAligner creates an aligner; dir only migrates a legacy global sensor_frame.json
@@ -175,7 +172,6 @@ func (s *sensorAligner) decideLocked() {
 				f.Q, f.H, bestMean, secondMean, s.pairs)
 			s.cur = f
 			s.known = true
-			s.saveLocked()
 		}
 	} else if s.pairs < alignMaxPairs {
 		return // keep collecting evidence
@@ -184,12 +180,6 @@ func (s *sensorAligner) decideLocked() {
 		s.errSum[i] = 0
 	}
 	s.pairs = 0
-}
-
-func (s *sensorAligner) saveLocked() {
-	if s.onLearn != nil {
-		s.onLearn(s.cur)
-	}
 }
 
 // iosSensorFrame is the axis relation iOS Safari has been observed to use for every
@@ -242,14 +232,13 @@ func (s *sensorAligner) Progress() (pairs, minPairs int, known bool) {
 	return s.pairs, alignMinPairs, s.known
 }
 
-// SetFrame switches to another device's mapping (profile change) and drops any
-// half-collected evidence. known=false falls back to the W3C default and relearns.
+// SetFrame switches the aligner to f. known=true marks it confirmed (a profile's own
+// saved mapping); known=false is only a starting guess for physics to confirm or
+// correct (e.g. the iOS default for a device with no saved mapping yet) — unlike a
+// confirmed frame, callers must not rely on it being exactly right.
 func (s *sensorAligner) SetFrame(f sensorFrame, known bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !known {
-		f = sensorFrame{Q: identity3(), H: -1}
-	}
 	s.cur, s.known = f, known
 	for i := range s.errSum {
 		s.errSum[i] = 0

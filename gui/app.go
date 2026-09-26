@@ -57,6 +57,34 @@ type Profile struct {
 	// Learned gyro↔accel axis relation of the device used with this profile.
 	SensorFrame *sensorFrame `json:"sensorFrame,omitempty"`
 	Active      bool         `json:"active"` // is this the currently applied profile?
+	// Version is the calibration data generation this profile was captured with,
+	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
+	// is behind CurrentProfileVersion is definitely missing data the current
+	// pipeline needs (e.g. SensorFrame) and must be recalibrated — see Outdated().
+	// A never-configured (empty Name) slot is not "outdated", just unused.
+	Version int `json:"version,omitempty"`
+}
+
+// CurrentProfileVersion is the calibration data generation SaveProfile stamps on every
+// save. Bump it whenever a new field becomes load-bearing for correct output (it was 3
+// when SensorFrame — the learned accelerometer axis mapping — became required).
+const CurrentProfileVersion = 3
+
+// Outdated reports whether this is a real (named) profile captured by an older build
+// that is missing data the current pipeline depends on. Never true for an empty slot.
+func (p Profile) Outdated() bool {
+	return p.Name != "" && p.Version < CurrentProfileVersion
+}
+
+// ProfileView is what the UI actually receives (GetProfiles, AppState.Profiles): the
+// stored profile plus display-only fields that are never written to profiles.json.
+type ProfileView struct {
+	Profile
+	Outdated bool `json:"outdated"`
+}
+
+func toProfileView(p Profile) ProfileView {
+	return ProfileView{Profile: p, Outdated: p.Outdated()}
 }
 
 // AppState represents the live state of Gyro Bridge
@@ -88,7 +116,7 @@ type AppState struct {
 	Qz float64 `json:"qz"`
 	Qw float64 `json:"qw"`
 	// Profile system
-	Profiles     []Profile     `json:"profiles"`
+	Profiles     []ProfileView `json:"profiles"`
 	ActiveSlot   int           `json:"activeSlot"`   // -1 = none (identity matrix)
 	ActiveMatrix [3][3]float64 `json:"activeMatrix"` // currently applied calibration matrix (or preview during wizard)
 	// Madgwick AHRS quaternion computed from calibrated gyro/accel (matching PadTest conventions).
@@ -187,8 +215,20 @@ type App struct {
 	captureBuffer   []captureSample
 	calVectors      [3][3]float64
 	calGravity      [3]float64     // captured gravity unit vector from step 0 rest
-	calGravityFresh bool           // set by the rest step, consumed by the next SaveProfile
-	align           *sensorAligner // gyro↔accel axis learner (frame stored per profile)
+	// wizardGravity stages the rest step's gravity reading the same way wizardAlign
+	// stages axis learning: SaveProfile is the only place that commits it, so an
+	// unsaved/cancelled wizard run never pollutes the live output or a profile.
+	wizardGravity      [3]float64
+	wizardGravityValid bool
+	align           *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
+	// wizardAlign is a scratch aligner used only by the calibration wizard's explicit
+	// "determine axes" step. It runs alongside `align` (fed the same data) so the
+	// wizard's progress reflects reality, but stays fully separate: nothing here
+	// touches the active profile's live output or profiles.json until the user
+	// clicks Save — see SaveProfile. This mirrors how previewMatrix/usePreview keep
+	// a candidate calibration matrix from affecting live output before Save.
+	wizardAlignMu sync.RWMutex
+	wizardAlign   *sensorAligner
 	// Gyroscope stationary zero-bias correction (§2 of spec)
 	biasMu   sync.RWMutex
 	gyroBias [3]float64
@@ -991,6 +1031,14 @@ func (a *App) loadProfiles() {
 		if math.Abs(math.Abs(det3x3(a.profiles[i].Matrix))-1.0) > 0.05 {
 			a.profiles[i].Matrix = defaultMatrix3x3()
 		}
+		// One-time migration for profiles saved before Version existed (Version == 0
+		// on disk): a profile that already has everything the current pipeline needs
+		// is not actually outdated, just never stamped — back-fill it explicitly
+		// rather than force a pointless recalibration. One that is missing SensorFrame
+		// stays at 0, correctly Outdated(), and must go through the wizard again.
+		if a.profiles[i].Name != "" && a.profiles[i].Version == 0 && a.profiles[i].SensorFrame != nil {
+			a.profiles[i].Version = CurrentProfileVersion
+		}
 	}
 	a.activeSlot = stored.ActiveSlot
 
@@ -1361,6 +1409,9 @@ func (a *App) startup(ctx context.Context) {
 		// a matrix derived from it plus the learned gyro↔accel axis relation, so PadTest's
 		// Madgwick sees a gravity vector that agrees with the gyro (see sensoralign.go).
 		align.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
+		if wz := a.getWizardAlign(); wz != nil {
+			wz.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
+		}
 		sf, sfKnown := align.Frame()
 		accMat, yawSign := buildOutputMapping(mat, sf, calGravity)
 
@@ -1890,6 +1941,7 @@ func (a *App) startup(ctx context.Context) {
 		registerLiveDebug(srv.HTTPSMux)
 	}
 
+	srv.SetAppVersion(a.GetAppVersion().Display)
 	if err := srv.Start(); err != nil {
 		fmt.Printf("[-] Server start error: %v\n", err)
 	}
@@ -2056,10 +2108,11 @@ func (a *App) GetState() AppState {
 	activeSlot := a.activeSlot
 	a.profilesMu.RUnlock()
 
-	profilesList := make([]Profile, 6)
+	profilesList := make([]ProfileView, 6)
 	for i := 0; i < 6; i++ {
-		profilesList[i] = profilesCopy[i]
-		profilesList[i].Active = (i == activeSlot)
+		p := profilesCopy[i]
+		p.Active = (i == activeSlot)
+		profilesList[i] = toProfileView(p)
 	}
 
 	// Determine which matrix is currently effective: preview during wizard, or saved active matrix.
@@ -2152,14 +2205,15 @@ func (a *App) TogglePause() AppState {
 }
 
 // GetProfiles returns current 6 profile slots
-func (a *App) GetProfiles() []Profile {
+func (a *App) GetProfiles() []ProfileView {
 	a.profilesMu.RLock()
 	defer a.profilesMu.RUnlock()
 
-	result := make([]Profile, 6)
+	result := make([]ProfileView, 6)
 	for i := 0; i < 6; i++ {
-		result[i] = a.profiles[i]
-		result[i].Active = (i == a.activeSlot)
+		p := a.profiles[i]
+		p.Active = (i == a.activeSlot)
+		result[i] = toProfileView(p)
 	}
 	return result
 }
@@ -2188,12 +2242,26 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 
 	a.profilesMu.Lock()
 	gravity := a.profiles[slot].CalGravity
-	a.biasMu.Lock()
-	if a.calGravityFresh {
-		gravity = a.calGravity
-		a.calGravityFresh = false
+	sensorFrame := a.profiles[slot].SensorFrame
+	a.profilesMu.Unlock()
+
+	// Commit whatever the wizard staged during this session (rest step / axis-align),
+	// if any — never invent or assume either value here (§3: no magic, only what the
+	// wizard actually measured this run, otherwise keep the profile's existing data).
+	a.wizardAlignMu.Lock()
+	if a.wizardGravityValid {
+		gravity = a.wizardGravity
+		a.wizardGravityValid = false
 	}
-	a.biasMu.Unlock()
+	if a.wizardAlign != nil {
+		if f, known := a.wizardAlign.Frame(); known {
+			cp := f
+			sensorFrame = &cp
+		}
+	}
+	a.wizardAlignMu.Unlock()
+
+	a.profilesMu.Lock()
 	a.profiles[slot] = Profile{
 		Slot:        slot,
 		Name:        name,
@@ -2202,7 +2270,11 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		Matrix:      matrix,
 		Active:      (slot == a.activeSlot),
 		CalGravity:  gravity,
-		SensorFrame: a.profiles[slot].SensorFrame,
+		SensorFrame: sensorFrame,
+		// Reaching Save means the wizard's axis-align step already confirmed a
+		// mapping (its "next" button is disabled otherwise), so this profile
+		// definitely meets the current pipeline's requirements.
+		Version: CurrentProfileVersion,
 	}
 	a.profilesMu.Unlock()
 
@@ -2240,6 +2312,12 @@ func (a *App) applyProfileGravity(slot int) {
 
 // applyProfileSensorFrame loads the profile's learned axis relation into the aligner.
 // Without one the aligner relearns from a few tilts and stores the result there.
+//
+// Switching profile mid-session (phone stays connected, no new OnClientDevice event)
+// must not silently fall back to the identity guess for a device we already know is
+// an iPhone/iPad: that guess is wrong for iOS, and until physics re-confirms it
+// PadTest's Madgwick fights the mismatched axes (reported as a wildly skewed pad
+// after switching to a profile that had never been through the axis wizard).
 func (a *App) applyProfileSensorFrame(slot int) {
 	if a.align == nil {
 		return
@@ -2252,28 +2330,36 @@ func (a *App) applyProfileSensorFrame(slot int) {
 	a.profilesMu.RUnlock()
 	if f != nil {
 		a.align.SetFrame(*f, true)
-	} else {
-		a.align.SetFrame(sensorFrame{}, false)
+		return
 	}
+	guess := sensorFrame{Q: identity3(), H: -1}
+	if dn, _ := a.deviceName.Load().(string); dn == "iPhone" || dn == "iPad" {
+		guess = iosSensorFrame()
+	}
+	a.align.SetFrame(guess, false)
 }
 
-// initProfileSensorFrame hooks the aligner to the active profile. A frame learned by
-// older builds (global sensor_frame.json) is migrated into the active profile once.
+// getWizardAlign returns the calibration wizard's scratch aligner, or nil when no
+// axis-align step is in progress (see wizardAlign field doc).
+func (a *App) getWizardAlign() *sensorAligner {
+	a.wizardAlignMu.RLock()
+	defer a.wizardAlignMu.RUnlock()
+	return a.wizardAlign
+}
+
+// initProfileSensorFrame hooks the live aligner to the active profile. A frame learned
+// by older builds (global sensor_frame.json) is migrated into the active profile once;
+// this is a one-time explicit upgrade, not the ongoing background writes that used to
+// happen here (removed: see wizardAlign).
 func (a *App) initProfileSensorFrame() {
 	legacy, legacyKnown := a.align.Frame()
-	a.align.onLearn = func(f sensorFrame) {
-		a.profilesMu.Lock()
-		if a.activeSlot >= 0 && a.activeSlot < len(a.profiles) {
-			cp := f
-			a.profiles[a.activeSlot].SensorFrame = &cp
-		}
-		a.profilesMu.Unlock()
-		go a.saveProfiles()
-	}
 	a.profilesMu.Lock()
 	migrate := legacyKnown && a.activeSlot >= 0 && a.activeSlot < len(a.profiles) && a.profiles[a.activeSlot].SensorFrame == nil
 	if migrate {
 		a.profiles[a.activeSlot].SensorFrame = &legacy
+		if p := &a.profiles[a.activeSlot]; p.Name != "" && p.Version < CurrentProfileVersion {
+			p.Version = CurrentProfileVersion
+		}
 	}
 	slot := a.activeSlot
 	a.profilesMu.Unlock()
@@ -2287,6 +2373,14 @@ func (a *App) initProfileSensorFrame() {
 func (a *App) SetActiveProfile(slot int) string {
 	if slot < -1 || slot > 5 {
 		return "invalid slot"
+	}
+	if slot >= 0 {
+		a.profilesMu.RLock()
+		outdated := a.profiles[slot].Outdated()
+		a.profilesMu.RUnlock()
+		if outdated {
+			return "error_outdated_profile"
+		}
 	}
 
 	a.profilesMu.Lock()
@@ -2341,6 +2435,13 @@ func (a *App) ClearPreview() {
 	a.previewMu.Lock()
 	a.usePreview = false
 	a.previewMu.Unlock()
+	// Discard the wizard's scratch axis-align attempt too: whatever it found either
+	// was already captured into the profile by SaveProfile, or the wizard was
+	// cancelled and it must not linger and leak into some later, unrelated Save.
+	a.wizardAlignMu.Lock()
+	a.wizardAlign = nil
+	a.wizardGravityValid = false
+	a.wizardAlignMu.Unlock()
 	if a.ahrs != nil {
 		a.ahrs.Reset()
 	}
@@ -3132,8 +3233,13 @@ func (a *App) StopCapture(step int) CaptureResult {
 		gZ := sumAccZ / n
 		gNorm := math.Sqrt(gX*gX + gY*gY + gZ*gZ)
 		if gNorm > 0.4 {
-			a.calGravity = [3]float64{gX / gNorm, gY / gNorm, gZ / gNorm}
-			a.calGravityFresh = true
+			// Stage it (do not touch the live a.calGravity yet): this rest step may
+			// belong to a profile that is not even the active one, and the wizard may
+			// still be cancelled. Only SaveProfile commits it — see wizardGravity.
+			a.wizardAlignMu.Lock()
+			a.wizardGravity = [3]float64{gX / gNorm, gY / gNorm, gZ / gNorm}
+			a.wizardGravityValid = true
+			a.wizardAlignMu.Unlock()
 		}
 
 		res := CaptureResult{
@@ -3455,28 +3561,32 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 // StartAxisAlign begins (or restarts) the explicit "determine axes" wizard step:
 // it clears any partially-collected physics evidence so the live progress readout
 // (GetAxisAlignStatus) starts from zero. The already-learned/seeded mapping keeps
-// driving DSU output the whole time, so accelerometer axes never regress to identity
-// while the user is redoing this step. Pass forgetKnown=true to force a full re-learn
-// (e.g. a "recalibrate axes" button on an already-known profile); false just takes a
-// fresh confidence reading without discarding a mapping that already works.
+// driving DSU output the whole time — the wizard uses its own scratch aligner
+// (wizardAlign), so this always starts that scratch completely fresh regardless of
+// what the live aligner currently believes. forgetKnown is kept for binding
+// compatibility (the wizard always passes true: a "determine axes" run is always a
+// full re-learn from scratch, never a partial confidence check).
 func (a *App) StartAxisAlign(forgetKnown bool) {
-	if a.align != nil {
-		a.align.Reset(forgetKnown)
-	}
+	_ = forgetKnown
+	a.wizardAlignMu.Lock()
+	a.wizardAlign = newSensorAligner("")
+	a.wizardAlignMu.Unlock()
 }
 
-// GetAxisAlignStatus reports live progress of the accelerometer↔gyro axis relation
-// so the wizard can show "N of M tilts" and detect the moment physics locks a mapping.
+// GetAxisAlignStatus reports live progress of the wizard's scratch axis-align attempt
+// so it can show "N of M tilts" and detect the moment physics locks a mapping. Empty
+// until StartAxisAlign has been called (no wizard session in progress).
 func (a *App) GetAxisAlignStatus() AxisAlignStatus {
-	if a.align == nil {
+	wz := a.getWizardAlign()
+	if wz == nil {
 		return AxisAlignStatus{}
 	}
-	pairs, minPairs, known := a.align.Progress()
+	pairs, minPairs, known := wz.Progress()
 	return AxisAlignStatus{
 		Known:    known,
 		Pairs:    pairs,
 		MinPairs: minPairs,
-		Mapping:  a.align.AxisMapping(),
+		Mapping:  wz.AxisMapping(),
 	}
 }
 

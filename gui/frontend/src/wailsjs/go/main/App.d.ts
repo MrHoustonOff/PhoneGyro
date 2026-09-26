@@ -12,6 +12,8 @@ export function CopyLast20Frames():Promise<string>;
 
 export function GetAppSettings():Promise<main.AppSettings>;
 
+export function GetAppVersion():Promise<main.AppVersion>;
+
 export function GetAxisAlignStatus():Promise<main.AxisAlignStatus>;
 
 export function GetCloseAction():Promise<string>;
@@ -28,7 +30,7 @@ export function GetLang():Promise<string>;
 
 export function GetLanguages():Promise<Array<string>>;
 
-export function GetProfiles():Promise<Array<main.Profile>>;
+export function GetProfiles():Promise<Array<main.ProfileView>>;
 
 export function GetResourceStats():Promise<Record<string, any>>;
 

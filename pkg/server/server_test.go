@@ -469,3 +469,26 @@ func TestServer_InputMode(t *testing.T) {
 	}
 }
 
+
+func TestSetAppVersionReplacesPlaceholder(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "gyro_srv_ver_test_*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(tmpDir)
+	cm, err := ca.NewCertificateManager(tmpDir, []net.IP{net.ParseIP("127.0.0.1")}, []string{"localhost"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	html := []byte("<html><body>GyroBridge __APP_VERSION__</body></html>")
+	srv := NewServer(cm, 0, 0, html, nil)
+	srv.SetAppVersion("1.2.3.045-dev")
+
+	if strings.Contains(string(srv.webContent), "__APP_VERSION__") {
+		t.Fatalf("placeholder not replaced: %s", srv.webContent)
+	}
+	if !strings.Contains(string(srv.webContent), "1.2.3.045-dev") {
+		t.Fatalf("version not present: %s", srv.webContent)
+	}
+}

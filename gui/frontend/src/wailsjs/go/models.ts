@@ -97,18 +97,21 @@ export namespace main {
 	        this.h = source["h"];
 	    }
 	}
-	export class Profile {
+	export class ProfileView {
 	    slot: number;
 	    name: string;
 	    device: string;
 	    icon: string;
 	    matrix: number[][];
 	    calGravity?: number[];
-	    sensorFrame?: sensorFrame;
+	    // Go type: sensorFrame
+	    sensorFrame?: any;
 	    active: boolean;
+	    version?: number;
+	    outdated: boolean;
 	
 	    static createFrom(source: any = {}) {
-	        return new Profile(source);
+	        return new ProfileView(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -119,8 +122,10 @@ export namespace main {
 	        this.icon = source["icon"];
 	        this.matrix = source["matrix"];
 	        this.calGravity = source["calGravity"];
-	        this.sensorFrame = this.convertValues(source["sensorFrame"], sensorFrame);
+	        this.sensorFrame = this.convertValues(source["sensorFrame"], null);
 	        this.active = source["active"];
+	        this.version = source["version"];
+	        this.outdated = source["outdated"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -166,7 +171,7 @@ export namespace main {
 	    qy: number;
 	    qz: number;
 	    qw: number;
-	    profiles: Profile[];
+	    profiles: ProfileView[];
 	    activeSlot: number;
 	    activeMatrix: number[][];
 	    ahrsQ0: number;
@@ -209,7 +214,7 @@ export namespace main {
 	        this.qy = source["qy"];
 	        this.qz = source["qz"];
 	        this.qw = source["qw"];
-	        this.profiles = this.convertValues(source["profiles"], Profile);
+	        this.profiles = this.convertValues(source["profiles"], ProfileView);
 	        this.activeSlot = source["activeSlot"];
 	        this.activeMatrix = source["activeMatrix"];
 	        this.ahrsQ0 = source["ahrsQ0"];
@@ -240,6 +245,24 @@ export namespace main {
 		    }
 		    return a;
 		}
+	}
+	export class AppVersion {
+	    release: string;
+	    build: string;
+	    channel: string;
+	    display: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppVersion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.release = source["release"];
+	        this.build = source["build"];
+	        this.channel = source["channel"];
+	        this.display = source["display"];
+	    }
 	}
 	export class AxisAlignStatus {
 	    known: boolean;

@@ -22,6 +22,10 @@ export function GetAppSettings() {
   return window['go']['main']['App']['GetAppSettings']();
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetAxisAlignStatus() {
   return window['go']['main']['App']['GetAxisAlignStatus']();
 }
