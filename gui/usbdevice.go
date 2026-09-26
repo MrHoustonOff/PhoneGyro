@@ -435,6 +435,11 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usb
 
 	port.Close()
 	if wasConnected {
+		// Mirror the phone transport's OnClientDisconnect: clear this bank's
+		// connection status so the UI actually falls back to the "waiting for
+		// device" screen instead of showing stale connected/frozen telemetry.
+		m.app.usbBank.hasClient.Store(false)
+		m.app.usbBank.connectedAt = time.Time{}
 		m.app.logEvent("INFO", "USB: %s disconnected (%d frame(s) dropped this session)", name, state.droppedFrames)
 		m.app.emitStateChange()
 	}

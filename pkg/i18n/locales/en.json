@@ -544,6 +544,8 @@
     "desc": "Connect a compatible USB IMU sensor (gyroscope/accelerometer) to stream motion data.",
     "status_scanning": "Searching for USB IMU device...",
     "status_connected": "IMU device connected ({port})",
+    "connected_name": "USB Controller",
+    "direct_connection": "Direct USB connection",
     "contract_hint": "Hardware contract specifications and reference implementation:",
     "repo_btn": "Project Repository",
     "spec_rate_val": "100+ Hz",

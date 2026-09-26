@@ -185,9 +185,20 @@
           <div class="device-subcard">
             <div class="device-headline">
               <div class="device-icon-wrap online" id="device-icon-wrap">
-                <svg class="device-icon" viewBox="0 0 24 24">
+                <svg class="device-icon icon-phone" viewBox="0 0 24 24">
                   <rect x="5" y="2" width="14" height="20" rx="3"></rect>
                   <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+                <svg class="device-icon icon-usb-chip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+                  <line x1="9" y1="2" x2="9" y2="6"></line>
+                  <line x1="15" y1="2" x2="15" y2="6"></line>
+                  <line x1="9" y1="18" x2="9" y2="22"></line>
+                  <line x1="15" y1="18" x2="15" y2="22"></line>
+                  <line x1="2" y1="9" x2="6" y2="9"></line>
+                  <line x1="2" y1="15" x2="6" y2="15"></line>
+                  <line x1="18" y1="9" x2="22" y2="9"></line>
+                  <line x1="18" y1="15" x2="22" y2="15"></line>
                 </svg>
               </div>
               <span id="device-name" class="device-name">Controller</span>
@@ -10301,6 +10312,45 @@
       }
     },
 
+    // morphToView animates the card's height across a view swap instead of an
+    // abrupt display:none/flex snap -- same recipe setInputMode already uses
+    // for the phone/USB tab switch, reused here for the offline<->online (and
+    // USB waiting<->connected) transition so connecting always feels smooth.
+    morphToView(applyFn) {
+      const card = document.querySelector('.apple-card');
+      if (!card) {
+        applyFn();
+        return;
+      }
+      const startHeight = card.offsetHeight;
+      card.style.height = `${startHeight}px`;
+      card.classList.add('morphing');
+      applyFn();
+      const targetHeight = card.scrollHeight;
+      if (startHeight === targetHeight) {
+        card.style.height = '';
+        card.classList.remove('morphing');
+        return;
+      }
+      void card.offsetHeight; // force reflow
+      card.style.transition = 'height 0.32s cubic-bezier(0.16, 1, 0.3, 1)';
+      card.style.height = `${targetHeight}px`;
+      let cleaned = false;
+      const cleanHeight = () => {
+        if (cleaned) return;
+        cleaned = true;
+        card.removeEventListener('transitionend', onEnd);
+        card.style.height = '';
+        card.style.transition = '';
+        card.classList.remove('morphing');
+      };
+      const onEnd = (e) => {
+        if (e.target === card && e.propertyName === 'height') cleanHeight();
+      };
+      card.addEventListener('transitionend', onEnd);
+      setTimeout(cleanHeight, 350);
+    },
+
     updateModeGlider() {
       const pill = document.getElementById('card-mode-pill') || document.querySelector('.main-mode-pill');
       if (pill) {
@@ -10363,15 +10413,35 @@
         cardModeHeader.style.display = isWizardOpen ? 'none' : 'flex';
       }
 
-      // Mode Branch: Stationary USB Controller Mode
-      if (this.inputMode === 'usb') {
+      // Mode Branch: Stationary USB Controller Mode, before a device is found.
+      // Once state.usbConnected flips true we deliberately fall through to the
+      // exact same "connected" rendering phone mode uses below (view-online,
+      // the LEVEL HUD, profiles module, DSU banner) instead of a bespoke USB
+      // view -- GetState()/GetProfiles()/etc. already resolve to the USB bank
+      // on their own, so reusing that view is both correct and free.
+      if (this.inputMode === 'usb' && !state.usbConnected) {
+        const enteringWaiting = this._lastStatus !== 'waiting_usb';
         if (viewOffline) viewOffline.style.display = 'none';
-        if (viewOnline) viewOnline.style.display = 'none';
-        if (viewUsb && !isWizardOpen) viewUsb.style.display = 'flex';
+        if (!isWizardOpen) {
+          if (enteringWaiting) {
+            this.morphToView(() => {
+              if (viewOnline) viewOnline.style.display = 'none';
+              if (viewUsb) viewUsb.style.display = 'flex';
+            });
+            if (viewUsb) {
+              viewUsb.classList.remove('view-fade-in');
+              void viewUsb.offsetWidth;
+              viewUsb.classList.add('view-fade-in');
+            }
+          } else {
+            if (viewOnline) viewOnline.style.display = 'none';
+            if (viewUsb) viewUsb.style.display = 'flex';
+          }
+        }
         if (linkLiveDebug) linkLiveDebug.style.display = 'none';
         this.hideRecalHint(true);
 
-        if (this._lastStatus !== 'waiting_usb') {
+        if (enteringWaiting) {
           this._lastStatus = 'waiting_usb';
           if (badgeStatus) badgeStatus.className = 'status-capsule waiting-usb';
           if (statusText) {
@@ -10396,7 +10466,16 @@
         return;
       }
 
-      // Phone mode: ensure USB view is hidden
+      // There's a brief gap between the USB transport connecting
+      // (state.usbConnected) and the pipeline processing its first frame
+      // (state.status flips to "online"). Keep showing the USB waiting view
+      // through that gap instead of ever flashing the phone QR screen below.
+      if (this.inputMode === 'usb' && state.status === 'offline') {
+        if (viewOnline) viewOnline.style.display = 'none';
+        if (viewOffline) viewOffline.style.display = 'none';
+        if (viewUsb && !isWizardOpen) viewUsb.style.display = 'flex';
+        return;
+      }
       if (viewUsb) viewUsb.style.display = 'none';
 
       // Status capsule: only mutate DOM when status actually changes
@@ -10427,16 +10506,27 @@
           this._reconnectCooldownTs = Date.now();
           this._stillnessStart = 0;
         }
+        const wizardBlocksView = SetupWizard?.isOpen || HelpManager?.isOpen || SettingsManager?.isOpen || WelcomeManager?.isOpen;
         if (isOffline) {
-          if (!SetupWizard?.isOpen && !HelpManager?.isOpen && !SettingsManager?.isOpen && !WelcomeManager?.isOpen) {
-            viewOffline.style.display = 'flex';
+          if (!wizardBlocksView) {
+            this.morphToView(() => {
+              viewOffline.style.display = 'flex';
+              viewOnline.style.display = 'none';
+            });
+            viewOffline.classList.remove('view-fade-in');
+            void viewOffline.offsetWidth;
+            viewOffline.classList.add('view-fade-in');
           }
-          viewOnline.style.display = 'none';
           if (linkLiveDebug) linkLiveDebug.style.display = 'none';
         } else {
-          if (!SetupWizard?.isOpen && !HelpManager?.isOpen && !SettingsManager?.isOpen && !WelcomeManager?.isOpen) {
-            viewOffline.style.display = 'none';
-            viewOnline.style.display = 'flex';
+          if (!wizardBlocksView) {
+            this.morphToView(() => {
+              viewOffline.style.display = 'none';
+              viewOnline.style.display = 'flex';
+            });
+            viewOnline.classList.remove('view-fade-in');
+            void viewOnline.offsetWidth;
+            viewOnline.classList.add('view-fade-in');
           }
           if (linkLiveDebug) linkLiveDebug.style.display = 'inline-flex';
         }
@@ -10482,23 +10572,55 @@
 
         const deviceIconWrap = document.getElementById('device-icon-wrap');
         const deviceStatusBadge = document.getElementById('device-status-badge');
+        const isUsbSource = this.inputMode === 'usb';
+        deviceIconWrap?.classList.toggle('usb-source', isUsbSource);
 
-        document.getElementById('device-name').textContent = state.deviceName || 'Controller';
-        document.getElementById('device-hz').textContent = `${Math.round(state.hz || 60)} Hz`;
-        const pingVal = state.pingMs || 3;
-        const pingTxt = document.getElementById('device-ping-txt');
-        if (pingTxt) {
-          pingTxt.textContent = `${pingVal} ms`;
+        const deviceNameEl = document.getElementById('device-name');
+        if (isUsbSource) {
+          const portLabel = state.usbPort ? ` (${state.usbPort})` : '';
+          deviceNameEl.textContent = (I18n.t('usb_mode.connected_name') || 'USB-контроллер') + portLabel;
         } else {
-          const devPing = document.getElementById('device-ping');
-          if (devPing) devPing.textContent = `${pingVal} ms`;
+          deviceNameEl.textContent = state.deviceName || 'Controller';
         }
-        const benchPing = document.getElementById('bench-net-ping');
-        if (benchPing) {
-          benchPing.textContent = `${pingVal} ms`;
-        }
-        if (typeof NetSparkline !== 'undefined') {
-          NetSparkline.push(pingVal);
+        document.getElementById('device-hz').textContent = `${Math.round(state.hz || 60)} Hz`;
+
+        // Ping/network-quality pills are meaningless over a wired USB link --
+        // repurpose them to show the port and a plain "direct connection"
+        // label instead of a fabricated latency number.
+        const pingTxt = document.getElementById('device-ping-txt');
+        const netSpark = document.getElementById('main-net-spark-canvas');
+        const networkHealthEl = document.getElementById('network-health');
+        if (isUsbSource) {
+          if (pingTxt) pingTxt.textContent = state.usbPort || 'USB';
+          else {
+            const devPing = document.getElementById('device-ping');
+            if (devPing) devPing.textContent = state.usbPort || 'USB';
+          }
+          if (netSpark) netSpark.style.display = 'none';
+          if (networkHealthEl) {
+            networkHealthEl.removeAttribute('data-i18n');
+            networkHealthEl.textContent = I18n.t('usb_mode.direct_connection') || 'Прямое USB-подключение';
+          }
+        } else {
+          const pingVal = state.pingMs || 3;
+          if (pingTxt) {
+            pingTxt.textContent = `${pingVal} ms`;
+          } else {
+            const devPing = document.getElementById('device-ping');
+            if (devPing) devPing.textContent = `${pingVal} ms`;
+          }
+          if (netSpark) netSpark.style.display = '';
+          if (networkHealthEl && networkHealthEl.getAttribute('data-i18n') !== 'calibration.network_quality_optimal') {
+            networkHealthEl.setAttribute('data-i18n', 'calibration.network_quality_optimal');
+            networkHealthEl.innerHTML = renderMarkdown(I18n.t('calibration.network_quality_optimal'));
+          }
+          const benchPing = document.getElementById('bench-net-ping');
+          if (benchPing) {
+            benchPing.textContent = `${pingVal} ms`;
+          }
+          if (typeof NetSparkline !== 'undefined') {
+            NetSparkline.push(pingVal);
+          }
         }
         document.getElementById('device-time').textContent = state.connectedTime || '00:00:00';
 

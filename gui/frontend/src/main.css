@@ -489,6 +489,21 @@ em {
   overflow: hidden !important;
 }
 
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view-fade-in {
+  animation: viewFadeIn 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .modular-container.setup-mode .apple-card {
   padding: clamp(24px, 3vw, 32px);
 }
@@ -1377,6 +1392,18 @@ em {
   stroke-width: 2;
   fill: none;
   transition: stroke var(--transition-fast);
+}
+
+.icon-usb-chip {
+  display: none;
+}
+
+.device-icon-wrap.usb-source .icon-phone {
+  display: none;
+}
+
+.device-icon-wrap.usb-source .icon-usb-chip {
+  display: block;
 }
 
 .device-name {
