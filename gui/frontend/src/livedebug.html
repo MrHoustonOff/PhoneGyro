@@ -3342,7 +3342,7 @@
       }
 
       // ── Live Telemetry & Statistics Engine ──
-      const CSV_HEADER = "timestamp_ms,event_type,seq,gx,gy,gz,ax,ay,az,recv_ts,send_ts,stick_lx,stick_ly,gyro_out_x,gyro_out_y,gyro_out_z";
+      const CSV_HEADER = "timestamp_ms,event_type,seq,gx,gy,gz,ax,ay,az,recv_ts,send_ts,stick_lx,stick_ly,gyro_out_x,gyro_out_y,gyro_out_z,dev_ts_us,ref_qw,ref_qx,ref_qy,ref_qz";
       isRecording = false;
       recordStartTime = 0;
       recordTimerInterval = null;
@@ -3912,9 +3912,13 @@
           const sendTs = data.send_ts || (nowEpoch + 1);
 
           // IN row: timestamp_ms,IN,seq,gx,gy,gz,ax,ay,az,recv_ts,,,,,,
-          const inRow = `${nowEpoch},IN,${seq},${gx},${gy},${gz},${ax},${ay},${az},${recvTs},,,,,,`;
+          // Device clock + the phone's own orientation: lets the attitude anchor be
+          // analysed offline (gui/attitudeanchor.go).
+          const devTs = typeof data.dev_ts_us === 'number' ? data.dev_ts_us : '';
+          const rq = ['ref_qw', 'ref_qx', 'ref_qy', 'ref_qz'].map(k => typeof data[k] === 'number' ? data[k].toFixed(6) : '').join(',');
+          const inRow = `${nowEpoch},IN,${seq},${gx},${gy},${gz},${ax},${ay},${az},${recvTs},,,,,,,${devTs},${rq}`;
           // OUT row: timestamp_ms,OUT,seq,,,,,,,send_ts,stick_lx,stick_ly,gyro_out_x,gyro_out_y,gyro_out_z
-          const outRow = `${nowEpoch + 1},OUT,${seq},,,,,,,,${sendTs},${stickLx},${stickLy},${outGx},${outGy},${outGz}`;
+          const outRow = `${nowEpoch + 1},OUT,${seq},,,,,,,,${sendTs},${stickLx},${stickLy},${outGx},${outGy},${outGz},,,,,`;
 
           recordedLines.push(inRow, outRow);
 

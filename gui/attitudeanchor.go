@@ -40,6 +40,7 @@ type attitudeAnchor struct {
 	score [anchorCandidates]float64
 	n     int
 	mode  int // -1 until a candidate is proven
+	evals int // decisions made while not engaged (throttles the diagnostic log)
 
 	// Attitude a client reaches by integrating our output, per candidate convention,
 	// tracked from the first frame so drift from before engagement is corrected too.
@@ -160,6 +161,17 @@ func (a *attitudeAnchor) scoreStep(gyroDev [3]float64, ref quat, dt float64) {
 	} else if a.mode >= 0 && mean >= anchorMaxRelErr {
 		log.Printf("[anchor] attitude reference disagrees with gyro (err %.2f): disengaged", mean)
 		a.mode = -1
+	}
+	if a.mode < 0 {
+		// Why it does not engage: relative step error of each candidate convention
+		// ({q, q*} x rotation sense). Engaging needs best < anchorMaxRelErr and the
+		// runner-up anchorMarginRatio times worse. Logged every ~10 s of motion.
+		if a.evals%5 == 0 {
+			n := float64(a.n)
+			log.Printf("[anchor] not engaged: step err per convention %.2f %.2f %.2f %.2f (best %d, need < %.2f and runner-up x%.0f)",
+				a.score[0]/n, a.score[1]/n, a.score[2]/n, a.score[3]/n, best, anchorMaxRelErr, anchorMarginRatio)
+		}
+		a.evals++
 	}
 	a.score = [anchorCandidates]float64{}
 	a.n = 0

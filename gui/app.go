@@ -263,10 +263,13 @@ type motionBank struct {
 	prevAnchorTsUs uint64
 	anchorClock    frameClock // интервал кадра для attitudeanchor (frameclock.go)
 	ahrsClock      frameClock // интервал кадра для ahrs.Update (frameclock.go)
+	// anchorWhyLogged: причина, по которой anchor не может работать, уже записана
+	// в лог для этого подключения (anchorNoteNoFrame / anchorNoteNoRef).
+	anchorWhyLogged uint8
 	// resetAnchor просит обработчик кадров сбросить anchor (новое WebSocket-
 	// подключение телефона: у новой страницы свой ноль ориентации). Флаг, а не
 	// прямой вызов: anchor живёт только в горутине обработчика кадров.
-	resetAnchor    atomic.Bool
+	resetAnchor   atomic.Bool
 	accFiltered    [3]float64
 	accFilterInit  bool
 	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
@@ -1528,6 +1531,7 @@ func (a *App) startup(ctx context.Context) {
 		if bank.resetAnchor.Swap(false) {
 			bank.anchor.Reset()
 			bank.anchorClock = frameClock{}
+			bank.anchorWhyLogged = 0
 			a.logEvent("INFO", "anchor: reset (new phone connection)")
 		}
 		if frame.SampleClock != server.ClockNone {
@@ -1553,6 +1557,18 @@ func (a *App) startup(ctx context.Context) {
 			}
 		}
 		bank.prevAnchorTsUs = frame.TimestampUs
+		if a.GetInputMode() != "usb" {
+			// Diagnostics only: say once per connection why the anchor cannot run.
+			refNorm := math.Sqrt(float64(frame.Qw*frame.Qw + frame.Qx*frame.Qx + frame.Qy*frame.Qy + frame.Qz*frame.Qz))
+			switch {
+			case !sfKnown && bank.anchorWhyLogged&1 == 0:
+				bank.anchorWhyLogged |= 1
+				a.logEvent("INFO", "anchor: inactive, gyro/accelerometer axis relation not known yet")
+			case refNorm < anchorMinQuatNorm && bank.anchorWhyLogged&2 == 0:
+				bank.anchorWhyLogged |= 2
+				a.logEvent("INFO", "anchor: inactive, the phone sends no orientation (deviceorientation)")
+			}
+		}
 		if sfKnown {
 			pk := [3]float64{rawRx * alignDegToRad, rawRy * alignDegToRad, rawRz * alignDegToRad}
 			dev := mulVec3(transpose3(sf.Q), pk)
@@ -1695,6 +1711,11 @@ func (a *App) startup(ctx context.Context) {
 				RawAx:      frame.AccX,
 				RawAy:      frame.AccY,
 				RawAz:      frame.AccZ,
+				DevTsUs:    frame.TimestampUs,
+				RefQw:      frame.Qw,
+				RefQx:      frame.Qx,
+				RefQy:      frame.Qy,
+				RefQz:      frame.Qz,
 				OutGx:      dsuRx,
 				OutGy:      dsuRy,
 				OutGz:      dsuRz,
@@ -2749,6 +2770,13 @@ type liveDebugMsg struct {
 	PipeMs          float64          `json:"pipe_ms,omitempty"`
 	DsuClients      int              `json:"dsu_clients"`
 	DsuClientList   []dsu.ClientInfo `json:"dsu_client_list,omitempty"`
+	// Кадр источника для офлайн-разбора записей Live Debug: часы устройства (µs)
+	// и ориентация, которую прислал телефон (кватернион iOS/Android).
+	DevTsUs uint64  `json:"dev_ts_us,omitempty"`
+	RefQw   float32 `json:"ref_qw"`
+	RefQx   float32 `json:"ref_qx"`
+	RefQy   float32 `json:"ref_qy"`
+	RefQz   float32 `json:"ref_qz"`
 	// LinkRttMs — измеренное время отклика канала телефона (PING/PONG), мс;
 	// -1 — не измерено (нет телефона, USB). Всегда в сообщении: 0 и -1 значимы.
 	LinkRttMs float64 `json:"link_rtt_ms"`
@@ -2815,6 +2843,8 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 		msg.RawAx = e.RawAx
 		msg.RawAy = e.RawAy
 		msg.RawAz = e.RawAz
+		msg.DevTsUs = e.DevTsUs
+		msg.RefQw, msg.RefQx, msg.RefQy, msg.RefQz = e.RefQw, e.RefQx, e.RefQy, e.RefQz
 		msg.OutGx = e.OutGx
 		msg.OutGy = e.OutGy
 		msg.OutGz = e.OutGz
