@@ -1645,12 +1645,22 @@ function onMotion(e) {
   // Frames skipped while the socket is busy must not lose rotation: accumulate
   // angle (rate × dt) and send the average rate over the whole unsent interval.
   const now = performance.now();
-  const dt = rotAccumPrevTs ? Math.min(Math.max((now - rotAccumPrevTs) / 1000, 0.001), 0.1) : 1 / 60;
+  const gapSec = rotAccumPrevTs ? (now - rotAccumPrevTs) / 1000 : 0;
+  const dt = rotAccumPrevTs ? Math.min(Math.max(gapSec, 0.001), 0.1) : 1 / 60;
   rotAccumPrevTs = now;
-  // Very long stall: start over (the server's attitude anchor re-converges it).
-  // 0.85 s + one event (dt <= 0.1 s) keeps every frame's span under the 1 s the
-  // server still trusts as a device interval (pkg/server MaxSourceDeltaUs).
   sensorEvents = (sensorEvents + 1) >>> 0;
+  // The OS delivered no motion for a while (page/JS freeze, backgrounding):
+  // the rotation in that gap was never measured and cannot be recovered here.
+  // Count the samples that should have arrived (60 Hz) as lost, so it shows up
+  // in the app (loss card, data-loss sound) instead of vanishing silently.
+  if (gapSec > 0.15) {
+    const missed = Math.max(0, Math.round(gapSec * 60) - 1);
+    sensorEvents = (sensorEvents + missed) >>> 0;
+    sensorDropped = (sensorDropped + missed) >>> 0;
+  }
+  // Very long socket stall: start over (the server's attitude anchor re-converges
+  // it). 0.85 s + one event (dt <= 0.1 s) keeps every frame's span under the 1 s
+  // the server still trusts as a device interval (pkg/server MaxSourceDeltaUs).
   if (rotAccumDt > 0.85) {
     sensorDropped = (sensorDropped + rotAccumEvents) >>> 0; // their rotation is gone
     rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; rotAccumEvents = 0;
