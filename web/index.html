@@ -1569,11 +1569,12 @@ function onMotion(e) {
   // the server still trusts as a device interval (pkg/server MaxSourceDeltaUs).
   if (rotAccumDt > 0.85) {
     sensorDropped = (sensorDropped + rotAccumEvents) >>> 0; // their rotation is gone
-    rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; rotAccumEvents = 0;
+    rotAccumQ = [1, 0, 0, 0]; rotAccumDt = 0; rotAccumEvents = 0;
   }
-  rotAccum.x += gyr.x * dt;
-  rotAccum.y += gyr.y * dt;
-  rotAccum.z += gyr.z * dt;
+  // Compose, don't add: summing rotation vectors is only right for small or
+  // same-axis turns. During a socket stall in fast multi-axis motion the sum
+  // was off by tens of degrees (median 78° for a 633 ms stall on real logs).
+  rotAccumQ = quatMul(rotAccumQ, quatExp(gyr.x * dt * DEG2RAD, gyr.y * dt * DEG2RAD, gyr.z * dt * DEG2RAD));
   rotAccumDt += dt;
   rotAccumEvents++;
 
@@ -1584,7 +1585,39 @@ function onMotion(e) {
   flushMotion();
 }
 
-let rotAccum = { x: 0, y: 0, z: 0 }, rotAccumDt = 0, rotAccumPrevTs = 0;
+// Rotation accumulated since the last delivered frame, as a unit quaternion
+// [w, x, y, z] in the rotationRate axes (body frame, right-multiplied like the
+// server and every DSU client integrate it).
+let rotAccumQ = [1, 0, 0, 0], rotAccumDt = 0, rotAccumPrevTs = 0;
+const DEG2RAD = Math.PI / 180;
+
+function quatMul(a, b) {
+  return [
+    a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+    a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+    a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+    a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
+  ];
+}
+
+// quatExp: rotation vector (radians) -> unit quaternion.
+function quatExp(x, y, z) {
+  const th = Math.hypot(x, y, z);
+  if (th < 1e-12) return [1, x / 2, y / 2, z / 2];
+  const s = Math.sin(th / 2) / th;
+  return [Math.cos(th / 2), x * s, y * s, z * s];
+}
+
+// quatLog: unit quaternion -> rotation vector (radians), shortest path. Its
+// exp is exactly the accumulated rotation, which is what the frame must carry.
+function quatLog(q) {
+  let [w, x, y, z] = q;
+  if (w < 0) { w = -w; x = -x; y = -y; z = -z; }
+  const v = Math.hypot(x, y, z);
+  if (v < 1e-12) return [2 * x, 2 * y, 2 * z];
+  const k = 2 * Math.atan2(v, w) / v;
+  return [x * k, y * k, z * k];
+}
 
 // Cumulative counters for the app's honest link statistics (gui/linkloss.go):
 // every DeviceMotion event, and the events whose rotation a very long stall
@@ -1605,15 +1638,17 @@ let sampleClockUs = Math.round(performance.now() * 1000);
 function flushMotion() {
   let rx = 0, ry = 0, rz = 0, spanSec = 1e-6;
   if (rotAccumDt > 0) {
-    rx = rotAccum.x / rotAccumDt;
-    ry = rotAccum.y / rotAccumDt;
-    rz = rotAccum.z / rotAccumDt;
+    // Mean rate whose rotation over the whole interval is exactly the composed one.
+    const v = quatLog(rotAccumQ);
+    rx = v[0] / DEG2RAD / rotAccumDt;
+    ry = v[1] / DEG2RAD / rotAccumDt;
+    rz = v[2] / DEG2RAD / rotAccumDt;
     spanSec = rotAccumDt;
   }
   const ts = sampleClockUs + spanSec * 1e6;
   if (!sendFrame(ts, rx, ry, rz)) return false; // socket busy: keep accumulating
   sampleClockUs = ts;
-  rotAccum = { x: 0, y: 0, z: 0 };
+  rotAccumQ = [1, 0, 0, 0];
   rotAccumDt = 0;
   rotAccumEvents = 0;
   return true;
