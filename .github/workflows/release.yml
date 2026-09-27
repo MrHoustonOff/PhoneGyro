@@ -113,7 +113,9 @@ jobs:
             Write-Warning "VT_API_KEY secret not found or empty, skipping upload."
           }
 
-          $notes = Get-Content docs/RELEASE_NOTES.md -Raw
+          # Windows PowerShell 5.1 reads BOM-less files as ANSI: be explicit, or any
+          # non-ASCII text (emoji, arrows, Cyrillic) in the notes turns into mojibake.
+          $notes = Get-Content docs/RELEASE_NOTES.md -Raw -Encoding UTF8
           $vtLines = @(
             "",
             "### VirusTotal Verification Reports",
@@ -123,7 +125,8 @@ jobs:
             "  SHA-256: ``$arm64Hash``"
           )
           $fullNotes = $notes + [Environment]::NewLine + ($vtLines -join [Environment]::NewLine)
-          Set-Content -Path RELEASE_NOTES_COMPOSED.md -Value $fullNotes -Encoding UTF8
+          # UTF-8 without BOM: a BOM ends up as a stray character before the title.
+          [System.IO.File]::WriteAllText((Join-Path (Get-Location) "RELEASE_NOTES_COMPOSED.md"), $fullNotes, (New-Object System.Text.UTF8Encoding $false))
         shell: powershell
 
       - name: Publish GitHub Release
