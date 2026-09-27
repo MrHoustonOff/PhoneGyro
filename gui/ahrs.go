@@ -252,3 +252,42 @@ func (m *AHRS) GetEulerAngles() (pitch, roll, yaw float64) {
 
 	return pitch, roll, yaw
 }
+
+// GetLevel — what LEVEL (and the other tilt UIs) show, without the Euler-angle
+// singularity that made them jump around beyond ~90° of tilt:
+//
+//	fwd, right — the tilt as a vector in the device's own axes, in degrees: its
+//	             length is the true angle from vertical (smooth all the way to
+//	             upside down), split into forward (+ = far edge down, bubble up)
+//	             and right (+ = right edge down, bubble right). For small tilts
+//	             these equal pitch and roll from GetEulerAngles.
+//	heading    — rotation about world vertical, degrees, clockwise (seen from
+//	             above) positive: the twist part of the orientation, independent
+//	             of how the device is tilted, so it does not flip at 90°.
+func (m *AHRS) GetLevel() (fwd, right, heading float64) {
+	m.mu.Lock()
+	w, x, y, z := float64(m.Q0), float64(m.Q1), float64(m.Q2), float64(m.Q3)
+	m.mu.Unlock()
+
+	const rad2deg = 180.0 / math.Pi
+	// World up in body coordinates: R(q)^T · (0,1,0).
+	ux := 2 * (x*y + w*z)
+	uy := 1 - 2*(x*x+z*z)
+	uz := 2 * (y*z - w*x)
+	tilt := math.Acos(math.Max(-1, math.Min(1, uy))) * rad2deg
+	if h := math.Hypot(ux, uz); h > 1e-9 {
+		// Up leaning toward the user (+Z) = far edge down = forward; up leaning
+		// right (+X) = right edge up = tilted left.
+		fwd = tilt * uz / h
+		right = tilt * -ux / h
+	}
+	// Twist about world Y: q = twist(Y) ⊗ swing(horizontal axis) gives
+	// twist half-angle atan2(q_y, q_w); +θ about Y is counter-clockwise from above.
+	heading = -2 * math.Atan2(y, w) * rad2deg
+	if heading > 180 {
+		heading -= 360
+	} else if heading <= -180 {
+		heading += 360
+	}
+	return fwd, right, heading
+}

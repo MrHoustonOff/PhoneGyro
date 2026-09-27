@@ -1689,7 +1689,7 @@ func (a *App) startup(ctx context.Context) {
 		var curP, curR, curY float64
 		if bank.ahrs != nil {
 			q0, q1, q2, q3 := bank.ahrs.Update(dsuRx, dsuRy, dsuRz, dsuAx, dsuAy, dsuAz, ahrsDt)
-			p, r, y := bank.ahrs.GetEulerAngles()
+			p, r, y := bank.ahrs.GetLevel() // LEVEL/tilt UIs: no Euler singularity beyond 90°
 			curP, curR, curY = p, r, y
 			bank.curPitch.Store(math.Float64bits(p))
 			bank.curRoll.Store(math.Float64bits(r))
