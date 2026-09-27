@@ -1519,6 +1519,7 @@ func (a *App) startup(ctx context.Context) {
 			wz.Feed([3]float64{rawRx, rawRy, rawRz}, rawAcc, frame.TimestampUs)
 		}
 		sf, sfKnown := bank.align.Frame()
+		sf, sfKnown, calGravity = bank.outputFrameInputs(usePrev, sf, sfKnown, calGravity)
 		accMat, yawSign := buildOutputMapping(mat, sf, calGravity)
 
 		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).

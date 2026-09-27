@@ -328,3 +328,26 @@ func (a *App) SetProfileMountEnabled(slot int, enabled bool) string {
 	a.emitStateChange()
 	return "ok"
 }
+
+// outputFrameInputs picks the sensor frame and rest gravity the output mapping is
+// built from. Normally that is the live aligner and the active profile. On the
+// calibration preview (usePrev) it must be what the wizard has just measured:
+// the profile's gravity may be absent (fresh install) or belong to another device,
+// and it decides the accelerometer's sign — with the wrong one the preview showed
+// gravity upside down and the model heavily tilted until the profile was saved.
+func (b *motionBank) outputFrameInputs(usePrev bool, sf sensorFrame, sfKnown bool, calGravity [3]float64) (sensorFrame, bool, [3]float64) {
+	if !usePrev {
+		return sf, sfKnown, calGravity
+	}
+	b.wizardAlignMu.Lock()
+	defer b.wizardAlignMu.Unlock()
+	if b.wizardGravityValid {
+		calGravity = b.wizardGravity
+	}
+	if b.wizardAlign != nil {
+		if f, ok := b.wizardAlign.Frame(); ok {
+			sf, sfKnown = f, true
+		}
+	}
+	return sf, sfKnown, calGravity
+}
