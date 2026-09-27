@@ -18,6 +18,10 @@ export function CopyLast20Frames() {
   return window['go']['main']['App']['CopyLast20Frames']();
 }
 
+export function DeleteProfile(arg1) {
+  return window['go']['main']['App']['DeleteProfile'](arg1);
+}
+
 export function GetAppSettings() {
   return window['go']['main']['App']['GetAppSettings']();
 }
