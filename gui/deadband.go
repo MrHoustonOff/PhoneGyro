@@ -1,5 +1,7 @@
 package main
 
+import "math"
+
 // Порог микро-тремора (настройка «Порог микро-тремора рук», по умолчанию 0.10°/с).
 //
 // Прежняя формула умножала вектор скорости на (|ω| − порог) / |ω|, то есть
@@ -12,6 +14,22 @@ package main
 //   - между ними       → плавный переход по кубическому эрмитову сплайну,
 //     гладкий и по значению, и по наклону на обоих концах (без рывков).
 // Направление вектора не меняется — масштабируется только модуль.
+
+// Порог свой у каждого источника: шум датчиков разный. Телефон — ~0.05–0.1 °/с,
+// MPU-6050 в USB-контроллере на ±2000 °/с — ~0.2 °/с в среднем и до 0.3–0.5 на
+// пиках (записи 2026-09-27), поэтому по умолчанию 0.10 и 0.50.
+const (
+	defaultDeadbandPhone = 0.10
+	defaultDeadbandUSB   = 0.50
+)
+
+// deadbandFor — порог для источника, который питает bank.
+func (a *App) deadbandFor(bank *motionBank) float64 {
+	if bank == a.usbBank {
+		return math.Float64frombits(a.gyroDeadbandUsbBits.Load())
+	}
+	return math.Float64frombits(a.gyroDeadbandBits.Load())
+}
 
 // deadbandScale возвращает множитель для вектора угловой скорости с модулем speed.
 func deadbandScale(speed, threshold float64) float64 {

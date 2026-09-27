@@ -82,7 +82,7 @@ export function SetTheme(arg1:string):Promise<void>;
 
 export function SetTuningActive(arg1:boolean):Promise<void>;
 
-export function SetTuningFilterParams(arg1:number,arg2:number):Promise<void>;
+export function SetTuningFilterParams(arg1:number,arg2:number,arg3:number):Promise<void>;
 
 export function SetWindowTheme(arg1:string):Promise<void>;
 

@@ -367,7 +367,7 @@
     "group_motion": "Aim Motion Filtering (DSU)",
     "filter_live_hint": "All filter adjustments apply automatically on the fly. Best tuned directly while aiming inside the game.",
     "group_behavior": "Behavior & Notifications",
-    "gyro_deadband": "Hand Tremor Deadband",
+    "gyro_deadband": "Tremor threshold — phone",
     "gyro_deadband_tip": "Smooth deadzone: fully silences rates below the threshold (sensor noise and hand micro-tremor), and from twice the threshold passes motion unchanged, so normal aiming loses no speed. In between is a smooth, jerk-free transition. Pick the lowest threshold at which the aim stays still when you freeze.",
     "deadband_off": "0.00°/s (Disabled)",
     "deadband_005": "0.05°/s (Minimum)",
@@ -522,7 +522,13 @@
     "deadband_035_desc": "The aim jitters slightly when you freeze and 0.20 is not enough.",
     "deadband_050_desc": "USB controller with an MPU-6050 (±2000 °/s): silences its 0.2–0.5 °/s noise. Recommended for USB.",
     "deadband_075_desc": "Strong hand tremor, or still shaky at 0.50. Aim adjustments slower than ~1.5 °/s get softer.",
-    "deadband_100_desc": "Last resort: everything under 1 °/s is silenced, from 2 °/s it passes as is. Fine aim adjustment suffers."
+    "deadband_100_desc": "Last resort: everything under 1 °/s is silenced, from 2 °/s it passes as is. Fine aim adjustment suffers.",
+    "gyro_deadband_usb": "Tremor threshold — USB controller",
+    "gyro_deadband_usb_tip": "The same for the USB controller, with its own threshold because its sensor is noisier than a phone. An MPU-6050 at ±2000 °/s has about 0.2 °/s of noise and up to 0.3–0.5 at peaks, hence the 0.50 default: the aim stays still while normal aiming (from 1 °/s) passes unchanged.",
+    "deadband_usb_010_desc": "Too low for USB: almost all sensor noise reaches the game and the aim jitters.",
+    "deadband_usb_020_desc": "A very quiet sensor, or one on a smaller range (±250–500 °/s).",
+    "deadband_usb_035_desc": "Slightly softer than recommended: if 0.50 costs you slow-aim precision.",
+    "deadband_usb_050_desc": "MPU-6050 at ±2000 °/s: silences its 0.2–0.5 °/s noise. The USB default."
   },
   "welcome": {
     "title": "Welcome to PhoneGyro!",

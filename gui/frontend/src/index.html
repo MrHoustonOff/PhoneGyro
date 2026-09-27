@@ -949,7 +949,7 @@
                     <div class="setting-row" data-setting-key="gyroDeadband">
                       <div class="setting-info">
                         <div class="setting-label-row">
-                          <span class="setting-label" data-i18n="settings_modal.gyro_deadband">Порог микро-тремора рук</span>
+                          <span class="setting-label" data-i18n="settings_modal.gyro_deadband">Порог дрожи — телефон</span>
                           <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.gyro_deadband_tip" aria-label="Info">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                               <circle cx="12" cy="12" r="10"></circle>
@@ -967,6 +967,33 @@
                           <option value="0.20" data-i18n="settings_modal.deadband_020" data-desc-i18n="settings_modal.deadband_020_desc">0.20°/s (Умеренный)</option>
                           <option value="0.35" data-i18n="settings_modal.deadband_035" data-desc-i18n="settings_modal.deadband_035_desc">0.35°/s (Повышенный)</option>
                           <option value="0.50" data-i18n="settings_modal.deadband_050" data-desc-i18n="settings_modal.deadband_050_desc">0.50°/s (USB-контроллер)</option>
+                          <option value="0.75" data-i18n="settings_modal.deadband_075" data-desc-i18n="settings_modal.deadband_075_desc">0.75°/s (Сильный)</option>
+                          <option value="1.00" data-i18n="settings_modal.deadband_100" data-desc-i18n="settings_modal.deadband_100_desc">1.00°/s (Максимальный)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Tremor Deadband, USB controller (own sensor noise: gui/deadband.go) -->
+                    <div class="setting-row" data-setting-key="gyroDeadbandUsb">
+                      <div class="setting-info">
+                        <div class="setting-label-row">
+                          <span class="setting-label" data-i18n="settings_modal.gyro_deadband_usb">Порог дрожи — USB-контроллер</span>
+                          <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.gyro_deadband_usb_tip" aria-label="Info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="setting-control">
+                        <select id="setting-gyro-deadband-usb" class="setting-select">
+                          <option value="0.00" data-i18n="settings_modal.deadband_off" data-desc-i18n="settings_modal.deadband_off_desc">0.00°/s (Отключен)</option>
+                          <option value="0.10" data-i18n="settings_modal.deadband_010" data-desc-i18n="settings_modal.deadband_usb_010_desc">0.10°/s (Стандартный)</option>
+                          <option value="0.20" data-i18n="settings_modal.deadband_020" data-desc-i18n="settings_modal.deadband_usb_020_desc">0.20°/s (Умеренный)</option>
+                          <option value="0.35" data-i18n="settings_modal.deadband_035" data-desc-i18n="settings_modal.deadband_usb_035_desc">0.35°/s (Повышенный)</option>
+                          <option value="0.50" data-i18n="settings_modal.deadband_050" data-desc-i18n="settings_modal.deadband_usb_050_desc" selected>0.50°/s (USB-контроллер)</option>
                           <option value="0.75" data-i18n="settings_modal.deadband_075" data-desc-i18n="settings_modal.deadband_075_desc">0.75°/s (Сильный)</option>
                           <option value="1.00" data-i18n="settings_modal.deadband_100" data-desc-i18n="settings_modal.deadband_100_desc">1.00°/s (Максимальный)</option>
                         </select>
@@ -6311,6 +6338,7 @@
       httpPort: 8080,
       httpsPort: 8443,
       gyroDeadband: 0.10,
+      gyroDeadbandUsb: 0.50,
       gyroSensitivity: 1.00,
       stillnessHint: true,
       disconnectAlert: true,
@@ -6590,7 +6618,7 @@
       }
 
       // Gyro filtering selects live update
-      ['setting-gyro-deadband'].forEach(id => {
+      ['setting-gyro-deadband', 'setting-gyro-deadband-usb'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
           this.syncLiveFilter();
           this.autoSave(true);
@@ -6829,11 +6857,12 @@
 
     syncLiveFilter() {
       const deadband = parseFloat(document.getElementById('setting-gyro-deadband')?.value || '0.10');
+      const deadbandUsb = parseFloat(document.getElementById('setting-gyro-deadband-usb')?.value || '0.50');
       const sensInput = document.getElementById('setting-gyro-sens-input');
       const sensSlider = document.getElementById('setting-gyro-sensitivity');
       const sens = parseFloat(sensInput?.value || sensSlider?.value || '1.00');
       if (window.go?.main?.App?.SetTuningFilterParams) {
-        window.go.main.App.SetTuningFilterParams(deadband, sens);
+        window.go.main.App.SetTuningFilterParams(deadband, deadbandUsb, sens);
       }
     },
 
@@ -7030,6 +7059,7 @@
         httpsPort: 8443,
         gyroDeadzone: 0.10,
         gyroDeadband: 0.10,
+        gyroDeadbandUsb: 0.50,
         gyroSensitivity: 1.00,
         stillnessHint: true,
         disconnectAlert: true,
@@ -7075,6 +7105,12 @@
         if (!matched && deadbandSelect.options.length > 0) {
           deadbandSelect.value = '0.10';
         }
+      }
+      const deadbandUsbSelect = document.getElementById('setting-gyro-deadband-usb');
+      if (deadbandUsbSelect) {
+        const usbVal = Number(s.gyroDeadbandUsb !== undefined ? s.gyroDeadbandUsb : 0.50);
+        const opt = Array.from(deadbandUsbSelect.options).find(o => Math.abs(parseFloat(o.value) - usbVal) < 0.02);
+        deadbandUsbSelect.value = opt ? opt.value : '0.50';
       }
 
       // DSU Sensitivity Multiplier
@@ -7231,6 +7267,8 @@
       // 6. Gyro Deadband
       const dbVal = parseFloat(deadbandSelect?.value || '0.10');
       setModified('gyroDeadband', Math.abs(dbVal - this.DEFAULTS.gyroDeadband) > 0.01);
+      const dbUsbVal = parseFloat(document.getElementById('setting-gyro-deadband-usb')?.value || '0.50');
+      setModified('gyroDeadbandUsb', Math.abs(dbUsbVal - this.DEFAULTS.gyroDeadbandUsb) > 0.01);
 
       // 7. Gyro Sensitivity
       const sensVal = parseFloat(sensInput?.value || sensSlider?.value || '1.00');
@@ -7312,6 +7350,7 @@
       if (hasPortError) return null;
 
       const gyroDeadband = parseFloat(document.getElementById('setting-gyro-deadband')?.value || '0.10');
+      const gyroDeadbandUsb = parseFloat(document.getElementById('setting-gyro-deadband-usb')?.value || '0.50');
       const gyroSensInput = document.getElementById('setting-gyro-sens-input');
       const gyroSensSlider = document.getElementById('setting-gyro-sensitivity');
       let gyroSensitivity = parseFloat(gyroSensInput?.value || gyroSensSlider?.value || '1.00');
@@ -7348,6 +7387,7 @@
         httpsPort: httpsPort,
         gyroDeadzone: isNaN(gyroDeadband) ? 0.10 : gyroDeadband,
         gyroDeadband: isNaN(gyroDeadband) ? 0.10 : gyroDeadband,
+        gyroDeadbandUsb: isNaN(gyroDeadbandUsb) ? 0.50 : gyroDeadbandUsb,
         gyroSensitivity: gyroSensitivity,
         stillnessHint: stillnessHint,
         disconnectAlert: disconnectAlert,
@@ -7423,6 +7463,10 @@
       const deadbandSelect = document.getElementById('setting-gyro-deadband');
       if (deadbandSelect) {
         deadbandSelect.value = '0.10';
+      }
+      const deadbandUsbSelect = document.getElementById('setting-gyro-deadband-usb');
+      if (deadbandUsbSelect) {
+        deadbandUsbSelect.value = '0.50';
       }
 
       const sensSlider = document.getElementById('setting-gyro-sensitivity');

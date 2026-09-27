@@ -374,7 +374,8 @@ type App struct {
 	soundVolumesMu    sync.RWMutex
 	soundVolumes      map[string]int
 	// Adaptive 1-Euro DSU filter and dynamic response parameters
-	gyroDeadbandBits    atomic.Uint64 // float64 (deg/s, default 0.10)
+	gyroDeadbandBits    atomic.Uint64 // float64 (deg/s, default 0.10): phone
+	gyroDeadbandUsbBits atomic.Uint64 // float64 (deg/s, default 0.50): USB controller (deadband.go)
 	gyroSensitivityBits atomic.Uint64 // float64 (multiplier, default 1.00)
 	tuningActive        atomic.Bool
 	lastTuningEmit      atomic.Int64
@@ -449,6 +450,7 @@ type AppSettings struct {
 	SoundVolume           int            `json:"soundVolume"`
 	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
 	GyroDeadband          float64        `json:"gyroDeadband"`
+	GyroDeadbandUsb       float64        `json:"gyroDeadbandUsb"`
 	GyroSensitivity       float64        `json:"gyroSensitivity"`
 	MinimizeToTray        bool           `json:"minimizeToTray"`
 	CloseAction           string         `json:"closeAction"`
@@ -692,7 +694,8 @@ func NewApp() *App {
 	app.phoneBank = newMotionBank()
 	app.usbBank = newMotionBank()
 	app.gyroDeadzoneBits.Store(math.Float64bits(0.20))
-	app.gyroDeadbandBits.Store(math.Float64bits(0.10))
+	app.gyroDeadbandBits.Store(math.Float64bits(defaultDeadbandPhone))
+	app.gyroDeadbandUsbBits.Store(math.Float64bits(defaultDeadbandUSB))
 	app.gyroSensitivityBits.Store(math.Float64bits(1.00))
 	app.fontScaleBits.Store(math.Float64bits(1.00))
 	app.stillnessHint.Store(true)
@@ -853,6 +856,7 @@ func (a *App) loadSettings() {
 		SoundVolume           *int           `json:"soundVolume"`
 		SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
 		GyroDeadband          *float64       `json:"gyroDeadband,omitempty"`
+		GyroDeadbandUsb       *float64       `json:"gyroDeadbandUsb,omitempty"`
 		GyroSensitivity       *float64       `json:"gyroSensitivity,omitempty"`
 		FontScale             *float64       `json:"fontScale,omitempty"`
 		MinimizeToTray        *bool          `json:"minimizeToTray,omitempty"`
@@ -933,7 +937,14 @@ func (a *App) loadSettings() {
 	} else if s.GyroDeadzone > 0 {
 		a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadzone))
 	} else {
-		a.gyroDeadbandBits.Store(math.Float64bits(0.10))
+		a.gyroDeadbandBits.Store(math.Float64bits(defaultDeadbandPhone))
+	}
+	// Settings from before the split had one threshold, tuned for phones: USB then
+	// starts from its own default rather than inheriting it.
+	if s.GyroDeadbandUsb != nil {
+		a.gyroDeadbandUsbBits.Store(math.Float64bits(*s.GyroDeadbandUsb))
+	} else {
+		a.gyroDeadbandUsbBits.Store(math.Float64bits(defaultDeadbandUSB))
 	}
 	if s.GyroSensitivity != nil && *s.GyroSensitivity > 0 {
 		a.gyroSensitivityBits.Store(math.Float64bits(*s.GyroSensitivity))
@@ -1061,6 +1072,7 @@ func (a *App) saveSettings() {
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
 		GyroDeadband:          deadband,
+		GyroDeadbandUsb:       math.Float64frombits(a.gyroDeadbandUsbBits.Load()),
 		GyroSensitivity:       sensitivity,
 		MinimizeToTray:        a.GetCloseAction() == "minimize",
 		CloseAction:           a.GetCloseAction(),
@@ -1596,11 +1608,7 @@ func (a *App) startup(ctx context.Context) {
 
 		// 1. Gyroscope deadband (deadband.go): silences resting tremor below the
 		// threshold, passes motion above 2x threshold untouched.
-		deadband := math.Float64frombits(a.gyroDeadbandBits.Load())
-		if deadband <= 0 && a.gyroDeadzoneBits.Load() > 0 {
-			deadband = math.Float64frombits(a.gyroDeadzoneBits.Load())
-		}
-		gyroDeadband := deadband
+		gyroDeadband := a.deadbandFor(bank)
 		sens := math.Float64frombits(a.gyroSensitivityBits.Load())
 		if sens <= 0 {
 			sens = 1.00
@@ -3119,6 +3127,7 @@ func (a *App) GetAppSettings() AppSettings {
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
 		GyroDeadband:          deadband,
+		GyroDeadbandUsb:       math.Float64frombits(a.gyroDeadbandUsbBits.Load()),
 		GyroSensitivity:       sensitivity,
 		MinimizeToTray:        a.GetCloseAction() == "minimize",
 		CloseAction:           a.GetCloseAction(),
@@ -3184,6 +3193,9 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 	if s.GyroDeadband >= 0 && s.GyroDeadband <= 1.0 {
 		a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadband))
+	}
+	if s.GyroDeadbandUsb >= 0 && s.GyroDeadbandUsb <= 1.0 {
+		a.gyroDeadbandUsbBits.Store(math.Float64bits(s.GyroDeadbandUsb))
 	}
 	if s.GyroSensitivity >= 0.25 && s.GyroSensitivity <= 3.0 {
 		a.gyroSensitivityBits.Store(math.Float64bits(s.GyroSensitivity))
@@ -3261,10 +3273,15 @@ func (a *App) SetTuningActive(active bool) {
 	a.tuningActive.Store(active)
 }
 
-// SetTuningFilterParams dynamically updates filter parameters for live bench previewing without saving
-func (a *App) SetTuningFilterParams(deadband, sensitivity float64) {
+// SetTuningFilterParams dynamically updates filter parameters for live bench
+// previewing: the tremor thresholds of the phone and the USB controller, and the
+// sensitivity.
+func (a *App) SetTuningFilterParams(deadband, deadbandUsb, sensitivity float64) {
 	if deadband >= 0 && deadband <= 1.0 {
 		a.gyroDeadbandBits.Store(math.Float64bits(deadband))
+	}
+	if deadbandUsb >= 0 && deadbandUsb <= 1.0 {
+		a.gyroDeadbandUsbBits.Store(math.Float64bits(deadbandUsb))
 	}
 	if sensitivity >= 0.25 && sensitivity <= 3.0 {
 		a.gyroSensitivityBits.Store(math.Float64bits(sensitivity))
