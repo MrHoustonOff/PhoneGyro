@@ -29,7 +29,7 @@
 ## Step 1. Download & Initial Setup
 
 Download the latest version of PhoneGyro from GitHub Releases:  
-**[Download PhoneGyro (GitHub Releases)](https://github.com/MrHoustonOff/iphone-gyro-controller/releases/latest)**
+**[Download PhoneGyro (GitHub Releases)](https://github.com/MrHoustonOff/PhoneGyro/releases/latest)**
 
 ### Security & Antivirus Warnings
 

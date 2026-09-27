@@ -18,7 +18,7 @@ PhoneGyro превращает ваш смартфон (iOS или Android) в �
 ## Быстрый старт
 
 ### 1. Скачивание
-Скачайте `PhoneGyro.exe` (или `PhoneGyro-windows-arm64.exe` для Windows-устройств на процессорах ARM) со страницы [GitHub Releases](https://github.com/MrHoustonOff/iphone-gyro-controller/releases).
+Скачайте `PhoneGyro.exe` (или `PhoneGyro-windows-arm64.exe` для Windows-устройств на процессорах ARM) со страницы [GitHub Releases](https://github.com/MrHoustonOff/PhoneGyro/releases).
 
 ### 2. Запуск
 Убедитесь, что ваш ПК и смартфон подключены к **одной локальной сети Wi-Fi**. Запустите `PhoneGyro.exe`.
@@ -80,8 +80,8 @@ PhoneGyro - это полностью бесплатный проект с от�
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/MrHoustonOff/iphone-gyro-controller.git
-cd iphone-gyro-controller/gui
+git clone https://github.com/MrHoustonOff/PhoneGyro.git
+cd PhoneGyro/gui
 
 # Сборка под Windows x86_64
 wails build -o PhoneGyro.exe

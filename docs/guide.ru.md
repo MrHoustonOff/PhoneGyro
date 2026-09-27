@@ -29,7 +29,7 @@
 ## Шаг 1. Скачивание и первичная настройка
 
 Скачайте последнюю версию приложения со страницы релизов:  
-**[Скачать PhoneGyro (GitHub Releases)](https://github.com/MrHoustonOff/iphone-gyro-controller/releases/latest)**
+**[Скачать PhoneGyro (GitHub Releases)](https://github.com/MrHoustonOff/PhoneGyro/releases/latest)**
 
 ### Безопасность и антивирусы
 

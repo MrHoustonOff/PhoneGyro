@@ -290,7 +290,7 @@
     "btn_close": "Close",
     "btn_finish": "Finish",
     "btn_next": "Next",
-    "disclosure_body_1": "**What am I installing?** A small security certificate, generated right on your own PC — nothing about it ever leaves your local network. It just tells your phone \"trust this one connection\" so it can talk to your computer over Wi-Fi. It can't see or touch anything else — not your other apps, not other websites, nothing. The app doesn't send any data anywhere, ever — no analytics, no logs, no phoning home. And since it's all open-source, you don't have to take our word for it: you (or your AI coding assistant) can go read the exact code that generates this certificate right here: [`internal/ca`](https://github.com/MrHoustonOff/iphone-gyro-controller/tree/main/internal/ca).",
+    "disclosure_body_1": "**What am I installing?** A small security certificate, generated right on your own PC — nothing about it ever leaves your local network. It just tells your phone \"trust this one connection\" so it can talk to your computer over Wi-Fi. It can't see or touch anything else — not your other apps, not other websites, nothing. The app doesn't send any data anywhere, ever — no analytics, no logs, no phoning home. And since it's all open-source, you don't have to take our word for it: you (or your AI coding assistant) can go read the exact code that generates this certificate right here: [`internal/ca`](https://github.com/MrHoustonOff/PhoneGyro/tree/main/pkg/ca).",
     "disclosure_body_2": "**Why is this even necessary?** Safari (WebKit) simply refuses to share gyroscope/motion data or keep a live WebSocket connection open unless the page is loaded over a secure, encrypted connection (HTTPS/WSS) — that's an Apple privacy rule, and no app can get around it. Since there's no way to get a \"real,\" publicly-trusted certificate for a private local address, self-signing one and asking your phone to trust it is the only way to satisfy that rule without ever going through the internet.",
     "disclosure_body_3": "**The trade-off:** you get a fully private, direct, offline connection where none of your data ever leaves your Wi-Fi — but in exchange, you have to do this one manual \"trust\" step yourself, since there's no public authority that can vouch for a certificate that only exists on your home network.",
     "disclosure_body_4": "No hidden actions. Just transparent local communication for your gamepad.",
@@ -328,7 +328,7 @@
     "cal_title": "Axis Calibration",
     "cal_desc": "After connecting, place phone motionless on desk and calibrate for optimal precision",
     "repo_title": "Source Code",
-    "repo_url": "https://github.com/MrHoustonOff/iphone-gyro-controller",
+    "repo_url": "https://github.com/MrHoustonOff/PhoneGyro",
     "author_signature": "by MrHoustonOff",
     "btn_close": "Close"
   },

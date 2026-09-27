@@ -18,7 +18,7 @@ Compatible with Cemu, RPCS3, Ryujinx, Yuzu, Dolphin, PCSX2, and any game or tool
 ## Quick Start
 
 ### 1. Download
-Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for ARM-based Windows devices) from the latest [GitHub Releases](https://github.com/MrHoustonOff/iphone-gyro-controller/releases).
+Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for ARM-based Windows devices) from the latest [GitHub Releases](https://github.com/MrHoustonOff/PhoneGyro/releases).
 
 ### 2. Launch
 Make sure your PC and smartphone are connected to the **same Wi-Fi network**. Launch `PhoneGyro.exe`.
@@ -80,8 +80,8 @@ Prerequisites:
 
 ```bash
 # Clone the repository
-git clone https://github.com/MrHoustonOff/iphone-gyro-controller.git
-cd iphone-gyro-controller/gui
+git clone https://github.com/MrHoustonOff/PhoneGyro.git
+cd PhoneGyro/gui
 
 # Build Windows x86_64
 wails build -o PhoneGyro.exe
