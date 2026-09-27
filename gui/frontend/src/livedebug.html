@@ -4540,6 +4540,10 @@
         };
 
         ws.onmessage = (event) => {
+          // Inside the app the native Go bridge (livedebug_app.go) already relays
+          // every message as "livedebug:telemetry"; handling both doubled each frame
+          // (duplicated, reordered CSV rows). This socket is for external browsers.
+          if (wailsBridgeRegistered) return;
           try {
             const data = JSON.parse(event.data);
             handleTelemetryData(data);

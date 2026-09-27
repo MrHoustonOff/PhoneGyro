@@ -57,8 +57,8 @@ type Profile struct {
 	// Learned gyro↔accel axis relation of the device used with this profile.
 	SensorFrame *sensorFrame `json:"sensorFrame,omitempty"`
 	// Поправка на наклон установки датчика (только USB, см. mountalign.go).
-	Mount *MountCorrection `json:"mount,omitempty"`
-	Active      bool         `json:"active"` // is this the currently applied profile?
+	Mount  *MountCorrection `json:"mount,omitempty"`
+	Active bool             `json:"active"` // is this the currently applied profile?
 	// Version is the calibration data generation this profile was captured with,
 	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
 	// is behind CurrentProfileVersion is definitely missing data the current
@@ -95,7 +95,7 @@ type AppState struct {
 	IsPaused      bool    `json:"isPaused"`
 	DeviceName    string  `json:"deviceName"` // e.g. "Controller"
 	Hz            float64 `json:"hz"`
-	PingMs        int     `json:"pingMs"` // real phone link RTT (pkg/server LinkRTT); -1 = not measured / USB
+	PingMs        int     `json:"pingMs"`        // real phone link RTT (pkg/server LinkRTT); -1 = not measured / USB
 	ConnectedTime string  `json:"connectedTime"` // "00:07:32"
 	Pitch         float64 `json:"pitch"`         // Live pitch in degrees
 	Roll          float64 `json:"roll"`          // Live roll in degrees
@@ -230,7 +230,7 @@ type motionBank struct {
 	mountMu     sync.RWMutex
 	mountLive   *MountCorrection
 	wizardMount *MountCorrection
-	align              *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
+	align       *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
 	// wizardAlign is a scratch aligner used only by the calibration wizard's explicit
 	// "determine axes" step. It runs alongside `align` (fed the same data) so the
 	// wizard's progress reflects reality, but stays fully separate: nothing here
@@ -264,15 +264,16 @@ type motionBank struct {
 	anchorClock    frameClock // интервал кадра для attitudeanchor (frameclock.go)
 	ahrsClock      frameClock // интервал кадра для ahrs.Update (frameclock.go)
 	// anchorWhyLogged: причина, по которой anchor не может работать, уже записана
-	// в лог для этого подключения (anchorNoteNoFrame / anchorNoteNoRef).
+	// в лог для этого подключения (бит 1 — не известна связь осей гироскопа и
+	// акселерометра, бит 2 — телефон не присылает ориентацию).
 	anchorWhyLogged uint8
 	anchorNoRefRun  int // consecutive frames without the phone's orientation
 	// resetAnchor просит обработчик кадров сбросить anchor (новое WebSocket-
 	// подключение телефона: у новой страницы свой ноль ориентации). Флаг, а не
 	// прямой вызов: anchor живёт только в горутине обработчика кадров.
 	resetAnchor   atomic.Bool
-	accFiltered    [3]float64
-	accFilterInit  bool
+	accFiltered   [3]float64
+	accFilterInit bool
 	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
 	biasTracker gyroBiasTracker
 	// Потери канала для Live Debug (linkloss.go): USB — по SEQ, телефон — по
@@ -331,9 +332,9 @@ type App struct {
 	isPaused atomic.Bool
 	// bankMu guards lazy-initializing phoneBank/usbBank; the banks' own
 	// internal fields have their own finer-grained locks as before.
-	bankMu    sync.Mutex
-	phoneBank *motionBank
-	usbBank   *motionBank
+	bankMu      sync.Mutex
+	phoneBank   *motionBank
+	usbBank     *motionBank
 	clientAddr  string
 	primaryIP   string
 	gamepadURL  string
@@ -359,19 +360,19 @@ type App struct {
 	stopResmon   func()
 	lastResStats atomic.Pointer[map[string]any]
 	// Advanced configuration settings
-	dsuPort            int
-	dsuMAC             string
-	dsuMACMu           sync.RWMutex
-	httpPort           int
-	httpsPort          int
-	gyroDeadzoneBits   atomic.Uint64
-	stillnessHint      atomic.Bool
-	disconnectAlert    atomic.Bool
-	silenceDisconnect  atomic.Bool
-	soundMode          string
-	soundVolume        atomic.Int32
-	soundVolumesMu sync.RWMutex
-	soundVolumes   map[string]int
+	dsuPort           int
+	dsuMAC            string
+	dsuMACMu          sync.RWMutex
+	httpPort          int
+	httpsPort         int
+	gyroDeadzoneBits  atomic.Uint64
+	stillnessHint     atomic.Bool
+	disconnectAlert   atomic.Bool
+	silenceDisconnect atomic.Bool
+	soundMode         string
+	soundVolume       atomic.Int32
+	soundVolumesMu    sync.RWMutex
+	soundVolumes      map[string]int
 	// Adaptive 1-Euro DSU filter and dynamic response parameters
 	gyroDeadbandBits    atomic.Uint64 // float64 (deg/s, default 0.10)
 	gyroSensitivityBits atomic.Uint64 // float64 (multiplier, default 1.00)

@@ -28,6 +28,7 @@ const (
 	anchorWindowFrames = 15                  // ~250 ms scoring windows (see scoreWindow)
 	anchorScoreWindows = 8                   // decide after this many informative windows (~2 s of motion)
 	anchorMaxRelErr    = 0.25                // mean relative window mismatch of the winner
+	anchorMaxWindowRad = 2.0                 // ~115°: beyond this a window's rotation is too close to 180° to compare
 	anchorMarginRatio  = 4.0
 	anchorCandidates   = 4 // {q, q*} × {+, -} rotation sense
 	anchorMinQuatNorm  = 0.5
@@ -153,6 +154,12 @@ func (a *attitudeAnchor) closeWindow(end quat) {
 	gn := norm3(gw)
 	if gn < anchorMinStepRad*anchorWindowFrames {
 		return // too little motion to tell conventions apart
+	}
+	if gn > anchorMaxWindowRad {
+		// Near 180° the shortest-path rotation flips direction, so gyro and reference
+		// can disagree for no real reason (window of a >700°/s spin): such a window
+		// would count as a mismatch and could disengage a working anchor.
+		return
 	}
 	for c := 0; c < anchorCandidates; c++ {
 		p, q := a.winRef0, end
