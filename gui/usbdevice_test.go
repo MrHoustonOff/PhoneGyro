@@ -139,3 +139,19 @@ func TestUSBConnStateResetButtonIsEdgeTriggered(t *testing.T) {
 		t.Fatalf("expected reset-held state to clear once the bit drops")
 	}
 }
+
+// TestUSBConnStateBootRestartIsNotLoss: the Nano resets when the port opens, often
+// after the probe already read stale frames of the previous run. Its metadata frame
+// starts a new SEQ count; the jump back to 0 is not lost frames.
+func TestUSBConnStateBootRestartIsNotLoss(t *testing.T) {
+	app := &App{}
+	st := newUSBConnState()
+	st.handle(usbFrame{Type: usbTypeData, Seq: 200}, app)
+	st.handle(usbFrame{Type: usbTypeData, Seq: 201}, app)
+	st.handle(usbFrame{Type: usbTypeMeta}, app) // reboot
+	st.handle(usbFrame{Type: usbTypeData, Seq: 0}, app)
+	st.handle(usbFrame{Type: usbTypeData, Seq: 1}, app)
+	if st.droppedFrames != 0 {
+		t.Fatalf("device restart counted as %d dropped frames, want 0", st.droppedFrames)
+	}
+}

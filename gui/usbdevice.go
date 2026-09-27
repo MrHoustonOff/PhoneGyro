@@ -174,6 +174,11 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		st.accelRangeG = metaRangeOrDefault(f.Accel[0], usbDefaultAccelRangeG)
 		st.gyroRangeDps = metaRangeOrDefault(f.Accel[1], usbDefaultGyroRangeDps)
 		st.haveMeta = true
+		// The metadata frame opens every boot, and SEQ restarts after it. Opening the
+		// port resets the Nano (DTR), often right after the probe already read stale
+		// frames from the previous run: without this the restart counted as up to
+		// 255 lost frames and fired the data-loss sound.
+		st.haveSeq = false
 	case usbTypeName:
 		// Optional (protocol Level 3): a device may self-identify. Mirrors
 		// the phone's OnClientDevice -- same bank field, same "show it in
@@ -281,6 +286,12 @@ func (m *usbDeviceManager) Stop() {
 	m.connected = false
 	m.mu.Unlock()
 
+	if port != nil {
+		// Same as a disconnect (readLoop only does it while still connected): a
+		// stale connectedAt would skip the loss-alarm grace on the next attach.
+		m.app.usbBank.hasClient.Store(false)
+		m.app.usbBank.connectedAt = time.Time{}
+	}
 	if stop != nil {
 		close(stop)
 	}
