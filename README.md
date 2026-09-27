@@ -23,18 +23,25 @@ Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for ARM-based Windows
 ### 2. Launch
 Make sure your PC and smartphone are connected to the **same Wi-Fi network**. Launch `PhoneGyro.exe`.
 
-### 3. Connect Phone
+### 3. Connect a Device
+Pick the source at the top of the window: **Smartphone** or **USB Controller**.
 - **iOS (iPhone / iPad)**: Click **Initial Setup** in the app and follow the step-by-step guide to install the local profile certificate required by Safari to access motion sensors over HTTPS.
 - **Android**: Scan the QR code on the main screen with your camera and open the controller web app in Google Chrome.
+- **USB controller** (Arduino Nano + MPU-6050): flash the [reference firmware](https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol) (protocol 1.1+) and plug it in — PhoneGyro finds it on any COM port by itself.
 
-### 4. Calibrate
-Once connected, place your smartphone flat on your desk in gaming grip and click **Calibrate**. The calibration takes ~5 seconds and needs to be done only once per device.
+### 4. Calibrate — do not skip this
+Click **Calibrate** and follow the wizard (rest, nod, bank, axis alignment — about a minute). Calibration is what tells PhoneGyro where "forward" and "right" are for your grip; **without it the in-game aim turns along the wrong axis or backwards.** Once per device and grip; phone and USB profiles are separate.
+
+### 4½. Pick the profile and recenter
+On the first connection PhoneGyro opens a **First connection** window: pick your calibration profile there and press **Recenter**.
 
 ### 5. Configure Emulator
 In your emulator's input/controller settings, configure the motion server:
 - **Server IP**: `127.0.0.1`
 - **Server Port**: `26760`
 - **Protocol**: Cemuhook DSU
+
+> Aim jitters slightly while you hold still? Raise the **tremor threshold** in Settings (separate for phone and USB). Details in the [User Guide](docs/guide.en.md).
 
 ---
 

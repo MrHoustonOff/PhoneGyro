@@ -533,12 +533,12 @@
   "welcome": {
     "title": "Welcome to PhoneGyro!",
     "badge": "First Launch",
-    "p1": "With this application, you can use your smartphone (Android or iPhone) as a gyroscope motion source for PC games and emulators!",
+    "p1": "With this app you can use your smartphone (Android or iPhone) or a DIY USB controller as a gyroscope source for PC games and/or emulators!",
     "p2": "This project is completely open source — feel free to review the code or contribute to development!",
     "steps_title": "Important Before Starting!",
     "step1": "1. Ensure your phone and PC are on the **SAME LOCAL NETWORK**!",
     "step2": "2. Complete the **initial setup** (needed only once per device).",
-    "step3": "3. After connecting, make sure to **CALIBRATE IT** (one time is enough).",
+    "step3": "3. After connecting, be sure to **CALIBRATE THE DEVICE** with the \"Calibrate\" button — without it the in-game aim moves along the wrong axes (once per device and grip is enough).",
     "btn_start_setup": "Start Setup",
     "btn_skip": "To Main Screen"
   },
@@ -581,7 +581,7 @@
     "forced_title": "First connection",
     "forced_subtitle": "Pick a profile and set the starting position",
     "forced_pick_label": "Calibration profile",
-    "forced_prompt": "Hold the device the way you will hold it in game and press “Center” — stay still for a second.",
+    "forced_prompt": "Hold the device the way you will hold it in game and press “Recenter” — stay still for a second.",
     "forced_no_profiles": "No saved profiles — after centering, calibrate the device with the “Calibrate” button."
   },
   "mode": {
