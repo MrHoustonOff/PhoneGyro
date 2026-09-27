@@ -34,7 +34,6 @@
       --apple-cyan-rgb: 100, 210, 255;
       --dot-online: #28A745;
       --dot-offline: #FF3B30;
-      --dot-paused: #FF9F0A;
 
       --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, monospace;
@@ -70,7 +69,6 @@
       --apple-cyan-rgb: 0, 113, 227;
       --dot-online: #248A3D;
       --dot-offline: #FF3B30;
-      --dot-paused: #FF9500;
     }
 
     * {
@@ -160,7 +158,6 @@
       flex-shrink: 0;
     }
     .device-status-dot.online { background: var(--dot-online); }
-    .device-status-dot.paused { background: var(--dot-paused); }
     .device-status-dot.blocked { background: var(--apple-cyan); box-shadow: 0 0 6px rgba(var(--apple-cyan-rgb), 0.5); }
 
     .header-controls {
@@ -244,15 +241,6 @@
       color: var(--dot-online);
     }
 
-    /* State: Connected & Paused */
-    .btn-main-connection.paused {
-      background: rgba(var(--apple-amber-rgb), 0.10);
-      border-color: rgba(var(--apple-amber-rgb), 0.4);
-    }
-    .btn-main-connection.paused .conn-title {
-      color: var(--apple-amber);
-    }
-
     /* State: Disconnected / Connecting */
     .btn-main-connection.disconnected {
       background: rgba(var(--apple-red-rgb), 0.08);
@@ -294,11 +282,6 @@
       background: rgba(var(--apple-green-rgb), 0.15);
       color: var(--dot-online);
       border: 1px solid rgba(var(--apple-green-rgb), 0.3);
-    }
-    .btn-main-connection.paused .conn-badge {
-      background: rgba(var(--apple-amber-rgb), 0.15);
-      color: var(--apple-amber);
-      border: 1px solid rgba(var(--apple-amber-rgb), 0.35);
     }
     .btn-main-connection.disconnected .conn-badge {
       background: rgba(var(--apple-red-rgb), 0.12);
@@ -964,16 +947,13 @@ const I18N = {
   ru: {
     lang_btn: 'RU',
     streaming_badge: 'Подключено • Передача',
-    paused_badge: 'На паузе',
     disconnected_badge: 'Нет связи с ПК',
     connecting_badge: 'Подключение...',
     blocked_badge: 'USB-режим на ПК',
-    action_pause: 'ПАУЗА',
-    action_resume: 'ПРОДОЛЖИТЬ',
+    action_streaming: 'ПЕРЕДАЧА ИДЁТ',
     action_connect: 'ПОДКЛЮЧИТЬСЯ',
     action_blocked: 'РЕЖИМ USB-КОНТРОЛЛЕРА',
-    hint_streaming: 'Нажмите, чтобы временно остановить передачу данных',
-    hint_paused: 'Нажмите, чтобы возобновить передачу данных на ПК',
+    hint_streaming: 'Движение передаётся на ПК. Разорвать связь можно кнопкой ниже',
     hint_disconnected: 'Нажмите для повторной попытки подключения по WebSocket',
     hint_blocked: 'На ПК выбран режим USB. Подключение смартфона временно отключено.',
     sub_disconnect: 'Разорвать связь',
@@ -992,16 +972,13 @@ const I18N = {
   en: {
     lang_btn: 'EN',
     streaming_badge: 'Connected • Streaming',
-    paused_badge: 'Paused',
     disconnected_badge: 'Disconnected',
     connecting_badge: 'Connecting...',
     blocked_badge: 'PC in USB Mode',
-    action_pause: 'PAUSE',
-    action_resume: 'RESUME',
+    action_streaming: 'STREAMING',
     action_connect: 'CONNECT',
     action_blocked: 'USB CONTROLLER MODE',
-    hint_streaming: 'Tap to temporarily pause motion transmission',
-    hint_paused: 'Tap to resume motion transmission to PC',
+    hint_streaming: 'Motion is streaming to your PC. Use the button below to disconnect',
     hint_disconnected: 'Tap to reconnect to PC via WebSocket',
     hint_blocked: 'PC app is set to USB mode. Smartphone connection is disabled.',
     sub_disconnect: 'Disconnect',
@@ -1255,7 +1232,6 @@ screensaverOverlay.addEventListener('click', (e) => {
 // ─────────────────────────────────────────────────────────────────────────────
 let ws = null;
 let isConnected = false;
-let isPaused = false;
 let isModeBlocked = false;
 let deliberateDisconnect = false;
 let packetCount = 0;
@@ -1295,18 +1271,10 @@ function updateConnectionUI() {
     headerStatusDot.className = 'device-status-dot';
     txtSubSocket.textContent = t.sub_connect;
     connHzPill.textContent = '0 Hz';
-  } else if (isPaused) {
-    btnMainConnection.className = 'btn-main-connection paused';
-    connBadgeText.textContent = t.paused_badge;
-    connTitle.textContent = t.action_resume;
-    connHint.textContent = t.hint_paused;
-    headerStatusDot.className = 'device-status-dot paused';
-    txtSubSocket.textContent = t.sub_disconnect;
-    connHzPill.textContent = `${currentHz} Hz`;
   } else {
     btnMainConnection.className = 'btn-main-connection streaming';
     connBadgeText.textContent = t.streaming_badge;
-    connTitle.textContent = t.action_pause;
+    connTitle.textContent = t.action_streaming;
     connHint.textContent = t.hint_streaming;
     headerStatusDot.className = 'device-status-dot online';
     txtSubSocket.textContent = t.sub_disconnect;
@@ -1349,35 +1317,13 @@ function connectWSS() {
     try {
       ws.send(JSON.stringify({ type: 'device', model: deviceModel }));
     } catch (e) {}
-
-    // Synchronize pause state
-    try {
-      ws.send(JSON.stringify({ type: 'pause', isPaused: isPaused }));
-    } catch (e) {}
   };
 
   ws.onmessage = async (e) => {
     let text = '';
     if (e.data instanceof ArrayBuffer) {
-      if (e.data.byteLength === 2) {
-        const bytes = new Uint8Array(e.data);
-        if (bytes[0] === 0x50) { // 'P' pause packet
-          isPaused = (bytes[1] === 1);
-          updateConnectionUI();
-          return;
-        }
-      }
       text = new TextDecoder().decode(e.data);
     } else if (e.data instanceof Blob) {
-      if (e.data.size === 2) {
-        const buf = await e.data.arrayBuffer();
-        const bytes = new Uint8Array(buf);
-        if (bytes[0] === 0x50) {
-          isPaused = (bytes[1] === 1);
-          updateConnectionUI();
-          return;
-        }
-      }
       text = await e.data.text();
     } else if (typeof e.data === 'string') {
       text = e.data;
@@ -1404,10 +1350,6 @@ function connectWSS() {
         }
         return;
       }
-      if (msg.type === 'pause' && typeof msg.isPaused === 'boolean') {
-        isPaused = msg.isPaused;
-        updateConnectionUI();
-      }
     } catch (err) {}
   };
 
@@ -1429,21 +1371,6 @@ function connectWSS() {
     }
   };
 }
-
-// Background polling failsafe for pause state synchronization
-setInterval(async () => {
-  if (deliberateDisconnect || isModeBlocked) return;
-  try {
-    const res = await fetch('/api/pause?t=' + Date.now(), { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json();
-      if (typeof data.isPaused === 'boolean' && data.isPaused !== isPaused) {
-        isPaused = data.isPaused;
-        updateConnectionUI();
-      }
-    }
-  } catch (e) {}
-}, 500);
 
 // Background polling for mode synchronization
 async function checkServerMode() {
@@ -1468,7 +1395,7 @@ async function checkServerMode() {
 setInterval(checkServerMode, 1500);
 checkServerMode();
 
-// Main Connection Button Click: Pause / Resume / Reconnect
+// Main Connection Button Click: Reconnect / enable sensors
 btnMainConnection.addEventListener('click', async () => {
   if (navigator.vibrate) navigator.vibrate(20);
 
@@ -1487,27 +1414,6 @@ btnMainConnection.addEventListener('click', async () => {
   if (!sensorsActive && needsPermission) {
     requestSensors();
   }
-
-  isPaused = !isPaused;
-  updateConnectionUI();
-
-  // Dual transmission: Binary 2-byte + JSON text
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    try {
-      const binCtrl = new Uint8Array([0x50, isPaused ? 1 : 0]);
-      ws.send(binCtrl.buffer);
-      ws.send(JSON.stringify({ type: 'pause', isPaused: isPaused }));
-    } catch (err) {}
-  }
-
-  // Redundant HTTP fallback
-  try {
-    fetch('/api/pause', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isPaused: isPaused })
-    }).catch(() => {});
-  } catch (err) {}
 });
 
 // Secondary Action: Disconnect / Force Reconnect Toggle
@@ -1729,7 +1635,7 @@ function sendFrame(tsUs, rateX, rateY, rateZ) {
   binView.setFloat32(36, dsuAccX, true);
   binView.setFloat32(40, dsuAccY, true);
   binView.setFloat32(44, dsuAccZ, true);
-  binView.setUint16(48,  isPaused ? 1 : 0, true);
+  binView.setUint16(48,  0, true); // flags (reserved; pause was removed)
   binView.setUint32(50,  sensorEvents,  true);
   binView.setUint32(54,  sensorDropped, true);
 

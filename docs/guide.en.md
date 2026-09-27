@@ -95,8 +95,7 @@ The mobile web app will open in your mobile browser.
 * **Interactive Status Pill:**  
   Displays current real-time network state:
   - <span style="color: #ff9500">🟡 **Connecting...**</span> — performing handshake and opening secure WSS channel.
-  - <span style="color: #34c759">🟢 **Streaming (XX Hz, X ms)**</span> — sensors online, telemetry streaming to PC with zero lag. **Tapping this pill pauses the stream!**
-  - <span style="color: #ff9500">⏸️ **Paused**</span> — transmission temporarily frozen (convenient if you need to set your phone down without disconnecting). Tapping it again instantly resumes streaming.
+  - <span style="color: #34c759">🟢 **Streaming (XX Hz, X ms)**</span> — sensors online, telemetry streaming to PC with zero lag.
   - <span style="color: #ff3b30">🔴 **Disconnected**</span> — lost connection to server (ensure phone and PC are connected to the same Wi-Fi network).
 
 ---

@@ -103,10 +103,8 @@ type Server struct {
 	// Lifecycle event hooks for clean, non-spammy logging
 	OnClientConnect    func(remoteAddr string)
 	OnClientDisconnect func(remoteAddr string)
-	OnClientPause      func(isPaused bool)
 	OnClientDevice     func(device string)
 	OnClientVisibility func(visible bool)
-	GetIsPaused        func() bool
 
 	inputModeMu sync.RWMutex
 	inputMode   string // "phone" (default) or "usb"
@@ -146,12 +144,10 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 	// Register core routes
 	httpMux.HandleFunc("/ca.mobileconfig", s.handleMobileConfig)
 	httpMux.HandleFunc("/ca.crt", s.handleRawCACert)
-	httpMux.HandleFunc("/api/pause", s.handleAPIPause)
 	httpMux.HandleFunc("/api/mode", s.handleAPIMode)
 
 	httpsMux.HandleFunc("/ca.mobileconfig", s.handleMobileConfig)
 	httpsMux.HandleFunc("/ca.crt", s.handleRawCACert)
-	httpsMux.HandleFunc("/api/pause", s.handleAPIPause)
 	httpsMux.HandleFunc("/api/mode", s.handleAPIMode)
 	httpsMux.HandleFunc("/ws", s.handleWebSocket)
 	httpsMux.HandleFunc("/", s.handleWebClient)
@@ -411,24 +407,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Send current pause state immediately upon connection (dual binary + text)
-	if s.GetIsPaused != nil {
-		isPaused := s.GetIsPaused()
-		initMsg, _ := json.Marshal(map[string]interface{}{
-			"type":     "pause",
-			"isPaused": isPaused,
-		})
-		var pByte byte = 0
-		if isPaused {
-			pByte = 1
-		}
-		writeMu.Lock()
-		conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-		_ = conn.WriteMessage(websocket.BinaryMessage, []byte{0x50, pByte})
-		_ = conn.WriteMessage(websocket.TextMessage, initMsg)
-		writeMu.Unlock()
-	}
-
 	// Arm initial read deadline
 	conn.SetReadDeadline(time.Now().Add(wsReadDeadline))
 
@@ -486,27 +464,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Check for binary control messages (e.g. 2-byte [0x50, 0x01/0x00])
-		if msgType == websocket.BinaryMessage && len(message) == 2 && message[0] == 0x50 {
-			if s.OnClientPause != nil {
-				s.OnClientPause(message[1] == 1)
-			}
-			continue
-		}
-
-		// Check for text control messages (e.g. phone clicked pause/resume or reported device model)
+		// Check for text control messages (the phone reports its device model / visibility)
 		if msgType == websocket.TextMessage {
 			var ctrl struct {
-				Type     string `json:"type"`
-				IsPaused bool   `json:"isPaused"`
-				Model    string `json:"model"`
-				Visible  *bool  `json:"visible"`
+				Type    string `json:"type"`
+				Model   string `json:"model"`
+				Visible *bool  `json:"visible"`
 			}
 			if err := json.Unmarshal(message, &ctrl); err == nil {
-				if ctrl.Type == "pause" && s.OnClientPause != nil {
-					s.OnClientPause(ctrl.IsPaused)
-					continue
-				}
 				if ctrl.Type == "device" && ctrl.Model != "" && s.OnClientDevice != nil {
 					s.OnClientDevice(ctrl.Model)
 					continue
@@ -648,31 +613,6 @@ func (s *Server) PacketStats() (uint64, int32, float64) {
 	return total, clients, hz
 }
 
-// BroadcastPause sends a pause state notification to all currently connected WebSocket clients.
-func (s *Server) BroadcastPause(isPaused bool) {
-	s.clientMu.Lock()
-	defer s.clientMu.Unlock()
-
-	msg, _ := json.Marshal(map[string]interface{}{
-		"type":     "pause",
-		"isPaused": isPaused,
-	})
-
-	var pByte byte = 0
-	if isPaused {
-		pByte = 1
-	}
-	binMsg := []byte{0x50, pByte}
-
-	for conn, mu := range s.clientConns {
-		mu.Lock()
-		conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
-		_ = conn.WriteMessage(websocket.BinaryMessage, binMsg)
-		_ = conn.WriteMessage(websocket.TextMessage, msg)
-		mu.Unlock()
-	}
-}
-
 // QuaternionToEuler converts Cemuhook SO(3) unit quaternion (Qx=Pitch, Qy=Yaw, Qz=-Roll, Qw=W)
 // to intuitive Euler angles (Pitch, Roll, Yaw) in degrees:
 // - Pitch > 0: phone tilted forward (nose down); Pitch < 0: phone tilted backward (nose up)
@@ -700,39 +640,3 @@ func QuaternionToEuler(qx, qy, qz, qw float32) (pitch, roll, yaw float64) {
 	return pitch, roll, yaw
 }
 
-// handleAPIPause provides a REST endpoint for checking and toggling pause state.
-// Acts as a failsafe layer alongside WebSockets for mobile browsers.
-func (s *Server) handleAPIPause(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method == http.MethodPost {
-		var body struct {
-			IsPaused bool `json:"isPaused"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err == nil {
-			if s.OnClientPause != nil {
-				s.OnClientPause(body.IsPaused)
-			}
-			s.BroadcastPause(body.IsPaused)
-		}
-	}
-
-	isPaused := false
-	if s.GetIsPaused != nil {
-		isPaused = s.GetIsPaused()
-	}
-
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"isPaused": isPaused,
-	})
-}

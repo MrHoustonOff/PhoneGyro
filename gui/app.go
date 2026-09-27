@@ -1836,15 +1836,6 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
-	srv.OnClientPause = func(isPaused bool) {
-		if a.isPaused.Load() != isPaused {
-			a.isPaused.Store(isPaused)
-			a.emitStateChange()
-		}
-	}
-
-	srv.GetIsPaused = a.isPaused.Load
-
 	// LiveDebug standalone 3D window routes and WebSocket streamer
 	subFS, err := fs.Sub(assets, "frontend/src")
 	if err == nil {
@@ -2429,10 +2420,7 @@ func (a *App) TogglePause() AppState {
 
 	current := a.isPaused.Load()
 	next := !current
-	a.isPaused.Store(next)
-	if a.srv != nil {
-		a.srv.BroadcastPause(next)
-	}
+	a.isPaused.Store(next) // PC-side mute of the DSU output; the phone is not told
 	a.emitStateChange()
 	return a.GetState()
 }
