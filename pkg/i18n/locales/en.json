@@ -577,7 +577,12 @@
     "btn_action_holding": "Locking...",
     "btn_retry": "Retry",
     "btn_cancel": "Cancel",
-    "toast_hotkey": "🎯 3D view recentered (Hotkey)"
+    "toast_hotkey": "🎯 3D view recentered (Hotkey)",
+    "forced_title": "First connection",
+    "forced_subtitle": "Pick a profile and set the starting position",
+    "forced_pick_label": "Calibration profile",
+    "forced_prompt": "Hold the device the way you will hold it in game and press “Center” — stay still for a second.",
+    "forced_no_profiles": "No saved profiles — after centering, calibrate the device with the “Calibrate” button."
   },
   "mode": {
     "phone": "Smartphone",
