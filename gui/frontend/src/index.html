@@ -8044,6 +8044,15 @@
 
       // Listen to backend global Windows hotkey trigger
       if (window.runtime?.EventsOn) {
+        // 60 Hz orientation for the live calibration previews (app.go "ahrs:quat").
+        window.runtime.EventsOn('ahrs:quat', (q) => {
+          if (!q || typeof Scene3D === 'undefined') return;
+          for (const id of ['cal-3d-canvas-confirm', 'cal-3d-canvas-manual']) {
+            const sc = Scene3D.get(id);
+            if (sc && sc.updateQuat) sc.updateQuat(q.q0, q.q1, q.q2, q.q3);
+          }
+        });
+
         // Heavy data loss on the active link (gui/lossalert.go decides when).
         window.runtime.EventsOn('link:loss', () => {
           if (typeof SoundManager !== 'undefined') SoundManager.play('loss');
@@ -8340,6 +8349,7 @@
       let animTime = 0;
       let liveQuat = new THREE.Quaternion();
       let currentQuat = new THREE.Quaternion();
+      let lastQuatStreamTs = 0;
       let activeMatrix = null;
 
       let curW = 0;
@@ -8476,8 +8486,21 @@
           currentQuat.set(0, 0, 0, 1);
           gamepadGroup.quaternion.set(0, 0, 0, 1);
         },
+        // 60 Hz orientation stream ("ahrs:quat"): the full app state only
+        // arrives at 15 Hz, which made live previews visibly step.
+        updateQuat(q0, q1, q2, q3) {
+          if (mode !== 'live') return;
+          if ([q0, q1, q2, q3].some(v => typeof v !== 'number' || isNaN(v))) return;
+          if (q0 === 0 && q1 === 0 && q2 === 0 && q3 === 0) return;
+          lastQuatStreamTs = performance.now();
+          liveQuat.set(q1, q2, q3, q0);
+          liveQuat.normalize();
+        },
         updateFromState(state) {
           if (mode !== 'live' || !state) return;
+          // The 60 Hz stream is newer than any 15 Hz state snapshot; only fall
+          // back to the snapshot when the stream is not arriving.
+          if (performance.now() - lastQuatStreamTs < 250) return;
 
           const q0 = Number(state.ahrsQ0);
           const q1 = Number(state.ahrsQ1);

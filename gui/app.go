@@ -2099,6 +2099,38 @@ func (a *App) startup(ctx context.Context) {
 		a.usbMgr.Start()
 	}
 
+	// 60 Hz orientation stream for the main window's live 3D previews
+	// (calibration confirm/manual screens). The full AppState below goes out at
+	// only 15 Hz -- too slow for a 3D model without interpolation, and
+	// interpolating would add lag on top. Four floats, sent only when changed.
+	go func() {
+		ticker := time.NewTicker(16 * time.Millisecond)
+		defer ticker.Stop()
+		var last [4]uint64
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				bank := a.activeBank()
+				if !bank.hasClient.Load() || a.ctx == nil {
+					continue
+				}
+				q := [4]uint64{bank.curAhrsQ0.Load(), bank.curAhrsQ1.Load(), bank.curAhrsQ2.Load(), bank.curAhrsQ3.Load()}
+				if q == last {
+					continue
+				}
+				last = q
+				wailsRuntime.EventsEmit(a.ctx, "ahrs:quat", map[string]float64{
+					"q0": math.Float64frombits(q[0]),
+					"q1": math.Float64frombits(q[1]),
+					"q2": math.Float64frombits(q[2]),
+					"q3": math.Float64frombits(q[3]),
+				})
+			}
+		}
+	}()
+
 	// Orientation heartbeat (15 Hz = 66ms) for smooth main GUI telemetry
 	go func() {
 		ticker := time.NewTicker(66 * time.Millisecond)
