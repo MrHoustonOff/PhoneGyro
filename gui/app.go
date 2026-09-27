@@ -3363,8 +3363,30 @@ func (a *App) StartCapture() {
 // active mode's own bank directory. Each session is separated by a blank line and
 // starts with a header and a metadata row.
 func (a *App) writeDebugCSV(bank *motionBank, step int, samples []captureSample, result CaptureResult) {
-	path := filepath.Join(a.bankDir(a.GetInputMode()), "gyro_debug_capture.csv")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	// The in-memory step log comes first and never depends on the file: the
+	// wizard reads it (mount-tilt correction, calibration report). It used to be
+	// stored only after the CSV opened, and on a fresh install the USB bank's
+	// folder does not exist until the first profile save -- so the very first USB
+	// calibration silently lost every step and could not show the mount card.
+	bank.calLogMu.Lock()
+	if bank.calStepLogs == nil {
+		bank.calStepLogs = make(map[int]StepCaptureLog)
+	}
+	samplesCopy := make([]captureSample, len(samples))
+	copy(samplesCopy, samples)
+	bank.calStepLogs[step] = StepCaptureLog{
+		Step:      step,
+		Samples:   samplesCopy,
+		Result:    result,
+		Timestamp: time.Now(),
+	}
+	bank.calLogMu.Unlock()
+
+	dir := a.bankDir(a.GetInputMode())
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return
+	}
+	f, err := os.OpenFile(filepath.Join(dir, "gyro_debug_capture.csv"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
@@ -3380,20 +3402,6 @@ func (a *App) writeDebugCSV(bank *motionBank, step int, samples []captureSample,
 			i, s.rot[0], s.rot[1], s.rot[2],
 			s.acc[0], s.acc[1], s.acc[2], speed)
 	}
-
-	bank.calLogMu.Lock()
-	if bank.calStepLogs == nil {
-		bank.calStepLogs = make(map[int]StepCaptureLog)
-	}
-	samplesCopy := make([]captureSample, len(samples))
-	copy(samplesCopy, samples)
-	bank.calStepLogs[step] = StepCaptureLog{
-		Step:      step,
-		Samples:   samplesCopy,
-		Result:    result,
-		Timestamp: time.Now(),
-	}
-	bank.calLogMu.Unlock()
 }
 
 // getI18nMsg returns localized message or fallback
