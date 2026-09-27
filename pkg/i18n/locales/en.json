@@ -138,7 +138,7 @@
     "align_already_title": "Axes already determined",
     "align_fail_desc": "Not enough confident moves. Plain forward/back and side-to-side tilts alone aren't enough — make sure to ADD A TWIST to the phone (like unscrewing a cap), combined with the tilt, and pause for a second between moves.",
     "align_fail_title": "Could not determine axes",
-    "align_recording_btn": "DETERMINING AXES...",
+    "align_recording_btn": "LISTENING FOR MOTION…",
     "align_status_recording": "Twist and tilt the phone together, pausing between moves",
     "align_success_desc": "Accelerometer aligned with gyroscope: **{mapping}**",
     "align_success_title": "Axes determined!",
@@ -161,7 +161,9 @@
     "mount_no_data": "Not enough data to measure the mount tilt.",
     "network_quality_measuring": "Measuring response…",
     "network_quality_fair": "Fair Connection",
-    "network_quality_poor": "Weak Connection"
+    "network_quality_poor": "Weak Connection",
+    "align_status_refining": "Enough data — refining. Make a couple more moves in other directions",
+    "align_counter_refining": "refining…"
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",

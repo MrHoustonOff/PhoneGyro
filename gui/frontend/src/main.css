@@ -3749,6 +3749,23 @@ em {
   animation: pulseOrangeBtn 0.75s infinite alternate !important;
 }
 
+/* Axis-align step: a live status, not a button to press. */
+.btn-capture-action.listening,
+.btn-capture-action.listening:disabled {
+  background: rgba(40, 167, 69, 0.10) !important;
+  color: var(--dot-online) !important;
+  border: 1px solid rgba(40, 167, 69, 0.35) !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  opacity: 1 !important;
+  animation: listeningBreath 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes listeningBreath {
+  from { background-color: rgba(40, 167, 69, 0.06); }
+  to   { background-color: rgba(40, 167, 69, 0.16); }
+}
+
 .btn-capture-action.recording {
   background: linear-gradient(135deg, #28A745, #218838) !important;
   color: #ffffff !important;

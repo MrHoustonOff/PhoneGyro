@@ -8992,7 +8992,7 @@
       if (statusDot) statusDot.className = 'status-pulse-dot';
 
       if (btnStart) {
-        btnStart.classList.remove('counting-down', 'recording');
+        btnStart.classList.remove('counting-down', 'recording', 'listening');
         btnStart.disabled = false;
       }
       const cfg = this.STEPS_CONFIG[this.captureStep];
@@ -9314,10 +9314,11 @@
       const timerCountdown = document.getElementById('cal-timer-countdown');
 
       if (btnStart) {
-        btnStart.classList.add('recording');
+        // A status, not an action: the step listens to your motion by itself.
+        btnStart.classList.add('listening');
         btnStart.disabled = true;
       }
-      if (btnText) btnText.textContent = I18n.t('calibration.align_recording_btn') || 'ОПРЕДЕЛЕНИЕ ОСЕЙ...';
+      if (btnText) btnText.textContent = I18n.t('calibration.align_recording_btn') || 'СЛУШАЕМ ДВИЖЕНИЯ…';
       if (statusText) statusText.textContent = I18n.t('calibration.align_status_recording') || 'Наклоняйте телефон в разные стороны и замирайте между наклонами';
       if (statusDot) statusDot.className = 'status-pulse-dot active';
       if (timerContainer) timerContainer.style.display = 'block';
@@ -9341,7 +9342,19 @@
 
         const pct = Math.min(100, Math.round((status.pairs / Math.max(1, status.minPairs)) * 100));
         if (progressBar) progressBar.style.width = `${pct}%`;
-        if (timerCountdown) timerCountdown.textContent = `${status.pairs}/${status.minPairs}`;
+        // minPairs is only the minimum: past it the backend keeps collecting until
+        // one axis mapping clearly wins. Say so instead of showing "12/6".
+        const refining = status.pairs >= status.minPairs;
+        if (timerCountdown) {
+          timerCountdown.textContent = refining
+            ? (I18n.t('calibration.align_counter_refining') || 'уточняем…')
+            : `${status.pairs}/${status.minPairs}`;
+        }
+        if (statusText) {
+          statusText.textContent = refining
+            ? (I18n.t('calibration.align_status_refining') || 'Данных хватает — уточняем. Сделайте ещё пару движений в других направлениях')
+            : (I18n.t('calibration.align_status_recording') || 'Наклоняйте телефон в разные стороны и замирайте между наклонами');
+        }
 
         if (AppState.lastState) {
           const rx = AppState.lastState.rawRotX || 0;
