@@ -7678,9 +7678,11 @@ em {
 .recenter-profile-picker {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
-  max-height: 240px;
+  /* All 6 slots of a mode fit without scrolling; a short window scrolls the list
+     instead of pushing the Center button off screen. */
+  max-height: min(310px, 38vh);
   overflow-y: auto;
 }
 
@@ -7689,7 +7691,8 @@ em {
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 12px;
+  flex-shrink: 0;
+  padding: 6px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -7714,8 +7717,8 @@ em {
 }
 
 .recenter-picker-icon {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 9px;
   display: flex;
   align-items: center;
