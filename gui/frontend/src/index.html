@@ -361,6 +361,16 @@
               <span data-i18n="calibration.outdated_warning_banner">Профиль устарел — перекалибруйте его, чтобы всё работало правильно.</span>
             </div>
 
+            <!-- USB mount-tilt correction of the active profile (gui/mountalign.go):
+                 shown only when calibration measured and verified one. -->
+            <div class="profile-mount-row" id="profile-mount-row" style="display: none;">
+              <span class="profile-mount-text" id="profile-mount-text" data-i18n-title="calibration.mount_profile_tip">Компенсация наклона датчика</span>
+              <label class="apple-toggle">
+                <input type="checkbox" id="profile-mount-toggle">
+                <span class="apple-toggle-slider"></span>
+              </label>
+            </div>
+
             <!-- Profile Calibrate & Manage Bar -->
             <div class="profile-status-bar">
               <div class="profile-status-left">
@@ -7609,6 +7619,34 @@
       const calibrateBtn = document.getElementById('btn-open-calibration');
       if (calibrateBtn) {
         calibrateBtn.classList.toggle('profile-outdated-highlight', !!activeProf.outdated);
+      }
+
+      // USB mount-tilt correction: switch it off/on without recalibrating.
+      const mountRow = document.getElementById('profile-mount-row');
+      const mountToggle = document.getElementById('profile-mount-toggle');
+      const mount = activeProf.mount;
+      const hasMount = !!(mount && mount.status === 'ok');
+      if (mountRow) mountRow.style.display = hasMount ? 'flex' : 'none';
+      if (hasMount) {
+        const mountText = document.getElementById('profile-mount-text');
+        if (mountText) {
+          mountText.textContent = (I18n.t('calibration.mount_profile_toggle') || 'Компенсация наклона датчика ({tilt}°)')
+            .replace('{tilt}', Number(mount.tiltDeg || 0).toFixed(1));
+          mountText.title = I18n.t('calibration.mount_profile_tip') || '';
+        }
+        if (mountToggle) mountToggle.checked = !!mount.enabled;
+      }
+      if (mountToggle && !this._mountToggleBound) {
+        this._mountToggleBound = true;
+        mountToggle.addEventListener('change', async () => {
+          const want = mountToggle.checked;
+          try {
+            const res = await window.go?.main?.App?.SetProfileMountEnabled(this.activeSlot, want);
+            if (res && res !== 'ok') mountToggle.checked = !want; // not applicable: undo
+          } catch (e) {
+            mountToggle.checked = !want;
+          }
+        });
       }
 
       // 2. Populate Dropdown Menu — only slots that actually hold a profile. Empty

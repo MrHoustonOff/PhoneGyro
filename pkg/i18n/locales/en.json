@@ -163,7 +163,9 @@
     "network_quality_fair": "Fair Connection",
     "network_quality_poor": "Weak Connection",
     "align_status_refining": "Enough data — refining. Make a couple more moves in other directions",
-    "align_counter_refining": "refining…"
+    "align_counter_refining": "refining…",
+    "mount_profile_toggle": "Sensor mount-tilt compensation ({tilt}°)",
+    "mount_profile_tip": "Correction for the sensor board being mounted tilted in the case, measured at calibration and confirmed by the gyroscope. Turn it off to output the sensor axes as they are."
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",

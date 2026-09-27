@@ -3120,6 +3120,21 @@ em {
   animation: profileOutdatedFadeIn 0.25s ease;
 }
 
+.profile-mount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
 [data-theme="light"] .profile-outdated-warning {
   background: rgba(255, 59, 48, 0.12);
   border-color: rgba(255, 59, 48, 0.45);
