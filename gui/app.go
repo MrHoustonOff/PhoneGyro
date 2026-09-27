@@ -1344,6 +1344,7 @@ func (a *App) GetDSUStatus() map[string]any {
 
 // startup is called at application startup: initializes services in background
 func (a *App) startup(ctx context.Context) {
+	a.routeStdLog()
 	a.ctx = ctx
 
 	a.trayMgr = NewTrayManager(a)
@@ -1527,6 +1528,7 @@ func (a *App) startup(ctx context.Context) {
 		if bank.resetAnchor.Swap(false) {
 			bank.anchor.Reset()
 			bank.anchorClock = frameClock{}
+			a.logEvent("INFO", "anchor: reset (new phone connection)")
 		}
 		if frame.SampleClock != server.ClockNone {
 			// Device clock: the anchor's client model must integrate exactly the
