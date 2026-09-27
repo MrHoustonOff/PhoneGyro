@@ -172,8 +172,25 @@ func (m *AHRS) store(w, x, y, z float64) {
 	m.Q0, m.Q1, m.Q2, m.Q3 = float32(w/n), float32(x/n), float32(y/n), float32(z/n)
 }
 
-// quatFromUp — минимальный поворот тело→мир, переводящий «верх» тела u в мировой Y.
+// quatFromUp — ориентация тело→мир по одной гравитации (старт и «Центрировать»):
+// «верх» тела u переходит в мировой Y, а курс выбирается так, чтобы туда, куда
+// смотрит пад (его ось вперёд, −Z тела, спроецированная на горизонт), смотрел и
+// мировой −Z. Раньше брался минимальный поворот u→Y: при наклоне сразу по двум
+// осям он добавлял лишний поворот вокруг вертикали, и после возврата пада в
+// ровное положение модель оставалась развёрнутой (8° при 30°+30°, 27° при
+// 60°+45°). Если ось вперёд почти вертикальна, курс не определён — тогда
+// остаётся минимальный поворот.
 func quatFromUp(ux, uy, uz float64) (w, x, y, z float64) {
+	// Горизонтальная проекция оси вперёд тела f = (0,0,-1): h = f - (f·u)u.
+	hx, hy, hz := uz*ux, uz*uy, -1+uz*uz
+	if hn := math.Sqrt(hx*hx + hy*hy + hz*hz); hn > 0.2 {
+		hx, hy, hz = hx/hn, hy/hn, hz/hn
+		// Строки матрицы тело→мир — мировые оси в координатах тела:
+		// Y = u, Z = −h, X = Y × Z.
+		zx, zy, zz := -hx, -hy, -hz
+		xx, xy, xz := uy*zz-uz*zy, uz*zx-ux*zz, ux*zy-uy*zx
+		return quatFromRows([3][3]float64{{xx, xy, xz}, {ux, uy, uz}, {zx, zy, zz}})
+	}
 	// q = (1 + u·Y, u × Y), нормируется в store(); u × Y = (-uz, 0, ux).
 	w, x, y, z = 1+uy, -uz, 0, ux
 	if w < 1e-6 { // вверх ногами: 180° вокруг X
@@ -181,6 +198,29 @@ func quatFromUp(ux, uy, uz float64) (w, x, y, z float64) {
 	}
 	n := math.Sqrt(w*w + x*x + z*z)
 	return w / n, x / n, 0, z / n
+}
+
+// quatFromRows — кватернион (w,x,y,z) поворота с матрицей m (тело→мир).
+func quatFromRows(m [3][3]float64) (w, x, y, z float64) {
+	tr := m[0][0] + m[1][1] + m[2][2]
+	switch {
+	case tr > 0:
+		s := math.Sqrt(tr+1) * 2
+		w, x, y, z = s/4, (m[2][1]-m[1][2])/s, (m[0][2]-m[2][0])/s, (m[1][0]-m[0][1])/s
+	case m[0][0] > m[1][1] && m[0][0] > m[2][2]:
+		s := math.Sqrt(1+m[0][0]-m[1][1]-m[2][2]) * 2
+		w, x, y, z = (m[2][1]-m[1][2])/s, s/4, (m[0][1]+m[1][0])/s, (m[0][2]+m[2][0])/s
+	case m[1][1] > m[2][2]:
+		s := math.Sqrt(1+m[1][1]-m[0][0]-m[2][2]) * 2
+		w, x, y, z = (m[0][2]-m[2][0])/s, (m[0][1]+m[1][0])/s, s/4, (m[1][2]+m[2][1])/s
+	default:
+		s := math.Sqrt(1+m[2][2]-m[0][0]-m[1][1]) * 2
+		w, x, y, z = (m[1][0]-m[0][1])/s, (m[0][2]+m[2][0])/s, (m[1][2]+m[2][1])/s, s/4
+	}
+	if w < 0 {
+		w, x, y, z = -w, -x, -y, -z
+	}
+	return
 }
 
 // GetEulerAngles returns pitch, roll, yaw in degrees from the AHRS quaternion.
