@@ -35,7 +35,6 @@ const (
 	usbRescanEvery   = 4 * time.Second
 	usbReadTimeout   = 300 * time.Millisecond
 	usbMetaGraceTime = 500 * time.Millisecond
-	usbResetPulse    = 50 * time.Millisecond
 
 	// Protocol Level 3 safe defaults, used until (or unless) a metadata frame
 	// declares the device's real sensor range.
@@ -144,6 +143,7 @@ type usbConnState struct {
 	metaDeadline time.Time
 
 	haveSeq       bool
+	afterMeta     bool // the previous frame was metadata: a data SEQ of 0 now means a reboot
 	lastSeq       uint8
 	droppedFrames uint64
 
@@ -172,15 +172,18 @@ func metaRangeOrDefault(v int16, def float64) float64 {
 func (st *usbConnState) handle(f usbFrame, app *App) {
 	switch f.Type {
 	case usbTypeMeta:
-		st.accelRangeG = metaRangeOrDefault(f.Accel[0], usbDefaultAccelRangeG)
-		st.gyroRangeDps = metaRangeOrDefault(f.Accel[1], usbDefaultGyroRangeDps)
+		// Applied whenever it arrives, not only at the start: since protocol v1.1
+		// the device repeats it about once a second, so a host that joins a stream
+		// already running (the board did not reboot when the port opened) still
+		// learns the real range instead of keeping the +-250 dps default.
+		gyro := metaRangeOrDefault(f.Accel[1], usbDefaultGyroRangeDps)
+		accel := metaRangeOrDefault(f.Accel[0], usbDefaultAccelRangeG)
+		if !st.haveMeta || gyro != st.gyroRangeDps || accel != st.accelRangeG {
+			app.logEvent("INFO", "USB: sensor range ±%g dps, ±%g g", gyro, accel)
+		}
+		st.gyroRangeDps, st.accelRangeG = gyro, accel
 		st.haveMeta = true
-		app.logEvent("INFO", "USB: sensor range ±%g dps, ±%g g", st.gyroRangeDps, st.accelRangeG)
-		// The metadata frame opens every boot, and SEQ restarts after it. Opening the
-		// port resets the Nano (DTR), often right after the probe already read stale
-		// frames from the previous run: without this the restart counted as up to
-		// 255 lost frames and fired the data-loss sound.
-		st.haveSeq = false
+		st.afterMeta = true
 	case usbTypeName:
 		// Optional (protocol Level 3): a device may self-identify. Mirrors
 		// the phone's OnClientDevice -- same bank field, same "show it in
@@ -196,7 +199,13 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 			st.haveMeta = true // give up waiting; declared/default range stands as-is
 		}
 		gap := 1
-		if st.haveSeq {
+		// A boot sends metadata and then restarts SEQ at 0 (the port opening often
+		// reboots the board right after the probe read stale frames of the previous
+		// run): that jump is not lost frames. Repeated metadata mid-stream does not
+		// consume SEQ, so there the next frame just continues the count.
+		rebooted := st.afterMeta && f.Seq == 0
+		st.afterMeta = false
+		if st.haveSeq && !rebooted {
 			gap = int(f.Seq) - int(st.lastSeq)
 			if gap < 0 {
 				gap += 256
@@ -441,35 +450,7 @@ func (m *usbDeviceManager) attach(name string, port serial.Port, initial []usbFr
 	go m.readLoop(port, name, initial, pending)
 }
 
-// hasUSBMeta reports whether the frames include the metadata frame a device sends
-// when it boots.
-func hasUSBMeta(frames []usbFrame) bool {
-	for _, f := range frames {
-		if f.Type == usbTypeMeta {
-			return true
-		}
-	}
-	return false
-}
-
 func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usbFrame, pending []byte) {
-	// The range comes only in the metadata frame at boot. Arduino-style boards
-	// usually reboot when the port opens (DTR), but not always: when the driver
-	// kept DTR asserted from the previous session the board just keeps streaming,
-	// the range never arrives and the ±250 dps default makes every turn 8x too
-	// slow (field log 2026-09-27 23:36). So restart it ourselves with a DTR pulse,
-	// like the Arduino IDE does before flashing, and drop what the old run left
-	// in the buffer. Boards without auto-reset are unaffected by the pulse.
-	if !hasUSBMeta(initial) {
-		m.app.logEvent("INFO", "USB: no metadata from %s yet, restarting the device (DTR)", name)
-		if err := port.SetDTR(false); err == nil {
-			time.Sleep(usbResetPulse)
-			_ = port.SetDTR(true)
-			_ = port.ResetInputBuffer()
-			initial, pending = nil, nil
-		}
-	}
-
 	state := newUSBConnState()
 	for _, f := range initial {
 		state.handle(f, m.app)

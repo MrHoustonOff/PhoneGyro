@@ -156,11 +156,25 @@ func TestUSBConnStateBootRestartIsNotLoss(t *testing.T) {
 	}
 }
 
-func TestHasUSBMeta(t *testing.T) {
-	if hasUSBMeta([]usbFrame{{Type: usbTypeData}, {Type: usbTypeData}}) {
-		t.Fatal("data-only frames reported as having metadata")
+// TestUSBConnStateRepeatedMetadata: protocol v1.1 repeats metadata mid-stream. A
+// host that joined a running stream (no boot seen) switches to the declared range
+// when it arrives, and the repeat does not break or fake the SEQ count.
+func TestUSBConnStateRepeatedMetadata(t *testing.T) {
+	app := &App{}
+	st := newUSBConnState()
+	st.handle(usbFrame{Type: usbTypeData, Seq: 40}, app)
+	if st.gyroRangeDps != usbDefaultGyroRangeDps {
+		t.Fatalf("before metadata: %g dps, want the default", st.gyroRangeDps)
 	}
-	if !hasUSBMeta([]usbFrame{{Type: usbTypeData}, {Type: usbTypeMeta}}) {
-		t.Fatal("metadata frame not found")
+	meta := usbFrame{Type: usbTypeMeta}
+	meta.Accel[0], meta.Accel[1] = 2, 2000
+	st.handle(meta, app)
+	if st.gyroRangeDps != 2000 {
+		t.Fatalf("mid-stream metadata not applied: %g dps", st.gyroRangeDps)
+	}
+	st.handle(usbFrame{Type: usbTypeData, Seq: 41}, app)
+	st.handle(usbFrame{Type: usbTypeData, Seq: 43}, app) // one really lost
+	if st.droppedFrames != 1 {
+		t.Fatalf("dropped %d, want 1", st.droppedFrames)
 	}
 }
