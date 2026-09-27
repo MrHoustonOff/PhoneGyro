@@ -137,7 +137,7 @@ func TestAttitudeAnchorEngagesOnRealIPhone(t *testing.T) {
 	var worst float64
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		line := sc.Text()
+		line := strings.TrimRight(sc.Text(), "\r") // the fixture may be checked out with CRLF
 		if line == "" || line[0] < '0' || line[0] > '9' {
 			continue
 		}
