@@ -1915,7 +1915,7 @@
           "live_debug.stats_in_hz": "Частота (Hz)",
           "live_debug.stats_in_hz_tip": "Сколько раз в секунду телефон отправляет данные. Обычно стабильно держится на одном уровне (например, 60). Резкие провалы означают, что телефон на секунду перестал успевать слать данные — обычно из-за загрузки CPU или сна экрана.",
           "live_debug.stats_latency": "Задержка (мс)",
-          "live_debug.stats_latency_tip": "Время в пути от телефона до компьютера. Чем меньше — тем меньше ощутимая задержка в игре между движением руки и реакцией на экране. Резкие скачки обычно означают проблемы с Wi-Fi.",
+          "live_debug.stats_latency_tip": "Время в пути от телефона до компьютера — половина времени отклика (RTT), которое сервер раз в секунду измеряет по тому же WebSocket, что и телеметрия, поэтому в него входит и очередь пакетов. Чем меньше — тем меньше задержка между движением руки и реакцией в игре. Резкие скачки обычно означают проблемы с Wi-Fi. Для USB не измеряется (н/д).",
           "live_debug.stats_jitter": "Джиттер (мс)",
           "live_debug.stats_jitter_tip": "Насколько неровно с точки зрения времени приходят пакеты друг за другом. Ровная почти прямая линия — хорошо. Пилообразные скачки означают нестабильное соединение, даже если общая частота (Hz) в среднем в норме.",
           "live_debug.stats_loss": "Потери пакетов",
@@ -1999,7 +1999,7 @@
           "live_debug.stats_in_hz": "Frequency (Hz)",
           "live_debug.stats_in_hz_tip": "How many times per second the phone sends data. Usually stays stable (e.g. 60). Sharp drops mean the phone briefly throttled data transmission — typically due to CPU load or screen sleep.",
           "live_debug.stats_latency": "Latency (ms)",
-          "live_debug.stats_latency_tip": "Transit time from phone to computer. Lower values mean less noticeable delay in game between hand movement and on-screen response. Sharp spikes usually indicate Wi-Fi issues.",
+          "live_debug.stats_latency_tip": "Transit time from phone to computer — half the round-trip time (RTT) the server measures once a second over the same WebSocket as the telemetry, so packet queueing is included. Lower values mean less delay between hand movement and in-game response. Sharp spikes usually indicate Wi-Fi issues. Not measured for USB (n/a).",
           "live_debug.stats_jitter": "Jitter (ms)",
           "live_debug.stats_jitter_tip": "How uneven the packet arrival intervals are over time. A smooth flat line is good. Sawtooth spikes indicate unstable connection, even if average frequency (Hz) looks normal.",
           "live_debug.stats_loss": "Packet Loss",
@@ -3451,8 +3451,11 @@
         const lat = emaState.latency;
         const valLatencyEl = document.getElementById('val-latency');
         const chipLatencyEl = document.getElementById('chip-latency');
-        if (valLatencyEl) valLatencyEl.textContent = lat !== null ? lat.toFixed(1) : '12.0';
-        if (chipLatencyEl && lat !== null) {
+        if (valLatencyEl) valLatencyEl.textContent = lat !== null ? lat.toFixed(1) : '--';
+        if (chipLatencyEl && lat === null) {
+          chipLatencyEl.className = 'stat-chip muted';
+          chipLatencyEl.textContent = currentLang === 'ru' ? 'н/д' : 'n/a';
+        } else if (chipLatencyEl) {
           if (lat < 20) {
             chipLatencyEl.className = 'stat-chip green';
             chipLatencyEl.textContent = '< 20ms';
@@ -3706,22 +3709,20 @@
         }
 
         // 2. Latency & Jitter
-        let latencyMs = 0;
-        if (data.recv_ts && data.ts) {
-          const delta = data.recv_ts - data.ts;
-          if (delta >= 0 && delta < 1000) {
-            latencyMs = delta;
-          } else {
-            latencyMs = 12 + Math.random() * 4;
-          }
+        // Phone -> PC transit estimated as half the measured round trip
+        // (server PING/PONG over the same WebSocket as the telemetry). Phone and
+        // PC clocks are not synchronized, so a one-way time can't be read off
+        // packet timestamps. No measurement (USB, not answered yet) -> "--".
+        const rtt = data.link_rtt_ms;
+        if (typeof rtt === 'number' && rtt >= 0) {
+          const latencyMs = rtt / 2;
+          updateEMA('latency', latencyMs, 0.20);
+          latencyHistory.push(latencyMs);
+          if (latencyHistory.length > MAX_CHART_SAMPLES) latencyHistory.shift();
+          chartsDirty = true;
         } else {
-          latencyMs = 12.0;
+          emaState.latency = null;
         }
-
-        updateEMA('latency', latencyMs, 0.20);
-        latencyHistory.push(latencyMs);
-        if (latencyHistory.length > MAX_CHART_SAMPLES) latencyHistory.shift();
-        chartsDirty = true;
 
         // Jitter: honest smoothed packet arrival interval tracking
         if (lastPacketRecvTime > 0) {

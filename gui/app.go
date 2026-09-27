@@ -95,7 +95,7 @@ type AppState struct {
 	IsPaused      bool    `json:"isPaused"`
 	DeviceName    string  `json:"deviceName"` // e.g. "Controller"
 	Hz            float64 `json:"hz"`
-	PingMs        int     `json:"pingMs"`
+	PingMs        int     `json:"pingMs"` // real phone link RTT (pkg/server LinkRTT); -1 = not measured / USB
 	ConnectedTime string  `json:"connectedTime"` // "00:07:32"
 	Pitch         float64 `json:"pitch"`         // Live pitch in degrees
 	Roll          float64 `json:"roll"`          // Live roll in degrees
@@ -2296,7 +2296,7 @@ func (a *App) GetState() AppState {
 		IsPaused:      a.isPaused.Load(),
 		DeviceName:    devName,
 		Hz:            hz,
-		PingMs:        3,
+		PingMs:        a.linkPingMs(),
 		ConnectedTime: connectedDuration,
 		Pitch:         math.Float64frombits(bank.curPitch.Load()),
 		Roll:          math.Float64frombits(bank.curRoll.Load()),
@@ -2700,6 +2700,29 @@ type liveDebugMsg struct {
 	PipeMs          float64          `json:"pipe_ms,omitempty"`
 	DsuClients      int              `json:"dsu_clients"`
 	DsuClientList   []dsu.ClientInfo `json:"dsu_client_list,omitempty"`
+	// LinkRttMs — измеренное время отклика канала телефона (PING/PONG), мс;
+	// -1 — не измерено (нет телефона, USB). Всегда в сообщении: 0 и -1 значимы.
+	LinkRttMs float64 `json:"link_rtt_ms"`
+}
+
+// linkPingMs — RTT канала телефона в целых мс, -1 если не измерен или источник USB.
+func (a *App) linkPingMs() int {
+	if ms := a.linkRttMs(); ms >= 0 {
+		return int(math.Round(ms))
+	}
+	return -1
+}
+
+// linkRttMs — RTT канала телефона в мс по настоящему PING/PONG (pkg/server
+// linkrtt.go), -1 если измерения нет. Для USB не бывает: там нет сети.
+func (a *App) linkRttMs() float64 {
+	if a.srv == nil || a.GetInputMode() == "usb" {
+		return -1
+	}
+	if rtt, ok := a.srv.LinkRTT(); ok {
+		return float64(rtt.Microseconds()) / 1000
+	}
+	return -1
 }
 
 func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg) {
@@ -2722,6 +2745,7 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 		msg.DsuClients = a.dsuSrv.ActiveClientCount()
 		msg.DsuClientList = a.dsuSrv.GetClientsInfo()
 	}
+	msg.LinkRttMs = a.linkRttMs()
 
 	if len(extras) > 0 {
 		e := extras[0]

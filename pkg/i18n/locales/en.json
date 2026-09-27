@@ -158,7 +158,10 @@
     "mount_small": "The sensor is mounted level ({tilt}° tilt) — no correction needed.",
     "mount_too_large": "Resting tilt is {tilt}° — too large for a board misalignment. The pad was most likely not lying flat during the Rest step. No correction applied; recalibrate on a flat surface.",
     "mount_inconsistent": "The accelerometer reads a {tilt}° tilt, but the gyroscope did not confirm it ({check}° deviation). This looks like accelerometer zero offset rather than board misalignment — rotating the axes would hurt, so no correction is applied.",
-    "mount_no_data": "Not enough data to measure the mount tilt."
+    "mount_no_data": "Not enough data to measure the mount tilt.",
+    "network_quality_measuring": "Measuring response…",
+    "network_quality_fair": "Fair Connection",
+    "network_quality_poor": "Weak Connection"
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",
@@ -219,7 +222,7 @@
     "stats_jitter_stable": "stable",
     "stats_jitter_tip": "How uneven the packet arrival intervals are over time. A smooth flat line is good. Sawtooth spikes indicate unstable connection, even if average frequency (Hz) looks normal.",
     "stats_latency": "Latency (ms)",
-    "stats_latency_tip": "Transit time from phone to computer. Lower values mean less noticeable delay in game between hand movement and on-screen response. Sharp spikes usually indicate Wi-Fi issues.",
+    "stats_latency_tip": "Transit time from phone to computer — half the round-trip time (RTT) the server measures once a second over the same WebSocket as the telemetry, so packet queueing is included. Lower values mean less delay between hand movement and in-game response. Sharp spikes usually indicate Wi-Fi issues. Not measured for USB (n/a).",
     "stats_loss": "Packet Loss",
     "stats_loss_tip": "Count of packets sent by the phone that never reached the computer, calculated by sequence number gaps. Normally 0. Growth indicates signal drops along the route (distance to router, interference, network congestion).",
     "stats_modal_btn_cancel": "Don't Save",

@@ -106,6 +106,9 @@ type Server struct {
 
 	clientMu    sync.Mutex
 	clientConns map[*websocket.Conn]*sync.Mutex
+
+	// rtt is the latest phone connection's PING/PONG round-trip meter (linkrtt.go).
+	rtt atomic.Pointer[linkRTT]
 }
 
 // NewServer initializes HTTP and HTTPS server instances.
@@ -264,7 +267,7 @@ func (s *Server) handleWebClient(w http.ResponseWriter, r *http.Request) {
 
 const (
 	wsReadDeadline = 30 * time.Second // connection dies if no client frame in this window
-	wsPingInterval = 2 * time.Second  // server→client keepalive ping interval
+	wsPingInterval = 1 * time.Second  // server→client keepalive ping interval (also the RTT sample rate, linkrtt.go)
 	wsPingText     = "PING"           // client listens for this and resets its own watchdog
 )
 
@@ -427,6 +430,12 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// independent of the OS TCP keepalive timer (~2 min default).
 	done := make(chan struct{})
 	defer close(done)
+
+	// Round-trip meter for this connection; the newest connection is the one reported.
+	rtt := &linkRTT{}
+	s.rtt.Store(rtt)
+	defer s.rtt.CompareAndSwap(rtt, nil)
+
 	go func() {
 		t := time.NewTicker(wsPingInterval)
 		defer t.Stop()
@@ -437,6 +446,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			case <-t.C:
 				writeMu.Lock()
 				conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				rtt.pingSent(time.Now())
 				err := conn.WriteMessage(websocket.TextMessage, []byte(wsPingText))
 				writeMu.Unlock()
 				if err != nil {
@@ -464,6 +474,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		// Check for client keepalive PONG
 		if msgType == websocket.TextMessage && string(message) == "PONG" {
+			rtt.pongReceived(now)
 			_ = conn.SetReadDeadline(time.Now().Add(wsReadDeadline))
 			continue
 		}

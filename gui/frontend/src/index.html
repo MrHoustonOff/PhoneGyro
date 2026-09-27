@@ -3829,13 +3829,13 @@
 
   // ── Network Telemetry Mini-Sparkline (Ping & Jitter) ──────────────────────
   const NetSparkline = {
-    history: [3, 4, 3, 5, 4, 3, 3, 4, 3, 4, 3, 3, 4],
+    history: [], // only real RTT samples (state.pingMs), never seeded
     maxLen: 32,
     lastRenderTs: 0,
 
     push(pingMs) {
-      const val = (typeof pingMs === 'number' && pingMs >= 0) ? pingMs : 3;
-      this.history.push(val);
+      if (typeof pingMs !== 'number' || pingMs < 0) return; // not measured: draw nothing
+      this.history.push(pingMs);
       if (this.history.length > this.maxLen) {
         this.history.shift();
       }
@@ -10669,21 +10669,28 @@
             networkHealthEl.textContent = I18n.t('usb_mode.direct_connection') || 'Прямое USB-подключение';
           }
         } else {
-          const pingVal = state.pingMs || 3;
+          // Real round-trip time of the phone link (server PING/PONG, 1/s);
+          // -1 until the first answer arrives.
+          const pingVal = (typeof state.pingMs === 'number') ? state.pingMs : -1;
+          const pingLabel = pingVal >= 0 ? `${pingVal} ms` : '—';
           if (pingTxt) {
-            pingTxt.textContent = `${pingVal} ms`;
+            pingTxt.textContent = pingLabel;
           } else {
             const devPing = document.getElementById('device-ping');
-            if (devPing) devPing.textContent = `${pingVal} ms`;
+            if (devPing) devPing.textContent = pingLabel;
           }
           if (netSpark) netSpark.style.display = '';
-          if (networkHealthEl && networkHealthEl.getAttribute('data-i18n') !== 'calibration.network_quality_optimal') {
-            networkHealthEl.setAttribute('data-i18n', 'calibration.network_quality_optimal');
-            networkHealthEl.innerHTML = renderMarkdown(I18n.t('calibration.network_quality_optimal'));
+          const qualityKey = pingVal < 0 ? 'calibration.network_quality_measuring'
+            : pingVal < 40 ? 'calibration.network_quality_optimal'
+            : pingVal < 100 ? 'calibration.network_quality_fair'
+            : 'calibration.network_quality_poor';
+          if (networkHealthEl && networkHealthEl.getAttribute('data-i18n') !== qualityKey) {
+            networkHealthEl.setAttribute('data-i18n', qualityKey);
+            networkHealthEl.innerHTML = renderMarkdown(I18n.t(qualityKey));
           }
           const benchPing = document.getElementById('bench-net-ping');
           if (benchPing) {
-            benchPing.textContent = `${pingVal} ms`;
+            benchPing.textContent = pingLabel;
           }
           if (typeof NetSparkline !== 'undefined') {
             NetSparkline.push(pingVal);
