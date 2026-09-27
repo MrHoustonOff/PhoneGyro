@@ -36,6 +36,41 @@ type MotionFrame struct {
 	AccZ float32 `json:"az"`
 	// Buttons and control flags bitmask
 	Buttons uint16 `json:"buttons"`
+	// SampleClock says what TimestampUs means (see SourceDeltaUs):
+	// ClockNone — no usable device clock (legacy phone page: Date.now() at send);
+	// ClockMicros32 / ClockMicros64 — device µs clock, and RotX/Y/Z is the mean
+	// angular rate over exactly the interval since the previous frame's timestamp.
+	SampleClock uint8 `json:"-"`
+}
+
+// Device clock kinds for MotionFrame.SampleClock.
+const (
+	ClockNone     uint8 = 0
+	ClockMicros32 uint8 = 32 // wraps every ~71.6 min (USB firmware micros())
+	ClockMicros64 uint8 = 64 // monotonic, never wraps (phone page integration clock)
+)
+
+// MaxSourceDeltaUs bounds a trusted device-clock interval. Anything longer (or
+// non-positive) is a reconnect, page reload or clock reset, not a sample period.
+const MaxSourceDeltaUs = 1_000_000
+
+// SourceDeltaUs returns the device-clock interval between two frames' TimestampUs
+// and whether it can be trusted as the period the frame's rate covers. 32-bit
+// clocks are subtracted modulo 2^32, so the USB micros() wrap is not a reset.
+func SourceDeltaUs(prev, cur uint64, clock uint8) (uint64, bool) {
+	var d uint64
+	switch clock {
+	case ClockMicros32:
+		d = uint64(uint32(cur) - uint32(prev))
+	case ClockMicros64:
+		if cur <= prev {
+			return 0, false
+		}
+		d = cur - prev
+	default:
+		return 0, false
+	}
+	return d, d > 0 && d <= MaxSourceDeltaUs
 }
 
 // Server encapsulates both HTTP (for certificate distribution) and HTTPS+WSS for gamepad traffic.
@@ -500,6 +535,7 @@ func (s *Server) parseFrame(msgType int, data []byte) (MotionFrame, bool) {
 		return MotionFrame{
 			Timestamp:   uint32(tsUs / 1000),
 			TimestampUs: tsUs,
+			SampleClock: ClockMicros64,
 			RotX:        rx,
 			RotY:        ry,
 			RotZ:        rz,

@@ -211,6 +211,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		mf := server.MotionFrame{
 			Timestamp:   uint32(time.Now().UnixMilli()),
 			TimestampUs: uint64(f.TimestampUs),
+			SampleClock: server.ClockMicros32, // firmware micros() at sample time
 			RotX:        float32(float64(f.Gyro[0]) / 32768.0 * st.gyroRangeDps),
 			RotY:        float32(float64(f.Gyro[1]) / 32768.0 * st.gyroRangeDps),
 			RotZ:        float32(float64(f.Gyro[2]) / 32768.0 * st.gyroRangeDps),

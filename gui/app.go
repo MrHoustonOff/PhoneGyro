@@ -261,7 +261,12 @@ type motionBank struct {
 	// variables in startup() -- moved here so each source keeps its own.
 	anchor         *attitudeAnchor
 	prevAnchorTsUs uint64
-	prevAhrsTime   time.Time // dt для ahrs.Update (часы DSU-пакета, см. startup)
+	anchorClock    frameClock // интервал кадра для attitudeanchor (frameclock.go)
+	ahrsClock      frameClock // интервал кадра для ahrs.Update (frameclock.go)
+	// resetAnchor просит обработчик кадров сбросить anchor (новое WebSocket-
+	// подключение телефона: у новой страницы свой ноль ориентации). Флаг, а не
+	// прямой вызов: anchor живёт только в горутине обработчика кадров.
+	resetAnchor    atomic.Bool
 	accFiltered    [3]float64
 	accFilterInit  bool
 	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
@@ -1509,15 +1514,31 @@ func (a *App) startup(ctx context.Context) {
 
 		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).
 		anchorDt := anchorDefaultDtSec
-		if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
-			d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6
-			if d >= 0.004 && d <= 0.1 {
-				anchorDt = d
-			} else if d > 1.0 {
-				bank.anchor.Reset() // reconnect / page reload: attitude reference restarted
-			}
-		} else if frame.TimestampUs < bank.prevAnchorTsUs {
+		if bank.resetAnchor.Swap(false) {
 			bank.anchor.Reset()
+			bank.anchorClock = frameClock{}
+		}
+		if frame.SampleClock != server.ClockNone {
+			// Device clock: the anchor's client model must integrate exactly the
+			// interval the DSU client will (pkg/dsu stampMotion), however long.
+			hadClock := bank.anchorClock.have
+			if d, fromDevice := bank.anchorClock.Interval(frame, startPipe); fromDevice {
+				anchorDt = d
+			} else if hadClock {
+				bank.anchor.Reset() // device clock restarted: reconnect / page reload
+			}
+		} else {
+			bank.anchorClock = frameClock{}
+			if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
+				d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6
+				if d >= 0.004 && d <= 0.1 {
+					anchorDt = d
+				} else if d > 1.0 {
+					bank.anchor.Reset() // reconnect / page reload: attitude reference restarted
+				}
+			} else if frame.TimestampUs < bank.prevAnchorTsUs {
+				bank.anchor.Reset()
+			}
 		}
 		bank.prevAnchorTsUs = frame.TimestampUs
 		if sfKnown {
@@ -1634,16 +1655,10 @@ func (a *App) startup(ctx context.Context) {
 			dsuAx, dsuAy, dsuAz = float32(ac[0]), float32(ac[1]), float32(ac[2])
 		}
 
-		// dt -- по тем же часам, что и таймстамп DSU-пакета (pkg/dsu nextTimestampUs,
-		// wall clock в момент отправки), с тем же правилом, что в тема/app.go readLoop.
-		nowAhrs := time.Now()
-		ahrsDt := float32(1.0 / 60.0)
-		if !bank.prevAhrsTime.IsZero() {
-			if d := nowAhrs.Sub(bank.prevAhrsTime).Seconds(); d > 0 && d <= 0.25 {
-				ahrsDt = float32(d)
-			}
-		}
-		bank.prevAhrsTime = nowAhrs
+		// dt -- тот же интервал, что получит DSU-клиент по таймстампам пакетов
+		// (pkg/dsu stampMotion, frameclock.go): кубик считает ровно как PadTest.
+		ahrsDtSec, _ := bank.ahrsClock.Interval(frame, time.Now())
+		ahrsDt := float32(ahrsDtSec)
 
 		// Update AHRS filter (see ahrs.go).
 		var curP, curR, curY float64
@@ -1695,7 +1710,13 @@ func (a *App) startup(ctx context.Context) {
 		}
 
 		if a.isPaused.Load() {
-			return // Muted during pause
+			// Muted during pause -- but the DSU timestamp chain still has to step
+			// past this frame, or the first frame after unpausing would claim the
+			// whole pause as its interval (pkg/dsu SkipMotion).
+			if a.dsuSrv != nil {
+				a.dsuSrv.SkipMotion(frame)
+			}
+			return
 		}
 		if a.dsuSrv != nil {
 			dsuFrame := frame
@@ -1745,6 +1766,7 @@ func (a *App) startup(ctx context.Context) {
 		// its own separate lifecycle handling in usbdevice.go -- so it always
 		// targets phoneBank directly, never activeBank().
 		a.phoneBank.hasClient.Store(true)
+		a.phoneBank.resetAnchor.Store(true)
 		a.clientAddr = remoteAddr
 		if a.phoneBank.connectedAt.IsZero() {
 			a.phoneBank.connectedAt = time.Now()

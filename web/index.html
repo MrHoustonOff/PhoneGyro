@@ -1536,13 +1536,13 @@ connectWSS();
 const G_CONST = 9.80665;
 const DEG2RAD_HALF = Math.PI / 360;
 
-const binBuffer = new ArrayBuffer(46);
+// 50-byte frame: uint64 ts_us, 3×f32 rate, 4×f32 quat, 3×f32 accel, u16 flags.
+const binBuffer = new ArrayBuffer(50);
 const binView   = new DataView(binBuffer);
 
 let curAlpha = 0, curBeta = 0, curGamma = 0;
 let zeroYawOffset = 0;
 let outQx = 0, outQy = 0, outQz = 0, outQw = 1;
-let dsuPitch = 0, dsuYaw = 0, dsuRoll = 0;
 let dsuAccX = 0, dsuAccY = 0, dsuAccZ = 0;
 let lastMotionTime = 0;
 
@@ -1585,7 +1585,7 @@ function onOrientation(e) {
   updateHUDLevel(curBeta, curGamma, curAlpha);
 
   if (performance.now() - lastMotionTime > 200) {
-    sendFrame();
+    flushMotion();
   }
 }
 
@@ -1646,43 +1646,68 @@ function onMotion(e) {
   const now = performance.now();
   const dt = rotAccumPrevTs ? Math.min(Math.max((now - rotAccumPrevTs) / 1000, 0.001), 0.1) : 1 / 60;
   rotAccumPrevTs = now;
-  if (rotAccumDt > 0.5) { rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; } // long stall: start over
+  // Very long stall: start over (the server's attitude anchor re-converges it).
+  // 0.85 s + one event (dt <= 0.1 s) keeps every frame's span under the 1 s the
+  // server still trusts as a device interval (pkg/server MaxSourceDeltaUs).
+  if (rotAccumDt > 0.85) { rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; }
   rotAccum.x += gyr.x * dt;
   rotAccum.y += gyr.y * dt;
   rotAccum.z += gyr.z * dt;
   rotAccumDt += dt;
 
-  dsuPitch = rotAccum.x / rotAccumDt;
-  dsuYaw   = rotAccum.y / rotAccumDt;
-  dsuRoll  = rotAccum.z / rotAccumDt;
-
   dsuAccX = acc.x;
   dsuAccY = acc.y;
   dsuAccZ = acc.z;
 
-  if (sendFrame()) {
-    rotAccum = { x: 0, y: 0, z: 0 };
-    rotAccumDt = 0;
-  }
+  flushMotion();
 }
 
 let rotAccum = { x: 0, y: 0, z: 0 }, rotAccumDt = 0, rotAccumPrevTs = 0;
 
-function sendFrame() {
+// Integration clock (µs). Each frame's timestamp is the previous one plus EXACTLY
+// the interval its rate was averaged over, so the server — and every DSU client
+// after it — integrates rate × Δts = the rotation actually measured, no matter
+// how Wi-Fi bunches or delays the packets (pkg/dsu stampMotion). Monotonic; only
+// deltas are meaningful.
+let sampleClockUs = Math.round(performance.now() * 1000);
+
+// flushMotion sends the rotation accumulated since the last delivered frame as
+// one average rate over its interval. With nothing pending (keep-alive paths) it
+// sends a zero rate spanning 1 µs: the link stays alive and no stale rate is
+// ever integrated twice.
+function flushMotion() {
+  let rx = 0, ry = 0, rz = 0, spanSec = 1e-6;
+  if (rotAccumDt > 0) {
+    rx = rotAccum.x / rotAccumDt;
+    ry = rotAccum.y / rotAccumDt;
+    rz = rotAccum.z / rotAccumDt;
+    spanSec = rotAccumDt;
+  }
+  const ts = sampleClockUs + spanSec * 1e6;
+  if (!sendFrame(ts, rx, ry, rz)) return false; // socket busy: keep accumulating
+  sampleClockUs = ts;
+  rotAccum = { x: 0, y: 0, z: 0 };
+  rotAccumDt = 0;
+  return true;
+}
+
+function sendFrame(tsUs, rateX, rateY, rateZ) {
   if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 0) return false;
 
-  binView.setUint32(0,  (Date.now() & 0xFFFFFFFF) >>> 0, true);
-  binView.setFloat32(4,  dsuPitch, true); // Pitch (RotX)
-  binView.setFloat32(8,  dsuYaw,   true); // Yaw   (RotY)
-  binView.setFloat32(12, dsuRoll,  true); // Roll  (RotZ)
-  binView.setFloat32(16, outQx,    true);
-  binView.setFloat32(20, outQy,    true);
-  binView.setFloat32(24, outQz,    true);
-  binView.setFloat32(28, outQw,    true);
-  binView.setFloat32(32, dsuAccX,  true);
-  binView.setFloat32(36, dsuAccY,  true);
-  binView.setFloat32(40, dsuAccZ,  true);
-  binView.setUint16(44,  isPaused ? 1 : 0, true);
+  const ts = Math.round(tsUs);
+  binView.setUint32(0,  ts % 4294967296, true);             // ts_us low
+  binView.setUint32(4,  Math.floor(ts / 4294967296), true); // ts_us high
+  binView.setFloat32(8,  rateX,   true); // Pitch (RotX)
+  binView.setFloat32(12, rateY,   true); // Yaw   (RotY)
+  binView.setFloat32(16, rateZ,   true); // Roll  (RotZ)
+  binView.setFloat32(20, outQx,   true);
+  binView.setFloat32(24, outQy,   true);
+  binView.setFloat32(28, outQz,   true);
+  binView.setFloat32(32, outQw,   true);
+  binView.setFloat32(36, dsuAccX, true);
+  binView.setFloat32(40, dsuAccY, true);
+  binView.setFloat32(44, dsuAccZ, true);
+  binView.setUint16(48,  isPaused ? 1 : 0, true);
 
   ws.send(binBuffer);
   packetCount++;
@@ -1693,7 +1718,7 @@ function sendFrame() {
 setInterval(() => {
   if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
     if (performance.now() - lastMotionTime > 1200) {
-      sendFrame();
+      flushMotion();
     }
   }
 }, 1000);

@@ -162,7 +162,7 @@ func BenchmarkFillPadDataPacket(b *testing.B) {
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		srv.fillPadDataPacket(buf, uint32(i), frame)
+		srv.fillPadDataPacket(buf, uint32(i), frame, uint64(i+1))
 	}
 }
 

@@ -62,8 +62,15 @@ type Server struct {
 	stopChan chan struct{}
 	running  atomic.Bool
 
+	// DSU timestamp chain (see stampMotion). Clients integrate RotX/Y/Z over the
+	// delta between consecutive packet timestamps, so for device frames that
+	// delta must be the device's own sample interval, not our send time.
 	timeMu         sync.Mutex
-	currentDsuTsUs uint64
+	currentDsuTsUs uint64    // last timestamp handed out (strictly increasing)
+	lastStampWall  time.Time // wall time when currentDsuTsUs was handed out
+	srcPrevTsUs    uint64    // previous device frame's TimestampUs
+	srcClock       uint8     // its server.MotionFrame.SampleClock
+	haveSrc        bool
 
 	// Lifecycle event hooks for clean, non-spammy logging
 	OnClientConnect    func(addr *net.UDPAddr)
@@ -201,6 +208,10 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	s.lastMotionTime = time.Now()
 	s.lastFrameMu.Unlock()
 
+	// Stamp even with no clients: the chain must see every device frame, or the
+	// first packet after a client subscribes would span an arbitrary interval.
+	ts := s.stampMotion(frame)
+
 	s.clientsMu.RLock()
 	if len(s.clients) == 0 {
 		s.clientsMu.RUnlock()
@@ -212,7 +223,7 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	// Acquire pooled buffer (Zero heap allocations in the hot path!)
 	bufPtr := padPacketPool.Get().(*[]byte)
 	pkt := *bufPtr
-	s.fillPadDataPacket(pkt, packetNum, frame)
+	s.fillPadDataPacket(pkt, packetNum, frame, ts)
 
 	for _, client := range s.clients {
 		_, _ = s.conn.WriteToUDP(pkt, client.Addr)
@@ -222,7 +233,20 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	padPacketPool.Put(bufPtr)
 }
 
-func (s *Server) fillPadDataPacket(buf []byte, packetNum uint32, frame server.MotionFrame) {
+// SkipMotion accounts a device frame that is deliberately not sent (paused
+// output): the next sent frame's rate only covers the interval since THIS one,
+// so the timestamp chain must advance its device-clock reference past it.
+func (s *Server) SkipMotion(frame server.MotionFrame) {
+	s.timeMu.Lock()
+	defer s.timeMu.Unlock()
+	if frame.SampleClock == server.ClockNone {
+		s.haveSrc = false
+		return
+	}
+	s.srcPrevTsUs, s.srcClock, s.haveSrc = frame.TimestampUs, frame.SampleClock, true
+}
+
+func (s *Server) fillPadDataPacket(buf []byte, packetNum uint32, frame server.MotionFrame, tsUs uint64) {
 	// Total size: 100 bytes (20 bytes header + 80 bytes payload)
 	// --- 1. Header (20 bytes) ---
 	copy(buf[0:4], MagicServer)
@@ -250,9 +274,8 @@ func (s *Server) fillPadDataPacket(buf []byte, packetNum uint32, frame server.Mo
 	p[22] = 128 // Right Stick X
 	p[23] = 128 // Right Stick Y
 
-	// Strictly monotonic timestamp in microseconds (offset 48..56)
-	micros := s.nextTimestampUs()
-	binary.LittleEndian.PutUint64(p[48:56], micros)
+	// Strictly monotonic timestamp in microseconds (offset 48..56), see stampMotion
+	binary.LittleEndian.PutUint64(p[48:56], tsUs)
 
 	// Accelerometer in g: AccX, AccY, AccZ (offsets 56..68)
 	binary.LittleEndian.PutUint32(p[56:60], float32ToBits(frame.AccX))
@@ -272,23 +295,88 @@ func (s *Server) fillPadDataPacket(buf []byte, packetNum uint32, frame server.Mo
 // BuildPadDataPacket builds and returns a newly allocated 100-byte packet (useful for tests).
 func (s *Server) BuildPadDataPacket(packetNum uint32, frame server.MotionFrame) []byte {
 	buf := make([]byte, 100)
-	s.fillPadDataPacket(buf, packetNum, frame)
+	s.fillPadDataPacket(buf, packetNum, frame, s.stampMotion(frame))
 	return buf
 }
 
-// nextTimestampUs generates a strictly monotonic microsecond timestamp for Cemuhook DSU
-// based on host wall clock, guaranteeing ts > last_ts and smooth deltaTime in Cemu.
-func (s *Server) nextTimestampUs() uint64 {
+// nominalFrameUs is the interval assumed for a device frame whose own interval
+// is unknown (first frame, reconnect, clock reset): one 60 Hz frame, never more
+// than the wall time actually elapsed. Long enough not to drop a real frame's
+// rotation, short enough that a stale rate is never integrated over a long gap.
+const nominalFrameUs = 16_667
+
+// stampMotion returns the DSU timestamp for a device frame.
+//
+// Clients (Cemu, yuzu-family, PadTest) integrate RotX/Y/Z * (ts - previous ts).
+// With a device clock (MotionFrame.SampleClock) the delta is exactly the device
+// interval the rate was averaged over, so network bursts and stalls no longer
+// change how much rotation a client integrates. Without one (legacy phone page)
+// the delta is the wall time since the previous packet, as before.
+func (s *Server) stampMotion(frame server.MotionFrame) uint64 {
+	now := time.Now()
 	s.timeMu.Lock()
 	defer s.timeMu.Unlock()
 
-	nowUs := uint64(time.Now().UnixNano() / 1000)
-	if nowUs <= s.currentDsuTsUs {
-		s.currentDsuTsUs++
-	} else {
-		s.currentDsuTsUs = nowUs
+	if frame.SampleClock == server.ClockNone {
+		s.haveSrc = false
+		return s.emitTsLocked(s.wallAdvanceLocked(now), now)
 	}
-	return s.currentDsuTsUs
+
+	d, ok := uint64(0), false
+	if s.haveSrc && s.srcClock == frame.SampleClock {
+		d, ok = server.SourceDeltaUs(s.srcPrevTsUs, frame.TimestampUs, frame.SampleClock)
+	}
+	s.srcPrevTsUs, s.srcClock, s.haveSrc = frame.TimestampUs, frame.SampleClock, true
+
+	if s.currentDsuTsUs == 0 {
+		return s.emitTsLocked(uint64(now.UnixMicro()), now)
+	}
+	if !ok {
+		d = uint64(max(0, now.Sub(s.lastStampWall).Microseconds()))
+		if d > nominalFrameUs {
+			d = nominalFrameUs
+		}
+	}
+	return s.emitTsLocked(s.currentDsuTsUs+d, now)
+}
+
+// stampIdle returns the timestamp for a heartbeat frame (zero rates): it only
+// needs to move forward in step with wall time.
+func (s *Server) stampIdle() uint64 {
+	now := time.Now()
+	s.timeMu.Lock()
+	defer s.timeMu.Unlock()
+	return s.emitTsLocked(s.wallAdvanceLocked(now), now)
+}
+
+// stampRepeat returns the timestamp for a re-send of the last frame (reply to a
+// client's data request). Its rates were already delivered, so it must span no
+// time at all, or the client would integrate them a second time: +1 us.
+func (s *Server) stampRepeat() uint64 {
+	now := time.Now()
+	s.timeMu.Lock()
+	defer s.timeMu.Unlock()
+	if s.currentDsuTsUs == 0 {
+		return s.emitTsLocked(uint64(now.UnixMicro()), now)
+	}
+	return s.emitTsLocked(s.currentDsuTsUs+1, now)
+}
+
+func (s *Server) wallAdvanceLocked(now time.Time) uint64 {
+	if s.currentDsuTsUs == 0 || s.lastStampWall.IsZero() {
+		return uint64(now.UnixMicro())
+	}
+	return s.currentDsuTsUs + uint64(max(0, now.Sub(s.lastStampWall).Microseconds()))
+}
+
+// emitTsLocked hands out cand, forced strictly above the previous timestamp.
+func (s *Server) emitTsLocked(cand uint64, now time.Time) uint64 {
+	if cand <= s.currentDsuTsUs {
+		cand = s.currentDsuTsUs + 1
+	}
+	s.currentDsuTsUs = cand
+	s.lastStampWall = now
+	return cand
 }
 
 // LastMotionFrame returns the latest received telemetry frame.
@@ -365,18 +453,20 @@ func (s *Server) sendLatestPadDataTo(remoteAddr *net.UDPAddr) {
 	if frame.AccX == 0 && frame.AccY == 0 && frame.AccZ == 0 {
 		frame.AccY = -1.0
 	}
-	frame.TimestampUs = 0
-
 	packetNum := atomic.AddUint32(&s.packetCounter, 1)
 
 	bufPtr := padPacketPool.Get().(*[]byte)
 	pkt := *bufPtr
-	s.fillPadDataPacket(pkt, packetNum, frame)
+	s.fillPadDataPacket(pkt, packetNum, frame, s.stampRepeat())
 
 	_, _ = s.conn.WriteToUDP(pkt, remoteAddr)
 
 	padPacketPool.Put(bufPtr)
 }
+
+// idleAfter is how long the device stream must be silent before heartbeat
+// frames (zero rates) take over to keep subscribed clients alive.
+const idleAfter = 250 * time.Millisecond
 
 // heartbeatLoop maintains active DSU client subscriptions when no live motion stream is flowing.
 // When an emulator is subscribed but no device is transmitting, it emits a neutral frame at 60 Hz.
@@ -402,8 +492,11 @@ func (s *Server) heartbeatLoop() {
 			lastF := s.lastFrame
 			s.lastFrameMu.RUnlock()
 
-			// If active frames were received within the last 35ms, live stream handles it
-			if !lastTime.IsZero() && now.Sub(lastTime) < 35*time.Millisecond {
+			// While a device is streaming, stay out of its way. A short Wi-Fi stall
+			// is not "no device": zero-rate filler frames there only make clients
+			// see motion stop and then jump. With device-clock timestamps nothing is
+			// lost across the gap either way (see stampMotion).
+			if !lastTime.IsZero() && now.Sub(lastTime) < idleAfter {
 				continue
 			}
 
@@ -413,7 +506,6 @@ func (s *Server) heartbeatLoop() {
 			idleFrame.RotX = 0
 			idleFrame.RotY = 0
 			idleFrame.RotZ = 0
-			idleFrame.TimestampUs = 0
 			if idleFrame.AccX == 0 && idleFrame.AccY == 0 && idleFrame.AccZ == 0 {
 				idleFrame.AccY = -1.0
 			}
@@ -422,7 +514,7 @@ func (s *Server) heartbeatLoop() {
 
 			bufPtr := padPacketPool.Get().(*[]byte)
 			pkt := *bufPtr
-			s.fillPadDataPacket(pkt, packetNum, idleFrame)
+			s.fillPadDataPacket(pkt, packetNum, idleFrame, s.stampIdle())
 
 			s.clientsMu.RLock()
 			for _, client := range s.clients {
