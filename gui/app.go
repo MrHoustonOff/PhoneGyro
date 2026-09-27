@@ -271,6 +271,9 @@ type motionBank struct {
 	accFilterInit  bool
 	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
 	biasTracker gyroBiasTracker
+	// Потери канала для Live Debug (linkloss.go): USB — по SEQ, телефон — по
+	// счётчикам событий датчика со страницы.
+	loss linkLoss
 	// Latest AHRS quaternion stored atomically for lock-free read by GetState.
 	// Q0=w, Q1=x, Q2=y, Q3=z (same as AHRS return values).
 	curAhrsQ0 atomic.Uint64
@@ -1391,6 +1394,11 @@ func (a *App) startup(ctx context.Context) {
 		// the bank by current input mode is race-free in practice.
 		bank := a.activeBank()
 		bank.lastMotionRecvTs.Store(recvTs)
+		if frame.HasEventCounters {
+			bank.loss.observePhone(frame.SensorEvents, frame.SensorDropped)
+		} else if frame.SampleClock == server.ClockNone {
+			bank.loss.markNoData() // старая страница телефона: счётчиков нет
+		}
 
 		if !bank.hasClient.Load() {
 			bank.hasClient.Store(true)
@@ -2703,6 +2711,12 @@ type liveDebugMsg struct {
 	// LinkRttMs — измеренное время отклика канала телефона (PING/PONG), мс;
 	// -1 — не измерено (нет телефона, USB). Всегда в сообщении: 0 и -1 значимы.
 	LinkRttMs float64 `json:"link_rtt_ms"`
+	// Накопительные счётчики потерь активного источника (linkloss.go):
+	// LossKind "usb" | "phone" | "" (нет данных).
+	LossKind   string `json:"loss_kind"`
+	LossTotal  uint64 `json:"loss_total"`
+	LossMerged uint64 `json:"loss_merged"`
+	LossLost   uint64 `json:"loss_lost"`
 }
 
 // linkPingMs — RTT канала телефона в целых мс, -1 если не измерен или источник USB.
@@ -2746,6 +2760,7 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 		msg.DsuClientList = a.dsuSrv.GetClientsInfo()
 	}
 	msg.LinkRttMs = a.linkRttMs()
+	msg.LossKind, msg.LossTotal, msg.LossMerged, msg.LossLost = a.activeBank().loss.snapshot()
 
 	if len(extras) > 0 {
 		e := extras[0]

@@ -224,7 +224,7 @@
     "stats_latency": "Latency (ms)",
     "stats_latency_tip": "Transit time from phone to computer — half the round-trip time (RTT) the server measures once a second over the same WebSocket as the telemetry, so packet queueing is included. Lower values mean less delay between hand movement and in-game response. Sharp spikes usually indicate Wi-Fi issues. Not measured for USB (n/a).",
     "stats_loss": "Packet Loss",
-    "stats_loss_tip": "Count of packets sent by the phone that never reached the computer, calculated by sequence number gaps. Normally 0. Growth indicates signal drops along the route (distance to router, interference, network congestion).",
+    "stats_loss_tip": "Losses on the link from the controller to the computer. For USB — lost frames by sequence number; for the phone — merged and lost sensor samples. No data (n/a) means the source does not report it (old phone page).",
     "stats_modal_btn_cancel": "Don't Save",
     "stats_modal_btn_copy": "Copy to Clipboard",
     "stats_modal_btn_save": "Save File...",
@@ -260,7 +260,13 @@
     "stats_unit_ms": "ms",
     "status_offline": "offline",
     "status_online": "online",
-    "title": "Statistics & 3D View Window"
+    "title": "Statistics & 3D View Window",
+    "stats_loss_usb": "Frame Loss",
+    "stats_loss_usb_tip": "Frames the USB controller sent that never reached the computer — from gaps in the firmware frame numbers (SEQ), including frames discarded on a CRC error. Counted over the last 60 s. Normally 0. Growth points to the cable, the port or the UART speed.",
+    "stats_loss_phone": "Merged Samples",
+    "stats_loss_phone_tip": "Over Wi-Fi packets are not lost (TCP), but when the network falls behind the phone combines several sensor samples into one packet. No rotation is lost (the mean rate over the whole interval is sent), but it is a direct sign of an overloaded Wi-Fi link. Shows how many samples in the last 60 s did not get a packet of their own. Separately, \"lost\" counts samples discarded during a link stall longer than 0.85 s — real rotation loss. Not measured for the old phone page (n/a).",
+    "loss_phone_none": "no loss",
+    "loss_phone_lost": "lost"
   },
   "nav": {
     "help": "Help",

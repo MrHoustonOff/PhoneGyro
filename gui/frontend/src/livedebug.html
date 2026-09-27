@@ -1919,7 +1919,13 @@
           "live_debug.stats_jitter": "Джиттер (мс)",
           "live_debug.stats_jitter_tip": "Насколько неровно с точки зрения времени приходят пакеты друг за другом. Ровная почти прямая линия — хорошо. Пилообразные скачки означают нестабильное соединение, даже если общая частота (Hz) в среднем в норме.",
           "live_debug.stats_loss": "Потери пакетов",
-          "live_debug.stats_loss_tip": "Количество пакетов, которые телефон отправил, но которые не дошли до компьютера — вычисляется по разрывам в номерах пакетов. В норме — 0. Если растёт — сигнал теряется по пути (расстояние до роутера, помехи, перегруз сети).",
+          "live_debug.stats_loss_tip": "Потери на канале от контроллера до компьютера. Для USB — потерянные кадры по номерам, для телефона — склеенные и потерянные замеры датчика. Нет данных (н/д) — источник их не сообщает (старая страница телефона).",
+          "live_debug.stats_loss_usb": "Потери кадров",
+          "live_debug.stats_loss_usb_tip": "Кадры, которые USB-контроллер отправил, но которые не дошли до компьютера — по разрывам в номерах кадров (SEQ) прошивки, сюда же входят кадры, отброшенные из-за ошибки CRC. Считается за последние 60 с. В норме — 0. Если растёт — проблема с кабелем, портом или скоростью UART.",
+          "live_debug.stats_loss_phone": "Склеено замеров",
+          "live_debug.stats_loss_phone_tip": "По Wi-Fi пакеты не теряются (TCP), но когда сеть не успевает, телефон объединяет несколько замеров датчика в один пакет. Поворот при этом сохраняется (отправляется средняя скорость за весь интервал), но это прямой признак перегруженного Wi-Fi. Показано, сколько замеров за последние 60 с не получили свой пакет. Отдельно: «потеряно» — замеры, выброшенные при паузе связи дольше 0.85 с; это настоящая потеря поворота. Для старой страницы телефона не измеряется (н/д).",
+          "live_debug.loss_phone_none": "без потерь",
+          "live_debug.loss_phone_lost": "потеряно",
           "live_debug.stats_raw_gyro": "Сырой гироскоп (°/s)",
           "live_debug.stats_raw_gyro_tip": "Необработанные показания гироскопа телефона — именно то, что он реально измеряет, без какой-либо коррекции с нашей стороны. Полезно, чтобы понять, шумит ли сам сенсор телефона или проблема в обработке.",
           "live_debug.stats_raw_accel": "Сырой акселерометр (g)",
@@ -2003,7 +2009,13 @@
           "live_debug.stats_jitter": "Jitter (ms)",
           "live_debug.stats_jitter_tip": "How uneven the packet arrival intervals are over time. A smooth flat line is good. Sawtooth spikes indicate unstable connection, even if average frequency (Hz) looks normal.",
           "live_debug.stats_loss": "Packet Loss",
-          "live_debug.stats_loss_tip": "Count of packets sent by the phone that never reached the computer, calculated by sequence number gaps. Normally 0. Growth indicates signal drops along the route (distance to router, interference, network congestion).",
+          "live_debug.stats_loss_tip": "Losses on the link from the controller to the computer. For USB — lost frames by sequence number; for the phone — merged and lost sensor samples. No data (n/a) means the source does not report it (old phone page).",
+          "live_debug.stats_loss_usb": "Frame Loss",
+          "live_debug.stats_loss_usb_tip": "Frames the USB controller sent that never reached the computer — from gaps in the firmware frame numbers (SEQ), including frames discarded on a CRC error. Counted over the last 60 s. Normally 0. Growth points to the cable, the port or the UART speed.",
+          "live_debug.stats_loss_phone": "Merged Samples",
+          "live_debug.stats_loss_phone_tip": "Over Wi-Fi packets are not lost (TCP), but when the network falls behind the phone combines several sensor samples into one packet. No rotation is lost (the mean rate over the whole interval is sent), but it is a direct sign of an overloaded Wi-Fi link. Shows how many samples in the last 60 s did not get a packet of their own. Separately, \"lost\" counts samples discarded during a link stall longer than 0.85 s — real rotation loss. Not measured for the old phone page (n/a).",
+          "live_debug.loss_phone_none": "no loss",
+          "live_debug.loss_phone_lost": "lost",
           "live_debug.stats_raw_gyro": "Raw Gyroscope (°/s)",
           "live_debug.stats_raw_gyro_tip": "Raw angular velocity from phone gyroscope exactly as measured, prior to bias subtraction and filtering. Useful for checking hardware sensor noise versus processing issues.",
           "live_debug.stats_raw_accel": "Raw Accelerometer (g)",
@@ -3375,9 +3387,12 @@
       }
 
       let lastPacketRecvTime = 0;
-      let lastSeq = 0;
-      let lostPacketsCount = 0;
-      let totalExpectedPackets = 0;
+      // Link loss (gui/linkloss.go): the backend sends cumulative counters of the
+      // active source; the card shows the last-60-s window as their differences.
+      let lossKind = '';       // 'usb' | 'phone' | '' (no data)
+      let lossWinBase = null;  // counters at the start of the window
+      let lossPrev = null;     // counters of the previous message (spike chart)
+      let lossWin = { total: 0, merged: 0, lost: 0 };
       let lastLossResetTime = performance.now();
       let currentLossSpike = 0;
       let lastValidInHz = 0;
@@ -3479,20 +3494,44 @@
           chipJitterEl.className = jit < 4 ? 'stat-chip green' : (jit < 10 ? 'stat-chip yellow' : 'stat-chip red');
         }
 
-        // 3. Packet Loss
+        // 3. Link loss: USB -> lost frames by SEQ; phone -> merged samples (+ lost)
         const valLossEl = document.getElementById('val-loss');
         const valLossPctEl = document.getElementById('val-loss-pct');
         const chipLossEl = document.getElementById('chip-loss');
-        const lossPct = totalExpectedPackets > 0 ? ((lostPacketsCount / totalExpectedPackets) * 100).toFixed(1) : '0.0';
-        if (valLossEl) valLossEl.textContent = lostPacketsCount;
-        if (valLossPctEl) valLossPctEl.textContent = `(${lossPct}%)`;
-        if (chipLossEl) {
-          if (lostPacketsCount === 0) {
+        const cardLossEl = document.getElementById('card-loss');
+        const lossLabelEl = cardLossEl ? cardLossEl.querySelector('.stat-card-label') : null;
+        const lossLabelKey = lossKind === 'usb' ? 'live_debug.stats_loss_usb'
+          : lossKind === 'phone' ? 'live_debug.stats_loss_phone' : 'live_debug.stats_loss';
+        if (lossLabelEl) {
+          lossLabelEl.setAttribute('data-i18n', lossLabelKey);
+          if (dict[lossLabelKey]) lossLabelEl.textContent = dict[lossLabelKey];
+        }
+        if (cardLossEl) {
+          const tipKey = lossLabelKey + '_tip';
+          cardLossEl.setAttribute('data-i18n-tip', tipKey);
+          if (dict[tipKey]) cardLossEl.setAttribute('data-tooltip-text', dict[tipKey]);
+        }
+        const shown = lossKind === 'usb' ? lossWin.lost : lossWin.merged;
+        const lossPct = lossWin.total > 0 ? ((shown / lossWin.total) * 100).toFixed(1) : '0.0';
+        if (!lossKind) {
+          if (valLossEl) valLossEl.textContent = '--';
+          if (valLossPctEl) valLossPctEl.textContent = '';
+          if (chipLossEl) {
             chipLossEl.className = 'stat-chip muted';
-            chipLossEl.textContent = '0%';
-          } else {
-            chipLossEl.className = 'stat-chip red';
+            chipLossEl.textContent = currentLang === 'ru' ? 'н/д' : 'n/a';
+          }
+        } else {
+          if (valLossEl) valLossEl.textContent = shown;
+          if (valLossPctEl) valLossPctEl.textContent = `(${lossPct}%)`;
+          if (chipLossEl && lossKind === 'usb') {
+            chipLossEl.className = shown === 0 ? 'stat-chip muted' : 'stat-chip red';
             chipLossEl.textContent = `${lossPct}%`;
+          } else if (chipLossEl) {
+            // Phone: merged samples keep their rotation; only "lost" is real loss.
+            chipLossEl.className = lossWin.lost === 0 ? 'stat-chip muted' : 'stat-chip red';
+            chipLossEl.textContent = lossWin.lost === 0
+              ? (dict['live_debug.loss_phone_none'] || 'no loss')
+              : `${dict['live_debug.loss_phone_lost'] || 'lost'} ${lossWin.lost}`;
           }
         }
 
@@ -3745,23 +3784,30 @@
         }
         lastPacketRecvTime = now;
 
-        // 3. Packet Loss: 0 baseline is calm flat line; spikes jump upward
-        if (now - lastLossResetTime > 60000) {
-          lostPacketsCount = 0;
-          totalExpectedPackets = 0;
+        // 3. Link loss: 0 baseline is calm flat line; spikes jump upward
+        const lossCur = {
+          total: Number(data.loss_total) || 0,
+          merged: Number(data.loss_merged) || 0,
+          lost: Number(data.loss_lost) || 0,
+        };
+        const kindNow = data.loss_kind || '';
+        if (kindNow !== lossKind || !lossWinBase || lossCur.total < lossWinBase.total ||
+            now - lastLossResetTime > 60000) {
+          // New source, restarted counters or a new 60 s window.
+          lossKind = kindNow;
+          lossWinBase = lossCur;
+          lossPrev = lossCur;
           lastLossResetTime = now;
         }
-        const curSeq = Number(data.seq) || 0;
-        let curLostDelta = 0;
-        if (lastSeq > 0 && curSeq > lastSeq) {
-          const diff = curSeq - lastSeq;
-          if (diff > 1) {
-            curLostDelta = diff - 1;
-            lostPacketsCount += curLostDelta;
-          }
-          totalExpectedPackets += diff;
-        }
-        lastSeq = curSeq;
+        lossWin = {
+          total: lossCur.total - lossWinBase.total,
+          merged: lossCur.merged - lossWinBase.merged,
+          lost: lossCur.lost - lossWinBase.lost,
+        };
+        let curLostDelta = (lossCur.lost - lossPrev.lost) +
+          (lossKind === 'phone' ? lossCur.merged - lossPrev.merged : 0);
+        if (curLostDelta < 0) curLostDelta = 0;
+        lossPrev = lossCur;
 
         if (curLostDelta > 0) {
           currentLossSpike = Math.min(20, currentLossSpike + curLostDelta);

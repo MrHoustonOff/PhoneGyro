@@ -38,6 +38,16 @@ func TestParseFrame50CarriesDeviceClock(t *testing.T) {
 	if !ok || f.SampleClock != ClockMicros64 || f.TimestampUs != 0x0100_0000_0000_0039 {
 		t.Fatalf("50-byte frame: ok=%v clock=%d ts=%#x", ok, f.SampleClock, f.TimestampUs)
 	}
+	if f.HasEventCounters {
+		t.Fatal("50-byte frame must not claim event counters")
+	}
+	withCounters := make([]byte, 58)
+	withCounters[50], withCounters[51] = 0x10, 0x27 // events = 10000
+	withCounters[54] = 7                            // dropped = 7
+	fc, ok := s.parseFrame(2, withCounters)
+	if !ok || !fc.HasEventCounters || fc.SensorEvents != 10000 || fc.SensorDropped != 7 || fc.SampleClock != ClockMicros64 {
+		t.Fatalf("58-byte frame: ok=%v has=%v events=%d dropped=%d", ok, fc.HasEventCounters, fc.SensorEvents, fc.SensorDropped)
+	}
 	legacy, ok := s.parseFrame(2, make([]byte, 46))
 	if !ok || legacy.SampleClock != ClockNone {
 		t.Fatalf("46-byte frame must stay ClockNone, got %d", legacy.SampleClock)

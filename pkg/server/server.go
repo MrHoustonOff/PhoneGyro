@@ -41,6 +41,13 @@ type MotionFrame struct {
 	// ClockMicros32 / ClockMicros64 — device µs clock, and RotX/Y/Z is the mean
 	// angular rate over exactly the interval since the previous frame's timestamp.
 	SampleClock uint8 `json:"-"`
+	// Phone page counters (58-byte frame), cumulative since page load:
+	// SensorEvents — DeviceMotion events seen; SensorDropped — events whose
+	// rotation was discarded (very long stall). Lets the app tell how many samples
+	// had to share one packet and how many were really lost (gui/linkloss.go).
+	SensorEvents     uint32 `json:"-"`
+	SensorDropped    uint32 `json:"-"`
+	HasEventCounters bool   `json:"-"`
 }
 
 // Device clock kinds for MotionFrame.SampleClock.
@@ -525,7 +532,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) parseFrame(msgType int, data []byte) (MotionFrame, bool) {
-	// Fast binary decoding for 50-byte layout (uint64 ts_us, 3x float32 rotRate, 4x float32 quat, 3x float32 accel, uint16 buttons)
+	// Fast binary decoding for 50-byte layout (uint64 ts_us, 3x float32 rotRate, 4x float32 quat, 3x float32 accel, uint16 buttons),
+	// optionally followed by uint32 sensor events + uint32 dropped events (58 bytes, current phone page)
 	if msgType == websocket.BinaryMessage && len(data) >= 50 {
 		tsUs := binary.LittleEndian.Uint64(data[0:8])
 		rx := math.Float32frombits(binary.LittleEndian.Uint32(data[8:12]))
@@ -543,21 +551,31 @@ func (s *Server) parseFrame(msgType int, data []byte) (MotionFrame, bool) {
 
 		buttons := binary.LittleEndian.Uint16(data[48:50])
 
+		var events, dropped uint32
+		hasCounters := len(data) >= 58
+		if hasCounters {
+			events = binary.LittleEndian.Uint32(data[50:54])
+			dropped = binary.LittleEndian.Uint32(data[54:58])
+		}
+
 		return MotionFrame{
-			Timestamp:   uint32(tsUs / 1000),
-			TimestampUs: tsUs,
-			SampleClock: ClockMicros64,
-			RotX:        rx,
-			RotY:        ry,
-			RotZ:        rz,
-			Qx:          qx,
-			Qy:          qy,
-			Qz:          qz,
-			Qw:          qw,
-			AccX:        ax,
-			AccY:        ay,
-			AccZ:        az,
-			Buttons:     buttons,
+			Timestamp:        uint32(tsUs / 1000),
+			TimestampUs:      tsUs,
+			SampleClock:      ClockMicros64,
+			SensorEvents:     events,
+			SensorDropped:    dropped,
+			HasEventCounters: hasCounters,
+			RotX:             rx,
+			RotY:             ry,
+			RotZ:             rz,
+			Qx:               qx,
+			Qy:               qy,
+			Qz:               qz,
+			Qw:               qw,
+			AccX:             ax,
+			AccY:             ay,
+			AccZ:             az,
+			Buttons:          buttons,
 		}, true
 	}
 

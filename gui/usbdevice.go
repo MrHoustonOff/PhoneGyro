@@ -188,8 +188,9 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		if !st.haveMeta && time.Now().After(st.metaDeadline) {
 			st.haveMeta = true // give up waiting; declared/default range stands as-is
 		}
+		gap := 1
 		if st.haveSeq {
-			gap := int(f.Seq) - int(st.lastSeq)
+			gap = int(f.Seq) - int(st.lastSeq)
 			if gap < 0 {
 				gap += 256
 			}
@@ -198,6 +199,9 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 			}
 		}
 		st.lastSeq, st.haveSeq = f.Seq, true
+		if app.usbBank != nil {
+			app.usbBank.loss.observeUSB(gap) // карточка «Потери» в Live Debug (linkloss.go)
+		}
 
 		// BUTTONS bit 0: reset centering, identical to the phone's recenter
 		// action (protocol Level 5). Edge-triggered so holding it down

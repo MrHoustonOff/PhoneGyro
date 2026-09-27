@@ -1536,8 +1536,9 @@ connectWSS();
 const G_CONST = 9.80665;
 const DEG2RAD_HALF = Math.PI / 360;
 
-// 50-byte frame: uint64 ts_us, 3×f32 rate, 4×f32 quat, 3×f32 accel, u16 flags.
-const binBuffer = new ArrayBuffer(50);
+// 58-byte frame: uint64 ts_us, 3×f32 rate, 4×f32 quat, 3×f32 accel, u16 flags,
+// u32 sensor events, u32 dropped events (the server reads the first 50 bytes the same way).
+const binBuffer = new ArrayBuffer(58);
 const binView   = new DataView(binBuffer);
 
 let curAlpha = 0, curBeta = 0, curGamma = 0;
@@ -1649,11 +1650,16 @@ function onMotion(e) {
   // Very long stall: start over (the server's attitude anchor re-converges it).
   // 0.85 s + one event (dt <= 0.1 s) keeps every frame's span under the 1 s the
   // server still trusts as a device interval (pkg/server MaxSourceDeltaUs).
-  if (rotAccumDt > 0.85) { rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; }
+  sensorEvents = (sensorEvents + 1) >>> 0;
+  if (rotAccumDt > 0.85) {
+    sensorDropped = (sensorDropped + rotAccumEvents) >>> 0; // their rotation is gone
+    rotAccum = { x: 0, y: 0, z: 0 }; rotAccumDt = 0; rotAccumEvents = 0;
+  }
   rotAccum.x += gyr.x * dt;
   rotAccum.y += gyr.y * dt;
   rotAccum.z += gyr.z * dt;
   rotAccumDt += dt;
+  rotAccumEvents++;
 
   dsuAccX = acc.x;
   dsuAccY = acc.y;
@@ -1663,6 +1669,11 @@ function onMotion(e) {
 }
 
 let rotAccum = { x: 0, y: 0, z: 0 }, rotAccumDt = 0, rotAccumPrevTs = 0;
+
+// Cumulative counters for the app's honest link statistics (gui/linkloss.go):
+// every DeviceMotion event, and the events whose rotation a very long stall
+// discarded. The server derives how many samples had to share one packet.
+let sensorEvents = 0, sensorDropped = 0, rotAccumEvents = 0;
 
 // Integration clock (µs). Each frame's timestamp is the previous one plus EXACTLY
 // the interval its rate was averaged over, so the server — and every DSU client
@@ -1688,6 +1699,7 @@ function flushMotion() {
   sampleClockUs = ts;
   rotAccum = { x: 0, y: 0, z: 0 };
   rotAccumDt = 0;
+  rotAccumEvents = 0;
   return true;
 }
 
@@ -1708,6 +1720,8 @@ function sendFrame(tsUs, rateX, rateY, rateZ) {
   binView.setFloat32(40, dsuAccY, true);
   binView.setFloat32(44, dsuAccZ, true);
   binView.setUint16(48,  isPaused ? 1 : 0, true);
+  binView.setUint32(50,  sensorEvents,  true);
+  binView.setUint32(54,  sensorDropped, true);
 
   ws.send(binBuffer);
   packetCount++;
