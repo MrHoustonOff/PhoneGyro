@@ -1514,11 +1514,22 @@ func (a *App) startup(ctx context.Context) {
 
 		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).
 		anchorDt := anchorDefaultDtSec
+		// usbAhrsDt: USB-only, surgical override for bank.ahrs.Update's sample
+		// period below. Phone keeps its untouched hardcoded 1/60 (pass 0 to
+		// mean "no override"); a USB source's real rate is very often not
+		// 60Hz, so it gets its own real measured dt instead. Deliberately not
+		// reusing anchorDt's [4ms,100ms] clamp (tuned for attitudeanchor, not
+		// this) -- just guard against non-positive/insane values.
+		var usbAhrsDt float32
 		if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
-			if d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6; d >= 0.004 && d <= 0.1 {
+			d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6
+			if d >= 0.004 && d <= 0.1 {
 				anchorDt = d
 			} else if d > 1.0 {
 				bank.anchor.Reset() // reconnect / page reload: attitude reference restarted
+			}
+			if a.GetInputMode() == "usb" && d > 0 && d <= 0.25 {
+				usbAhrsDt = float32(d)
 			}
 		} else if frame.TimestampUs < bank.prevAnchorTsUs {
 			bank.anchor.Reset()
@@ -1622,7 +1633,7 @@ func (a *App) startup(ctx context.Context) {
 		// Update Madgwick AHRS filter.
 		var curP, curR, curY float64
 		if bank.ahrs != nil {
-			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now())
+			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now(), usbAhrsDt)
 			p, r, y := bank.ahrs.GetEulerAngles()
 			curP, curR, curY = p, r, y
 			bank.curPitch.Store(math.Float64bits(p))

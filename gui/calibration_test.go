@@ -368,7 +368,7 @@ func TestPadTest_Convergence(t *testing.T) {
 		ahrs := NewMadgwickAHRS(0.1) // Exact PadTest Beta
 		// Run 300 steps (5 seconds at 60 Hz) of stationary holding
 		for i := 0; i < 300; i++ {
-			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, time.Now())
+			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, time.Now(), 0)
 		}
 		p, r, y := ahrs.GetEulerAngles()
 		t.Logf("[%s] Q: (%+.3f, %+.3f, %+.3f, %+.3f) -> Pitch: %+.1f°, Roll: %+.1f°, Yaw: %+.1f°",

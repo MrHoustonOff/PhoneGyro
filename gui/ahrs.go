@@ -54,7 +54,11 @@ func (m *MadgwickAHRS) Reset() {
 //   accX (Lateral acceleration in g, left = +, right = -)
 //   accY (Vertical acceleration in g, up = +, down = -)
 //   accZ (Longitudinal acceleration in g, back = +, forward = -)
-func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ float32, now time.Time) (float32, float32, float32, float32) {
+// dtOverride: 0 means "use the fixed 60Hz phone assumption below, unchanged".
+// A caller for a non-60Hz source (USB) passes its own real measured sample
+// period instead -- this is the only thing dtOverride does; everything else
+// about this function is exactly as it was.
+func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ float32, now time.Time, dtOverride float32) (float32, float32, float32, float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -62,7 +66,10 @@ func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ float32, now ti
 	// Never use network arrival time delta (now.Sub(lastTime)) because WiFi jitter
 	// causes bursts with 100ms+ deltas that multiply rotation rates by up to 10x,
 	// causing violent spasms/instability during fast movements.
-	const dt float32 = 1.0 / 60.0
+	dt := float32(1.0 / 60.0)
+	if dtOverride > 0 {
+		dt = dtOverride
+	}
 	m.lastTime = now
 
 	const deg2rad = float32(math.Pi / 180.0)
