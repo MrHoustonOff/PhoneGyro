@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"gyrobridge/pkg/ca"
+	"phonegyro/pkg/ca"
 )
 
 // MotionFrame represents telemetry received from mobile device sensors (50-byte or 46-byte binary payload).
@@ -250,7 +250,7 @@ func (s *Server) handleMobileConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Mandatory Apple MIME-type to trigger "Profile Downloaded" sheet in Safari
 	w.Header().Set("Content-Type", "application/x-apple-as-config")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"gyrobridge.mobileconfig\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"phonegyro.mobileconfig\"")
 	w.WriteHeader(http.StatusOK)
 	w.Write(configBytes)
 }
@@ -258,7 +258,7 @@ func (s *Server) handleMobileConfig(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRawCACert(w http.ResponseWriter, r *http.Request) {
 	pemBytes := s.caManager.RootCertPEM()
 	w.Header().Set("Content-Type", "application/x-x509-ca-cert")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"gyrobridge-ca.crt\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"phonegyro-ca.crt\"")
 	w.WriteHeader(http.StatusOK)
 	w.Write(pemBytes)
 }

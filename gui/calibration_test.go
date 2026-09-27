@@ -369,7 +369,7 @@ func TestLandscapeCalibration_YawAndPadTest(t *testing.T) {
 }
 
 func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "gyrobridge-test-*")
+	tempDir, err := os.MkdirTemp("", "phonegyro-test-*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -377,7 +377,7 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 
 	app := NewApp()
 	app.profilesDir = tempDir
-	// NewApp() already read the real machine's %APPDATA%\gyrobridge\settings.json
+	// NewApp() already read the real machine's %APPDATA%\phonegyro\settings.json
 	// (this test's tempDir override happens after construction), so input
 	// mode/firstLaunchDone/hideAuthor could all be left over from a real
 	// session on this dev machine. Reset them explicitly so this test is
@@ -481,9 +481,9 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 
 	// Test logs persistence
 	app.logEvent("TEST", "Test log message")
-	logPath := filepath.Join(tempDir, "logs", "gyrobridge.log")
+	logPath := filepath.Join(tempDir, "logs", "phonegyro.log")
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
-		t.Fatalf("gyrobridge.log was not created at %s", logPath)
+		t.Fatalf("phonegyro.log was not created at %s", logPath)
 	}
 
 	// Verify sound volumes reloaded

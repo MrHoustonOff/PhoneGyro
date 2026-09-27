@@ -188,7 +188,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 	defer runtime.UnlockOSThread()
 
 	// 1. Prepare temp icon files
-	tempDir := filepath.Join(os.TempDir(), "gyrobridge_tray")
+	tempDir := filepath.Join(os.TempDir(), "phonegyro_tray")
 	_ = os.MkdirAll(tempDir, 0755)
 
 	offPath := filepath.Join(tempDir, "tray_off.ico")
@@ -208,7 +208,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 
 	// 2. Register window class
 	hInstance, _, _ := pGetModuleHandleW.Call(0)
-	className, _ := syscall.UTF16PtrFromString(fmt.Sprintf("GyroBridgeTray_%d", time.Now().UnixNano()))
+	className, _ := syscall.UTF16PtrFromString(fmt.Sprintf("PhoneGyroTray_%d", time.Now().UnixNano()))
 
 	wndProcCallback := syscall.NewCallback(func(hwnd uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 		switch msg {
@@ -273,7 +273,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 		UCallbackMessage: WM_TRAYICON,
 		HIcon:            tm.currentIcon,
 	}
-	tip, _ := syscall.UTF16FromString("GyroBridge")
+	tip, _ := syscall.UTF16FromString("PhoneGyro")
 	copy(tm.nid.SzTip[:], tip)
 
 	pShellNotifyIconW.Call(NIM_ADD, uintptr(unsafe.Pointer(&tm.nid)))
@@ -383,7 +383,7 @@ func (tm *TrayManager) showContextMenu(hwnd uintptr) {
 	var openStr, phoneStr, emuStr, profStr, quitStr string
 
 	if isRu {
-		openStr = "Открыть GyroBridge"
+		openStr = "Открыть PhoneGyro"
 		quitStr = "Выход"
 		if hasPhone {
 			phoneStr = fmt.Sprintf("📱 %s (Онлайн)", phoneName)
@@ -397,7 +397,7 @@ func (tm *TrayManager) showContextMenu(hwnd uintptr) {
 		}
 		profStr = fmt.Sprintf("⚡ Профиль: %s", profileName)
 	} else {
-		openStr = "Open GyroBridge"
+		openStr = "Open PhoneGyro"
 		quitStr = "Quit"
 		if hasPhone {
 			phoneStr = fmt.Sprintf("📱 %s (Online)", phoneName)
@@ -523,15 +523,15 @@ func (tm *TrayManager) refresh() {
 	var tipText string
 	if isRu {
 		if hasPhone {
-			tipText = fmt.Sprintf("GyroBridge — %s (Онлайн)", phoneName)
+			tipText = fmt.Sprintf("PhoneGyro — %s (Онлайн)", phoneName)
 		} else {
-			tipText = "GyroBridge — Ожидание подключения"
+			tipText = "PhoneGyro — Ожидание подключения"
 		}
 	} else {
 		if hasPhone {
-			tipText = fmt.Sprintf("GyroBridge — %s (Online)", phoneName)
+			tipText = fmt.Sprintf("PhoneGyro — %s (Online)", phoneName)
 		} else {
-			tipText = "GyroBridge — Waiting for connection"
+			tipText = "PhoneGyro — Waiting for connection"
 		}
 	}
 

@@ -22,14 +22,14 @@ import (
 	"time"
 	"unsafe"
 
-	"gyrobridge/pkg/ca"
-	"gyrobridge/pkg/dsu"
-	"gyrobridge/pkg/i18n"
-	"gyrobridge/pkg/pairing"
-	"gyrobridge/pkg/server"
-	"gyrobridge/web"
+	"phonegyro/pkg/ca"
+	"phonegyro/pkg/dsu"
+	"phonegyro/pkg/i18n"
+	"phonegyro/pkg/pairing"
+	"phonegyro/pkg/server"
+	"phonegyro/web"
 
-	"gyrobridge-gui/resmon"
+	"phonegyro-gui/resmon"
 
 	"github.com/gorilla/websocket"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -89,7 +89,7 @@ func toProfileView(p Profile) ProfileView {
 	return ProfileView{Profile: p, Outdated: p.Outdated()}
 }
 
-// AppState represents the live state of Gyro Bridge
+// AppState represents the live state of PhoneGyro
 type AppState struct {
 	Status        string  `json:"status"` // "offline", "online", "paused"
 	IsPaused      bool    `json:"isPaused"`
@@ -316,7 +316,7 @@ func newMotionBank() *motionBank {
 	return b
 }
 
-// App struct manages desktop backend and GyroBridge services
+// App struct manages desktop backend and PhoneGyro services
 type App struct {
 	ctx      context.Context
 	i18nMgr  *i18n.Manager
@@ -668,7 +668,7 @@ func NewApp() *App {
 	if appData == "" {
 		appData = "."
 	}
-	profilesDir := filepath.Join(appData, "gyrobridge")
+	profilesDir := filepath.Join(appData, "phonegyro")
 
 	app := &App{
 		i18nMgr:      mgr,
@@ -710,21 +710,21 @@ func NewApp() *App {
 	app.rebuildURLsAndQRCodes()
 	app.loadProfilesInto(app.phoneBank, app.bankDir("phone"))
 	app.loadProfilesInto(app.usbBank, app.bankDir("usb"))
-	app.logEvent("INFO", "GyroBridge initialized: IP=%s, Theme=%s, Lang=%s, DSU=%d, HTTP=%d, HTTPS=%d", primaryIP, app.currentTheme, app.currentLang, app.dsuPort, app.httpPort, app.httpsPort)
+	app.logEvent("INFO", "PhoneGyro initialized: IP=%s, Theme=%s, Lang=%s, DSU=%d, HTTP=%d, HTTPS=%d", primaryIP, app.currentTheme, app.currentLang, app.dsuPort, app.httpPort, app.httpsPort)
 
 	return app
 }
 
 const CurrentProfileSchemaVersion = 2
 
-// logEvent writes a timestamped line to %APPDATA%/gyrobridge/logs/gyrobridge.log
+// logEvent writes a timestamped line to %APPDATA%/phonegyro/logs/phonegyro.log
 func (a *App) logEvent(level, format string, args ...any) {
 	if a.profilesDir == "" {
 		return
 	}
 	logDir := filepath.Join(a.profilesDir, "logs")
 	_ = os.MkdirAll(logDir, 0755)
-	logPath := filepath.Join(logDir, "gyrobridge.log")
+	logPath := filepath.Join(logDir, "phonegyro.log")
 
 	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
@@ -1354,7 +1354,7 @@ func (a *App) startup(ctx context.Context) {
 	if appData == "" {
 		appData = "."
 	}
-	caDir := filepath.Join(appData, "gyrobridge", "ca")
+	caDir := filepath.Join(appData, "phonegyro", "ca")
 
 	lanIPs := pairing.GetLocalIPv4s()
 	caMgr, err := ca.NewCertificateManager(caDir, lanIPs, nil)
@@ -3896,7 +3896,7 @@ func (a *App) CopyCalibrationReport() string {
 	defer bank.calLogMu.Unlock()
 
 	var sb strings.Builder
-	sb.WriteString("=== GYROBRIDGE CALIBRATION FULL REPORT ===\n")
+	sb.WriteString("=== PHONEGYRO CALIBRATION FULL REPORT ===\n")
 	sb.WriteString(fmt.Sprintf("Generated: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
 
 	// Final Verdict

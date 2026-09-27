@@ -1,18 +1,18 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "GyroBridge",
-  "outputfilename": "GyroBridge",
+  "name": "PhoneGyro",
+  "outputfilename": "PhoneGyro",
   "frontend:dir": "./frontend/src",
   "wailsjsdir": "./frontend/src",
-  "version": "1.1.3",
+  "version": "2.0.0",
   "author": {
     "name": "MrHoustonOff",
     "email": "mrhoustonvr@yandex.ru"
   },
   "info": {
     "companyName": "MrHoustonOff",
-    "productName": "GyroBridge",
-    "productVersion": "1.1.3.0",
+    "productName": "PhoneGyro",
+    "productVersion": "2.0.0.0",
     "copyright": "Copyright 2026 MrHoustonOff",
     "comments": "Open-source smartphone motion controller bridge for Cemuhook DSU"
   }

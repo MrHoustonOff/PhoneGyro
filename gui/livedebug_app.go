@@ -189,7 +189,7 @@ func runLiveDebug() {
 	debugApp := NewLiveDebugApp()
 
 	err := wails.Run(&options.App{
-		Title:            "GyroBridge - Telemetry & 3D Viewport",
+		Title:            "PhoneGyro - Telemetry & 3D Viewport",
 		Width:            1000,
 		Height:           640,
 		MinWidth:         880,
@@ -216,7 +216,7 @@ func runLiveDebug() {
 		},
 		OnShutdown: debugApp.shutdown,
 		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "gyrobridge-livedebug-window-lock-uuid",
+			UniqueId: "phonegyro-livedebug-window-lock-uuid",
 			OnSecondInstanceLaunch: func(secondInstanceData options.SecondInstanceData) {
 				if debugApp.ctx != nil {
 					wailsRuntime.WindowUnminimise(debugApp.ctx)
@@ -232,7 +232,7 @@ func runLiveDebug() {
 			OpenInspectorOnStartup: false,
 		},
 		Windows: &windows.Options{
-			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "GyroBridge", "WebView2_LiveDebug"),
+			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", "WebView2_LiveDebug"),
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 			Theme:                windows.Dark,

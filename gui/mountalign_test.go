@@ -115,9 +115,9 @@ func TestMountApplyToDSU(t *testing.T) {
 }
 
 // TestMountOnRealUSBCapture прогоняет последние реальные калибровки USB-пада
-// (%APPDATA%/GyroBridge/usb) через тот же путь, что и SaveProfile. Нет файлов — skip.
+// (%APPDATA%/PhoneGyro/usb) через тот же путь, что и SaveProfile. Нет файлов — skip.
 func TestMountOnRealUSBCapture(t *testing.T) {
-	dir := filepath.Join(os.Getenv("APPDATA"), "GyroBridge", "usb")
+	dir := filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", "usb")
 	f, err := os.Open(filepath.Join(dir, "gyro_debug_capture.csv"))
 	if err != nil {
 		t.Skip("нет usb/gyro_debug_capture.csv")

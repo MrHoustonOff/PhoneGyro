@@ -7,7 +7,7 @@ import (
 
 	"go.bug.st/serial"
 
-	"gyrobridge/pkg/server"
+	"phonegyro/pkg/server"
 )
 
 // USB host implementation of the PhoneGyro Hardware Protocol v1.0

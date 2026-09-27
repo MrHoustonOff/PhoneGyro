@@ -11,7 +11,7 @@ import (
 )
 
 func TestCertificateManager_CreationAndVerification(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gyrobridge_ca_test_*")
+	tmpDir, err := os.MkdirTemp("", "phonegyro_ca_test_*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -32,7 +32,7 @@ func TestCertificateManager_CreationAndVerification(t *testing.T) {
 	if !cm.RootCert.IsCA {
 		t.Error("RootCert IsCA should be true")
 	}
-	if cm.RootCert.Subject.CommonName != "GyroBridge Root CA" {
+	if cm.RootCert.Subject.CommonName != "PhoneGyro Root CA" {
 		t.Errorf("unexpected CommonName: %s", cm.RootCert.Subject.CommonName)
 	}
 
@@ -83,7 +83,7 @@ func TestCertificateManager_CreationAndVerification(t *testing.T) {
 }
 
 func TestCertificateManager_Persistence(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gyrobridge_persist_test_*")
+	tmpDir, err := os.MkdirTemp("", "phonegyro_persist_test_*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestCertificateManager_Persistence(t *testing.T) {
 }
 
 func TestCertificateManager_MobileConfig(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gyrobridge_mc_test_*")
+	tmpDir, err := os.MkdirTemp("", "phonegyro_mc_test_*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -139,13 +139,13 @@ func TestCertificateManager_MobileConfig(t *testing.T) {
 	if !strings.Contains(mcStr, "com.apple.security.root") {
 		t.Error("mobileconfig missing com.apple.security.root payload type")
 	}
-	if !strings.Contains(mcStr, "com.gyrobridge.ca.profile") {
+	if !strings.Contains(mcStr, "com.phonegyro.ca.profile") {
 		t.Error("mobileconfig missing profile identifier")
 	}
 }
 
 func TestCertificateManager_DynamicSAN(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "gyrobridge_dyn_test_*")
+	tmpDir, err := os.MkdirTemp("", "phonegyro_dyn_test_*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}

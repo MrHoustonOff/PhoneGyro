@@ -1,4 +1,4 @@
-// Package vis provides a real-time 3D orientation visualizer for GyroBridge.
+// Package vis provides a real-time 3D orientation visualizer for PhoneGyro.
 //
 // Architecture:
 //

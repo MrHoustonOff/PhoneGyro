@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"gyrobridge/pkg/server"
+	"phonegyro/pkg/server"
 )
 
 const (

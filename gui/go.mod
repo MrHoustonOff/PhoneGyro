@@ -1,4 +1,4 @@
-module gyrobridge-gui
+module phonegyro-gui
 
 go 1.25.0
 
@@ -6,10 +6,10 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/wailsapp/wails/v2 v2.16.0
 	go.bug.st/serial v1.8.0
-	gyrobridge v0.0.0
+	phonegyro v0.0.0
 )
 
-replace gyrobridge => ../
+replace phonegyro => ../
 
 require (
 	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect

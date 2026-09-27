@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"gyrobridge/pkg/server"
+	"phonegyro/pkg/server"
 )
 
 // frameClock даёт интервал, за который усреднена скорость кадра, — ровно тот,

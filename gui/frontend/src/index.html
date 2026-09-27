@@ -8,7 +8,7 @@
       window.location.replace('livedebug.html');
     }
   </script>
-  <title>GyroBridge</title>
+  <title>PhoneGyro</title>
   <link rel="stylesheet" href="main.css">
   <script src="assets/three.min.js"></script>
   <script src="assets/GLTFLoader.js"></script>
@@ -19,7 +19,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-brand-bubble">
-        <span class="header-brand-title" data-i18n="app.title">Gyro Bridge</span>
+        <span class="header-brand-title" data-i18n="app.title">PhoneGyro</span>
       </div>
     </div>
 
@@ -729,7 +729,7 @@
                     <p class="ios-step-lead" data-i18n="setup.ios_step6_text"></p>
                     <div class="mockup-capsule success">
                       <span class="mockup-tag">Trust</span>
-                      <span class="mockup-path" data-i18n="setup.ios_step6_badge">GyroBridge Root CA → Включить</span>
+                      <span class="mockup-path" data-i18n="setup.ios_step6_badge">PhoneGyro Root CA → Включить</span>
                     </div>
                   </div>
                   <div class="ios-step-image-col">
@@ -764,7 +764,7 @@
         <div class="help-module" id="view-help" style="display: none;">
           <div class="help-card-inner">
             <h2 class="setup-headline" data-i18n="help.title">Помощь и руководство</h2>
-            <p class="setup-subhead" data-i18n="help.subtitle">Информация о работе и настройке GyroBridge</p>
+            <p class="setup-subhead" data-i18n="help.subtitle">Информация о работе и настройке PhoneGyro</p>
 
             <div class="help-grouped-card">
               <!-- Item 1: Setup Wizard -->
@@ -1669,7 +1669,7 @@
             <div class="welcome-badge-wrap">
               <span class="welcome-badge" data-i18n="welcome.badge">Первый запуск</span>
             </div>
-            <h2 class="welcome-headline" data-i18n="welcome.title">Добро пожаловать в GyroBridge!</h2>
+            <h2 class="welcome-headline" data-i18n="welcome.title">Добро пожаловать в PhoneGyro!</h2>
             
             <div class="welcome-content-card">
               <p class="welcome-p" data-i18n="welcome.p1">Благодаря этому приложению вы сможете использовать ваш смартфон (Android или iPhone) в качестве источника гироскопических данных для ПК игр и (или) эмуляторов!</p>
@@ -1758,7 +1758,7 @@
         </svg>
       </div>
       <div class="apple-close-title" data-i18n="close_modal.title">Закрыть или свернуть в трей?</div>
-      <div class="apple-close-message" data-i18n="close_modal.desc">GyroBridge может продолжить работу в системном трее, чтобы соединение с эмулятором и передача гироскопа не прерывались.</div>
+      <div class="apple-close-message" data-i18n="close_modal.desc">PhoneGyro может продолжить работу в системном трее, чтобы соединение с эмулятором и передача гироскопа не прерывались.</div>
 
       <!-- Ultra-Refined Apple Squircle Checkbox -->
       <label class="apple-close-remember-row" for="apple-close-remember">
@@ -2699,7 +2699,7 @@
     try {
       const v = await window.go.main.App.GetAppVersion();
       el.innerHTML = `<span>${v.release}.${v.build}</span><span class="footer-version-channel ${v.channel}">${v.channel}</span>`;
-      el.title = `GyroBridge ${v.release} • build ${v.build} • ${v.channel}`;
+      el.title = `PhoneGyro ${v.release} • build ${v.build} • ${v.channel}`;
     } catch (e) {
       el.style.display = 'none';
     }

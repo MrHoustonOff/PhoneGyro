@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"gyrobridge/pkg/ca"
+	"phonegyro/pkg/ca"
 )
 
 func setupTestServer(t *testing.T) (*Server, func()) {
@@ -63,8 +63,8 @@ func TestServer_MobileConfigEndpoint(t *testing.T) {
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	if !strings.Contains(string(body), "GyroBridge Root CA") {
-		t.Error("body does not contain GyroBridge Root CA")
+	if !strings.Contains(string(body), "PhoneGyro Root CA") {
+		t.Error("body does not contain PhoneGyro Root CA")
 	}
 }
 
@@ -481,7 +481,7 @@ func TestSetAppVersionReplacesPlaceholder(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	html := []byte("<html><body>GyroBridge __APP_VERSION__</body></html>")
+	html := []byte("<html><body>PhoneGyro __APP_VERSION__</body></html>")
 	srv := NewServer(cm, 0, 0, html, nil)
 	srv.SetAppVersion("1.2.3.045-dev")
 

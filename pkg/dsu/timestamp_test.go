@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"gyrobridge/pkg/server"
+	"phonegyro/pkg/server"
 )
 
 func devFrame(tsUs uint64, clock uint8, rate float32) server.MotionFrame {

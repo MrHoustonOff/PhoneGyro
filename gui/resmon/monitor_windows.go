@@ -87,7 +87,7 @@ func newPlatformMonitor() (Monitor, error) {
 	return m, nil
 }
 
-// getProcessTreePIDs collects rootPID and all descendant child PIDs belonging to GyroBridge.
+// getProcessTreePIDs collects rootPID and all descendant child PIDs belonging to PhoneGyro.
 func getProcessTreePIDs(rootPID uint32) []uint32 {
 	snap, err := syscall.CreateToolhelp32Snapshot(syscall.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
@@ -131,7 +131,7 @@ func getProcessTreePIDs(rootPID uint32) []uint32 {
 				visited[child] = true
 				childName := exeNameOf[child]
 				// Only track our own executable instances (e.g. main app and --livedebug child process)
-				if ourExeName == "" || childName == ourExeName || strings.HasPrefix(childName, "gyrobridge") {
+				if ourExeName == "" || childName == ourExeName || strings.HasPrefix(childName, "phonegyro") {
 					treePIDs = append(treePIDs, child)
 					queue = append(queue, child)
 				}

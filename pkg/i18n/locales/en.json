@@ -2,7 +2,7 @@
   "app": {
     "subtitle": "Motion Gamepad Bridge",
     "theme_toggle": "Toggle theme",
-    "title": "Gyro Bridge"
+    "title": "PhoneGyro"
   },
   "calibration": {
     "axes_default_desc": "Axes: Pitch +X • Yaw +Y • Roll +Z",
@@ -165,7 +165,7 @@
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",
-    "desc": "GyroBridge can continue running in the system tray so motion streaming to your emulator is not interrupted.",
+    "desc": "PhoneGyro can continue running in the system tray so motion streaming to your emulator is not interrupted.",
     "remember": "Remember my choice",
     "minimize": "Minimize to Tray",
     "quit": "Quit",
@@ -311,7 +311,7 @@
     "ios_step5_badge": "`Settings` → `General` → `About` → `Certificate Trust Settings`",
     "ios_step5_text": "Return to the main `Settings` screen. Go to `General` → `About`, then scroll all the way down to `Certificate Trust Settings` and tap it.",
     "ios_step5_title": "Step 5. Trust Settings",
-    "ios_step6_badge": "`GyroBridge Root CA` → Toggle ON",
+    "ios_step6_badge": "`PhoneGyro Root CA` → Toggle ON",
     "ios_step6_text": "You'll see your certificate listed. Toggle it on, then tap `Continue`.",
     "ios_step6_title": "Step 6. Trust Certificate",
     "ios_title": "iOS (iPhone / iPad)",
@@ -321,7 +321,7 @@
   },
   "help": {
     "title": "Help & Guide",
-    "subtitle": "Information and setup instructions for GyroBridge",
+    "subtitle": "Information and setup instructions for PhoneGyro",
     "setup_title": "Initial Setup",
     "setup_desc": "Step-by-step wizard to connect your phone to PC over local Wi-Fi",
     "btn_open_setup": "Start",
@@ -470,12 +470,12 @@
     "group_appearance": "Appearance & Language",
     "theme": "Visual Theme",
     "theme_desc": "Application color scheme",
-    "theme_tip": "Choose between dark and light appearance modes in GyroBridge.",
+    "theme_tip": "Choose between dark and light appearance modes in PhoneGyro.",
     "theme_dark": "Dark",
     "theme_light": "Light",
     "language": "Display Language",
     "language_desc": "Application interface language",
-    "language_tip": "Choose the primary display language for GyroBridge.",
+    "language_tip": "Choose the primary display language for PhoneGyro.",
     "font_scale": "Interface & Font Scale",
     "font_scale_tip": "Global font and interface scaling factor (default: 1.00x). You can also press Ctrl + and Ctrl - to adjust scale, Ctrl 0 to reset, or scroll the mouse wheel while holding Ctrl.",
     "font_scale_hotkeys": "Ctrl + / Ctrl - (zoom) • Ctrl 0 (reset)",
@@ -483,7 +483,7 @@
     "group_hotkeys": "Global Hotkeys (Windows)",
     "hotkey_recenter": "Recenter 3D View",
     "hotkey_recenter_desc": "Global shortcut to reset the in-app 3D view neutral",
-    "hotkey_recenter_tip": "Global Windows shortcut (RegisterHotKey), works from any window. Resets only GyroBridge's own 3D view; games are unaffected: DSU has no recenter command, use the game's own recenter instead.",
+    "hotkey_recenter_tip": "Global Windows shortcut (RegisterHotKey), works from any window. Resets only PhoneGyro's own 3D view; games are unaffected: DSU has no recenter command, use the game's own recenter instead.",
     "hotkey_record_prompt": "Press shortcut keys...",
     "hotkey_record_modifier_req": "Press a key with Ctrl, Alt, or Shift",
     "hotkey_clear_tip": "Clear shortcut",
@@ -501,7 +501,7 @@
     "err_ports_duplicate": "DSU, HTTP and HTTPS ports must not be identical"
   },
   "welcome": {
-    "title": "Welcome to GyroBridge!",
+    "title": "Welcome to PhoneGyro!",
     "badge": "First Launch",
     "p1": "With this application, you can use your smartphone (Android or iPhone) as a gyroscope motion source for PC games and emulators!",
     "p2": "This project is completely open source — feel free to review the code or contribute to development!",
@@ -572,7 +572,7 @@
     "spec_driver_lbl": "Virtual COM Port",
     "pill_usb": "USB 2.0 Direct Feed",
     "pill_latency": "Zero Wi-Fi Latency",
-    "pill_version": "GyroBridge 2.0 Preview",
+    "pill_version": "PhoneGyro 2.0 Preview",
     "phone_blocked_notice": "In hardware mode, smartphone Wi-Fi connections are disabled.",
     "switch_hint": "To connect a smartphone, switch to 'Smartphone' above.",
     "footnote": "Direct USB motion stream • Cemuhook DSU protocol"

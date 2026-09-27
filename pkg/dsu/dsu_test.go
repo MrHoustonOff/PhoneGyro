@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"gyrobridge/pkg/server"
+	"phonegyro/pkg/server"
 )
 
 func TestDSU_PadDataPacketLayoutAndCRC32(t *testing.T) {

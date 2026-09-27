@@ -1,12 +1,15 @@
 **English** | [Русский](docs/README_RU.md)
 
-# GyroBridge
+# PhoneGyro
+
+> [!IMPORTANT]
+> **Formerly GyroBridge.** Since v2.0.0 the project is called PhoneGyro. All GyroBridge v1.x releases are deprecated and considered highly unstable — use v2.0.0 or newer. There is no migration from v1.x: reinstall the certificate on iPhone/iPad and recalibrate. See the [v2.0.0 release notes](docs/RELEASE_NOTES.md).
 
 > 📖 **Comprehensive User Guide**: [English User Guide](docs/guide.en.md) | [Русскоязычное руководство](docs/guide.ru.md)
 
-GyroBridge turns your smartphone (iOS or Android) into a high-precision, low-latency motion controller for PC games and emulators using the Cemuhook DSU protocol.
+PhoneGyro turns your smartphone (iOS or Android) into a high-precision, low-latency motion controller for PC games and emulators using the Cemuhook DSU protocol.
 
-![GyroBridge Core Interface](docs/imgs/core%20screen.jpg)
+![PhoneGyro Core Interface](docs/imgs/core%20screen.jpg)
 
 Compatible with Cemu, RPCS3, Ryujinx, Yuzu, Dolphin, PCSX2, and any game or tool supporting Cemuhook DSU.
 
@@ -15,10 +18,10 @@ Compatible with Cemu, RPCS3, Ryujinx, Yuzu, Dolphin, PCSX2, and any game or tool
 ## Quick Start
 
 ### 1. Download
-Download `GyroBridge.exe` (or `GyroBridge-windows-arm64.exe` for ARM-based Windows devices) from the latest [GitHub Releases](https://github.com/MrHoustonOff/iphone-gyro-controller/releases).
+Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for ARM-based Windows devices) from the latest [GitHub Releases](https://github.com/MrHoustonOff/iphone-gyro-controller/releases).
 
 ### 2. Launch
-Make sure your PC and smartphone are connected to the **same Wi-Fi network**. Launch `GyroBridge.exe`.
+Make sure your PC and smartphone are connected to the **same Wi-Fi network**. Launch `PhoneGyro.exe`.
 
 ### 3. Connect Phone
 - **iOS (iPhone / iPad)**: Click **Initial Setup** in the app and follow the step-by-step guide to install the local profile certificate required by Safari to access motion sensors over HTTPS.
@@ -37,7 +40,7 @@ In your emulator's input/controller settings, configure the motion server:
 
 ## Live 3D Telemetry & Diagnostics
 
-GyroBridge includes a dedicated real-time 3D telemetry window to verify sensor response, orientation stability, and DSU packet delivery rate:
+PhoneGyro includes a dedicated real-time 3D telemetry window to verify sensor response, orientation stability, and DSU packet delivery rate:
 
 ![3D Telemetry & Diagnostics](docs/imgs/3d%20view%20screen.jpg)
 
@@ -57,7 +60,7 @@ Click the **Settings** button in the header to access advanced options:
 
 ## Security, Antivirus & Transparency
 
-GyroBridge is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections whatsoever - all communication is strictly between your phone and your PC over your local home Wi-Fi.
+PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections whatsoever - all communication is strictly between your phone and your PC over your local home Wi-Fi.
 
 ### Antivirus False Positives Notice
 Independent open-source developers rarely purchase proprietary EV (Extended Validation) code signing certificates due to exorbitant recurring costs ($400+/year). Because of this, automated machine-learning heuristics in certain antivirus software (e.g., Microsoft Defender generic `!ml` tags) might flag freshly compiled binaries as unfamiliar.
@@ -81,10 +84,10 @@ git clone https://github.com/MrHoustonOff/iphone-gyro-controller.git
 cd iphone-gyro-controller/gui
 
 # Build Windows x86_64
-wails build -o GyroBridge.exe
+wails build -o PhoneGyro.exe
 
 # Build Windows ARM64
-wails build -platform windows/arm64 -o GyroBridge-arm64.exe
+wails build -platform windows/arm64 -o PhoneGyro-arm64.exe
 ```
 
 The compiled binaries will be placed in `gui/build/bin/`.

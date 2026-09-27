@@ -55,8 +55,8 @@ func TestI18n_GetAndFallback(t *testing.T) {
 	}
 
 	// Russian (base)
-	if val := mgr.Get("ru", "app.title"); val != "Gyro Bridge" {
-		t.Errorf("expected 'Gyro Bridge', got %q", val)
+	if val := mgr.Get("ru", "app.title"); val != "PhoneGyro" {
+		t.Errorf("expected 'PhoneGyro', got %q", val)
 	}
 	if val := mgr.Get("ru", "status.online"); val != "В сети" {
 		t.Errorf("expected 'В сети', got %q", val)

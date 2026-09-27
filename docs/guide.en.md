@@ -1,4 +1,4 @@
-# GyroBridge User Guide
+# PhoneGyro User Guide
 
 > **Important:** This guide should not be taken as dry or boring documentation. I strongly recommend reading it completely to avoid issues and save tons of time in the future. **It takes literally 5 minutes!**
 
@@ -28,15 +28,15 @@
 
 ## Step 1. Download & Initial Setup
 
-Download the latest version of GyroBridge from GitHub Releases:  
-**[Download GyroBridge (GitHub Releases)](https://github.com/MrHoustonOff/iphone-gyro-controller/releases/latest)**
+Download the latest version of PhoneGyro from GitHub Releases:  
+**[Download PhoneGyro (GitHub Releases)](https://github.com/MrHoustonOff/iphone-gyro-controller/releases/latest)**
 
 ### Security & Antivirus Warnings
 
 Most likely, your antivirus or built-in <span style="color: #007aff">**Windows Defender (SmartScreen)**</span> will complain about the downloaded `.exe` file or silently block it.
 
 > [!NOTE]
-> I have emphasized the security of my code many times. **GyroBridge is a 100% transparent open-source project (<span style="color: #34c759">Open Source</span>).** If you have even the slightest doubt:
+> I have emphasized the security of my code many times. **PhoneGyro is a 100% transparent open-source project (<span style="color: #34c759">Open Source</span>).** If you have even the slightest doubt:
 > 
 > 1. You can inspect every single line of code directly in this repository.
 > 2. Build the executable yourself from scratch using Go and Wails.
@@ -79,7 +79,7 @@ iOS setup is explained in step-by-step detail **directly inside the app** on PC 
 
 ## Step 2. Smartphone Connection & Mobile Interface
 
-Now that your smartphone trusts your PC, scan the **main QR code** on the GyroBridge home screen.
+Now that your smartphone trusts your PC, scan the **main QR code** on the PhoneGyro home screen.
 
 The mobile web app will open in your mobile browser.
 
@@ -146,7 +146,7 @@ Every player holds their controller differently: some mount their phone horizont
 
 The calibration wizard on your PC will guide you through three simple steps:
 
-1. **Step 1: Rest (Zero-Bias)** — place your smartphone completely stationary in its neutral resting position for 2–3 seconds. GyroBridge measures thermal sensor noise and eliminates drift (*unwanted cursor or crosshair crawling*).
+1. **Step 1: Rest (Zero-Bias)** — place your smartphone completely stationary in its neutral resting position for 2–3 seconds. PhoneGyro measures thermal sensor noise and eliminates drift (*unwanted cursor or crosshair crawling*).
 2. **Step 2: Pitch Forward** — smoothly tilt the phone forward away from you and return. The algorithm identifies the vertical pitch axis.
 3. **Step 3: Turn Right (Yaw / Roll)** — rotate the device to the right. The program locks in the horizontal turning axis.
 
@@ -160,7 +160,7 @@ It is vital to pause here and understand the fundamental physical difference:
 > **Emulators (Cemu, Dolphin, Ryujinx) do not care about the phone's absolute tilt angle relative to the horizon!**  
 > Games care strictly about **angular velocity** (how fast and in which direction your hands are turning right now).
 > 
-> - **Calibration** is performed once: it teaches GyroBridge your personal coordinate system (where *«forward»* and *«right»* are relative to your grip).
+> - **Calibration** is performed once: it teaches PhoneGyro your personal coordinate system (where *«forward»* and *«right»* are relative to your grip).
 > - **Centering (<span style="color: #007aff">Recenter / Reset 3D View</span>)** exists **exclusively for your visual convenience INSIDE THIS APP**. If the 3D model in the PC preview gets out of sync with the physical phone on your desk — simply hold your hands comfortably and click Recenter.
 
 ---
@@ -178,7 +178,7 @@ It is vital to pause here and understand the fundamental physical difference:
 
 ## Emulator Setup (Cemu Example)
 
-GyroBridge runs on the industry-standard **Cemuhook DSU (UDP)** protocol. To any emulator, your smartphone behaves identically to a genuine 6-axis motion controller (DualShock 4 / DualSense / Nintendo Switch Pro Controller).
+PhoneGyro runs on the industry-standard **Cemuhook DSU (UDP)** protocol. To any emulator, your smartphone behaves identically to a genuine 6-axis motion controller (DualShock 4 / DualSense / Nintendo Switch Pro Controller).
 
 ### Step-by-Step Configuration in Cemu 2.0+
 
@@ -203,16 +203,16 @@ GyroBridge runs on the industry-standard **Cemuhook DSU (UDP)** protocol. To any
 
 ### Cemu Launch Order Quirk
 
-If you launch Cemu **BEFORE** launching GyroBridge:
+If you launch Cemu **BEFORE** launching PhoneGyro:
 
 - Cemu sends an initial UDP probe packet to `127.0.0.1:26760` upon startup.
-- Because GyroBridge was **not running yet**, the Windows network stack responds with an ICMP *port unreachable* error.
-- Due to the absence of a background retry timer in Cemu's UDP client, the socket worker thread **falls asleep**. In Cemu's UI, the controller plug icon may still appear connected, but motion in-game stays frozen and GyroBridge displays: <span style="color: #ff9500">*«Waiting for emulators»*</span>.
+- Because PhoneGyro was **not running yet**, the Windows network stack responds with an ICMP *port unreachable* error.
+- Due to the absence of a background retry timer in Cemu's UDP client, the socket worker thread **falls asleep**. In Cemu's UI, the controller plug icon may still appear connected, but motion in-game stays frozen and PhoneGyro displays: <span style="color: #ff9500">*«Waiting for emulators»*</span>.
 
 ### Solutions:
 
 * **Method 1 (Recommended & Easiest):**  
-  Always launch **GyroBridge BEFORE launching Cemu** (or enable GyroBridge autostart to system tray on Windows boot — it consumes less than 20 MB of RAM and 0% CPU).
+  Always launch **PhoneGyro BEFORE launching Cemu** (or enable PhoneGyro autostart to system tray on Windows boot — it consumes less than 20 MB of RAM and 0% CPU).
 * **Method 2 (On the fly without closing the game):**  
   If your game is already running and you don't want to close it:
   1. In Cemu, open <kbd>Options</kbd> → <kbd>Input Settings</kbd>.

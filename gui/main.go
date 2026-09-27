@@ -28,7 +28,7 @@ func main() {
 	debugApp := NewLiveDebugApp()
 
 	err := wails.Run(&options.App{
-		Title:     "GyroBridge",
+		Title:     "PhoneGyro",
 		Width:     880,
 		Height:    620,
 		MinWidth:  620,
@@ -58,7 +58,7 @@ func main() {
 			}
 		},
 		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "gyrobridge-desktop-lock-uuid",
+			UniqueId: "phonegyro-desktop-lock-uuid",
 			OnSecondInstanceLaunch: func(secondInstanceData options.SecondInstanceData) {
 				if app.ctx != nil {
 					wailsRuntime.WindowUnminimise(app.ctx)
@@ -77,7 +77,7 @@ func main() {
 			OpenInspectorOnStartup: false,
 		},
 		Windows: &windows.Options{
-			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "GyroBridge", "WebView2_Main"),
+			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", "WebView2_Main"),
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
 		},

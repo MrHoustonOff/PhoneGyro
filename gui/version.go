@@ -17,7 +17,7 @@ import (
 //
 // releaseVersion/buildTag/buildChannel are settable at build time via -ldflags (the
 // official release workflow does this from the pushed tag, which is authoritative and
-// needs no git available on the build machine). Left empty, GyroBridge falls back to
+// needs no git available on the build machine). Left empty, PhoneGyro falls back to
 // asking git itself — convenient for everyday dev builds run straight from the repo —
 // and finally to hard defaults if neither source is available (e.g. a binary someone
 // copied out of the repo with no .git nearby).
@@ -29,7 +29,7 @@ var (
 
 // releaseVersionFallback is the last resort when neither -ldflags nor git are
 // available. Keep it in sync with gui/wails.json's "version" field.
-const releaseVersionFallback = "1.1.3"
+const releaseVersionFallback = "2.0.0"
 
 // AppVersion is what the UI displays; Display is the ready-to-show string so every
 // surface (desktop footer, phone web client) renders identically.
@@ -81,7 +81,7 @@ func computeAppVersion() AppVersion {
 
 // versionFromGit is a best-effort local-dev fallback: it asks git for the nearest
 // release tag and how many commits sit on top of it, run from the executable's own
-// directory (git finds the repo root by walking up, so this works whether GyroBridge
+// directory (git finds the repo root by walking up, so this works whether PhoneGyro
 // runs from gui/build/bin or anywhere else inside the checkout). Any failure — no git,
 // no repo, no tags — returns all-empty and the caller uses its hard defaults instead.
 func versionFromGit() (release, build, channel string) {

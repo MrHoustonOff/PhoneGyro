@@ -138,9 +138,9 @@ func (cm *CertificateManager) loadOrGenerateRootCA() error {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization:       []string{"GyroBridge"},
+			Organization:       []string{"PhoneGyro"},
 			OrganizationalUnit: []string{"Local Motion Controller"},
-			CommonName:         "GyroBridge Root CA",
+			CommonName:         "PhoneGyro Root CA",
 		},
 		NotBefore:             now,
 		NotAfter:              now.Add(3650 * 24 * time.Hour), // 10 years validity
@@ -211,7 +211,7 @@ func (cm *CertificateManager) generateLeafCertLocked() error {
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			Organization: []string{"GyroBridge"},
+			Organization: []string{"PhoneGyro"},
 			CommonName:   "gamepad.local",
 		},
 		NotBefore:             now,
@@ -407,7 +407,7 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 	<array>
 		<dict>
 			<key>PayloadCertificateFileName</key>
-			<string>GyroBridgeRootCA.cer</string>
+			<string>PhoneGyroRootCA.cer</string>
 			<key>PayloadContent</key>
 			<data>
 `)
@@ -422,11 +422,11 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 
 	buf.WriteString(fmt.Sprintf(`			</data>
 			<key>PayloadDescription</key>
-			<string>Installs the local GyroBridge Root CA for motion controller connectivity.</string>
+			<string>Installs the local PhoneGyro Root CA for motion controller connectivity.</string>
 			<key>PayloadDisplayName</key>
-			<string>GyroBridge Root CA</string>
+			<string>PhoneGyro Root CA</string>
 			<key>PayloadIdentifier</key>
-			<string>com.gyrobridge.ca.credential</string>
+			<string>com.phonegyro.ca.credential</string>
 			<key>PayloadType</key>
 			<string>com.apple.security.root</string>
 			<key>PayloadUUID</key>
@@ -438,11 +438,11 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 	<key>PayloadDescription</key>
 	<string>Enables secure local HTTPS for motion sensors on iOS devices.</string>
 	<key>PayloadDisplayName</key>
-	<string>GyroBridge Controller Profile</string>
+	<string>PhoneGyro Controller Profile</string>
 	<key>PayloadIdentifier</key>
-	<string>com.gyrobridge.ca.profile</string>
+	<string>com.phonegyro.ca.profile</string>
 	<key>PayloadOrganization</key>
-	<string>GyroBridge</string>
+	<string>PhoneGyro</string>
 	<key>PayloadRemovalDisallowed</key>
 	<false/>
 	<key>PayloadType</key>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GyroBridge - Telemetry & 3D Viewport</title>
+  <title>PhoneGyro - Telemetry & 3D Viewport</title>
   <link rel="stylesheet" href="main.css">
   <style>
     /* ── Authentic Apple HIG Desktop Window Layout ───────────────────────────── */
@@ -1429,7 +1429,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="brand-title">
-        <span>GyroBridge</span>
+        <span>PhoneGyro</span>
       </div>
       <div class="status-capsule offline" id="status-capsule">
         <span class="status-dot" id="status-dot"></span>
@@ -4023,7 +4023,7 @@
       }
 
       function saveRecordedCSV() {
-        const defaultName = `gyrobridge_telemetry_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
+        const defaultName = `phonegyro_telemetry_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
         const csvContent = recordedLines.join('\n');
         const statusMsgEl = document.getElementById('modal-status-msg');
         const btnOpenFolder = document.getElementById('btn-modal-open-folder');

@@ -89,7 +89,7 @@ func TestGyroBiasIgnoresSlowSteadyRotation(t *testing.T) {
 func TestGyroBiasOnRealCaptures(t *testing.T) {
 	found := false
 	for _, sub := range []string{"usb", ""} {
-		path := filepath.Join(os.Getenv("APPDATA"), "GyroBridge", sub, "gyro_debug_capture.csv")
+		path := filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", sub, "gyro_debug_capture.csv")
 		f, err := os.Open(path)
 		if err != nil {
 			continue
