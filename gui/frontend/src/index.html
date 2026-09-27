@@ -961,11 +961,14 @@
                       </div>
                       <div class="setting-control">
                         <select id="setting-gyro-deadband" class="setting-select">
-                          <option value="0.00" data-i18n="settings_modal.deadband_off">0.00°/s (Отключен)</option>
-                          <option value="0.05" data-i18n="settings_modal.deadband_005">0.05°/s (Минимальный)</option>
-                          <option value="0.10" data-i18n="settings_modal.deadband_010" selected>0.10°/s (Стандартный)</option>
-                          <option value="0.20" data-i18n="settings_modal.deadband_020">0.20°/s (Умеренный)</option>
-                          <option value="0.35" data-i18n="settings_modal.deadband_035">0.35°/s (Агрессивный)</option>
+                          <option value="0.00" data-i18n="settings_modal.deadband_off" data-desc-i18n="settings_modal.deadband_off_desc">0.00°/s (Отключен)</option>
+                          <option value="0.05" data-i18n="settings_modal.deadband_005" data-desc-i18n="settings_modal.deadband_005_desc">0.05°/s (Минимальный)</option>
+                          <option value="0.10" data-i18n="settings_modal.deadband_010" data-desc-i18n="settings_modal.deadband_010_desc" selected>0.10°/s (Стандартный)</option>
+                          <option value="0.20" data-i18n="settings_modal.deadband_020" data-desc-i18n="settings_modal.deadband_020_desc">0.20°/s (Умеренный)</option>
+                          <option value="0.35" data-i18n="settings_modal.deadband_035" data-desc-i18n="settings_modal.deadband_035_desc">0.35°/s (Повышенный)</option>
+                          <option value="0.50" data-i18n="settings_modal.deadband_050" data-desc-i18n="settings_modal.deadband_050_desc">0.50°/s (USB-контроллер)</option>
+                          <option value="0.75" data-i18n="settings_modal.deadband_075" data-desc-i18n="settings_modal.deadband_075_desc">0.75°/s (Сильный)</option>
+                          <option value="1.00" data-i18n="settings_modal.deadband_100" data-desc-i18n="settings_modal.deadband_100_desc">1.00°/s (Максимальный)</option>
                         </select>
                       </div>
                     </div>
@@ -3132,6 +3135,17 @@
           const text = document.createElement('span');
           text.className = 'apple-select-opt-text';
           text.textContent = opt.textContent;
+
+          // Optional second line "when to pick it": <option data-desc-i18n="key">.
+          const descKey = opt.getAttribute('data-desc-i18n');
+          const descText = descKey && window.I18n ? I18n.t(descKey) : '';
+          if (descText && descText !== descKey) {
+            item.classList.add('has-desc');
+            const desc = document.createElement('span');
+            desc.className = 'apple-select-opt-desc';
+            desc.textContent = descText;
+            text.appendChild(desc);
+          }
 
           item.appendChild(check);
           item.appendChild(text);
