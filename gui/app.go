@@ -264,9 +264,8 @@ type motionBank struct {
 	prevAhrsTime   time.Time // dt для ahrs.Update (часы DSU-пакета, см. startup)
 	accFiltered    [3]float64
 	accFilterInit  bool
-	// Stationary auto-bias-refinement accumulator, also formerly closure-local.
-	stillFrames                        int
-	stillSumGx, stillSumGy, stillSumGz float64
+	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
+	biasTracker gyroBiasTracker
 	// Latest AHRS quaternion stored atomically for lock-free read by GetState.
 	// Q0=w, Q1=x, Q2=y, Q3=z (same as AHRS return values).
 	curAhrsQ0 atomic.Uint64
@@ -1471,38 +1470,20 @@ func (a *App) startup(ctx context.Context) {
 			bank.matrixMu.RUnlock()
 		}
 
-		// Automatic resting zero-bias refinement:
-		// When the device is completely still on a flat surface:
-		// Acc magnitude is ≈ 1.0g (0.92 .. 1.08) and raw gyro rate is < 0.35 °/s
-		accMag := math.Sqrt(float64(frame.AccX*frame.AccX + frame.AccY*frame.AccY + frame.AccZ*frame.AccZ))
-		rawGyroSpeed := math.Sqrt(float64(frame.RotX*frame.RotX + frame.RotY*frame.RotY + frame.RotZ*frame.RotZ))
-
-		if !bank.isCapturing.Load() && accMag >= 0.92 && accMag <= 1.08 && rawGyroSpeed < 0.35 {
-			bank.stillFrames++
-			bank.stillSumGx += float64(frame.RotX)
-			bank.stillSumGy += float64(frame.RotY)
-			bank.stillSumGz += float64(frame.RotZ)
-			if bank.stillFrames >= 60 { // 1 full second of stationary rest
-				avgGx := bank.stillSumGx / 60.0
-				avgGy := bank.stillSumGy / 60.0
-				avgGz := bank.stillSumGz / 60.0
-				bank.stillFrames = 0
-				bank.stillSumGx = 0
-				bank.stillSumGy = 0
-				bank.stillSumGz = 0
-
-				const alpha = 0.05
-				bank.biasMu.Lock()
-				bank.gyroBias[0] += alpha * (avgGx - bank.gyroBias[0])
-				bank.gyroBias[1] += alpha * (avgGy - bank.gyroBias[1])
-				bank.gyroBias[2] += alpha * (avgGz - bank.gyroBias[2])
-				bank.biasMu.Unlock()
+		// Живая подстройка нуля гироскопа в покое (см. gyrobias.go). Не во время
+		// записи шага калибровки: там bias задаётся явно.
+		if !bank.isCapturing.Load() {
+			rawGyro := [3]float64{float64(frame.RotX), float64(frame.RotY), float64(frame.RotZ)}
+			rawAccel := [3]float64{float64(frame.AccX), float64(frame.AccY), float64(frame.AccZ)}
+			bank.biasMu.Lock()
+			if nb, ok := bank.biasTracker.Feed(startPipe, rawGyro, rawAccel, bank.gyroBias); ok {
+				bank.gyroBias = nb
 			}
+			bank.biasMu.Unlock()
 		} else {
-			bank.stillFrames = 0
-			bank.stillSumGx = 0
-			bank.stillSumGy = 0
-			bank.stillSumGz = 0
+			bank.biasMu.Lock()
+			bank.biasTracker.reset()
+			bank.biasMu.Unlock()
 		}
 
 		// Subtract gyro zero-bias before applying calibration matrix M (§1, §2 of spec)
