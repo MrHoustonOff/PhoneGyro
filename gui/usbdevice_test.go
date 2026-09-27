@@ -155,3 +155,12 @@ func TestUSBConnStateBootRestartIsNotLoss(t *testing.T) {
 		t.Fatalf("device restart counted as %d dropped frames, want 0", st.droppedFrames)
 	}
 }
+
+func TestHasUSBMeta(t *testing.T) {
+	if hasUSBMeta([]usbFrame{{Type: usbTypeData}, {Type: usbTypeData}}) {
+		t.Fatal("data-only frames reported as having metadata")
+	}
+	if !hasUSBMeta([]usbFrame{{Type: usbTypeData}, {Type: usbTypeMeta}}) {
+		t.Fatal("metadata frame not found")
+	}
+}

@@ -35,6 +35,7 @@ const (
 	usbRescanEvery   = 4 * time.Second
 	usbReadTimeout   = 300 * time.Millisecond
 	usbMetaGraceTime = 500 * time.Millisecond
+	usbResetPulse    = 50 * time.Millisecond
 
 	// Protocol Level 3 safe defaults, used until (or unless) a metadata frame
 	// declares the device's real sensor range.
@@ -174,6 +175,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		st.accelRangeG = metaRangeOrDefault(f.Accel[0], usbDefaultAccelRangeG)
 		st.gyroRangeDps = metaRangeOrDefault(f.Accel[1], usbDefaultGyroRangeDps)
 		st.haveMeta = true
+		app.logEvent("INFO", "USB: sensor range ±%g dps, ±%g g", st.gyroRangeDps, st.accelRangeG)
 		// The metadata frame opens every boot, and SEQ restarts after it. Opening the
 		// port resets the Nano (DTR), often right after the probe already read stale
 		// frames from the previous run: without this the restart counted as up to
@@ -439,7 +441,35 @@ func (m *usbDeviceManager) attach(name string, port serial.Port, initial []usbFr
 	go m.readLoop(port, name, initial, pending)
 }
 
+// hasUSBMeta reports whether the frames include the metadata frame a device sends
+// when it boots.
+func hasUSBMeta(frames []usbFrame) bool {
+	for _, f := range frames {
+		if f.Type == usbTypeMeta {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usbFrame, pending []byte) {
+	// The range comes only in the metadata frame at boot. Arduino-style boards
+	// usually reboot when the port opens (DTR), but not always: when the driver
+	// kept DTR asserted from the previous session the board just keeps streaming,
+	// the range never arrives and the ±250 dps default makes every turn 8x too
+	// slow (field log 2026-09-27 23:36). So restart it ourselves with a DTR pulse,
+	// like the Arduino IDE does before flashing, and drop what the old run left
+	// in the buffer. Boards without auto-reset are unaffected by the pulse.
+	if !hasUSBMeta(initial) {
+		m.app.logEvent("INFO", "USB: no metadata from %s yet, restarting the device (DTR)", name)
+		if err := port.SetDTR(false); err == nil {
+			time.Sleep(usbResetPulse)
+			_ = port.SetDTR(true)
+			_ = port.ResetInputBuffer()
+			initial, pending = nil, nil
+		}
+	}
+
 	state := newUSBConnState()
 	for _, f := range initial {
 		state.handle(f, m.app)
