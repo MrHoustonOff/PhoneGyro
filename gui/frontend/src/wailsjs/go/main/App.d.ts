@@ -40,6 +40,8 @@ export function GetTheme():Promise<string>;
 
 export function GetTranslations(arg1:string):Promise<string>;
 
+export function GetWizardMount():Promise<main.MountCorrection>;
+
 export function IsFirstLaunch():Promise<boolean>;
 
 export function MarkFirstLaunchDone():Promise<void>;
@@ -72,6 +74,8 @@ export function SetInputMode(arg1:string):Promise<string>;
 
 export function SetLang(arg1:string):Promise<void>;
 
+export function SetProfileMountEnabled(arg1:number,arg2:boolean):Promise<string>;
+
 export function SetTheme(arg1:string):Promise<void>;
 
 export function SetTuningActive(arg1:boolean):Promise<void>;
@@ -79,6 +83,8 @@ export function SetTuningActive(arg1:boolean):Promise<void>;
 export function SetTuningFilterParams(arg1:number,arg2:number):Promise<void>;
 
 export function SetWindowTheme(arg1:string):Promise<void>;
+
+export function SetWizardMountEnabled(arg1:boolean):Promise<void>;
 
 export function ShowWindow():Promise<void>;
 

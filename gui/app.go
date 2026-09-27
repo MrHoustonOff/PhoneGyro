@@ -56,6 +56,8 @@ type Profile struct {
 	CalGravity [3]float64 `json:"calGravity,omitempty"`
 	// Learned gyro↔accel axis relation of the device used with this profile.
 	SensorFrame *sensorFrame `json:"sensorFrame,omitempty"`
+	// Поправка на наклон установки датчика (только USB, см. mountalign.go).
+	Mount *MountCorrection `json:"mount,omitempty"`
 	Active      bool         `json:"active"` // is this the currently applied profile?
 	// Version is the calibration data generation this profile was captured with,
 	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
@@ -222,6 +224,12 @@ type motionBank struct {
 	// unsaved/cancelled wizard run never pollutes the live output or a profile.
 	wizardGravity      [3]float64
 	wizardGravityValid bool
+	// Поправка установки датчика (mountalign.go): mountLive — активного профиля,
+	// wizardMount — посчитанная мастером калибровки для кандидата (действует на
+	// превью, в профиль попадает только через SaveProfile).
+	mountMu     sync.RWMutex
+	mountLive   *MountCorrection
+	wizardMount *MountCorrection
 	align              *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
 	// wizardAlign is a scratch aligner used only by the calibration wizard's explicit
 	// "determine axes" step. It runs alongside `align` (fed the same data) so the
@@ -245,12 +253,15 @@ type motionBank struct {
 	previewMu     sync.RWMutex
 	previewMatrix [3][3]float64
 	usePreview    bool
-	// Madgwick AHRS filter matching PadTest.exe exactly for 3D viewport synchronization
-	ahrs *MadgwickAHRS
+	// AHRS filter for 3D viewport synchronization (see ahrs.go — ported verbatim
+	// from the "тема" sandbox after it root-caused and fixed the mirror-handed
+	// gyro convention and the beta-noise-floor kick of the old Madgwick port).
+	ahrs *AHRS
 	// Attitude anchor + accelerometer low-pass state, formerly closure-local
 	// variables in startup() -- moved here so each source keeps its own.
 	anchor         *attitudeAnchor
 	prevAnchorTsUs uint64
+	prevAhrsTime   time.Time // dt для ahrs.Update (часы DSU-пакета, см. startup)
 	accFiltered    [3]float64
 	accFilterInit  bool
 	// Stationary auto-bias-refinement accumulator, also formerly closure-local.
@@ -280,7 +291,7 @@ func newMotionBank() *motionBank {
 	b := &motionBank{
 		activeSlot:   -1,
 		activeMatrix: defaultMatrix3x3(),
-		ahrs:         NewMadgwickAHRS(0.0), // Pure gyro integration with stationary deadband
+		ahrs:         NewAHRS(),
 		anchor:       newAttitudeAnchor(),
 		calStepLogs:  make(map[int]StepCaptureLog),
 	}
@@ -1153,6 +1164,9 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && norm3(bank.profiles[bank.activeSlot].CalGravity) > 0.3 {
 		bank.calGravity = bank.profiles[bank.activeSlot].CalGravity
 	}
+	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) {
+		bank.setLiveMount(bank.profiles[bank.activeSlot].Mount)
+	}
 }
 
 // saveProfiles writes the currently active mode's profiles.json with
@@ -1514,22 +1528,12 @@ func (a *App) startup(ctx context.Context) {
 
 		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).
 		anchorDt := anchorDefaultDtSec
-		// usbAhrsDt: USB-only, surgical override for bank.ahrs.Update's sample
-		// period below. Phone keeps its untouched hardcoded 1/60 (pass 0 to
-		// mean "no override"); a USB source's real rate is very often not
-		// 60Hz, so it gets its own real measured dt instead. Deliberately not
-		// reusing anchorDt's [4ms,100ms] clamp (tuned for attitudeanchor, not
-		// this) -- just guard against non-positive/insane values.
-		var usbAhrsDt float32
 		if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
 			d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6
 			if d >= 0.004 && d <= 0.1 {
 				anchorDt = d
 			} else if d > 1.0 {
 				bank.anchor.Reset() // reconnect / page reload: attitude reference restarted
-			}
-			if a.GetInputMode() == "usb" && d > 0 && d <= 0.25 {
-				usbAhrsDt = float32(d)
 			}
 		} else if frame.TimestampUs < bank.prevAnchorTsUs {
 			bank.anchor.Reset()
@@ -1630,10 +1634,40 @@ func (a *App) startup(ctx context.Context) {
 		corrected.AccY = finalAy
 		corrected.AccZ = finalAz
 
-		// Update Madgwick AHRS filter.
+		// Ровно то, что уходит по проводу в DSU (dsuYawSign, чувствительность,
+		// dsuAccSign) -- ahrs.go перенесён из песочницы "тема", которая считает
+		// ориентацию по принятым DSU-пакетам, и его знаки гироскопа верны только
+		// в этом кадре. Кормить его чем-то другим (как было: ahrsR*, final* до
+		// знаков DSU) = другая хиральность = снова увод после резкого движения.
+		dsuAx := dsuAccSign[0] * finalAx
+		dsuAy := dsuAccSign[1] * finalAy
+		dsuAz := dsuAccSign[2] * finalAz
+
+		// Поправка на наклон установки датчика (USB, mountalign.go): один поворот
+		// на гироскоп и акселерометр, чтобы их согласованность не пострадала.
+		if mc := bank.activeMount(usePrev); mc.Active() {
+			r, ac := mc.applyToDSU(
+				[3]float64{float64(dsuRx), float64(dsuRy), float64(dsuRz)},
+				[3]float64{float64(dsuAx), float64(dsuAy), float64(dsuAz)})
+			dsuRx, dsuRy, dsuRz = float32(r[0]), float32(r[1]), float32(r[2])
+			dsuAx, dsuAy, dsuAz = float32(ac[0]), float32(ac[1]), float32(ac[2])
+		}
+
+		// dt -- по тем же часам, что и таймстамп DSU-пакета (pkg/dsu nextTimestampUs,
+		// wall clock в момент отправки), с тем же правилом, что в тема/app.go readLoop.
+		nowAhrs := time.Now()
+		ahrsDt := float32(1.0 / 60.0)
+		if !bank.prevAhrsTime.IsZero() {
+			if d := nowAhrs.Sub(bank.prevAhrsTime).Seconds(); d > 0 && d <= 0.25 {
+				ahrsDt = float32(d)
+			}
+		}
+		bank.prevAhrsTime = nowAhrs
+
+		// Update AHRS filter (see ahrs.go).
 		var curP, curR, curY float64
 		if bank.ahrs != nil {
-			q0, q1, q2, q3 := bank.ahrs.Update(ahrsRx, ahrsRy, ahrsRz, finalAx, finalAy, finalAz, time.Now(), usbAhrsDt)
+			q0, q1, q2, q3 := bank.ahrs.Update(dsuRx, dsuRy, dsuRz, dsuAx, dsuAy, dsuAz, ahrsDt)
 			p, r, y := bank.ahrs.GetEulerAngles()
 			curP, curR, curY = p, r, y
 			bank.curPitch.Store(math.Float64bits(p))
@@ -1687,9 +1721,9 @@ func (a *App) startup(ctx context.Context) {
 			dsuFrame.RotX = dsuRx
 			dsuFrame.RotY = dsuRy
 			dsuFrame.RotZ = dsuRz
-			dsuFrame.AccX = dsuAccSign[0] * finalAx
-			dsuFrame.AccY = dsuAccSign[1] * finalAy
-			dsuFrame.AccZ = dsuAccSign[2] * finalAz
+			dsuFrame.AccX = dsuAx
+			dsuFrame.AccY = dsuAy
+			dsuFrame.AccZ = dsuAz
 			a.dsuSrv.SendMotion(dsuFrame)
 		}
 
@@ -2382,6 +2416,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 	bank.profilesMu.Lock()
 	gravity := bank.profiles[slot].CalGravity
 	sensorFrame := bank.profiles[slot].SensorFrame
+	mount := bank.profiles[slot].Mount
 	bank.profilesMu.Unlock()
 
 	// Commit whatever the wizard staged during this session (rest step / axis-align),
@@ -2391,6 +2426,11 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 	if bank.wizardGravityValid {
 		gravity = bank.wizardGravity
 		bank.wizardGravityValid = false
+		// Мастер прошёл заново: старая поправка к новой калибровке не относится.
+		bank.mountMu.Lock()
+		mount = bank.wizardMount
+		bank.wizardMount = nil
+		bank.mountMu.Unlock()
 	}
 	if bank.wizardAlign != nil {
 		if f, known := bank.wizardAlign.Frame(); known {
@@ -2410,6 +2450,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		Active:      (slot == bank.activeSlot),
 		CalGravity:  gravity,
 		SensorFrame: sensorFrame,
+		Mount:       mount,
 		// Reaching Save means the wizard's axis-align step already confirmed a
 		// mapping (its "next" button is disabled otherwise), so this profile
 		// definitely meets the current pipeline's requirements.
@@ -2423,6 +2464,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		bank.activeMatrix = matrix
 		bank.matrixMu.Unlock()
 		a.applyProfileGravity(bank, slot)
+		a.applyProfileMount(bank, slot)
 		if bank.ahrs != nil {
 			bank.ahrs.Reset()
 		}
@@ -2546,6 +2588,7 @@ func (a *App) SetActiveProfile(slot int) string {
 	bank.matrixMu.Unlock()
 	a.applyProfileGravity(bank, slot)
 	a.applyProfileSensorFrame(bank, slot)
+	a.applyProfileMount(bank, slot)
 
 	if bank.ahrs != nil {
 		bank.ahrs.Reset()
@@ -2565,6 +2608,7 @@ func (a *App) PreviewMatrix(matrix [3][3]float64) {
 	bank.previewMatrix = matrix
 	bank.usePreview = true
 	bank.previewMu.Unlock()
+	a.stageWizardMount(bank, matrix)
 	if bank.ahrs != nil {
 		bank.ahrs.Reset()
 	}
@@ -2584,6 +2628,9 @@ func (a *App) ClearPreview() {
 	bank.wizardAlign = nil
 	bank.wizardGravityValid = false
 	bank.wizardAlignMu.Unlock()
+	bank.mountMu.Lock()
+	bank.wizardMount = nil
+	bank.mountMu.Unlock()
 	if bank.ahrs != nil {
 		bank.ahrs.Reset()
 	}

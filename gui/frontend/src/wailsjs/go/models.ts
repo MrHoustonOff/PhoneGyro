@@ -83,6 +83,30 @@ export namespace main {
 	        this.inputMode = source["inputMode"];
 	    }
 	}
+	export class MountCorrection {
+	    status: string;
+	    enabled: boolean;
+	    r: number[][];
+	    tiltDeg: number;
+	    forwardDeg: number;
+	    rightDeg: number;
+	    checkDeg: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MountCorrection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.enabled = source["enabled"];
+	        this.r = source["r"];
+	        this.tiltDeg = source["tiltDeg"];
+	        this.forwardDeg = source["forwardDeg"];
+	        this.rightDeg = source["rightDeg"];
+	        this.checkDeg = source["checkDeg"];
+	    }
+	}
 	export class sensorFrame {
 	    q: number[][];
 	    h: number;
@@ -106,6 +130,7 @@ export namespace main {
 	    calGravity?: number[];
 	    // Go type: sensorFrame
 	    sensorFrame?: any;
+	    mount?: MountCorrection;
 	    active: boolean;
 	    version?: number;
 	    outdated: boolean;
@@ -123,6 +148,7 @@ export namespace main {
 	        this.matrix = source["matrix"];
 	        this.calGravity = source["calGravity"];
 	        this.sensorFrame = this.convertValues(source["sensorFrame"], null);
+	        this.mount = this.convertValues(source["mount"], MountCorrection);
 	        this.active = source["active"];
 	        this.version = source["version"];
 	        this.outdated = source["outdated"];
@@ -316,6 +342,7 @@ export namespace main {
 	        this.errorMsg = source["errorMsg"];
 	    }
 	}
+	
 	
 	export class ValidationResult {
 	    success: boolean;

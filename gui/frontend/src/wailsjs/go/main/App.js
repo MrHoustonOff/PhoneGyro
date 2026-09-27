@@ -78,6 +78,10 @@ export function GetTranslations(arg1) {
   return window['go']['main']['App']['GetTranslations'](arg1);
 }
 
+export function GetWizardMount() {
+  return window['go']['main']['App']['GetWizardMount']();
+}
+
 export function IsFirstLaunch() {
   return window['go']['main']['App']['IsFirstLaunch']();
 }
@@ -142,6 +146,10 @@ export function SetLang(arg1) {
   return window['go']['main']['App']['SetLang'](arg1);
 }
 
+export function SetProfileMountEnabled(arg1, arg2) {
+  return window['go']['main']['App']['SetProfileMountEnabled'](arg1, arg2);
+}
+
 export function SetTheme(arg1) {
   return window['go']['main']['App']['SetTheme'](arg1);
 }
@@ -156,6 +164,10 @@ export function SetTuningFilterParams(arg1, arg2) {
 
 export function SetWindowTheme(arg1) {
   return window['go']['main']['App']['SetWindowTheme'](arg1);
+}
+
+export function SetWizardMountEnabled(arg1) {
+  return window['go']['main']['App']['SetWizardMountEnabled'](arg1);
 }
 
 export function ShowWindow() {

@@ -151,7 +151,14 @@
     "subtitle": "Map your phone's axes to gamepad axes",
     "subtitle_device": "Axis mapping configuration • {device}",
     "title": "Axis Calibration",
-    "view_disclaimer": "3D orientation may differ from your physical grip"
+    "view_disclaimer": "3D orientation may differ from your physical grip",
+    "mount_title": "Sensor Mount Tilt",
+    "mount_toggle": "Compensate tilt",
+    "mount_ok": "The sensor is mounted at a {tilt}° tilt (forward {fwd}, right {right}). The gyroscope confirmed it ({check}° deviation). The correction rotates gyro and accelerometer together: neutral becomes level and horizontal turns stop leaking into tilt.",
+    "mount_small": "The sensor is mounted level ({tilt}° tilt) — no correction needed.",
+    "mount_too_large": "Resting tilt is {tilt}° — too large for a board misalignment. The pad was most likely not lying flat during the Rest step. No correction applied; recalibrate on a flat surface.",
+    "mount_inconsistent": "The accelerometer reads a {tilt}° tilt, but the gyroscope did not confirm it ({check}° deviation). This looks like accelerometer zero offset rather than board misalignment — rotating the axes would hurt, so no correction is applied.",
+    "mount_no_data": "Not enough data to measure the mount tilt."
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",

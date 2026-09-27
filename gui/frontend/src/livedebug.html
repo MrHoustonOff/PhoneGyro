@@ -2671,7 +2671,7 @@
         if (!isRendering) return;
         animId = requestAnimationFrame(renderFrame);
 
-        currentQuat.slerp(liveQuat, 0.35);
+        currentQuat.copy(liveQuat); // 1:1, без сглаживания (как в "теме" и PadTest)
         gamepadGroup.quaternion.copy(currentQuat);
         cubeGroup.quaternion.copy(currentQuat);
 
@@ -4157,8 +4157,8 @@
           if (!isPhoneConnected) {
             setPhoneConnected(true);
           }
-          // Three.js coordinates: -q1 (pitch), -q2 (yaw), q3 (roll), q0 (w)
-          liveQuat.set(-q1, -q2, q3, q0);
+          // Кадр AHRS = кадр three.js -- без ремапа, как в песочнице "тема" (gui/ahrs.go).
+          liveQuat.set(q1, q2, q3, q0);
           liveQuat.normalize();
         }
 

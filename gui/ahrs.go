@@ -3,182 +3,196 @@ package main
 import (
 	"math"
 	"sync"
-	"time"
 )
 
-// MadgwickAHRS implements the exact IMU orientation filter used by PadTest.exe and BetterJoy.
-// It estimates controller orientation as a unit quaternion [Q0, Q1, Q2, Q3]
-// directly from calibrated gyroscope rates (RotX, RotY, RotZ in °/s)
-// and accelerometer readings (AccX, AccY, AccZ in g).
-type MadgwickAHRS struct {
-	mu       sync.Mutex
-	Q0       float32
-	Q1       float32
-	Q2       float32
-	Q3       float32
-	Beta     float32
-	lastTime time.Time
+// AHRS — комплементарный фильтр ориентации на SO(3) (схема Mahony, P-звено):
+// гироскоп интегрируется точной экспонентой, акселерометр подтягивает только
+// наклон (pitch/roll) через векторное произведение «измеренный верх × оценка верха».
+//
+// Полный перенос из M:\00_Coding\00_Projects\тема (песочница, где алгоритм был
+// найден, воспроизведён на реальных логах и проверен вживую против PadTest) —
+// заменяет прежний "Madgwick из PadTest". Почему:
+//
+//  1. Главная причина «залипания» ориентации после резкого движения — ЗЕРКАЛЬНАЯ
+//     конвенция гироскопа. Старый маппинг gx,gy,gz = -rotX,-rotY,-rotZ имеет
+//     неверную хиральность: инверсия всех трёх осей — это отражение (det=-1), а
+//     не поворот, и при интегрировании последовательных поворотов они складываются
+//     в обратном порядке. Для одноосевых движений это незаметно, а после сложного
+//     движения «туда-обратно» ошибка не сходится: чистое интегрирование гироскопа
+//     по реальным логам с резким поворотом давало 38-40° вместо нуля. С физически
+//     согласованным маппингом ω = (+rotX, -rotY, -rotZ) те же данные замыкаются в
+//     2-5° — и именно этот маппинг совпадает с акселерометром (подобран перебором
+//     всех 48 вариантов знаков/перестановок, а не угадан). Yaw акселерометр
+//     исправить не может в принципе — это физика, не баг.
+//  2. Старый градиент Madgwick нормализовался до единичного вектора перед
+//     умножением на beta, поэтому коррекция всегда била на полную мощность
+//     (~2·beta) даже когда реальная ошибка ориентации уже ничтожна — в покое это
+//     давало постоянный паразитный "пинок" в случайную сторону (шум акселерометра,
+//     а не сигнал). Комплементарный фильтр ниже использует некалиброванную
+//     (не нормированную) ошибку e = u×v, чья величина = sin(угла ошибки) и сама
+//     стремится к нулю — никакого пинка в покое по построению.
+//
+// Кадр тела здесь = кадр вывода DSU (как приходит rotX/Y/Z, accX/Y/Z), мир — Y
+// вверх. Наружу отдаём тот же контракт: вход (rotX/Y/Z в °/с, accX/Y/Z в g, dt в
+// секундах) → кватернион [Q0,Q1,Q2,Q3].
+type AHRS struct {
+	mu sync.Mutex
+	Q0 float32
+	Q1 float32
+	Q2 float32
+	Q3 float32
+
+	// Коэффициенты коррекции наклона, 1/с (≈ 1/постоянная времени).
+	KpStill float32 // когда пад почти неподвижен — быстро возвращаемся к истине
+	KpMove  float32 // во время движения — акселерометру (с центробежкой) верим меньше
+
+	initialized bool
+
+	// Диагностика последнего Update() — на будущее, для подробных логов/дебага.
+	LastDt            float32
+	LastEffectiveBeta float32 // фактически применённый Kp, 1/с
+	LastOmegaMagDeg   float32 // |ω после коррекции| в °/с
 }
 
-// NewMadgwickAHRS creates a filter initialized to identity orientation [1, 0, 0, 0].
-// Pass beta=0 for pure gyro integration without phantom accelerometer drift/spinning.
-func NewMadgwickAHRS(beta float32) *MadgwickAHRS {
-	if beta < 0 {
-		beta = 0.0
-	}
-	return &MadgwickAHRS{
-		Q0:   1.0,
-		Q1:   0.0,
-		Q2:   0.0,
-		Q3:   0.0,
-		Beta: beta,
-	}
+const (
+	ahrsStillRateDeg = 20.0 // ниже этой скорости поворота считаем пад «почти неподвижным»
+	ahrsAccTolerance = 0.25 // | |acc|-1g | при котором доверие к акселерометру падает до нуля
+	ahrsDeg2Rad      = math.Pi / 180.0
+)
+
+// NewAHRS создаёт фильтр в единичной ориентации с параметрами коррекции,
+// подобранными и проверенными в песочнице "тема" (не угадано, не тронуто).
+func NewAHRS() *AHRS {
+	return &AHRS{Q0: 1, KpStill: 2.0, KpMove: 0.3}
 }
 
 // Reset resets the filter to identity orientation.
-func (m *MadgwickAHRS) Reset() {
+func (m *AHRS) Reset() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.Q0 = 1.0
-	m.Q1 = 0.0
-	m.Q2 = 0.0
-	m.Q3 = 0.0
-	m.lastTime = time.Time{}
+	m.Q0, m.Q1, m.Q2, m.Q3 = 1, 0, 0, 0
+	m.initialized = false
 }
 
-// Update runs one integration step matching PadTest.exe (0x140832a67 - 0x140833a00) exactly.
-// Input arguments are the canonical Cemuhook DSU fields:
-//   rotX (Pitch in °/s, nose up = +, nose down = -)
-//   rotY (Yaw in °/s, nose left = +, nose right = -)
-//   rotZ (Roll in °/s, bank right = +, bank left = -)
-//   accX (Lateral acceleration in g, left = +, right = -)
-//   accY (Vertical acceleration in g, up = +, down = -)
-//   accZ (Longitudinal acceleration in g, back = +, forward = -)
-// dtOverride: 0 means "use the fixed 60Hz phone assumption below, unchanged".
-// A caller for a non-60Hz source (USB) passes its own real measured sample
-// period instead -- this is the only thing dtOverride does; everything else
-// about this function is exactly as it was.
-func (m *MadgwickAHRS) Update(rotX, rotY, rotZ, accX, accY, accZ float32, now time.Time, dtOverride float32) (float32, float32, float32, float32) {
+// Update: rotX/Y/Z в °/с (DSU: Pitch/Yaw/Roll), accX/Y/Z в g, dt — реальный
+// измеренный интервал в секундах с прошлого пакета (считается у вызывающего
+// кода из таймстампа пакета, см. app.go).
+func (m *AHRS) Update(rotX, rotY, rotZ, accX, accY, accZ, dt float32) (float32, float32, float32, float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Fixed sensor sample period: iOS devicemotion fires at exactly 60 Hz.
-	// Never use network arrival time delta (now.Sub(lastTime)) because WiFi jitter
-	// causes bursts with 100ms+ deltas that multiply rotation rates by up to 10x,
-	// causing violent spasms/instability during fast movements.
-	dt := float32(1.0 / 60.0)
-	if dtOverride > 0 {
-		dt = dtOverride
+	// Угловая скорость в кадре тела (правая тройка, см. комментарий к типу).
+	gx := float64(rotX) * ahrsDeg2Rad
+	gy := -float64(rotY) * ahrsDeg2Rad
+	gz := -float64(rotZ) * ahrsDeg2Rad
+
+	// DSU acc — направление гравитации (лежащий пад: accY=-1), «верх» = -acc.
+	ux, uy, uz := -float64(accX), -float64(accY), -float64(accZ)
+	accNorm := math.Sqrt(ux*ux + uy*uy + uz*uz)
+
+	w, x, y, z := float64(m.Q0), float64(m.Q1), float64(m.Q2), float64(m.Q3)
+
+	// Первый кадр: сразу ставим наклон по акселерометру (yaw = 0), чтобы вьюер
+	// с первого пакета совпадал с падом, а не «приезжал» из единичной ориентации.
+	if !m.initialized && accNorm > 0.5 && accNorm < 1.5 {
+		w, x, y, z = quatFromUp(ux/accNorm, uy/accNorm, uz/accNorm)
+		m.initialized = true
+		m.store(w, x, y, z)
+		m.LastDt, m.LastEffectiveBeta, m.LastOmegaMagDeg = dt, 0, 0
+		return m.Q0, m.Q1, m.Q2, m.Q3
 	}
-	m.lastTime = now
 
-	const deg2rad = float32(math.Pi / 180.0)
+	rawRateDeg := math.Sqrt(gx*gx+gy*gy+gz*gz) / ahrsDeg2Rad
 
-	// PadTest.exe mapping at 0x140832a67 - 0x140832a95:
-	// gx = -RotX, gy = -RotY, gz = -RotZ
-	// ax = +AccX, ay = -AccY, az = -AccZ
-	gx := -rotX * deg2rad
-	gy := -rotY * deg2rad
-	gz := -rotZ * deg2rad
-	ax := accX
-	ay := -accY
-	az := -accZ
+	var kp float64
+	if accNorm > 1e-3 {
+		// Доверие к акселерометру: 1 при |acc|=1g, линейно до 0 при отклонении accTolerance.
+		trust := 1 - math.Abs(accNorm-1)/ahrsAccTolerance
+		if trust < 0 {
+			trust = 0
+		}
+		// Плавный переход KpMove → KpStill по мере успокоения гироскопа.
+		still := 1 - rawRateDeg/ahrsStillRateDeg
+		if still < 0 {
+			still = 0
+		}
+		kp = trust * (float64(m.KpMove) + (float64(m.KpStill)-float64(m.KpMove))*still)
 
-	q1, q2, q3, q4 := m.Q0, m.Q1, m.Q2, m.Q3
-
-	beta := m.Beta
-	if beta > 0 {
-		norm := float32(math.Sqrt(float64(ax*ax + ay*ay + az*az)))
-		if norm > 1e-4 {
-			// Adaptive gain (§6): trust accelerometer only when close to 1g
-			// During fast motion, centrifugal acceleration distorts gravity -> confidence = 0 (zero kick)
-			deviation := float32(math.Abs(float64(norm - 1.0)))
-			confidence := 1.0 - deviation/0.3
-			if confidence < 0 {
-				confidence = 0
-			} else if confidence > 1 {
-				confidence = 1
-			}
-			effectiveBeta := beta * confidence
-
-			if effectiveBeta > 1e-5 {
-				recip := 1.0 / norm
-				ax *= recip
-				ay *= recip
-				az *= recip
-
-				_2q1 := 2.0 * q1
-				_2q2 := 2.0 * q2
-				_2q3 := 2.0 * q3
-				_2q4 := 2.0 * q4
-				_4q1 := 4.0 * q1
-				_4q2 := 4.0 * q2
-				_4q3 := 4.0 * q3
-				_8q2 := 8.0 * q2
-				_8q3 := 8.0 * q3
-				q1q1 := q1 * q1
-				q2q2 := q2 * q2
-				q3q3 := q3 * q3
-				q4q4 := q4 * q4
-
-				s1 := _4q1*q3q3 + _2q3*ax + _4q1*q2q2 - _2q2*ay
-				s2 := _4q2*q4q4 - _2q4*ax + 4.0*q1q1*q2 - _2q1*ay - _4q2 + _8q2*q2q2 + _8q2*q3q3 + _4q2*az
-				s3 := 4.0*q1q1*q3 + _2q1*ax + _4q3*q4q4 - _2q4*ay - _4q3 + _8q3*q2q2 + _8q3*q3q3 + _4q3*az
-				s4 := 4.0*q2q2*q4 - _2q2*ax + 4.0*q3q3*q4 - _2q3*ay
-
-				snorm := float32(math.Sqrt(float64(s1*s1 + s2*s2 + s3*s3 + s4*s4)))
-				if snorm > 1e-4 {
-					srecip := 1.0 / snorm
-					gx -= 2.0 * effectiveBeta * s1 * srecip
-					gy -= 2.0 * effectiveBeta * s2 * srecip
-					gz -= 2.0 * effectiveBeta * s3 * srecip
+		if kp > 0 {
+			ux, uy, uz = ux/accNorm, uy/accNorm, uz/accNorm
+			// Оценка «верха» в кадре тела: R(q)^T · (0,1,0).
+			vx := 2 * (x*y + w*z)
+			vy := 1 - 2*(x*x+z*z)
+			vz := 2 * (y*z - w*x)
+			// Ошибка e = u × v; её модуль = sin(угла ошибки), т.е. в покое → 0,
+			// никакого постоянного пинка шумом, как было с нормированным градиентом.
+			ex := uy*vz - uz*vy
+			ey := uz*vx - ux*vz
+			ez := ux*vy - uy*vx
+			// Ошибка > 90°: sin начинает убывать — не даём коррекции ослабнуть.
+			if ux*vx+uy*vy+uz*vz < 0 {
+				if en := math.Sqrt(ex*ex + ey*ey + ez*ez); en > 1e-9 {
+					ex, ey, ez = ex/en, ey/en, ez/en
 				}
 			}
+			gx += kp * ex
+			gy += kp * ey
+			gz += kp * ez
 		}
 	}
 
-	// Exact closed-form Lie algebra quaternion integration:
-	// dq = [cos(|w|*dt/2), (w/|w|) * sin(|w|*dt/2)]
-	// Unlike first-order Euler integration (q + 0.5*q*w*dt), this does not diverge
-	// or overshoot at high angular velocities.
-	omegaMag := float32(math.Sqrt(float64(gx*gx + gy*gy + gz*gz)))
-	if omegaMag > 1e-6 {
-		halfAngle := omegaMag * dt * 0.5
-		sinHalf := float32(math.Sin(float64(halfAngle))) / omegaMag
-		cosHalf := float32(math.Cos(float64(halfAngle)))
+	m.LastDt = dt
+	m.LastEffectiveBeta = float32(kp)
+	omega := math.Sqrt(gx*gx + gy*gy + gz*gz)
+	m.LastOmegaMagDeg = float32(omega / ahrsDeg2Rad)
 
-		dq0 := cosHalf
-		dq1 := gx * sinHalf
-		dq2 := gy * sinHalf
-		dq3 := gz * sinHalf
-
-		// Hamilton product: q_next = q * dq
-		n0 := q1*dq0 - q2*dq1 - q3*dq2 - q4*dq3
-		n1 := q1*dq1 + q2*dq0 + q3*dq3 - q4*dq2
-		n2 := q1*dq2 - q2*dq3 + q3*dq0 + q4*dq1
-		n3 := q1*dq3 + q2*dq2 - q3*dq1 + q4*dq0
-
-		qnorm := float32(math.Sqrt(float64(n0*n0 + n1*n1 + n2*n2 + n3*n3)))
-		if qnorm > 1e-4 {
-			qrecip := 1.0 / qnorm
-			m.Q0 = n0 * qrecip
-			m.Q1 = n1 * qrecip
-			m.Q2 = n2 * qrecip
-			m.Q3 = n3 * qrecip
-		}
+	// Точный шаг на группе: q ← q ⊗ exp(ω·dt/2), ω в кадре тела.
+	if omega > 1e-9 && dt > 0 {
+		half := omega * float64(dt) * 0.5
+		s := math.Sin(half) / omega
+		dw, dx, dy, dz := math.Cos(half), gx*s, gy*s, gz*s
+		w, x, y, z = w*dw-x*dx-y*dy-z*dz,
+			w*dx+x*dw+y*dz-z*dy,
+			w*dy-x*dz+y*dw+z*dx,
+			w*dz+x*dy-y*dx+z*dw
+		m.store(w, x, y, z)
 	}
-	// When stationary (omegaMag <= 1e-6), keep the exact current quaternion without decay.
-	// This ensures 1:1 attitude hold and zero offset when returning to neutral.
 
 	return m.Q0, m.Q1, m.Q2, m.Q3
 }
 
-// GetEulerAngles returns pitch, roll, yaw in degrees from calibrated quaternion.
-// Signs match canonical flight dynamics and user controls:
-//   Pitch > 0: nodding forward (nose down)
-//   Roll > 0: banking right
-//   Yaw > 0: turning clockwise (right)
-func (m *MadgwickAHRS) GetEulerAngles() (pitch, roll, yaw float64) {
+func (m *AHRS) store(w, x, y, z float64) {
+	n := math.Sqrt(w*w + x*x + y*y + z*z)
+	if n < 1e-9 {
+		return
+	}
+	if w < 0 { // один и тот же поворот — держим w ≥ 0, чтобы лог не прыгал знаком
+		n = -n
+	}
+	m.Q0, m.Q1, m.Q2, m.Q3 = float32(w/n), float32(x/n), float32(y/n), float32(z/n)
+}
+
+// quatFromUp — минимальный поворот тело→мир, переводящий «верх» тела u в мировой Y.
+func quatFromUp(ux, uy, uz float64) (w, x, y, z float64) {
+	// q = (1 + u·Y, u × Y), нормируется в store(); u × Y = (-uz, 0, ux).
+	w, x, y, z = 1+uy, -uz, 0, ux
+	if w < 1e-6 { // вверх ногами: 180° вокруг X
+		return 0, 1, 0, 0
+	}
+	n := math.Sqrt(w*w + x*x + z*z)
+	return w / n, x / n, 0, z / n
+}
+
+// GetEulerAngles returns pitch, roll, yaw in degrees from the AHRS quaternion.
+// Кадр AHRS (см. комментарий к типу): X вправо, Y вверх, Z к пользователю;
+// пад лежит экраном вверх. Знаки -- те, что ждёт LEVEL-HUD (index.html,
+// startInclinometerLoop) и остальной UI (закреплено в TestEulerSigns):
+//   Pitch > 0: наклон вперёд (дальний край вниз)   -> шарик вверх
+//   Roll  > 0: наклон вправо (правый край вниз)    -> шарик вправо
+//   Yaw   > 0: поворот по часовой (вид сверху)     -> стрелка вправо
+// Поворот +θ вокруг X поднимает дальний край, а +θ вокруг Y -- это против
+// часовой при взгляде сверху, поэтому у pitch и yaw знак минус.
+func (m *AHRS) GetEulerAngles() (pitch, roll, yaw float64) {
 	m.mu.Lock()
 	q0, q1, q2, q3 := float64(m.Q0), float64(m.Q1), float64(m.Q2), float64(m.Q3)
 	m.mu.Unlock()
@@ -189,15 +203,12 @@ func (m *MadgwickAHRS) GetEulerAngles() (pitch, roll, yaw float64) {
 
 	const rad2deg = 180.0 / math.Pi
 
-	// Pitch (rotation around X): nodding forward is +angle
 	pitchSin := 2.0 * (q0*q1 - q2*q3)
-	pitch = math.Asin(math.Max(-1.0, math.Min(1.0, pitchSin))) * rad2deg
+	pitch = -math.Asin(math.Max(-1.0, math.Min(1.0, pitchSin))) * rad2deg
 
-	// Roll (rotation around Z): banking right is +angle
 	roll = -math.Atan2(2.0*(q0*q3+q1*q2), 1.0-2.0*(sq1+sq3)) * rad2deg
 
-	// Yaw (rotation around Y): turning clockwise is +angle
-	yaw = math.Atan2(2.0*(q0*q2+q1*q3), 1.0-2.0*(sq1+sq2)) * rad2deg
+	yaw = -math.Atan2(2.0*(q0*q2+q1*q3), 1.0-2.0*(sq1+sq2)) * rad2deg
 
 	return pitch, roll, yaw
 }

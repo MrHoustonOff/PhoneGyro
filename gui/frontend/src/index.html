@@ -1983,6 +1983,19 @@
               <div class="matrix-det-status" id="confirm-det-status" data-i18n="calibration.matrix_det_ok">Определитель матрицы: det = -1 (Корректно)</div>
             </div>
 
+            <!-- Mount tilt correction (USB only, see gui/mountalign.go) -->
+            <div class="cal-matrix-card" id="cal-mount-card" style="display:none;">
+              <div class="matrix-card-title" data-i18n="calibration.mount_title">Наклон установки датчика</div>
+              <div class="cal-mount-text" id="cal-mount-text"></div>
+              <div class="cal-mount-toggle-row" id="cal-mount-toggle-row" style="display:none;">
+                <span data-i18n="calibration.mount_toggle">Компенсировать наклон</span>
+                <label class="apple-toggle">
+                  <input type="checkbox" id="cal-mount-toggle" checked>
+                  <span class="apple-toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+
             <div class="cal-confirm-btns">
               <button type="button" class="btn-apple-primary btn-lg" id="btn-confirm-yes" data-i18n="calibration.confirm_yes">Всё верно — Сохранить</button>
               <button type="button" class="btn-apple-secondary" id="btn-confirm-no" data-i18n="calibration.confirm_no">Настроить вручную</button>
@@ -8363,8 +8376,8 @@
           // Smoothly glide camera back to neutral center in live mode
           currentCamAngle += (0 - currentCamAngle) * 0.04;
 
-          // Live motion tracking: snappy 1:1 response
-          currentQuat.slerp(liveQuat, 0.35);
+          // Live motion tracking: 1:1, без сглаживания (как в "теме" и PadTest)
+          currentQuat.copy(liveQuat);
           gamepadGroup.quaternion.copy(currentQuat);
         }
 
@@ -8421,9 +8434,9 @@
 
           if (!isNaN(q0) && !isNaN(q1) && !isNaN(q2) && !isNaN(q3) &&
               (q0 !== 0 || q1 !== 0 || q2 !== 0 || q3 !== 0)) {
-            // Three.js coordinates: -q1 (pitch down/up), -q2 (yaw CW/CCW), q3 (roll right/left), q0 (w)
-            // Matches PadTest.exe orientation display convention: (-Q1, -Q2, Q3, Q0)
-            liveQuat.set(-q1, -q2, q3, q0);
+            // Кадр AHRS = кадр three.js (X вправо, Y вверх, Z на зрителя) -- кладём
+            // как есть, без ремапа, ровно как в песочнице "тема" (см. gui/ahrs.go).
+            liveQuat.set(q1, q2, q3, q0);
             liveQuat.normalize();
           }
         },
@@ -8677,7 +8690,11 @@
         }
         if (window.go?.main?.App) {
           if (this.builtMatrix) {
-            window.go.main.App.PreviewMatrix(this.builtMatrix).catch(() => {});
+            window.go.main.App.PreviewMatrix(this.builtMatrix)
+              .then(() => this._renderMountCard())
+              .catch(() => {});
+          } else {
+            this._renderMountCard();
           }
           window.go.main.App.ResetAHRS().catch(() => {});
         }
@@ -8935,11 +8952,11 @@
         btnStart.disabled = true;
       }
 
-      // 1. Prominent countdown directly on the button: 3.. 2.. 1..
+      // 1. Prominent countdown directly on the button: 2.. 1..
       if (statusDot) statusDot.className = 'status-pulse-dot countdown';
       if (statusText) statusText.textContent = I18n.t('calibration.preparing') || 'Приготовьтесь...';
 
-      for (let c = 3; c >= 1; c--) {
+      for (let c = 2; c >= 1; c--) {
         const txt = `${c}...`;
         if (btnText) btnText.textContent = txt;
         await new Promise(r => setTimeout(r, 650));
@@ -9189,15 +9206,21 @@
 
     async _enterAxisAlignStep() {
       this._stopAxisAlignPoll();
-      let status = { known: false, pairs: 0, minPairs: 6, mapping: [] };
-      if (window.go?.main?.App) {
-        try { status = await window.go.main.App.GetAxisAlignStatus(); } catch (e) {}
-      }
-      this.axisAlignKnown = !!status.known;
+      // Deliberately NOT asking the backend for status here: its scratch aligner
+      // (wizardAlign) is fed every incoming frame from the moment the wizard opens
+      // (startCaptureFlow), so by the time the user reaches this step it can already
+      // look "known" purely from Pitch/Roll's own big tilts in steps 1-2 -- before
+      // the user has actually done this step once. Always require the real capture;
+      // this.axisAlignKnown only turns true from a genuinely completed run of
+      // startAxisAlignSequence (or stays false after Retry resets it).
       const btnForward = document.getElementById('cal-capture-forward');
       if (btnForward && this.captureStep === 3) btnForward.disabled = !this.axisAlignKnown;
 
-      if (status.known) {
+      if (this.axisAlignKnown) {
+        let status = { known: false, pairs: 0, minPairs: 6, mapping: [] };
+        if (window.go?.main?.App) {
+          try { status = await window.go.main.App.GetAxisAlignStatus(); } catch (e) {}
+        }
         this._showAxisAlignResult(true, status, /*alreadyKnown=*/true);
       }
     },
@@ -9624,6 +9647,31 @@
       this.updateTelemetry(AppState.lastState);
     },
 
+    // Поправка на наклон установки датчика (только USB): бэкенд считает её в
+    // PreviewMatrix по покою + жесту «вперёд»; здесь только показать и дать выключить.
+    async _renderMountCard() {
+      const card = document.getElementById('cal-mount-card');
+      if (!card) return;
+      let m = null;
+      try { m = await window.go?.main?.App?.GetWizardMount(); } catch (e) {}
+      if (!m) {
+        card.style.display = 'none';
+        return;
+      }
+      const signed = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
+      const text = I18n.t('calibration.mount_' + m.status)
+        .replace('{tilt}', m.tiltDeg.toFixed(1))
+        .replace('{fwd}', signed(m.forwardDeg))
+        .replace('{right}', signed(m.rightDeg))
+        .replace('{check}', m.checkDeg.toFixed(1));
+      document.getElementById('cal-mount-text').textContent = text;
+      const row = document.getElementById('cal-mount-toggle-row');
+      if (row) row.style.display = (m.status === 'ok') ? '' : 'none';
+      const toggle = document.getElementById('cal-mount-toggle');
+      if (toggle) toggle.checked = !!m.enabled;
+      card.style.display = '';
+    },
+
     async save() {
       const slot = this.targetSlot;
       const name = document.getElementById('cal-name-input')?.value.trim()
@@ -9662,6 +9710,11 @@
         } else {
           this.startCaptureSequence();
         }
+      });
+
+      // Mount tilt correction toggle (confirm screen)
+      document.getElementById('cal-mount-toggle')?.addEventListener('change', (e) => {
+        window.go?.main?.App?.SetWizardMountEnabled(e.target.checked).catch(() => {});
       });
 
       // Retry step

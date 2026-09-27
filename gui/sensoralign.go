@@ -43,7 +43,16 @@ const (
 	alignStillRate   = 0.5  // rad/s (~30°/s)
 	alignStillAccTol = 0.07 // | |acc| - 1g |
 	alignStillJerk   = 0.03 // g change per frame: accelerometer settled
-	alignMaxErrDeg   = 10.0 // winner's mean prediction error
+	// Было 10°, рассчитано на тонкое квантование телефонного гироскопа. USB-прошивка
+	// теперь работает на ±2000°/s (см. firmware/reference_nano_gy521 — расширили ради
+	// защиты от клиппинга при резких движениях), что даёт ~8x более грубое
+	// квантование (~0.061°/с на шаг вместо ~0.0076°/с у телефона) -- интегрируя такой
+	// шум по нескольким секундам наклона, ошибка предсказания гравитации у ВСЕХ
+	// гипотез легко превышала старые 10°, и калибровка никогда не принимала решение
+	// (пары росли до alignMaxPairs и сбрасывались бесконечно). alignMarginRatio=2.5
+	// по-прежнему требует явного отрыва от второго места, так что запас тут не
+	// снижает надёжность выбора, только терпимость к более шумному источнику.
+	alignMaxErrDeg   = 20.0 // winner's mean prediction error
 	alignMarginRatio = 2.5  // runner-up must be this much worse
 	alignErrClampDeg = 45.0
 	alignDegToRad    = math.Pi / 180.0

@@ -3643,6 +3643,13 @@ em {
   color: var(--text);
 }
 
+/* Текст статуса занимает всё место до бейджа и переносится внутри него —
+   ширина доступного места больше не зависит от значения бейджа. */
+.cal-motion-status-bar .status-text-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .status-pulse-dot {
   width: 8px;
   height: 8px;
@@ -3670,6 +3677,14 @@ em {
 
 .speed-badge {
   margin-left: auto;
+  /* Фиксированная ширина под самое длинное значение ("2000°/с"): иначе бейдж
+     растёт/сжимается с числом цифр, текст статуса слева переносится иначе и
+     вся карточка скачет по высоте несколько раз в секунду. */
+  flex-shrink: 0;
+  min-width: 7ch;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
   font-size: 11px;
   padding: 2px 8px;
@@ -3688,6 +3703,8 @@ em {
 }
 
 .cal-timer-countdown {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   font-size: 24px;
   font-weight: 800;
   font-family: var(--font-mono);
@@ -4040,6 +4057,21 @@ em {
   font-size: 12px;
   color: var(--dot-online);
   font-weight: 700;
+}
+
+.cal-mount-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.cal-mount-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .cal-confirm-btns {

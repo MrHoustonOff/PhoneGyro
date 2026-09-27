@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestCalibration_StillnessStep0(t *testing.T) {
@@ -203,45 +202,8 @@ func TestCalibration_EndToEnd_StandardPortraitFlow(t *testing.T) {
 	}
 }
 
-func TestMadgwickAHRS_EulerAngleSigns(t *testing.T) {
-	// 1. Identity quaternion -> all angles 0
-	ahrs := NewMadgwickAHRS(0.0)
-	p0, r0, y0 := ahrs.GetEulerAngles()
-	if math.Abs(p0) > 1e-3 || math.Abs(r0) > 1e-3 || math.Abs(y0) > 1e-3 {
-		t.Fatalf("Expected identity angles to be 0, got p=%f r=%f y=%f", p0, r0, y0)
-	}
-
-	// 2. Pitch forward (nodding forward, q1 > 0): Pitch must be positive
-	halfAng := 15.0 * math.Pi / 180.0
-	ahrs.Q0 = float32(math.Cos(halfAng))
-	ahrs.Q1 = float32(math.Sin(halfAng))
-	ahrs.Q2 = 0
-	ahrs.Q3 = 0
-	p, r, y := ahrs.GetEulerAngles()
-	if p < 29.0 || p > 31.0 || math.Abs(r) > 1e-3 || math.Abs(y) > 1e-3 {
-		t.Fatalf("Expected pitch ~+30.0, got p=%f r=%f y=%f", p, r, y)
-	}
-
-	// 3. Roll right (banking right, q3 < 0): Roll must be positive
-	ahrs.Q0 = float32(math.Cos(halfAng))
-	ahrs.Q1 = 0
-	ahrs.Q2 = 0
-	ahrs.Q3 = float32(-math.Sin(halfAng))
-	p, r, y = ahrs.GetEulerAngles()
-	if r < 29.0 || r > 31.0 || math.Abs(p) > 1e-3 || math.Abs(y) > 1e-3 {
-		t.Fatalf("Expected roll ~+30.0, got p=%f r=%f y=%f", p, r, y)
-	}
-
-	// 4. Yaw clockwise (turning right, q2 > 0): Yaw must be positive
-	ahrs.Q0 = float32(math.Cos(halfAng))
-	ahrs.Q1 = 0
-	ahrs.Q2 = float32(math.Sin(halfAng))
-	ahrs.Q3 = 0
-	p, r, y = ahrs.GetEulerAngles()
-	if y < 29.0 || y > 31.0 || math.Abs(p) > 1e-3 || math.Abs(r) > 1e-3 {
-		t.Fatalf("Expected yaw ~+30.0, got p=%f r=%f y=%f", p, r, y)
-	}
-}
+// Знаки Эйлеровых углов (вперёд / вправо / по часовой = +) проверяет
+// TestEulerSigns в ahrs_euler_test.go -- в кадре кватерниона AHRS из "темы".
 
 func TestLiveDebug_AssetsAndBroadcast(t *testing.T) {
 	// Verify embedded assets contain livedebug.html and required static assets
@@ -365,10 +327,10 @@ func TestPadTest_Convergence(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ahrs := NewMadgwickAHRS(0.1) // Exact PadTest Beta
+		ahrs := NewAHRS()
 		// Run 300 steps (5 seconds at 60 Hz) of stationary holding
 		for i := 0; i < 300; i++ {
-			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, time.Now(), 0)
+			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, 1.0/60.0)
 		}
 		p, r, y := ahrs.GetEulerAngles()
 		t.Logf("[%s] Q: (%+.3f, %+.3f, %+.3f, %+.3f) -> Pitch: %+.1f°, Roll: %+.1f°, Yaw: %+.1f°",
