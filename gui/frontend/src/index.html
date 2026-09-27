@@ -1818,6 +1818,26 @@
     </div>
   </div>
 
+  <!-- Delete profile confirmation (same sheet style as the close dialog) -->
+  <div class="apple-dialog-overlay" id="profile-delete-modal" style="display: none;" aria-modal="true" role="dialog">
+    <div class="apple-close-card">
+      <div class="apple-close-icon-wrap apple-close-icon-danger">
+        <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 8h18"></path>
+          <path d="M11 8V5.5A1.5 1.5 0 0 1 12.5 4h3A1.5 1.5 0 0 1 17 5.5V8"></path>
+          <path d="M7.5 8l1.1 14.2A2 2 0 0 0 10.6 24h6.8a2 2 0 0 0 2-1.8L20.5 8"></path>
+          <path d="M12 12.5v7M16 12.5v7"></path>
+        </svg>
+      </div>
+      <div class="apple-close-title" id="profile-delete-title">Удалить профиль?</div>
+      <div class="apple-close-message" data-i18n="calibration.delete_profile_desc">Калибровка этого профиля будет удалена безвозвратно, а слот освободится.</div>
+      <div class="apple-close-actions">
+        <button type="button" class="apple-close-btn apple-close-btn-cancel" id="profile-delete-btn-cancel" data-i18n="calibration.delete_profile_cancel">Отмена</button>
+        <button type="button" class="apple-close-btn apple-close-btn-quit" id="profile-delete-btn-confirm" data-i18n="calibration.delete_profile_confirm">Удалить</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- Calibration Wizard Modal Overlay                                       -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -2936,6 +2956,76 @@
   };
 
   AppleCloseDialog.init();
+
+  // ── Delete Profile Confirmation ────────────────────────────────────────────
+  const ProfileDeleteDialog = {
+    isOpen: false,
+    show(slot, name) {
+      if (this.isOpen) return;
+      const overlay = document.getElementById('profile-delete-modal');
+      const title = document.getElementById('profile-delete-title');
+      const confirmBtn = document.getElementById('profile-delete-btn-confirm');
+      const cancelBtn = document.getElementById('profile-delete-btn-cancel');
+      if (!overlay) return;
+      this.isOpen = true;
+
+      if (window.I18n && typeof window.I18n.applyDOM === 'function') {
+        window.I18n.applyDOM(overlay);
+      }
+      if (title) {
+        title.textContent = (I18n.t('calibration.delete_profile_title') || 'Удалить профиль «{name}»?').replace('{name}', name);
+      }
+
+      overlay.style.display = 'flex';
+      overlay.offsetHeight; // reflow for the scale-in transition
+      overlay.classList.add('visible');
+
+      const cleanup = () => {
+        this.isOpen = false;
+        overlay.classList.remove('visible');
+        setTimeout(() => {
+          overlay.style.display = 'none';
+        }, 180);
+        window.removeEventListener('keydown', onKey);
+        confirmBtn?.removeEventListener('click', onConfirm);
+        cancelBtn?.removeEventListener('click', onCancel);
+        overlay.removeEventListener('click', onOverlay);
+      };
+
+      const onConfirm = async () => {
+        cleanup();
+        try {
+          const res = await window.go?.main?.App?.DeleteProfile(slot);
+          if (res !== 'ok') {
+            console.error('Failed to delete profile:', res);
+            return;
+          }
+          showToast((I18n.t('calibration.profile_deleted') || 'Профиль «{name}» удалён').replace('{name}', name));
+        } catch (err) {
+          console.error('Failed to delete profile:', err);
+        }
+      };
+      const onCancel = () => cleanup();
+      const onOverlay = (e) => {
+        if (e.target === overlay) cleanup();
+      };
+      // Escape cancels; Enter is left to the focused button, which starts on Cancel,
+      // so a stray Enter never deletes anything.
+      const onKey = (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          cleanup();
+        }
+      };
+
+      confirmBtn?.addEventListener('click', onConfirm);
+      cancelBtn?.addEventListener('click', onCancel);
+      overlay.addEventListener('click', onOverlay);
+      window.addEventListener('keydown', onKey);
+
+      cancelBtn?.focus();
+    }
+  };
 
   // ── Apple HIG Pop-up Button & Dropdown Select Manager ──────────────────────
   const AppleSelect = {
@@ -7680,12 +7770,24 @@
                 <span class="profile-item-sub">${formatSlotName(i)} • ${devText}</span>
               </div>
             </div>
-            ${i === activeIdx ? '<span class="profile-item-check">✓</span>' : ''}
+            <div class="profile-item-right">
+              ${i === activeIdx ? '<span class="profile-item-check">✓</span>' : ''}
+              <span class="profile-item-delete" role="button" title="${I18n.t('calibration.delete_profile_tip') || 'Удалить профиль'}">
+                <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                  <path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path>
+                </svg>
+              </span>
+            </div>
           `;
 
           item.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (e.target.closest('.profile-item-delete')) {
+              this.closeDropdown();
+              ProfileDeleteDialog.show(i, p.name);
+              return;
+            }
             this.selectSlot(i);
           });
           menu.appendChild(item);

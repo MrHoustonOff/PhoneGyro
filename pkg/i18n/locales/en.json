@@ -165,7 +165,13 @@
     "align_status_refining": "Enough data — refining. Make a couple more moves in other directions",
     "align_counter_refining": "refining…",
     "mount_profile_toggle": "Sensor mount-tilt compensation ({tilt}°)",
-    "mount_profile_tip": "Correction for the sensor board being mounted tilted in the case, measured at calibration and confirmed by the gyroscope. Turn it off to output the sensor axes as they are."
+    "mount_profile_tip": "Correction for the sensor board being mounted tilted in the case, measured at calibration and confirmed by the gyroscope. Turn it off to output the sensor axes as they are.",
+    "delete_profile_title": "Delete profile “{name}”?",
+    "delete_profile_desc": "This profile’s calibration will be removed permanently and its slot freed.",
+    "delete_profile_confirm": "Delete",
+    "delete_profile_cancel": "Cancel",
+    "delete_profile_tip": "Delete profile",
+    "profile_deleted": "Profile “{name}” deleted"
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",

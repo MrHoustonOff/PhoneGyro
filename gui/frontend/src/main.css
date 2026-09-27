@@ -2468,6 +2468,21 @@ em {
   color: #007AFF;
 }
 
+/* Destructive variant (delete profile) */
+.apple-close-icon-wrap.apple-close-icon-danger {
+  background: linear-gradient(145deg, rgba(255, 69, 58, 0.22) 0%, rgba(255, 69, 58, 0.08) 100%);
+  border: 1px solid rgba(255, 69, 58, 0.38);
+  box-shadow: 0 6px 18px rgba(255, 69, 58, 0.18), 0 1px 0 inset rgba(255, 255, 255, 0.2);
+  color: #FF453A;
+}
+
+[data-theme="light"] .apple-close-icon-wrap.apple-close-icon-danger {
+  background: linear-gradient(145deg, rgba(255, 59, 48, 0.14) 0%, rgba(255, 59, 48, 0.05) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  box-shadow: 0 6px 16px rgba(255, 59, 48, 0.12);
+  color: #D70015;
+}
+
 /* Dialog Title */
 .apple-close-title {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-sans);
@@ -3067,6 +3082,47 @@ em {
   color: #007AFF;
   font-size: 14px;
   font-weight: 700;
+}
+
+.profile-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Delete cross: appears on hover of its row, turns red under the pointer. */
+.profile-dropdown-item .profile-item-delete {
+  pointer-events: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.profile-dropdown-item:hover .profile-item-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.profile-dropdown-item .profile-item-delete:hover {
+  background: rgba(255, 69, 58, 0.16);
+  color: #FF453A;
+}
+
+.profile-dropdown-item .profile-item-delete:active {
+  transform: scale(0.9);
+}
+
+[data-theme="light"] .profile-dropdown-item .profile-item-delete:hover {
+  background: rgba(255, 59, 48, 0.12);
+  color: #D70015;
 }
 
 /* Outdated profile: red, not amber — this is "unconfirmed data" territory, a step up
