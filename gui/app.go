@@ -266,6 +266,7 @@ type motionBank struct {
 	// anchorWhyLogged: причина, по которой anchor не может работать, уже записана
 	// в лог для этого подключения (anchorNoteNoFrame / anchorNoteNoRef).
 	anchorWhyLogged uint8
+	anchorNoRefRun  int // consecutive frames without the phone's orientation
 	// resetAnchor просит обработчик кадров сбросить anchor (новое WebSocket-
 	// подключение телефона: у новой страницы свой ноль ориентации). Флаг, а не
 	// прямой вызов: anchor живёт только в горутине обработчика кадров.
@@ -1560,13 +1561,20 @@ func (a *App) startup(ctx context.Context) {
 		if a.GetInputMode() != "usb" {
 			// Diagnostics only: say once per connection why the anchor cannot run.
 			refNorm := math.Sqrt(float64(frame.Qw*frame.Qw + frame.Qx*frame.Qx + frame.Qy*frame.Qy + frame.Qz*frame.Qz))
-			switch {
-			case !sfKnown && bank.anchorWhyLogged&1 == 0:
+			if !sfKnown && bank.anchorWhyLogged&1 == 0 {
 				bank.anchorWhyLogged |= 1
 				a.logEvent("INFO", "anchor: inactive, gyro/accelerometer axis relation not known yet")
-			case refNorm < anchorMinQuatNorm && bank.anchorWhyLogged&2 == 0:
-				bank.anchorWhyLogged |= 2
-				a.logEvent("INFO", "anchor: inactive, the phone sends no orientation (deviceorientation)")
+			}
+			// The orientation may simply arrive a few frames after the first motion
+			// sample: only report it if it stays missing for a second.
+			if refNorm < anchorMinQuatNorm {
+				bank.anchorNoRefRun++
+				if bank.anchorNoRefRun == 60 && bank.anchorWhyLogged&2 == 0 {
+					bank.anchorWhyLogged |= 2
+					a.logEvent("INFO", "anchor: inactive, the phone sends no orientation (deviceorientation)")
+				}
+			} else {
+				bank.anchorNoRefRun = 0
 			}
 		}
 		if sfKnown {

@@ -24,9 +24,10 @@ type quat [4]float64 // w, x, y, z
 const (
 	anchorGain         = 2.0 // 1/s: fraction of the error removed per second
 	anchorMaxCorrRad   = 20.0 * alignDegToRad
-	anchorMinStepRad   = 0.5 * alignDegToRad // per-frame rotation needed to score a candidate
-	anchorScoreFrames  = 120
-	anchorMaxRelErr    = 0.25 // mean relative step mismatch of the winner
+	anchorMinStepRad   = 0.5 * alignDegToRad // mean per-frame rotation a scoring window needs
+	anchorWindowFrames = 15                  // ~250 ms scoring windows (see scoreWindow)
+	anchorScoreWindows = 8                   // decide after this many informative windows (~2 s of motion)
+	anchorMaxRelErr    = 0.25                // mean relative window mismatch of the winner
 	anchorMarginRatio  = 4.0
 	anchorCandidates   = 4 // {q, q*} × {+, -} rotation sense
 	anchorMinQuatNorm  = 0.5
@@ -34,8 +35,12 @@ const (
 )
 
 type attitudeAnchor struct {
-	prev     quat
-	havePrev bool
+	// Engage test window (scoreWindow): gyro rotation composed since the window
+	// opened, and the reference when it opened.
+	winG      quat
+	winRef0   quat
+	winFrames int
+	winOpen   bool
 
 	score [anchorCandidates]float64
 	n     int
@@ -55,7 +60,7 @@ func newAttitudeAnchor() *attitudeAnchor {
 // Reset forgets the client model (keeps the learned convention). Call it when the
 // phone reconnects: its attitude reference restarts from an arbitrary heading.
 func (a *attitudeAnchor) Reset() {
-	a.havePrev, a.haveEst = false, false
+	a.winOpen, a.haveEst = false, false
 }
 
 // Correction returns the correction rate (device axes, rad/s) to add to the gyro for
@@ -64,15 +69,12 @@ func (a *attitudeAnchor) Reset() {
 func (a *attitudeAnchor) Correction(gyroDev [3]float64, ref quat, dt float64) [3]float64 {
 	var zero [3]float64
 	if qnorm(ref) < anchorMinQuatNorm {
-		a.havePrev, a.haveEst = false, false
+		a.winOpen, a.haveEst = false, false
 		return zero
 	}
 	ref = qnormalize(ref)
 
-	if a.havePrev {
-		a.scoreStep(gyroDev, ref, dt)
-	}
-	a.prev, a.havePrev = ref, true
+	a.scoreWindow([3]float64{gyroDev[0] * dt, gyroDev[1] * dt, gyroDev[2] * dt}, ref)
 
 	if !a.haveEst {
 		for c := range a.est {
@@ -122,14 +124,38 @@ func view(c int, q quat) (quat, float64) {
 	return q, sense
 }
 
-func (a *attitudeAnchor) scoreStep(gyroDev [3]float64, ref quat, dt float64) {
-	g := [3]float64{gyroDev[0] * dt, gyroDev[1] * dt, gyroDev[2] * dt}
-	gn := norm3(g)
-	if gn < anchorMinStepRad {
-		return
+// scoreWindow decides which reference convention (if any) matches the gyro.
+//
+// Measured on real iPhone recordings (2026-09-27): the deviceorientation
+// quaternion arrives about one frame behind the gyro (the step error is smallest
+// with the reference shifted by +1..2 frames), and single-frame steps on fast
+// hand motion are too noisy to judge: with the right convention the mean error
+// was 0.33-0.42 per frame -- above anchorMaxRelErr, so the anchor never engaged --
+// but 0.12 over 250 ms windows. So candidates are scored on windows: the gyro
+// rotation composed over anchorWindowFrames steps against the reference's
+// rotation over the same span taken one frame later, which is the same
+// one-frame alignment Correction uses (client model before this frame's output
+// vs this frame's reference).
+func (a *attitudeAnchor) scoreWindow(g [3]float64, ref quat) {
+	if a.winOpen && a.winFrames >= anchorWindowFrames {
+		a.closeWindow(ref) // this call's reference ends the window the previous steps filled
+	}
+	if !a.winOpen {
+		a.winG, a.winRef0, a.winFrames, a.winOpen = quat{1, 0, 0, 0}, ref, 0, true
+	}
+	a.winG = qnormalize(qmul(a.winG, qexp(g)))
+	a.winFrames++
+}
+
+func (a *attitudeAnchor) closeWindow(end quat) {
+	a.winOpen = false
+	gw := qlog(a.winG)
+	gn := norm3(gw)
+	if gn < anchorMinStepRad*anchorWindowFrames {
+		return // too little motion to tell conventions apart
 	}
 	for c := 0; c < anchorCandidates; c++ {
-		p, q := a.prev, ref
+		p, q := a.winRef0, end
 		if c/2 == 1 {
 			p, q = qconj(p), qconj(q)
 		}
@@ -137,11 +163,11 @@ func (a *attitudeAnchor) scoreStep(gyroDev [3]float64, ref quat, dt float64) {
 		if c%2 == 1 {
 			d = [3]float64{-d[0], -d[1], -d[2]}
 		}
-		r := [3]float64{d[0] - g[0], d[1] - g[1], d[2] - g[2]}
+		r := [3]float64{d[0] - gw[0], d[1] - gw[1], d[2] - gw[2]}
 		a.score[c] += math.Min(norm3(r)/gn, 2)
 	}
 	a.n++
-	if a.n < anchorScoreFrames {
+	if a.n < anchorScoreWindows {
 		return
 	}
 	best, second := 0, -1
@@ -155,20 +181,20 @@ func (a *attitudeAnchor) scoreStep(gyroDev [3]float64, ref quat, dt float64) {
 	mean := a.score[best] / float64(a.n)
 	if mean < anchorMaxRelErr && a.score[second] > anchorMarginRatio*a.score[best] {
 		if a.mode != best {
-			log.Printf("[anchor] attitude reference engaged: mode %d (step err %.2f)", best, mean)
+			log.Printf("[anchor] attitude reference engaged: mode %d (window err %.2f)", best, mean)
 			a.mode = best
 		}
 	} else if a.mode >= 0 && mean >= anchorMaxRelErr {
-		log.Printf("[anchor] attitude reference disagrees with gyro (err %.2f): disengaged", mean)
+		log.Printf("[anchor] attitude reference disagrees with gyro (window err %.2f): disengaged", mean)
 		a.mode = -1
 	}
 	if a.mode < 0 {
-		// Why it does not engage: relative step error of each candidate convention
+		// Why it does not engage: relative window error of each candidate convention
 		// ({q, q*} x rotation sense). Engaging needs best < anchorMaxRelErr and the
 		// runner-up anchorMarginRatio times worse. Logged every ~10 s of motion.
 		if a.evals%5 == 0 {
 			n := float64(a.n)
-			log.Printf("[anchor] not engaged: step err per convention %.2f %.2f %.2f %.2f (best %d, need < %.2f and runner-up x%.0f)",
+			log.Printf("[anchor] not engaged: window err per convention %.2f %.2f %.2f %.2f (best %d, need < %.2f and runner-up x%.0f)",
 				a.score[0]/n, a.score[1]/n, a.score[2]/n, a.score[3]/n, best, anchorMaxRelErr, anchorMarginRatio)
 		}
 		a.evals++
