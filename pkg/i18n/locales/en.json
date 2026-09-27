@@ -498,7 +498,10 @@
     "save_notice": "Saving will restart web services and reload the page",
     "saved_toast": "Settings successfully saved!",
     "err_port_range": "Ports must be between 1024 and 65535",
-    "err_ports_duplicate": "DSU, HTTP and HTTPS ports must not be identical"
+    "err_ports_duplicate": "DSU, HTTP and HTTPS ports must not be identical",
+    "sound_link_loss": "Data Loss",
+    "sound_link_loss_desc": "The link is noticeably struggling",
+    "sound_link_loss_tip": "A quiet cue when the link to the controller is noticeably struggling: for USB, more than 5% of frames are lost; for the phone, a link stall longer than 0.85 s or more than 60% of samples arriving merged. At most once every 15 s, never in the first 3 s after connecting or while paused. A full disconnect has its own sound. 0 turns it off."
   },
   "welcome": {
     "title": "Welcome to PhoneGyro!",

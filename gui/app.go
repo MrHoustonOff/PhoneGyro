@@ -774,6 +774,7 @@ func defaultSoundVolumes() map[string]int {
 		"recenter":   1,
 		"goal":       1,
 		"defeat":     1,
+		"loss":       1, // тихий сигнал сильной потери данных (lossalert.go)
 	}
 }
 
@@ -2142,6 +2143,34 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}()
 
+	// Тихий звук при сильной потере данных (lossalert.go): решение по настоящим
+	// счётчикам канала активного источника, звук играет фронтенд ("link:loss").
+	go func() {
+		ticker := time.NewTicker(250 * time.Millisecond)
+		defer ticker.Stop()
+		var alarm lossAlarm
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				bank := a.activeBank()
+				kind, total, merged, lost := bank.loss.snapshot()
+				active := bank.hasClient.Load() && !a.isPaused.Load()
+				var connectedFor time.Duration
+				if at := bank.connectedAt; !at.IsZero() {
+					connectedFor = now.Sub(at)
+				}
+				if reason, ok := alarm.check(now, active, connectedFor, kind, total, merged, lost); ok {
+					a.logEvent("WARN", "link: heavy data loss (%s)", reason)
+					if a.ctx != nil {
+						wailsRuntime.EventsEmit(a.ctx, "link:loss", reason)
+					}
+				}
+			}
+		}
+	}()
+
 	// Process resource monitor (CPU / RAM)
 	a.stopResmon = resmon.RunLoop(1500*time.Millisecond, func(s resmon.Stats) {
 		ramPercent := 0.0
@@ -3254,16 +3283,21 @@ func (a *App) PlaySystemSound(soundType string) {
 	case "defeat":
 		soundName = "SystemHand"
 		fallbackPath = `C:\Windows\Media\Windows Hardware Fail.wav`
+	case "loss":
+		// Самый мягкий системный звук: предупреждение, а не тревога.
+		fallbackPath = `C:\Windows\Media\Windows Background.wav`
 	default:
 		return
 	}
 
-	ptr, err := syscall.UTF16PtrFromString(soundName)
-	if err == nil {
-		// SND_ASYNC (0x0001) | SND_ALIAS (0x00010000) | SND_NODEFAULT (0x0002)
-		ret, _, _ := proc.Call(uintptr(unsafe.Pointer(ptr)), 0, uintptr(0x0001|0x00010000|0x0002))
-		if ret != 0 {
-			return
+	if soundName != "" { // "loss" has no system alias, only the file below
+		ptr, err := syscall.UTF16PtrFromString(soundName)
+		if err == nil {
+			// SND_ASYNC (0x0001) | SND_ALIAS (0x00010000) | SND_NODEFAULT (0x0002)
+			ret, _, _ := proc.Call(uintptr(unsafe.Pointer(ptr)), 0, uintptr(0x0001|0x00010000|0x0002))
+			if ret != 0 {
+				return
+			}
 		}
 	}
 

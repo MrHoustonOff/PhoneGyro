@@ -1208,6 +1208,32 @@
                         </div>
                       </div>
 
+                      <!-- Item 2b: Heavy data loss (gui/lossalert.go) -->
+                      <div class="sound-detail-row" data-setting-key="soundVol_loss">
+                        <div class="sound-detail-info">
+                          <div class="sound-detail-label-row">
+                            <span class="sound-detail-name" data-i18n="settings_modal.sound_link_loss">Потеря данных</span>
+                            <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.sound_link_loss_tip" aria-label="Info">
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                              </svg>
+                            </button>
+                          </div>
+                          <span class="sound-detail-desc" data-i18n="settings_modal.sound_link_loss_desc">Связь заметно проседает</span>
+                        </div>
+                        <div class="sound-detail-control">
+                          <input type="range" id="setting-sound-vol-loss" class="setting-slider sound-individual-slider" data-sound="loss" min="0" max="3" step="1" value="1">
+                          <span id="setting-sound-badge-loss" class="setting-value-badge sound-detail-badge">1x</span>
+                          <button type="button" class="btn-sound-detail-play" data-sound="loss" aria-label="Play Sound">
+                            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                              <polygon points="6 4 19 12 6 20 6 4"></polygon>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
                       <!-- Item 3: DSU Emulator Connected -->
                       <div class="sound-detail-row" data-setting-key="soundVol_dsu">
                         <div class="sound-detail-info">
@@ -3456,9 +3482,10 @@
       dsu: 1,
       recenter: 1,
       goal: 1,
-      defeat: 1
+      defeat: 1,
+      loss: 1
     },
-    _lastPlayTs: { connect: 0, disconnect: 0, dsu: 0, recenter: 0, goal: 0, defeat: 0 },
+    _lastPlayTs: { connect: 0, disconnect: 0, dsu: 0, recenter: 0, goal: 0, defeat: 0, loss: 0 },
     _curEffectiveVol: 1,
 
     getAudioContext() {
@@ -3533,7 +3560,7 @@
       if (!force && indVol <= 0) return;
 
       const now = Date.now();
-      const minInterval = (type === 'defeat') ? 1200 : (type === 'goal') ? 700 : (type === 'recenter') ? 140 : 600;
+      const minInterval = (type === 'loss') ? 5000 : (type === 'defeat') ? 1200 : (type === 'goal') ? 700 : (type === 'recenter') ? 140 : 600;
       if (!force && this._lastPlayTs[type] && now - this._lastPlayTs[type] < minInterval) {
         return;
       }
@@ -3543,6 +3570,16 @@
 
       if (type === 'goal') {
         this.playCuteGoal();
+        return;
+      }
+      if (type === 'loss') {
+        if (mode === 'windows') {
+          if (window.go?.main?.App?.PlaySystemSound) {
+            try { window.go.main.App.PlaySystemSound('loss'); } catch (e) {}
+          }
+        } else {
+          this.playCuteLoss();
+        }
         return;
       }
       if (type === 'defeat') {
@@ -3734,6 +3771,16 @@
       for (const n of notes) {
         this.playTone(n.f, now + n.t, n.d, n.g, 'sine');
       }
+    },
+
+    playCuteLoss() {
+      const ctx = this.getAudioContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      // Quiet two-note sigh (D5 -> B4), well below the disconnect cue: tells the
+      // player the link is struggling without startling them mid-game.
+      this.playTone(587.33, now + 0.00, 0.30, 0.06, 'sine');
+      this.playTone(493.88, now + 0.16, 0.42, 0.05, 'sine');
     },
 
     playCuteDSUConnect() {
@@ -6163,7 +6210,8 @@
         dsu: 1,
         recenter: 1,
         goal: 1,
-        defeat: 1
+        defeat: 1,
+        loss: 1
       },
       hotkeyRecenterEnabled: true,
       hotkeyRecenterKey: 'Ctrl+Shift+R',
@@ -6958,7 +7006,7 @@
       }
 
       // Individual sound volumes
-      const soundKeys = ['connect', 'disconnect', 'dsu', 'recenter', 'goal', 'defeat'];
+      const soundKeys = ['connect', 'disconnect', 'loss', 'dsu', 'recenter', 'goal', 'defeat'];
       const soundVols = s.soundVolumes || SoundManager.soundVolumes || {};
       soundKeys.forEach(key => {
         const slider = document.getElementById(`setting-sound-vol-${key}`);
@@ -7095,7 +7143,7 @@
 
       // 14. Individual Sound Volumes & Sound Details Toggle
       let anySoundModified = false;
-      ['connect', 'disconnect', 'dsu', 'recenter', 'goal', 'defeat'].forEach(k => {
+      ['connect', 'disconnect', 'loss', 'dsu', 'recenter', 'goal', 'defeat'].forEach(k => {
         const slider = document.getElementById(`setting-sound-vol-${k}`);
         const v = parseInt(slider?.value || '1', 10);
         const mod = v !== 1;
@@ -7167,7 +7215,7 @@
       const dsuMac = (document.getElementById('setting-dsu-mac')?.value || '00:13:37:00:00:01').trim();
 
       const soundVolumes = {};
-      ['connect', 'disconnect', 'dsu', 'recenter', 'goal', 'defeat'].forEach(key => {
+      ['connect', 'disconnect', 'loss', 'dsu', 'recenter', 'goal', 'defeat'].forEach(key => {
         const slider = document.getElementById(`setting-sound-vol-${key}`);
         const val = parseInt(slider?.value || '1', 10);
         soundVolumes[key] = isNaN(val) ? 1 : val;
@@ -7303,7 +7351,7 @@
       }
 
       // Reset individual sound sliders
-      ['connect', 'disconnect', 'dsu', 'recenter', 'goal', 'defeat'].forEach(key => {
+      ['connect', 'disconnect', 'loss', 'dsu', 'recenter', 'goal', 'defeat'].forEach(key => {
         const slider = document.getElementById(`setting-sound-vol-${key}`);
         const badge = document.getElementById(`setting-sound-badge-${key}`);
         if (slider) slider.value = 1;
@@ -7996,6 +8044,10 @@
 
       // Listen to backend global Windows hotkey trigger
       if (window.runtime?.EventsOn) {
+        // Heavy data loss on the active link (gui/lossalert.go decides when).
+        window.runtime.EventsOn('link:loss', () => {
+          if (typeof SoundManager !== 'undefined') SoundManager.play('loss');
+        });
         window.runtime.EventsOn('recenter:triggered', () => {
           // Reset 3D scenes if active
           if (typeof Scene3D !== 'undefined' && Scene3D.activeScenes) {
