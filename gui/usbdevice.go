@@ -78,6 +78,9 @@ func usbCRC8(data []byte) byte {
 // never requires tearing down the connection.
 type usbFrameDecoder struct {
 	buf []byte
+
+	garbage    uint64 // bytes skipped to find MAGIC again
+	crcRejects uint64 // MAGIC found but the CRC failed (corrupt frame or a coincidence)
 }
 
 func (d *usbFrameDecoder) push(data []byte) []usbFrame {
@@ -91,6 +94,10 @@ func (d *usbFrameDecoder) push(data []byte) []usbFrame {
 		d.buf = d.buf[consumed:]
 		if ok {
 			out = append(out, f)
+		} else if consumed == 1 {
+			d.garbage++
+		} else {
+			d.crcRejects++
 		}
 	}
 	return out
@@ -146,6 +153,17 @@ type usbConnState struct {
 	afterMeta     bool // the previous frame was metadata: a data SEQ of 0 now means a reboot
 	lastSeq       uint8
 	droppedFrames uint64
+	dataFrames    uint64
+
+	// What the metadata declared beyond the ranges, and how often it comes
+	// (usbproto.go shows it in Live Debug).
+	protoVersion uint32
+	declaredHz   int16
+	caps         uint8
+	metaCount    uint64
+	lastMetaAt   time.Time
+	metaInterval time.Duration
+	resetPresses uint64
 
 	prevResetHeld    bool
 	lastReportedName string
@@ -184,6 +202,15 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		st.gyroRangeDps, st.accelRangeG = gyro, accel
 		st.haveMeta = true
 		st.afterMeta = true
+		now := time.Now()
+		if st.metaCount > 0 {
+			st.metaInterval = now.Sub(st.lastMetaAt)
+		}
+		st.lastMetaAt = now
+		st.metaCount++
+		st.protoVersion = f.TimestampUs
+		st.declaredHz = f.Accel[2]
+		st.caps = f.Buttons
 	case usbTypeName:
 		// Optional (protocol Level 3): a device may self-identify. Mirrors
 		// the phone's OnClientDevice -- same bank field, same "show it in
@@ -205,6 +232,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		// consume SEQ, so there the next frame just continues the count.
 		rebooted := st.afterMeta && f.Seq == 0
 		st.afterMeta = false
+		st.dataFrames++
 		if st.haveSeq && !rebooted {
 			gap = int(f.Seq) - int(st.lastSeq)
 			if gap < 0 {
@@ -224,6 +252,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		// doesn't spam resets 200 times a second.
 		held := f.Buttons&0x01 != 0
 		if held && !st.prevResetHeld {
+			st.resetPresses++
 			app.TriggerRecenterFromHotkey()
 		}
 		st.prevResetHeld = held
@@ -460,7 +489,21 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usb
 	_ = port.SetReadTimeout(usbReadTimeout)
 	buf := make([]byte, 256)
 
+	// Protocol status for Live Debug, once a second (usbproto.go).
+	lastReport, lastFrames := time.Now(), state.dataFrames
+	report := func() {
+		now := time.Now()
+		if now.Sub(lastReport) < usbProtoEvery {
+			return
+		}
+		rate := float64(state.dataFrames-lastFrames) / now.Sub(lastReport).Seconds()
+		lastReport, lastFrames = now, state.dataFrames
+		m.app.broadcastLiveDebugJSON(state.snapshot(now, name, &dec, rate))
+	}
+	defer m.app.broadcastLiveDebugJSON(usbProtoStatus{Type: "usb_proto"})
+
 	for {
+		report()
 		if !m.isConnected() {
 			break
 		}

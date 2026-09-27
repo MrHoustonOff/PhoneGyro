@@ -886,6 +886,53 @@
       color: #9C88FF;
     }
 
+    .proto-badge {
+      color: #30B0C7;
+    }
+
+    /* USB protocol status (gui/usbproto.go): one row per protocol level */
+    .proto-card {
+      gap: 0;
+      padding: 4px 8px;
+    }
+
+    .proto-row {
+      display: grid;
+      grid-template-columns: 22px minmax(0, auto) minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .proto-row:last-child {
+      border-bottom: none;
+    }
+
+    .proto-level {
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .proto-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .proto-val {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: var(--text-secondary);
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     /* Stats Grid */
     .stats-grid-2col {
       display: grid;
@@ -1552,6 +1599,58 @@
           </div>
         </section>
 
+        <!-- USB PROTOCOL SECTION: shown only while a USB device streams (gui/usbproto.go) -->
+        <div class="stats-stream-section" id="usb-proto-section" style="display: none;">
+          <div class="stream-section-badge proto-badge">
+            <svg class="stream-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v14"></path>
+              <path d="M9 5l3-3 3 3"></path>
+              <path d="M12 12l-5-3v-2"></path>
+              <path d="M12 10l5-3v-1.5"></path>
+              <circle cx="12" cy="19" r="3"></circle>
+            </svg>
+            <span data-i18n="live_debug.proto_header">Протокол USB</span>
+          </div>
+          <div class="stat-card full-width proto-card" id="card-usb-proto" data-i18n-tip="live_debug.proto_tip">
+            <div class="proto-row">
+              <span class="proto-level">L1</span>
+              <span class="proto-name" data-i18n="live_debug.proto_l1">Транспорт</span>
+              <span class="proto-val" id="proto-l1-val">--</span>
+              <span class="stat-chip muted" id="proto-l1-chip">--</span>
+            </div>
+            <div class="proto-row">
+              <span class="proto-level">L2</span>
+              <span class="proto-name" data-i18n="live_debug.proto_l2">Кадры</span>
+              <span class="proto-val" id="proto-l2-val">--</span>
+              <span class="stat-chip muted" id="proto-l2-chip">--</span>
+            </div>
+            <div class="proto-row">
+              <span class="proto-level">L3</span>
+              <span class="proto-name" data-i18n="live_debug.proto_l3">Метаданные</span>
+              <span class="proto-val" id="proto-l3-val">--</span>
+              <span class="stat-chip muted" id="proto-l3-chip">--</span>
+            </div>
+            <div class="proto-row">
+              <span class="proto-level">L3</span>
+              <span class="proto-name" data-i18n="live_debug.proto_name">Имя</span>
+              <span class="proto-val" id="proto-name-val">--</span>
+              <span class="stat-chip muted" id="proto-name-chip">--</span>
+            </div>
+            <div class="proto-row">
+              <span class="proto-level">L4</span>
+              <span class="proto-name" data-i18n="live_debug.proto_l4">Автопоиск</span>
+              <span class="proto-val" id="proto-l4-val">--</span>
+              <span class="stat-chip muted" id="proto-l4-chip">--</span>
+            </div>
+            <div class="proto-row">
+              <span class="proto-level">L5</span>
+              <span class="proto-name" data-i18n="live_debug.proto_l5">Кнопка сброса</span>
+              <span class="proto-val" id="proto-l5-val">--</span>
+              <span class="stat-chip muted" id="proto-l5-chip">--</span>
+            </div>
+          </div>
+        </div>
+
         <!-- INPUT SECTION: Телефон -->
         <div class="stats-stream-section">
           <div class="stream-section-badge input-badge">
@@ -1559,7 +1658,7 @@
               <rect x="5" y="2" width="14" height="20" rx="3"></rect>
               <line x1="12" y1="18" x2="12.01" y2="18"></line>
             </svg>
-            <span data-i18n="live_debug.stats_input_header">Input (Телефон)</span>
+            <span id="stats-input-header" data-i18n="live_debug.stats_input_header">Input (Телефон)</span>
           </div>
 
           <div class="stats-grid-2col">
@@ -1911,6 +2010,35 @@
           "live_debug.stats_recording": "Запись...",
           "live_debug.stats_record_limit": "Лимит: 1 мин",
           "live_debug.stats_input_header": "Input (Телефон)",
+          "live_debug.stats_input_header_usb": "Input (USB)",
+          "live_debug.proto_header": "Протокол USB",
+          "live_debug.proto_tip": "Что USB-устройство реально делает на каждом уровне протокола PhoneGyro, по данным с провода. L1 — порт и скорость. L2 — кадры: частота, отбракованные по CRC, пропущенный мусор, потерянные по номерам. L3 — метаданные: версия протокола и заявленные диапазоны; с v1.1 устройство повторяет их раз в секунду, иначе хост, подключившийся к уже идущему потоку, остаётся на дефолтах ±250 °/с и всё движется в 8 раз медленнее. L4 — устройство найдено автоматически. L5 — кнопка сброса центра, если есть.",
+          "live_debug.proto_l1": "Транспорт",
+          "live_debug.proto_l2": "Кадры",
+          "live_debug.proto_l3": "Метаданные",
+          "live_debug.proto_name": "Имя",
+          "live_debug.proto_l4": "Автопоиск",
+          "live_debug.proto_l5": "Кнопка сброса",
+          "live_debug.proto_baud": "бод",
+          "live_debug.proto_hz": "Гц",
+          "live_debug.proto_crc": "CRC",
+          "live_debug.proto_garbage": "мусор",
+          "live_debug.proto_bytes": "Б",
+          "live_debug.proto_lost": "потеряно",
+          "live_debug.proto_dps": "°/с",
+          "live_debug.proto_ok": "OK",
+          "live_debug.proto_slow": "медленно",
+          "live_debug.proto_errors": "ошибки",
+          "live_debug.proto_repeat": "повтор {s} с",
+          "live_debug.proto_once": "только при старте",
+          "live_debug.proto_defaults": "дефолты ±250 °/с, ±2 g",
+          "live_debug.proto_missing": "нет",
+          "live_debug.proto_no_name": "не сообщено",
+          "live_debug.proto_optional": "опц.",
+          "live_debug.proto_found": "найдено само",
+          "live_debug.proto_presses": "нажатий: {n}",
+          "live_debug.proto_no_button": "нет на устройстве",
+          "live_debug.proto_yes": "есть",
           "live_debug.stats_output_header": "Output (Эмулятор)",
           "live_debug.stats_in_hz": "Частота (Hz)",
           "live_debug.stats_in_hz_tip": "Сколько раз в секунду телефон отправляет данные. Обычно стабильно держится на одном уровне (например, 60). Резкие провалы означают, что телефон на секунду перестал успевать слать данные — обычно из-за загрузки CPU или сна экрана.",
@@ -2001,6 +2129,35 @@
           "live_debug.stats_recording": "Recording...",
           "live_debug.stats_record_limit": "Limit: 1 min",
           "live_debug.stats_input_header": "Input (Phone)",
+          "live_debug.stats_input_header_usb": "Input (USB)",
+          "live_debug.proto_header": "USB Protocol",
+          "live_debug.proto_tip": "What the USB device actually does on each level of the PhoneGyro protocol, as seen on the wire. L1 — port and speed. L2 — frames: rate, CRC rejects, skipped garbage, frames lost by sequence number. L3 — metadata: protocol version and declared ranges; since v1.1 the device repeats it every second, otherwise a host that joins a running stream stays on the ±250 °/s defaults and everything moves 8x too slow. L4 — the device was found automatically. L5 — the recenter button, if there is one.",
+          "live_debug.proto_l1": "Transport",
+          "live_debug.proto_l2": "Frames",
+          "live_debug.proto_l3": "Metadata",
+          "live_debug.proto_name": "Name",
+          "live_debug.proto_l4": "Discovery",
+          "live_debug.proto_l5": "Reset button",
+          "live_debug.proto_baud": "baud",
+          "live_debug.proto_hz": "Hz",
+          "live_debug.proto_crc": "CRC",
+          "live_debug.proto_garbage": "garbage",
+          "live_debug.proto_bytes": "B",
+          "live_debug.proto_lost": "lost",
+          "live_debug.proto_dps": "°/s",
+          "live_debug.proto_ok": "OK",
+          "live_debug.proto_slow": "slow",
+          "live_debug.proto_errors": "errors",
+          "live_debug.proto_repeat": "every {s} s",
+          "live_debug.proto_once": "startup only",
+          "live_debug.proto_defaults": "defaults ±250 °/s, ±2 g",
+          "live_debug.proto_missing": "none",
+          "live_debug.proto_no_name": "not reported",
+          "live_debug.proto_optional": "opt.",
+          "live_debug.proto_found": "auto-found",
+          "live_debug.proto_presses": "presses: {n}",
+          "live_debug.proto_no_button": "not on the device",
+          "live_debug.proto_yes": "present",
           "live_debug.stats_output_header": "Output (Emulator)",
           "live_debug.stats_in_hz": "Frequency (Hz)",
           "live_debug.stats_in_hz_tip": "How many times per second the phone sends data. Usually stays stable (e.g. 60). Sharp drops mean the phone briefly throttled data transmission — typically due to CPU load or screen sleep.",
@@ -2125,6 +2282,9 @@
 
         if (lastTelemetryData && typeof updateTelemetryStats === 'function') {
           try { updateTelemetryStats(lastTelemetryData); } catch (e) {}
+        }
+        if (typeof renderUsbProto === 'function') {
+          try { renderUsbProto(); } catch (e) {}
         }
 
         const modal = document.getElementById('stats-save-modal');
@@ -4117,6 +4277,101 @@
 
       setupTooltips();
 
+      // ── USB protocol status (gui/usbproto.go), once a second while a USB device streams ──
+      let usbProto = null;       // last status with connected === true
+      let usbProtoPrevCrc = 0;   // CRC rejects in the previous message
+      let usbProtoCrcGrew = false;
+      let usbProtoHideTimer = null;
+
+      function setProtoRow(id, value, chipText, chipClass) {
+        const val = document.getElementById(`proto-${id}-val`);
+        const chip = document.getElementById(`proto-${id}-chip`);
+        if (val) { val.textContent = value; val.title = value; }
+        if (chip) {
+          chip.textContent = chipText;
+          chip.className = `stat-chip ${chipClass}`;
+        }
+      }
+
+      function renderUsbProto() {
+        const section = document.getElementById('usb-proto-section');
+        const inputHeader = document.getElementById('stats-input-header');
+        const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
+        const tr = (k, fb) => dict[k] || fb;
+        const p = usbProto;
+
+        const headerKey = p ? 'live_debug.stats_input_header_usb' : 'live_debug.stats_input_header';
+        if (inputHeader) {
+          inputHeader.setAttribute('data-i18n', headerKey);
+          inputHeader.textContent = tr(headerKey, p ? 'Input (USB)' : 'Input (Телефон)');
+        }
+        if (section) section.style.display = p ? 'flex' : 'none';
+        if (!p) return;
+
+        const ok = tr('live_debug.proto_ok', 'OK');
+        setProtoRow('l1', `${p.port || '--'} · ${p.baud || '--'} ${tr('live_debug.proto_baud', 'бод')}`, ok, 'green');
+
+        const l2 = `${Math.round(p.rate_hz || 0)} ${tr('live_debug.proto_hz', 'Гц')} · ${tr('live_debug.proto_crc', 'CRC')} ${p.crc_rejects || 0}` +
+          ` · ${tr('live_debug.proto_garbage', 'мусор')} ${p.garbage_bytes || 0} ${tr('live_debug.proto_bytes', 'Б')}` +
+          ` · ${tr('live_debug.proto_lost', 'потеряно')} ${p.lost || 0}`;
+        if (usbProtoCrcGrew) {
+          setProtoRow('l2', l2, tr('live_debug.proto_errors', 'ошибки'), 'yellow');
+        } else if ((p.rate_hz || 0) < 95) {
+          setProtoRow('l2', l2, tr('live_debug.proto_slow', 'медленно'), 'yellow');
+        } else {
+          setProtoRow('l2', l2, ok, 'green');
+        }
+
+        if (!p.meta_seen) {
+          setProtoRow('l3', tr('live_debug.proto_defaults', 'дефолты ±250 °/с, ±2 g'), tr('live_debug.proto_missing', 'нет'), 'red');
+        } else {
+          const l3 = `v${p.protocol} · ±${p.gyro_range_dps} ${tr('live_debug.proto_dps', '°/с')} · ±${p.accel_range_g} g · ${p.declared_hz} ${tr('live_debug.proto_hz', 'Гц')}`;
+          // v1.1 repeats metadata every second; one that never repeats is a v1.0 device.
+          if (p.meta_interval_ms > 0 && p.meta_age_ms < 2500) {
+            const secs = (p.meta_interval_ms / 1000).toFixed(1);
+            setProtoRow('l3', l3, tr('live_debug.proto_repeat', 'повтор {s} с').replace('{s}', secs), 'green');
+          } else if (p.meta_age_ms >= 2500) {
+            setProtoRow('l3', l3, tr('live_debug.proto_once', 'только при старте'), 'yellow');
+          } else {
+            setProtoRow('l3', l3, ok, 'green');
+          }
+        }
+
+        if (p.name) {
+          setProtoRow('name', p.name, ok, 'green');
+        } else {
+          setProtoRow('name', tr('live_debug.proto_no_name', 'не сообщено'), tr('live_debug.proto_optional', 'опц.'), 'muted');
+        }
+
+        setProtoRow('l4', `${tr('live_debug.proto_found', 'найдено само')}: ${p.port || '--'}`, ok, 'green');
+
+        if (p.reset_button) {
+          setProtoRow('l5', `${tr('live_debug.proto_yes', 'есть')} · ${tr('live_debug.proto_presses', 'нажатий: {n}').replace('{n}', p.reset_presses || 0)}`, ok, 'green');
+        } else {
+          setProtoRow('l5', tr('live_debug.proto_no_button', 'нет на устройстве'), tr('live_debug.proto_optional', 'опц.'), 'muted');
+        }
+      }
+
+      function handleUsbProto(data) {
+        clearTimeout(usbProtoHideTimer);
+        if (!data.connected) {
+          usbProto = null;
+          usbProtoPrevCrc = 0;
+          usbProtoCrcGrew = false;
+          renderUsbProto();
+          return;
+        }
+        usbProtoCrcGrew = usbProto !== null && (data.crc_rejects || 0) > usbProtoPrevCrc;
+        usbProtoPrevCrc = data.crc_rejects || 0;
+        usbProto = data;
+        renderUsbProto();
+        // Sent every second while connected: silence means the device or the mode is gone.
+        usbProtoHideTimer = setTimeout(() => {
+          usbProto = null;
+          renderUsbProto();
+        }, 3500);
+      }
+
       // ── Unified Telemetry Data Processor ──
       function handleTelemetryData(data) {
         if (!data) return;
@@ -4128,6 +4383,11 @@
           } else {
             window.close();
           }
+          return;
+        }
+
+        if (data.type === 'usb_proto') {
+          handleUsbProto(data);
           return;
         }
 
