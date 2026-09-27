@@ -1565,9 +1565,8 @@ func (a *App) startup(ctx context.Context) {
 
 		gyroSpeed := math.Sqrt(rx*rx + ry*ry + rz*rz)
 
-		// 1. Gyroscope deadband with soft-knee attenuation.
-		// Electronic MEMS sensor noise is ~0.05-0.15 deg/s on desk.
-		// Deadband completely eliminates stationary gyro trembling in PadTest and games.
+		// 1. Gyroscope deadband (deadband.go): silences resting tremor below the
+		// threshold, passes motion above 2x threshold untouched.
 		deadband := math.Float64frombits(a.gyroDeadbandBits.Load())
 		if deadband <= 0 && a.gyroDeadzoneBits.Load() > 0 {
 			deadband = math.Float64frombits(a.gyroDeadzoneBits.Load())
@@ -1582,26 +1581,16 @@ func (a *App) startup(ctx context.Context) {
 		rawDsuRy := dsuYawSign * float32(ry) // see dsuYawSign / dsuAccSign in sensoralign.go
 		rawDsuRz := float32(rz)
 
-		var ahrsRx, ahrsRy, ahrsRz float32
-		var dsuRx, dsuRy, dsuRz float32
-		if gyroDeadband <= 0 {
-			ahrsRx = float32(rx)
-			ahrsRy = float32(ry)
-			ahrsRz = float32(rz)
+		// Порог гасит только скорости около нуля; от 2·порога движение проходит
+		// без изменений (deadband.go).
+		scale := float32(deadbandScale(gyroSpeed, gyroDeadband))
+		ahrsRx := float32(rx) * scale
+		ahrsRy := float32(ry) * scale
+		ahrsRz := float32(rz) * scale
 
-			dsuRx = rawDsuRx
-			dsuRy = rawDsuRy
-			dsuRz = rawDsuRz
-		} else if gyroSpeed >= gyroDeadband {
-			scale := float32((gyroSpeed - gyroDeadband) / gyroSpeed)
-			ahrsRx = float32(rx) * scale
-			ahrsRy = float32(ry) * scale
-			ahrsRz = float32(rz) * scale
-
-			dsuRx = rawDsuRx * scale
-			dsuRy = rawDsuRy * scale
-			dsuRz = rawDsuRz * scale
-		}
+		dsuRx := rawDsuRx * scale
+		dsuRy := rawDsuRy * scale
+		dsuRz := rawDsuRz * scale
 
 		// DSU gets deadbanded but unsmoothed rates: any low-pass on angular velocity adds
 		// lag that clients integrate into overshoot.

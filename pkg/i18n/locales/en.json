@@ -358,7 +358,7 @@
     "filter_live_hint": "All filter adjustments apply automatically on the fly. Best tuned directly while aiming inside the game.",
     "group_behavior": "Behavior & Notifications",
     "gyro_deadband": "Hand Tremor Deadband",
-    "gyro_deadband_tip": "Smooth Hermite deadband. Completely silences micro-tremors below threshold with no step discontinuities.",
+    "gyro_deadband_tip": "Smooth deadzone: fully silences micro-tremor below the threshold and passes motion unchanged from twice the threshold up, so slow precise aiming keeps its full speed. In between, a smooth transition with no jolts.",
     "deadband_off": "0.00°/s (Disabled)",
     "deadband_005": "0.05°/s (Minimum)",
     "deadband_010": "0.10°/s (Standard)",
