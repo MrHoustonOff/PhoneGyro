@@ -49,17 +49,17 @@ type AppState struct {
 	// Madgwick AHRS quaternion computed from calibrated gyro/accel (matching PadTest conventions).
 	// Use these (not raw Qx/Qy/Qz/Qw) for 3D rendering.
 	// Q0=w, Q1=x, Q2=y, Q3=z. Apply PadTest negate to get display: (-Q1, -Q2, Q3, Q0).
-	AhrsQ0        float64          `json:"ahrsQ0"`
-	AhrsQ1        float64          `json:"ahrsQ1"`
-	AhrsQ2        float64          `json:"ahrsQ2"`
-	AhrsQ3        float64          `json:"ahrsQ3"`
-	FirstLaunch   bool             `json:"firstLaunch"`
-	HideAuthor    bool             `json:"hideAuthor"`
-	DsuClients    int              `json:"dsuClients"`
-	DsuClientList []dsu.ClientInfo `json:"dsuClientList"`
-	InputMode     string           `json:"inputMode"`
-	UsbConnected  bool             `json:"usbConnected"`
-	UsbPort       string           `json:"usbPort"`
+	AhrsQ0        float64         `json:"ahrsQ0"`
+	AhrsQ1        float64         `json:"ahrsQ1"`
+	AhrsQ2        float64         `json:"ahrsQ2"`
+	AhrsQ3        float64         `json:"ahrsQ3"`
+	FirstLaunch   bool            `json:"firstLaunch"`
+	HideAuthor    bool            `json:"hideAuthor"`
+	DsuClients    int             `json:"dsuClients"`
+	DsuClientList []DSUClientView `json:"dsuClientList"`
+	InputMode     string          `json:"inputMode"`
+	UsbConnected  bool            `json:"usbConnected"`
+	UsbPort       string          `json:"usbPort"`
 }
 
 // TuningFrame conveys simultaneous raw and filtered telemetry to the frontend tuning bench
@@ -103,7 +103,7 @@ func (a *App) bindDSUCallbacks(srv *dsu.Server) {
 		return
 	}
 	notify := func() {
-		clients := srv.GetClientsInfo()
+		clients := a.dsuClientViews()
 		count := len(clients)
 		if a.trayMgr != nil {
 			a.trayMgr.UpdateState()
@@ -130,10 +130,10 @@ func (a *App) bindDSUCallbacks(srv *dsu.Server) {
 
 // GetDSUStatus returns the current DSU clients count and connection metadata.
 func (a *App) GetDSUStatus() map[string]any {
-	var clients []dsu.ClientInfo
+	var clients []DSUClientView
 	count := 0
 	if a.dsuSrv != nil {
-		clients = a.dsuSrv.GetClientsInfo()
+		clients = a.dsuClientViews()
 		count = len(clients)
 	}
 	return map[string]any{
@@ -246,9 +246,9 @@ func (a *App) GetState() AppState {
 			}
 			return 0
 		}(),
-		DsuClientList: func() []dsu.ClientInfo {
+		DsuClientList: func() []DSUClientView {
 			if a.dsuSrv != nil {
-				return a.dsuSrv.GetClientsInfo()
+				return a.dsuClientViews()
 			}
 			return nil
 		}(),

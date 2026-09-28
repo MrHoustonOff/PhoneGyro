@@ -558,7 +558,10 @@
     "dsu_connected": "Эмулятор подключен",
     "dsu_connected_plural": "Подключено эмуляторов: %d",
     "dsu_title": "Сервер Cemuhook DSU",
-    "waiting_usb": "Ожидание USB"
+    "waiting_usb": "Ожидание USB",
+    "dsu_client_tip_switch": "Нажмите, чтобы переключиться на {name}",
+    "dsu_client_remove": "Отключить клиента",
+    "dsu_client_removed": "{name} отключён от DSU"
   },
   "recenter": {
     "btn_main": "Центрировать 3D-вид",

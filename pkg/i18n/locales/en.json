@@ -558,7 +558,10 @@
     "dsu_connected": "Emulator connected",
     "dsu_connected_plural": "%d emulators connected",
     "dsu_title": "Cemuhook DSU Server",
-    "waiting_usb": "Waiting for USB"
+    "waiting_usb": "Waiting for USB",
+    "dsu_client_tip_switch": "Click to switch to {name}",
+    "dsu_client_remove": "Disconnect this client",
+    "dsu_client_removed": "{name} disconnected from DSU"
   },
   "recenter": {
     "btn_main": "Recenter 3D View",

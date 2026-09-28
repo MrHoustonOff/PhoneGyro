@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"phonegyro/pkg/dsu"
 	"syscall"
 	"time"
 
@@ -16,34 +15,34 @@ import (
 )
 
 type liveDebugMsg struct {
-	DeviceConnected bool             `json:"device_connected"`
-	Q0              float32          `json:"q0"`
-	Q1              float32          `json:"q1"`
-	Q2              float32          `json:"q2"`
-	Q3              float32          `json:"q3"`
-	Seq             uint64           `json:"seq,omitempty"`
-	Timestamp       uint32           `json:"ts,omitempty"`
-	RecvTs          int64            `json:"recv_ts,omitempty"`
-	SendTs          int64            `json:"send_ts,omitempty"`
-	RawGx           float32          `json:"raw_gx,omitempty"`
-	RawGy           float32          `json:"raw_gy,omitempty"`
-	RawGz           float32          `json:"raw_gz,omitempty"`
-	RawAx           float32          `json:"raw_ax,omitempty"`
-	RawAy           float32          `json:"raw_ay,omitempty"`
-	RawAz           float32          `json:"raw_az,omitempty"`
-	OutGx           float32          `json:"out_gx,omitempty"`
-	OutGy           float32          `json:"out_gy,omitempty"`
-	OutGz           float32          `json:"out_gz,omitempty"`
-	OutAx           float32          `json:"out_ax,omitempty"`
-	OutAy           float32          `json:"out_ay,omitempty"`
-	OutAz           float32          `json:"out_az,omitempty"`
-	StickLx         float32          `json:"stick_lx,omitempty"`
-	StickLy         float32          `json:"stick_ly,omitempty"`
-	InHz            float64          `json:"in_hz,omitempty"`
-	OutHz           float64          `json:"out_hz,omitempty"`
-	PipeMs          float64          `json:"pipe_ms,omitempty"`
-	DsuClients      int              `json:"dsu_clients"`
-	DsuClientList   []dsu.ClientInfo `json:"dsu_client_list,omitempty"`
+	DeviceConnected bool            `json:"device_connected"`
+	Q0              float32         `json:"q0"`
+	Q1              float32         `json:"q1"`
+	Q2              float32         `json:"q2"`
+	Q3              float32         `json:"q3"`
+	Seq             uint64          `json:"seq,omitempty"`
+	Timestamp       uint32          `json:"ts,omitempty"`
+	RecvTs          int64           `json:"recv_ts,omitempty"`
+	SendTs          int64           `json:"send_ts,omitempty"`
+	RawGx           float32         `json:"raw_gx,omitempty"`
+	RawGy           float32         `json:"raw_gy,omitempty"`
+	RawGz           float32         `json:"raw_gz,omitempty"`
+	RawAx           float32         `json:"raw_ax,omitempty"`
+	RawAy           float32         `json:"raw_ay,omitempty"`
+	RawAz           float32         `json:"raw_az,omitempty"`
+	OutGx           float32         `json:"out_gx,omitempty"`
+	OutGy           float32         `json:"out_gy,omitempty"`
+	OutGz           float32         `json:"out_gz,omitempty"`
+	OutAx           float32         `json:"out_ax,omitempty"`
+	OutAy           float32         `json:"out_ay,omitempty"`
+	OutAz           float32         `json:"out_az,omitempty"`
+	StickLx         float32         `json:"stick_lx,omitempty"`
+	StickLy         float32         `json:"stick_ly,omitempty"`
+	InHz            float64         `json:"in_hz,omitempty"`
+	OutHz           float64         `json:"out_hz,omitempty"`
+	PipeMs          float64         `json:"pipe_ms,omitempty"`
+	DsuClients      int             `json:"dsu_clients"`
+	DsuClientList   []DSUClientView `json:"dsu_client_list,omitempty"`
 	// Кадр источника для офлайн-разбора записей Live Debug: часы устройства (µs)
 	// и ориентация, которую прислал телефон (кватернион iOS/Android).
 	DevTsUs uint64  `json:"dev_ts_us,omitempty"`
@@ -110,7 +109,7 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 
 	if a.dsuSrv != nil {
 		msg.DsuClients = a.dsuSrv.ActiveClientCount()
-		msg.DsuClientList = a.dsuSrv.GetClientsInfo()
+		msg.DsuClientList = a.dsuClientViews()
 	}
 	msg.LinkRttMs = a.linkRttMs()
 	msg.LossKind, msg.LossTotal, msg.LossMerged, msg.LossLost = a.activeBank().loss.Snapshot()

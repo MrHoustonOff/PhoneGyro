@@ -22,6 +22,14 @@ export function DeleteProfile(arg1) {
   return window['go']['main']['App']['DeleteProfile'](arg1);
 }
 
+export function DisconnectDSUClient(arg1) {
+  return window['go']['main']['App']['DisconnectDSUClient'](arg1);
+}
+
+export function FocusDSUClient(arg1) {
+  return window['go']['main']['App']['FocusDSUClient'](arg1);
+}
+
 export function GetAppSettings() {
   return window['go']['main']['App']['GetAppSettings']();
 }

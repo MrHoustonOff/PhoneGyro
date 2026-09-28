@@ -54,6 +54,10 @@ type Server struct {
 
 	clientsMu sync.RWMutex
 	clients   map[string]*ClientSub
+	// kicked: clients the user disconnected, by address, with the time of their
+	// last request. Their requests are ignored until they stay silent for
+	// kickedUntilSilent (under clientsMu).
+	kicked map[string]time.Time
 
 	lastFrameMu    sync.RWMutex
 	lastMotionTime time.Time
@@ -425,6 +429,9 @@ func (s *Server) listenLoop() {
 }
 
 func (s *Server) handleRequest(msgType uint32, payload []byte, remoteAddr *net.UDPAddr) {
+	if s.stillKicked(remoteAddr) {
+		return
+	}
 	// Register / keepalive client subscription
 	isNew := s.touchClient(remoteAddr)
 
@@ -596,6 +603,50 @@ func (s *Server) sendPortInfoRsp(remoteAddr *net.UDPAddr, payload []byte) {
 
 		_, _ = s.conn.WriteToUDP(buf, remoteAddr)
 	}
+}
+
+// kickedUntilSilent: a disconnected client stays ignored until it has sent
+// nothing for this long. Cemu asks every few milliseconds, so without it the
+// client would be back at once; a client that reconnects later comes from a new
+// port anyway.
+const kickedUntilSilent = 5 * time.Second
+
+// Kick disconnects a client (by the address in ClientInfo.Address): it gets no
+// more packets and its requests are ignored until it stays silent for
+// kickedUntilSilent. Returns false if no such client is subscribed.
+func (s *Server) Kick(address string) bool {
+	s.clientsMu.Lock()
+	client, ok := s.clients[address]
+	if ok {
+		delete(s.clients, address)
+		if s.kicked == nil {
+			s.kicked = map[string]time.Time{}
+		}
+		s.kicked[address] = time.Now()
+	}
+	s.clientsMu.Unlock()
+	if ok && s.OnClientDisconnect != nil {
+		go s.OnClientDisconnect(client.Addr)
+	}
+	return ok
+}
+
+// stillKicked reports whether a request from addr must be ignored, and keeps
+// the kick alive while the client keeps asking.
+func (s *Server) stillKicked(addr *net.UDPAddr) bool {
+	key := addr.String()
+	s.clientsMu.Lock()
+	defer s.clientsMu.Unlock()
+	last, ok := s.kicked[key]
+	if !ok {
+		return false
+	}
+	if time.Since(last) > kickedUntilSilent {
+		delete(s.kicked, key)
+		return false
+	}
+	s.kicked[key] = time.Now()
+	return true
 }
 
 // touchClient registers or refreshes a subscription; true if it is new.

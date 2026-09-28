@@ -1,28 +1,3 @@
-export namespace dsu {
-	
-	export class ClientInfo {
-	    address: string;
-	    ip: string;
-	    port: number;
-	    lastSeenMs: number;
-	    active: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new ClientInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.address = source["address"];
-	        this.ip = source["ip"];
-	        this.port = source["port"];
-	        this.lastSeenMs = source["lastSeenMs"];
-	        this.active = source["active"];
-	    }
-	}
-
-}
-
 export namespace main {
 	
 	export class AppSettings {
@@ -83,6 +58,30 @@ export namespace main {
 	        this.hotkeyRecenterEnabled = source["hotkeyRecenterEnabled"];
 	        this.hotkeyRecenterKey = source["hotkeyRecenterKey"];
 	        this.inputMode = source["inputMode"];
+	    }
+	}
+	export class DSUClientView {
+	    address: string;
+	    ip: string;
+	    port: number;
+	    lastSeenMs: number;
+	    active: boolean;
+	    process?: string;
+	    pid?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DSUClientView(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.ip = source["ip"];
+	        this.port = source["port"];
+	        this.lastSeenMs = source["lastSeenMs"];
+	        this.active = source["active"];
+	        this.process = source["process"];
+	        this.pid = source["pid"];
 	    }
 	}
 	export class ProfileView {
@@ -171,7 +170,7 @@ export namespace main {
 	    firstLaunch: boolean;
 	    hideAuthor: boolean;
 	    dsuClients: number;
-	    dsuClientList: dsu.ClientInfo[];
+	    dsuClientList: DSUClientView[];
 	    inputMode: string;
 	    usbConnected: boolean;
 	    usbPort: string;
@@ -216,7 +215,7 @@ export namespace main {
 	        this.firstLaunch = source["firstLaunch"];
 	        this.hideAuthor = source["hideAuthor"];
 	        this.dsuClients = source["dsuClients"];
-	        this.dsuClientList = this.convertValues(source["dsuClientList"], dsu.ClientInfo);
+	        this.dsuClientList = this.convertValues(source["dsuClientList"], DSUClientView);
 	        this.inputMode = source["inputMode"];
 	        this.usbConnected = source["usbConnected"];
 	        this.usbPort = source["usbPort"];
@@ -306,6 +305,7 @@ export namespace main {
 	        this.errorMsg = source["errorMsg"];
 	    }
 	}
+	
 	
 	export class ValidationResult {
 	    success: boolean;

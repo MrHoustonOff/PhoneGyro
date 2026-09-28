@@ -75,3 +75,41 @@ func TestDSU_RepeatedRequestsDoNotPingPong(t *testing.T) {
 		t.Fatalf("%d packets answered 300 repeated requests: the server still ping-pongs", got)
 	}
 }
+
+// TestDSU_KickIgnoresUntilSilent: a kicked client gets nothing more even though
+// it keeps asking (Cemu asks every few ms); after staying silent it may return.
+func TestDSU_KickIgnoresUntilSilent(t *testing.T) {
+	srv := NewServer(0)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	conn, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_, _ = conn.Write(padDataRequest(1))
+	time.Sleep(50 * time.Millisecond)
+	if srv.ActiveClientCount() != 1 {
+		t.Fatalf("client not subscribed")
+	}
+	if !srv.Kick(conn.LocalAddr().String()) {
+		t.Fatal("Kick did not find the client")
+	}
+	for i := 0; i < 20; i++ {
+		_, _ = conn.Write(padDataRequest(1))
+		time.Sleep(5 * time.Millisecond)
+	}
+	if n := srv.ActiveClientCount(); n != 0 {
+		t.Fatalf("kicked client came back while still asking: %d clients", n)
+	}
+	srv.clientsMu.Lock()
+	srv.kicked[conn.LocalAddr().String()] = time.Now().Add(-kickedUntilSilent - time.Second)
+	srv.clientsMu.Unlock()
+	_, _ = conn.Write(padDataRequest(1))
+	time.Sleep(50 * time.Millisecond)
+	if srv.ActiveClientCount() != 1 {
+		t.Fatal("client could not return after staying silent")
+	}
+}

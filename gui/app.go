@@ -1075,10 +1075,10 @@ func (a *App) startup(ctx context.Context) {
 				}
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				var dsuClients []dsu.ClientInfo
+				var dsuClients []DSUClientView
 				dsuCount := 0
 				if a.dsuSrv != nil {
-					dsuClients = a.dsuSrv.GetClientsInfo()
+					dsuClients = a.dsuClientViews()
 					dsuCount = len(dsuClients)
 				}
 				_ = json.NewEncoder(w).Encode(map[string]any{
@@ -1114,10 +1114,10 @@ func (a *App) startup(ctx context.Context) {
 				if curL == "" {
 					curL = "ru"
 				}
-				var dsuClients []dsu.ClientInfo
+				var dsuClients []DSUClientView
 				dsuCount := 0
 				if a.dsuSrv != nil {
-					dsuClients = a.dsuSrv.GetClientsInfo()
+					dsuClients = a.dsuClientViews()
 					dsuCount = len(dsuClients)
 				}
 				syncBytes, _ := json.Marshal(map[string]any{

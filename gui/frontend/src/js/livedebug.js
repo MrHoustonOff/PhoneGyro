@@ -1901,7 +1901,7 @@
           return `<div class="dsu-client-pill" title="${addr}">
             <div class="dsu-client-left">
               <span class="dsu-client-dot" style="${isAct ? '' : 'background: #FF9500; box-shadow: none;'}"></span>
-              <span class="dsu-client-ip">${addr}</span>
+              <span class="dsu-client-ip">${c.process || addr}</span>
             </div>
             <span class="dsu-client-tag" style="${isAct ? '' : 'color: #FF9500; background: rgba(255, 149, 0, 0.15);'}">${tagLabel}</span>
           </div>`;

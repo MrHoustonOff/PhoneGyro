@@ -840,6 +840,57 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.dsu-home-client-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* A local client named after its program: clicking switches to it. */
+.dsu-home-client-tag.has-process {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dsu-home-client-tag.has-process:hover {
+  background: var(--surface-hover);
+}
+
+.dsu-client-addr.is-name {
+  font-family: var(--font-sans);
+  font-weight: 650;
+}
+
+.dsu-client-remove {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.dsu-client-remove:hover {
+  opacity: 1;
+  background: rgba(255, 69, 58, 0.16);
+  color: #FF453A;
+}
+
+.dsu-client-remove svg {
+  pointer-events: none;
+}
+
+.dsu-client-tooltip {
+  white-space: pre-line;
+  font-family: var(--font-sans);
 }
 
 .dsu-client-addr {

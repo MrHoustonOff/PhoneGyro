@@ -321,23 +321,13 @@
           if (idleRow) idleRow.style.display = 'none';
           if (clientsList) {
             clientsList.style.display = 'flex';
-            clientsList.innerHTML = clients.map(c => {
-              const addr = c.address || (c.ip + ':' + c.port);
-              const isAct = c.active !== false;
-              return `<div class="dsu-home-client-tag">
-                <div class="dsu-home-client-left">
-                  <span class="dsu-client-pulse ${isAct ? 'green' : 'amber'}"></span>
-                  <span class="dsu-client-addr">${addr}</span>
-                </div>
-                <span class="dsu-client-status-badge ${isAct ? 'green' : 'amber'}">${isAct ? 'ACTIVE' : 'IDLE'}</span>
-              </div>`;
-            }).join('');
+            DsuClientList.render(clientsList, clients);
           }
         } else {
           if (idleRow) idleRow.style.display = 'flex';
           if (clientsList) {
             clientsList.style.display = 'none';
-            clientsList.innerHTML = '';
+            DsuClientList.render(clientsList, []);
           }
         }
       };

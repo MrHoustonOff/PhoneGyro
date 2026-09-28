@@ -13,6 +13,10 @@ export function CopyLast20Frames():Promise<string>;
 
 export function DeleteProfile(arg1:number):Promise<string>;
 
+export function DisconnectDSUClient(arg1:string):Promise<string>;
+
+export function FocusDSUClient(arg1:string):Promise<string>;
+
 export function GetAppSettings():Promise<main.AppSettings>;
 
 export function GetAppVersion():Promise<main.AppVersion>;
