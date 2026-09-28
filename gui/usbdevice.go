@@ -1,16 +1,16 @@
 package main
 
 import (
-	"bytes"
 	"sync"
 	"time"
 
 	"go.bug.st/serial"
 
+	"phonegyro-gui/internal/hwproto"
 	"phonegyro/pkg/server"
 )
 
-// USB host implementation of the PhoneGyro Hardware Protocol v1.0
+// USB host implementation of the PhoneGyro Hardware Protocol
 // (https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol). This is the
 // host half of the contract: any device speaking the protocol is picked up
 // automatically and fed into the exact same downstream pipeline the phone
@@ -18,19 +18,12 @@ import (
 // alignment, AHRS and DSU output behave identically regardless of source.
 //
 // This file deliberately contains no calibration/AHRS/DSU logic of its own:
-// its only job is transport (find the device, decode its frames, convert
-// raw register values to physical units) and handing the result to the core
-// pipeline the same way a phone's WebSocket frame would.
+// its only job is transport (find the device, decode its frames with
+// internal/hwproto, convert raw register values to physical units) and handing
+// the result to the core pipeline the same way a phone's WebSocket frame would.
 
+// Host-side timing and safe defaults.
 const (
-	usbFrameSize = 24
-	usbMagic0    = 0xAA
-	usbMagic1    = 0x55
-	usbTypeMeta  = 0x00
-	usbTypeData  = 0x01
-	usbTypeName  = 0x02 // optional device name frame (see PhoneGyro_hardware_protocol docs/PROTOCOL.md)
-	usbBaudRate  = 115200
-
 	usbProbeTimeout  = 1500 * time.Millisecond
 	usbRescanEvery   = 4 * time.Second
 	usbReadTimeout   = 300 * time.Millisecond
@@ -41,104 +34,6 @@ const (
 	usbDefaultGyroRangeDps = 250.0
 	usbDefaultAccelRangeG  = 2.0
 )
-
-// usbFrame is one decoded 24-byte PhoneGyro frame, still in raw register units.
-type usbFrame struct {
-	Type        uint8
-	Seq         uint8
-	TimestampUs uint32
-	Accel       [3]int16
-	Gyro        [3]int16
-	Temp        int16
-	Buttons     uint8
-	Name        string // only set when Type == usbTypeName
-}
-
-// usbCRC8 is CRC-8/SMBUS: poly 0x07, init 0x00, no reflect, no final xor —
-// the exact variant the protocol and reference firmware use.
-func usbCRC8(data []byte) byte {
-	var crc byte
-	for _, b := range data {
-		crc ^= b
-		for i := 0; i < 8; i++ {
-			if crc&0x80 != 0 {
-				crc = (crc << 1) ^ 0x07
-			} else {
-				crc <<= 1
-			}
-		}
-	}
-	return crc
-}
-
-// usbFrameDecoder is a streaming, resynchronizing decoder: feed it arbitrary
-// chunks of bytes as they arrive off the wire, get back however many whole,
-// CRC-valid frames were found. On any corruption it drops one byte at a time
-// until MAGIC lines up again (protocol Level 2/Level 5), so a single glitch
-// never requires tearing down the connection.
-type usbFrameDecoder struct {
-	buf []byte
-
-	garbage    uint64 // bytes skipped to find MAGIC again
-	crcRejects uint64 // MAGIC found but the CRC failed (corrupt frame or a coincidence)
-}
-
-func (d *usbFrameDecoder) push(data []byte) []usbFrame {
-	d.buf = append(d.buf, data...)
-	var out []usbFrame
-	for {
-		f, consumed, ok := decodeOneUSBFrame(d.buf)
-		if consumed == 0 {
-			break // not enough bytes yet; wait for more
-		}
-		d.buf = d.buf[consumed:]
-		if ok {
-			out = append(out, f)
-		} else if consumed == 1 {
-			d.garbage++
-		} else {
-			d.crcRejects++
-		}
-	}
-	return out
-}
-
-func decodeOneUSBFrame(buf []byte) (usbFrame, int, bool) {
-	if len(buf) < 2 {
-		return usbFrame{}, 0, false
-	}
-	if buf[0] != usbMagic0 || buf[1] != usbMagic1 {
-		return usbFrame{}, 1, false // resync: drop one byte and look again
-	}
-	if len(buf) < usbFrameSize {
-		return usbFrame{}, 0, false // wait for the rest of the frame
-	}
-	frame := buf[:usbFrameSize]
-	if usbCRC8(frame[:usbFrameSize-1]) != frame[usbFrameSize-1] {
-		return usbFrame{}, 2, false // coincidental MAGIC match, not a real frame
-	}
-	var f usbFrame
-	f.Type = frame[2]
-	f.Seq = frame[3]
-	if f.Type == usbTypeName {
-		// Bytes 4..22 (19 bytes) are an ASCII name, zero-padded -- read up to
-		// the first 0x00, or all 19 bytes if there is none.
-		name := frame[4:23]
-		if i := bytes.IndexByte(name, 0); i >= 0 {
-			name = name[:i]
-		}
-		f.Name = string(name)
-		return f, usbFrameSize, true
-	}
-	f.TimestampUs = uint32(frame[4]) | uint32(frame[5])<<8 | uint32(frame[6])<<16 | uint32(frame[7])<<24
-	for k := 0; k < 3; k++ {
-		f.Accel[k] = int16(uint16(frame[8+2*k]) | uint16(frame[9+2*k])<<8)
-		f.Gyro[k] = int16(uint16(frame[14+2*k]) | uint16(frame[15+2*k])<<8)
-	}
-	f.Temp = int16(uint16(frame[20]) | uint16(frame[21])<<8)
-	f.Buttons = frame[22]
-	return f, usbFrameSize, true
-}
 
 // usbConnState is the per-connection decoding state: declared sensor range
 // (protocol Level 3), sequence tracking for drop telemetry, and the reset
@@ -187,9 +82,9 @@ func metaRangeOrDefault(v int16, def float64) float64 {
 // handle processes one decoded frame: applies metadata (Level 3), tracks
 // dropped frames via SEQ, handles the reset button (Level 5), and — for a
 // data frame — injects the converted result into the app's core pipeline.
-func (st *usbConnState) handle(f usbFrame, app *App) {
+func (st *usbConnState) handle(f hwproto.Frame, app *App) {
 	switch f.Type {
-	case usbTypeMeta:
+	case hwproto.TypeMeta:
 		// Applied whenever it arrives, not only at the start: since protocol v1.1
 		// the device repeats it about once a second, so a host that joins a stream
 		// already running (the board did not reboot when the port opened) still
@@ -211,7 +106,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		st.protoVersion = f.TimestampUs
 		st.declaredHz = f.Accel[2]
 		st.caps = f.Buttons
-	case usbTypeName:
+	case hwproto.TypeName:
 		// Optional (protocol Level 3): a device may self-identify. Mirrors
 		// the phone's OnClientDevice -- same bank field, same "show it in
 		// the UI and the profile's Device column" treatment.
@@ -221,7 +116,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 			app.logEvent("INFO", "USB: device identified as %q", f.Name)
 			app.emitStateChange()
 		}
-	case usbTypeData:
+	case hwproto.TypeData:
 		if !st.haveMeta && time.Now().After(st.metaDeadline) {
 			st.haveMeta = true // give up waiting; declared/default range stands as-is
 		}
@@ -373,7 +268,7 @@ func (m *usbDeviceManager) run(stop chan struct{}) {
 type usbProbeResult struct {
 	name    string
 	port    serial.Port
-	frames  []usbFrame
+	frames  []hwproto.Frame
 	pending []byte
 }
 
@@ -427,15 +322,15 @@ func (m *usbDeviceManager) scanOnce(stop chan struct{}) {
 // frames/leftover bytes were already read, so the handoff to the streaming
 // reader loses nothing (in particular, a one-time metadata frame that
 // happened to arrive during the probe window must not be discarded).
-func probeUSBPort(name string, stop <-chan struct{}) (serial.Port, []usbFrame, []byte, bool) {
-	mode := &serial.Mode{BaudRate: usbBaudRate, DataBits: 8, Parity: serial.NoParity, StopBits: serial.OneStopBit}
+func probeUSBPort(name string, stop <-chan struct{}) (serial.Port, []hwproto.Frame, []byte, bool) {
+	mode := &serial.Mode{BaudRate: hwproto.BaudRate, DataBits: 8, Parity: serial.NoParity, StopBits: serial.OneStopBit}
 	port, err := serial.Open(name, mode)
 	if err != nil {
 		return nil, nil, nil, false
 	}
 	_ = port.SetReadTimeout(150 * time.Millisecond)
 
-	var dec usbFrameDecoder
+	var dec hwproto.Decoder
 	deadline := time.Now().Add(usbProbeTimeout)
 	buf := make([]byte, 128)
 	for time.Now().Before(deadline) {
@@ -453,15 +348,15 @@ func probeUSBPort(name string, stop <-chan struct{}) (serial.Port, []usbFrame, [
 		if n == 0 {
 			continue // read timeout, try again until deadline
 		}
-		if frames := dec.push(buf[:n]); len(frames) > 0 {
-			return port, frames, dec.buf, true
+		if frames := dec.Push(buf[:n]); len(frames) > 0 {
+			return port, frames, dec.Pending(), true
 		}
 	}
 	port.Close()
 	return nil, nil, nil, false
 }
 
-func (m *usbDeviceManager) attach(name string, port serial.Port, initial []usbFrame, pending []byte) {
+func (m *usbDeviceManager) attach(name string, port serial.Port, initial []hwproto.Frame, pending []byte) {
 	m.mu.Lock()
 	if !m.running {
 		m.mu.Unlock()
@@ -479,13 +374,13 @@ func (m *usbDeviceManager) attach(name string, port serial.Port, initial []usbFr
 	go m.readLoop(port, name, initial, pending)
 }
 
-func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usbFrame, pending []byte) {
+func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []hwproto.Frame, pending []byte) {
 	state := newUSBConnState()
 	for _, f := range initial {
 		state.handle(f, m.app)
 	}
 
-	dec := usbFrameDecoder{buf: pending}
+	dec := hwproto.ResumeDecoder(pending)
 	_ = port.SetReadTimeout(usbReadTimeout)
 	buf := make([]byte, 256)
 
@@ -514,7 +409,7 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []usb
 		if n == 0 {
 			continue // read timeout; loop again so Stop() is noticed promptly
 		}
-		for _, f := range dec.push(buf[:n]) {
+		for _, f := range dec.Push(buf[:n]) {
 			state.handle(f, m.app)
 		}
 	}

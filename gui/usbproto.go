@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"phonegyro-gui/internal/hwproto"
 	"time"
 )
 
@@ -50,17 +51,17 @@ func protocolVersionString(v uint32) string {
 
 // snapshot builds the status from the connection state and the decoder's
 // counters. rateHz is measured by the caller over its reporting interval.
-func (st *usbConnState) snapshot(now time.Time, port string, dec *usbFrameDecoder, rateHz float64) usbProtoStatus {
+func (st *usbConnState) snapshot(now time.Time, port string, dec *hwproto.Decoder, rateHz float64) usbProtoStatus {
 	s := usbProtoStatus{
 		Type:         "usb_proto",
 		Connected:    true,
 		Port:         port,
-		Baud:         usbBaudRate,
+		Baud:         hwproto.BaudRate,
 		RateHz:       rateHz,
 		Frames:       st.dataFrames,
 		Lost:         st.droppedFrames,
-		CRCRejects:   dec.crcRejects,
-		GarbageBytes: dec.garbage,
+		CRCRejects:   dec.CRCRejects(),
+		GarbageBytes: dec.Garbage(),
 		MetaSeen:     st.metaCount > 0,
 		GyroRangeDps: st.gyroRangeDps,
 		AccelRangeG:  st.accelRangeG,
