@@ -66,6 +66,9 @@ export namespace main {
 	    port: number;
 	    lastSeenMs: number;
 	    active: boolean;
+	    cemuBias: number[];
+	    cemuSamples: number;
+	    restFill: boolean;
 	    process?: string;
 	    pid?: number;
 	
@@ -80,6 +83,9 @@ export namespace main {
 	        this.port = source["port"];
 	        this.lastSeenMs = source["lastSeenMs"];
 	        this.active = source["active"];
+	        this.cemuBias = source["cemuBias"];
+	        this.cemuSamples = source["cemuSamples"];
+	        this.restFill = source["restFill"];
 	        this.process = source["process"];
 	        this.pid = source["pid"];
 	    }

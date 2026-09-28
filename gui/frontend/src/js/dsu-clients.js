@@ -5,6 +5,8 @@
 // address, a click switches to that program, the cross disconnects the client.
 const DsuClientList = {
   tooltip: null,
+  info: {},     // address -> latest client data (Cemu bias for the tooltip)
+  tipRow: null, // row the tooltip is showing for, to refresh it live
 
   esc(s) {
     return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -13,6 +15,8 @@ const DsuClientList = {
   // render rebuilds the list only when what it shows changes: the state arrives
   // 15 times a second, and a rebuilt row loses its hover and its click.
   render(listEl, clients) {
+    this.info = {};
+    clients.forEach(c => { this.info[c.address || (c.ip + ':' + c.port)] = c; });
     const html = clients.map(c => {
       const addr = c.address || (c.ip + ':' + c.port);
       const isAct = c.active !== false;
@@ -34,8 +38,25 @@ const DsuClientList = {
       listEl._dsuHtml = html;
       listEl.innerHTML = html;
       this.hideTip();
+    } else if (this.tipRow && this.tipRow.isConnected && listEl.contains(this.tipRow)) {
+      this.tooltip.textContent = this.rowTip(this.tipRow); // live Cemu bias
     }
     this.bind(listEl);
+  },
+
+  // rowTip: full address, what a click does, and for Cemu the gyro bias its
+  // filter holds (pkg/dsu/cemubias.go) -- what the game turns by at rest.
+  rowTip(row) {
+    const lines = [row.dataset.addr];
+    if (row.dataset.process) {
+      lines.push((I18n.t('status.dsu_client_tip_switch') || 'Нажмите, чтобы переключиться на {name}').replace('{name}', row.dataset.process));
+    }
+    const c = this.info[row.dataset.addr];
+    if (c && /^cemu$/i.test(c.process || '') && Array.isArray(c.cemuBias)) {
+      const b = c.cemuBias.map(v => (v >= 0 ? '+' : '') + v.toFixed(3)).join(' / ');
+      lines.push((I18n.t('status.dsu_client_cemu_bias') || 'Смещение гироскопа по версии Cemu: {bias} °/с').replace('{bias}', b));
+    }
+    return lines.join('\n');
   },
 
   bind(listEl) {
@@ -49,11 +70,8 @@ const DsuClientList = {
         this.showTip(row, I18n.t('status.dsu_client_remove') || 'Отключить клиента');
         return;
       }
-      const lines = [row.dataset.addr];
-      if (row.dataset.process) {
-        lines.push((I18n.t('status.dsu_client_tip_switch') || 'Нажмите, чтобы переключиться на {name}').replace('{name}', row.dataset.process));
-      }
-      this.showTip(row, lines.join('\n'));
+      this.tipRow = row;
+      this.showTip(row, this.rowTip(row));
     });
     listEl.addEventListener('mouseout', (e) => {
       const row = e.target.closest('.dsu-home-client-tag');
@@ -105,6 +123,7 @@ const DsuClientList = {
   },
 
   hideTip() {
+    this.tipRow = null;
     if (!this.tooltip) return;
     this.tooltip.classList.remove('show');
     this.tooltip.style.display = 'none';

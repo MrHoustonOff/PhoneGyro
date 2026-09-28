@@ -429,6 +429,8 @@ func (a *App) startup(ctx context.Context) {
 		a.setDSUMAC(formatMAC(macBytes))
 	}
 	dsuSrv := dsu.NewServer(a.dsuPort, macBytes)
+	// PHONEGYRO_NO_CEMU_FILL=1 turns the Cemu bias dilution off (for comparing).
+	dsuSrv.RestFillEnabled.Store(os.Getenv("PHONEGYRO_NO_CEMU_FILL") == "")
 	a.bindDSUCallbacks(dsuSrv)
 	if err := dsuSrv.Start(); err != nil {
 		fmt.Printf("[-] DSU start error: %v\n", err)

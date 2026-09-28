@@ -35,6 +35,9 @@ const (
 type ClientSub struct {
 	Addr     *net.UDPAddr
 	LastSeen time.Time
+	// RestFill: dilute Cemu's gyro-bias estimate while at rest (cemubias.go).
+	RestFill bool
+	cemu     cemuBiasModel // what Cemu's filter makes of the packets we sent
 }
 
 var padPacketPool = sync.Pool{
@@ -65,6 +68,10 @@ type Server struct {
 
 	stopChan chan struct{}
 	running  atomic.Bool
+
+	// RestFillEnabled switches the rest-time dilution for SetRestFill clients
+	// (cemubias.go); on by default.
+	RestFillEnabled atomic.Bool
 
 	// DSU timestamp chain (see stampMotion). Clients integrate RotX/Y/Z over the
 	// delta between consecutive packet timestamps, so for device frames that
@@ -110,6 +117,7 @@ func NewServer(port int, mac ...[6]byte) *Server {
 		clients:  make(map[string]*ClientSub),
 		stopChan: make(chan struct{}),
 	}
+	s.RestFillEnabled.Store(true)
 
 	return s
 }
@@ -135,6 +143,11 @@ type ClientInfo struct {
 	Port       int    `json:"port"`
 	LastSeenMs int64  `json:"lastSeenMs"`
 	Active     bool   `json:"active"`
+	// CemuBias is the gyro bias (deg/s) Cemu's filter would hold if this client
+	// is Cemu, replayed from the packets sent since it subscribed (cemubias.go).
+	CemuBias    [3]float64 `json:"cemuBias"`
+	CemuSamples uint64     `json:"cemuSamples"`
+	RestFill    bool       `json:"restFill"`
 }
 
 // ActiveClientCount returns the number of currently active DSU subscribers.
@@ -160,11 +173,14 @@ func (s *Server) GetClientsInfo() []ClientInfo {
 	for _, c := range s.clients {
 		ms := now.Sub(c.LastSeen).Milliseconds()
 		res = append(res, ClientInfo{
-			Address:    c.Addr.String(),
-			IP:         c.Addr.IP.String(),
-			Port:       c.Addr.Port,
-			LastSeenMs: ms,
-			Active:     ms < 3500,
+			Address:     c.Addr.String(),
+			IP:          c.Addr.IP.String(),
+			Port:        c.Addr.Port,
+			LastSeenMs:  ms,
+			Active:      ms < 3500,
+			CemuBias:    c.cemu.biasDps(),
+			CemuSamples: c.cemu.n,
+			RestFill:    c.RestFill,
 		})
 	}
 	return res
@@ -216,9 +232,9 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	// first packet after a client subscribes would span an arbitrary interval.
 	ts := s.stampMotion(frame)
 
-	s.clientsMu.RLock()
+	s.clientsMu.Lock()
 	if len(s.clients) == 0 {
-		s.clientsMu.RUnlock()
+		s.clientsMu.Unlock()
 		return // Fast path: zero emulators subscribed, zero allocations, zero packet work!
 	}
 
@@ -229,10 +245,25 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	pkt := *bufPtr
 	s.fillPadDataPacket(pkt, packetNum, frame, ts)
 
+	atRest := frame.RotX == 0 && frame.RotY == 0 && frame.RotZ == 0
+	fill := false
 	for _, client := range s.clients {
 		_, _ = s.conn.WriteToUDP(pkt, client.Addr)
+		client.cemu.add(frame.RotX, frame.RotY, frame.RotZ)
+		fill = fill || (atRest && client.RestFill && s.RestFillEnabled.Load())
 	}
-	s.clientsMu.RUnlock()
+	if fill {
+		for i := 0; i < restFillPackets; i++ {
+			s.fillPadDataPacket(pkt, atomic.AddUint32(&s.packetCounter, 1), frame, s.stampRepeat())
+			for _, client := range s.clients {
+				if client.RestFill {
+					_, _ = s.conn.WriteToUDP(pkt, client.Addr)
+					client.cemu.add(0, 0, 0)
+				}
+			}
+		}
+	}
+	s.clientsMu.Unlock()
 
 	padPacketPool.Put(bufPtr)
 }
@@ -533,11 +564,12 @@ func (s *Server) heartbeatLoop() {
 			pkt := *bufPtr
 			s.fillPadDataPacket(pkt, packetNum, idleFrame, s.stampIdle())
 
-			s.clientsMu.RLock()
+			s.clientsMu.Lock()
 			for _, client := range s.clients {
 				_, _ = s.conn.WriteToUDP(pkt, client.Addr)
+				client.cemu.add(0, 0, 0)
 			}
-			s.clientsMu.RUnlock()
+			s.clientsMu.Unlock()
 
 			padPacketPool.Put(bufPtr)
 		}

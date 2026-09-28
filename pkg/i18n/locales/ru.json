@@ -561,7 +561,8 @@
     "waiting_usb": "Ожидание USB",
     "dsu_client_tip_switch": "Нажмите, чтобы переключиться на {name}",
     "dsu_client_remove": "Отключить клиента",
-    "dsu_client_removed": "{name} отключён от DSU"
+    "dsu_client_removed": "{name} отключён от DSU",
+    "dsu_client_cemu_bias": "Смещение гироскопа по версии Cemu: {bias} °/с"
   },
   "recenter": {
     "btn_main": "Центрировать 3D-вид",

@@ -561,7 +561,8 @@
     "waiting_usb": "Waiting for USB",
     "dsu_client_tip_switch": "Click to switch to {name}",
     "dsu_client_remove": "Disconnect this client",
-    "dsu_client_removed": "{name} disconnected from DSU"
+    "dsu_client_removed": "{name} disconnected from DSU",
+    "dsu_client_cemu_bias": "Gyro bias as Cemu sees it: {bias} °/s"
   },
   "recenter": {
     "btn_main": "Recenter 3D View",
