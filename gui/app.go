@@ -1882,8 +1882,15 @@ func (a *App) startup(ctx context.Context) {
 		}
 
 		registerLiveDebug := func(mux *http.ServeMux) {
-			mux.Handle("/assets/", http.FileServer(http.FS(subFS)))
-			mux.Handle("/livedebug/assets/", http.StripPrefix("/livedebug", http.FileServer(http.FS(subFS))))
+			// Files the Live Debug page loads by relative path, for the browser
+			// fallback of OpenLiveDebugWindow (the --livedebug window serves them from
+			// its own asset server). Without /js/ and /css/ the page loads bare.
+			files := http.FileServer(http.FS(subFS))
+			mux.Handle("/assets/", files)
+			mux.Handle("/js/", files)
+			mux.Handle("/css/", files)
+			mux.Handle("/main.css", files)
+			mux.Handle("/livedebug/assets/", http.StripPrefix("/livedebug", files))
 			mux.HandleFunc("/livedebug", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
 				w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
