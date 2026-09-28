@@ -1,5 +1,7 @@
 **English** | [Русский](docs/README_RU.md)
 
+<!-- TODO: logo -->
+
 # PhoneGyro
 
 > [!IMPORTANT]
@@ -7,7 +9,9 @@
 
 > 📖 **Comprehensive User Guide**: [English User Guide](docs/guide.en.md) | [Русскоязычное руководство](docs/guide.ru.md)
 
-PhoneGyro turns your smartphone (iOS or Android) into a high-precision, low-latency motion controller for PC games and emulators using the Cemuhook DSU protocol.
+PhoneGyro turns your smartphone (iOS or Android) or a USB motion controller (Arduino Nano + MPU-6050) into a motion controller for PC games and emulators using the Cemuhook DSU protocol.
+
+<!-- TODO: video or animated demo gif -->
 
 ![PhoneGyro Core Interface](docs/imgs/core%20screen.jpg)
 
@@ -29,11 +33,11 @@ Pick the source at the top of the window: **Smartphone** or **USB Controller**.
 - **Android**: Scan the QR code on the main screen with your camera and open the controller web app in Google Chrome.
 - **USB controller** (Arduino Nano + MPU-6050): flash the [reference firmware](https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol) (protocol 1.1+) and plug it in — PhoneGyro finds it on any COM port by itself.
 
-### 4. Calibrate — do not skip this
-Click **Calibrate** and follow the wizard (rest, nod, bank, axis alignment — about a minute). Calibration is what tells PhoneGyro where "forward" and "right" are for your grip; **without it the in-game aim turns along the wrong axis or backwards.** Once per device and grip; phone and USB profiles are separate.
+### 4. Calibrate — mandatory step
+Click **Calibrate** and follow the wizard (rest, nod, bank, axis alignment — about a minute). Calibration tells PhoneGyro where "forward" and "right" are for your grip; **without it the in-game aim turns along the wrong axis or backwards.** Perform this once per device and grip; phone and USB profiles are stored separately.
 
 ### 4½. Pick the profile and recenter
-On the first connection PhoneGyro opens a **First connection** window: pick your calibration profile there and press **Recenter**.
+On first connection PhoneGyro opens the recenter window: hold the device as you will hold it in game, pick your calibration profile, and press **Recenter** (or press Space).
 
 ### 5. Configure Emulator
 In your emulator's input/controller settings, configure the motion server:
@@ -47,7 +51,7 @@ In your emulator's input/controller settings, configure the motion server:
 
 ## Live 3D Telemetry & Diagnostics
 
-PhoneGyro includes a dedicated real-time 3D telemetry window to verify sensor response, orientation stability, and DSU packet delivery rate:
+Click **Stats & 3D View** in the header to open the dedicated real-time 3D telemetry and diagnostics window to verify sensor response, orientation stability, and DSU packet delivery rate:
 
 ![3D Telemetry & Diagnostics](docs/imgs/3d%20view%20screen.jpg)
 
@@ -60,14 +64,14 @@ Click the **Settings** button in the header to access advanced options:
 - **Custom Ports**: Modify Cemuhook DSU (`26760`), HTTP pairing (`8080`), and HTTPS controller (`8443`) ports with real-time collision checks.
 - **Gyro Deadband & Sensitivity**: Silence resting sensor micro-jitter with a soft deadband and scale gyro response. Motion itself is sent unsmoothed and drift-corrected (see [Motion Pipeline](docs/motion-pipeline.md)).
 - **Global UI Scaling**: Scale the interface and fonts (`0.80x` - `1.40x`) with desktop shortcuts (`Ctrl +`, `Ctrl -`, `Ctrl 0`).
-- **Audio Feedback**: Choose between cute synthesized celesta chimes, classic Windows system sounds, or silent mode.
+- **Audio Feedback**: Choose between synthesized chimes, classic Windows system sounds, or silent mode.
 - **Appearance**: Switch between Apple-inspired dark and light interfaces.
 
 ---
 
 ## Security, Antivirus & Transparency
 
-PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections whatsoever - all communication is strictly between your phone and your PC over your local home Wi-Fi.
+PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections whatsoever — all communication is strictly between your phone and your PC over your local home Wi-Fi.
 
 ### Antivirus False Positives Notice
 Independent open-source developers rarely purchase proprietary EV (Extended Validation) code signing certificates due to exorbitant recurring costs ($400+/year). Because of this, automated machine-learning heuristics in certain antivirus software (e.g., Microsoft Defender generic `!ml` tags) might flag freshly compiled binaries as unfamiliar.
@@ -91,10 +95,10 @@ git clone https://github.com/MrHoustonOff/PhoneGyro.git
 cd PhoneGyro/gui
 
 # Build Windows x86_64
-wails build -o PhoneGyro.exe
+wails build -tags native_webview2loader -o PhoneGyro.exe
 
 # Build Windows ARM64
-wails build -platform windows/arm64 -o PhoneGyro-arm64.exe
+wails build -tags native_webview2loader -platform windows/arm64 -o PhoneGyro-arm64.exe
 ```
 
 The compiled binaries will be placed in `gui/build/bin/`.
