@@ -5,11 +5,11 @@ import (
 	"testing"
 )
 
-func quatAxis(axis [3]float64, deg float64) quat {
+func quatAxis(axis [3]float64, deg float64) Quat {
 	return qexp([3]float64{axis[0] * deg * math.Pi / 180, axis[1] * deg * math.Pi / 180, axis[2] * deg * math.Pi / 180})
 }
 
-func levelOf(q quat) (fwd, right, heading float64) {
+func levelOf(q Quat) (fwd, right, heading float64) {
 	m := NewAHRS()
 	m.Q0, m.Q1, m.Q2, m.Q3 = float32(q[0]), float32(q[1]), float32(q[2]), float32(q[3])
 	return m.GetLevel()
@@ -21,7 +21,7 @@ func levelOf(q quat) (fwd, right, heading float64) {
 func TestLevelSigns(t *testing.T) {
 	cases := []struct {
 		name          string
-		q             quat
+		q             Quat
 		fwd, right, h float64
 	}{
 		{"наклон вперёд", quatAxis([3]float64{1, 0, 0}, -10), 10, 0, 0},

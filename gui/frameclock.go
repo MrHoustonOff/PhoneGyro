@@ -6,7 +6,7 @@ import (
 	"phonegyro/pkg/server"
 )
 
-// frameClock даёт интервал, за который усреднена скорость кадра, — ровно тот,
+// FrameClock даёт интервал, за который усреднена скорость кадра, — ровно тот,
 // что DSU-клиент проинтегрирует по таймстампам пакетов (pkg/dsu stampMotion):
 //   - есть часы устройства (MotionFrame.SampleClock) и интервал правдоподобен
 //     (0 < d ≤ 1 с, 32-битный USB micros() — по модулю 2^32) — он и есть;
@@ -17,7 +17,7 @@ import (
 //
 // Наш AHRS и attitudeanchor обязаны считать так же, как клиенты: иначе кубик
 // разойдётся с PadTest, а anchor будет «исправлять» не ту ошибку.
-type frameClock struct {
+type FrameClock struct {
 	prevTs   uint64
 	clock    uint8
 	have     bool
@@ -25,7 +25,7 @@ type frameClock struct {
 }
 
 // Interval возвращает интервал в секундах и true, если он взят с часов устройства.
-func (c *frameClock) Interval(frame server.MotionFrame, now time.Time) (float64, bool) {
+func (c *FrameClock) Interval(frame server.MotionFrame, now time.Time) (float64, bool) {
 	wall := -1.0
 	if !c.prevWall.IsZero() {
 		wall = now.Sub(c.prevWall).Seconds()

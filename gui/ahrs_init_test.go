@@ -11,21 +11,21 @@ import (
 // без разворота по курсу — раньше минимальный поворот оставлял 8-27° курса.
 func TestInitKeepsHeading(t *testing.T) {
 	for _, c := range []struct{ pitch, roll float64 }{{30, 0}, {0, 30}, {30, 30}, {45, 30}, {60, 45}, {20, 60}} {
-		r0 := matMul(rotAxis([3]float64{1, 0, 0}, -c.pitch), rotAxis([3]float64{0, 0, 1}, -c.roll)) // тело→мир
+		r0 := MatMul(rotAxis([3]float64{1, 0, 0}, -c.pitch), rotAxis([3]float64{0, 0, 1}, -c.roll)) // тело→мир
 		m := NewAHRS()
 		// Путь возврата: постоянная угловая скорость тела ω = log(R0ᵀ)/T.
 		const T, steps = 2.0, 400
 		dt := T / steps
-		wb := rotVecOf(transpose3(r0))
+		wb := rotVecOf(Transpose3(r0))
 		cur := r0
 		for i := 0; i <= steps; i++ {
-			up := mulVec3(transpose3(cur), [3]float64{0, 1, 0})
+			up := MulVec3(Transpose3(cur), [3]float64{0, 1, 0})
 			var rot [3]float64
 			if i > 0 {
 				rot = [3]float64{wb[0] / T * 180 / math.Pi, -wb[1] / T * 180 / math.Pi, -wb[2] / T * 180 / math.Pi}
 			}
 			m.Update(float32(rot[0]), float32(rot[1]), float32(rot[2]), float32(-up[0]), float32(-up[1]), float32(-up[2]), float32(dt))
-			cur = matMul(cur, rotAxis(wb, math.Sqrt(wb[0]*wb[0]+wb[1]*wb[1]+wb[2]*wb[2])/steps*180/math.Pi))
+			cur = MatMul(cur, rotAxis(wb, math.Sqrt(wb[0]*wb[0]+wb[1]*wb[1]+wb[2]*wb[2])/steps*180/math.Pi))
 		}
 		p, r, y := m.GetEulerAngles()
 		t.Logf("старт наклонён вперёд %2.0f°, вправо %2.0f° -> в ровном: pitch %.2f roll %.2f yaw %.2f", c.pitch, c.roll, p, r, y)

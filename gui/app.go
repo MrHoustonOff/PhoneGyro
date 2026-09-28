@@ -94,7 +94,7 @@ type motionBank struct {
 	mountMu     sync.RWMutex
 	mountLive   *MountCorrection
 	wizardMount *MountCorrection
-	align       *sensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
+	align       *SensorAligner // gyro↔accel axis learner driving the LIVE output; never written to disk directly
 	// wizardAlign is a scratch aligner used only by the calibration wizard's explicit
 	// "determine axes" step. It runs alongside `align` (fed the same data) so the
 	// wizard's progress reflects reality, but stays fully separate: nothing here
@@ -102,7 +102,7 @@ type motionBank struct {
 	// clicks Save — see SaveProfile. This mirrors how previewMatrix/usePreview keep
 	// a candidate calibration matrix from affecting live output before Save.
 	wizardAlignMu sync.RWMutex
-	wizardAlign   *sensorAligner
+	wizardAlign   *SensorAligner
 	// Gyroscope stationary zero-bias correction (§2 of spec)
 	biasMu   sync.RWMutex
 	gyroBias [3]float64
@@ -123,10 +123,10 @@ type motionBank struct {
 	ahrs *AHRS
 	// Attitude anchor + accelerometer low-pass state, formerly closure-local
 	// variables in startup() -- moved here so each source keeps its own.
-	anchor         *attitudeAnchor
+	anchor         *AttitudeAnchor
 	prevAnchorTsUs uint64
-	anchorClock    frameClock // интервал кадра для attitudeanchor (frameclock.go)
-	ahrsClock      frameClock // интервал кадра для ahrs.Update (frameclock.go)
+	anchorClock    FrameClock // интервал кадра для attitudeanchor (frameclock.go)
+	ahrsClock      FrameClock // интервал кадра для ahrs.Update (frameclock.go)
 	// anchorWhyLogged: причина, по которой anchor не может работать, уже записана
 	// в лог для этого подключения (бит 1 — не известна связь осей гироскопа и
 	// акселерометра, бит 2 — телефон не присылает ориентацию).
@@ -139,7 +139,7 @@ type motionBank struct {
 	accFiltered   [3]float64
 	accFilterInit bool
 	// Живая подстройка нуля гироскопа в покое (gyrobias.go), под biasMu.
-	biasTracker gyroBiasTracker
+	biasTracker GyroBiasTracker
 	// Потери канала для Live Debug (linkloss.go): USB — по SEQ, телефон — по
 	// счётчикам событий датчика со страницы.
 	loss linkLoss
@@ -166,9 +166,9 @@ type motionBank struct {
 func newMotionBank() *motionBank {
 	b := &motionBank{
 		activeSlot:   -1,
-		activeMatrix: defaultMatrix3x3(),
+		activeMatrix: DefaultMatrix3x3(),
 		ahrs:         NewAHRS(),
-		anchor:       newAttitudeAnchor(),
+		anchor:       NewAttitudeAnchor(),
 		calStepLogs:  make(map[int]StepCaptureLog),
 	}
 	for i := range b.profiles {
@@ -177,7 +177,7 @@ func newMotionBank() *motionBank {
 			Name:   "",
 			Device: "Unknown",
 			Icon:   "default",
-			Matrix: defaultMatrix3x3(),
+			Matrix: DefaultMatrix3x3(),
 			Active: false,
 		}
 	}
@@ -434,8 +434,8 @@ func (a *App) startup(ctx context.Context) {
 
 	// Each bank gets its own aligner (own sensor_frame.json) so a learned
 	// axis mapping never leaks between the phone and a USB device.
-	a.phoneBank.align = newSensorAligner(a.bankDir("phone"))
-	a.usbBank.align = newSensorAligner(a.bankDir("usb"))
+	a.phoneBank.align = NewSensorAligner(a.bankDir("phone"))
+	a.usbBank.align = NewSensorAligner(a.bankDir("usb"))
 	a.initProfileSensorFrame(a.phoneBank, a.bankDir("phone"))
 	a.initProfileSensorFrame(a.usbBank, a.bankDir("usb"))
 
@@ -575,13 +575,13 @@ func (a *App) startup(ctx context.Context) {
 		}
 		sf, sfKnown := bank.align.Frame()
 		sf, sfKnown, calGravity = bank.outputFrameInputs(usePrev, sf, sfKnown, calGravity)
-		accMat, yawSign := buildOutputMapping(mat, sf, calGravity)
+		accMat, yawSign := BuildOutputMapping(mat, sf, calGravity)
 
 		// Pull the integrated angle onto the source's own attitude (see attitudeanchor.go).
-		anchorDt := anchorDefaultDtSec
+		anchorDt := AnchorDefaultDtSec
 		if bank.resetAnchor.Swap(false) {
 			bank.anchor.Reset()
-			bank.anchorClock = frameClock{}
+			bank.anchorClock = FrameClock{}
 			bank.anchorWhyLogged = 0
 			a.logEvent("INFO", "anchor: reset (new phone connection)")
 		}
@@ -595,7 +595,7 @@ func (a *App) startup(ctx context.Context) {
 				bank.anchor.Reset() // device clock restarted: reconnect / page reload
 			}
 		} else {
-			bank.anchorClock = frameClock{}
+			bank.anchorClock = FrameClock{}
 			if bank.prevAnchorTsUs > 0 && frame.TimestampUs > bank.prevAnchorTsUs {
 				d := float64(frame.TimestampUs-bank.prevAnchorTsUs) / 1e6
 				if d >= 0.004 && d <= 0.1 {
@@ -617,7 +617,7 @@ func (a *App) startup(ctx context.Context) {
 			}
 			// The orientation may simply arrive a few frames after the first motion
 			// sample: only report it if it stays missing for a second.
-			if refNorm < anchorMinQuatNorm {
+			if refNorm < AnchorMinQuatNorm {
 				bank.anchorNoRefRun++
 				if bank.anchorNoRefRun == 60 && bank.anchorWhyLogged&2 == 0 {
 					bank.anchorWhyLogged |= 2
@@ -628,18 +628,18 @@ func (a *App) startup(ctx context.Context) {
 			}
 		}
 		if sfKnown {
-			pk := [3]float64{rawRx * alignDegToRad, rawRy * alignDegToRad, rawRz * alignDegToRad}
-			dev := mulVec3(transpose3(sf.Q), pk)
-			ref := quat{float64(frame.Qw), float64(frame.Qx), float64(frame.Qy), float64(frame.Qz)}
-			corr := mulVec3(sf.Q, bank.anchor.Correction(dev, ref, anchorDt))
-			rawRx += corr[0] / alignDegToRad
-			rawRy += corr[1] / alignDegToRad
-			rawRz += corr[2] / alignDegToRad
+			pk := [3]float64{rawRx * DegToRad, rawRy * DegToRad, rawRz * DegToRad}
+			dev := MulVec3(Transpose3(sf.Q), pk)
+			ref := Quat{float64(frame.Qw), float64(frame.Qx), float64(frame.Qy), float64(frame.Qz)}
+			corr := MulVec3(sf.Q, bank.anchor.Correction(dev, ref, anchorDt))
+			rawRx += corr[0] / DegToRad
+			rawRy += corr[1] / DegToRad
+			rawRz += corr[2] / DegToRad
 		}
 
-		rx, ry, rz := applyMatrix(mat, rawRx, rawRy, rawRz)
+		rx, ry, rz := ApplyMatrix(mat, rawRx, rawRy, rawRz)
 		ry *= yawSign
-		ax, ay, az := applyMatrix(accMat, rawAcc[0], rawAcc[1], rawAcc[2])
+		ax, ay, az := ApplyMatrix(accMat, rawAcc[0], rawAcc[1], rawAcc[2])
 
 		gyroSpeed := math.Sqrt(rx*rx + ry*ry + rz*rz)
 
@@ -652,12 +652,12 @@ func (a *App) startup(ctx context.Context) {
 		}
 
 		rawDsuRx := float32(rx)
-		rawDsuRy := dsuYawSign * float32(ry) // see dsuYawSign / dsuAccSign in sensoralign.go
+		rawDsuRy := DSUYawSign * float32(ry) // see dsuYawSign / dsuAccSign in sensoralign.go
 		rawDsuRz := float32(rz)
 
 		// Порог гасит только скорости около нуля; от 2·порога движение проходит
 		// без изменений (deadband.go).
-		scale := float32(deadbandScale(gyroSpeed, gyroDeadband))
+		scale := float32(DeadbandScale(gyroSpeed, gyroDeadband))
 		ahrsRx := float32(rx) * scale
 		ahrsRy := float32(ry) * scale
 		ahrsRz := float32(rz) * scale
@@ -712,14 +712,14 @@ func (a *App) startup(ctx context.Context) {
 		// ориентацию по принятым DSU-пакетам, и его знаки гироскопа верны только
 		// в этом кадре. Кормить его чем-то другим (как было: ahrsR*, final* до
 		// знаков DSU) = другая хиральность = снова увод после резкого движения.
-		dsuAx := dsuAccSign[0] * finalAx
-		dsuAy := dsuAccSign[1] * finalAy
-		dsuAz := dsuAccSign[2] * finalAz
+		dsuAx := DSUAccSign[0] * finalAx
+		dsuAy := DSUAccSign[1] * finalAy
+		dsuAz := DSUAccSign[2] * finalAz
 
 		// Поправка на наклон установки датчика (USB, mountalign.go): один поворот
 		// на гироскоп и акселерометр, чтобы их согласованность не пострадала.
 		if mc := bank.activeMount(usePrev); mc.Active() {
-			r, ac := mc.applyToDSU(
+			r, ac := mc.ApplyToDSU(
 				[3]float64{float64(dsuRx), float64(dsuRy), float64(dsuRz)},
 				[3]float64{float64(dsuAx), float64(dsuAy), float64(dsuAz)})
 			dsuRx, dsuRy, dsuRz = float32(r[0]), float32(r[1]), float32(r[2])
@@ -906,7 +906,7 @@ func (a *App) startup(ctx context.Context) {
 			a.phoneBank.deviceName.Store(device)
 			a.emitStateChange()
 			if device == "iPhone" || device == "iPad" {
-				a.phoneBank.align.SeedGuess(iosSensorFrame())
+				a.phoneBank.align.SeedGuess(IOSSensorFrame())
 			}
 		}
 	}

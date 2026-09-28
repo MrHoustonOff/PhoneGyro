@@ -11,7 +11,7 @@ import (
 )
 
 func rotAxis(axis [3]float64, deg float64) [3][3]float64 {
-	n := norm3(axis)
+	n := Norm3(axis)
 	x, y, z := axis[0]/n, axis[1]/n, axis[2]/n
 	a := deg * math.Pi / 180
 	c, s, t := math.Cos(a), math.Sin(a), 1-math.Cos(a)
@@ -24,32 +24,32 @@ func rotAxis(axis [3]float64, deg float64) [3][3]float64 {
 
 // Датчик повёрнут в корпусе: sensor = Mᵀ·body. Жест «вперёд» — вращение вокруг X корпуса.
 func simulateMount(m [3][3]float64, pitchWobbleDeg float64) (up [3]float64, pitch [][3]float64) {
-	mt := transpose3(m)
-	up = mulVec3(mt, [3]float64{0, 1, 0})
+	mt := Transpose3(m)
+	up = MulVec3(mt, [3]float64{0, 1, 0})
 	wob := rotAxis([3]float64{0, 1, 0}, pitchWobbleDeg)
 	for i := 0; i < 200; i++ {
 		w := 150 * math.Sin(float64(i)/10)
-		pitch = append(pitch, mulVec3(mt, mulVec3(wob, [3]float64{w, 0, 0})))
+		pitch = append(pitch, MulVec3(mt, MulVec3(wob, [3]float64{w, 0, 0})))
 	}
 	return
 }
 
 func TestMountRealTiltIsCorrected(t *testing.T) {
 	// 7.8° вокруг Z корпуса + 2° вокруг X — как у реального USB-пада.
-	m := matMul(rotAxis([3]float64{0, 0, 1}, 7.8), rotAxis([3]float64{1, 0, 0}, 2))
+	m := MatMul(rotAxis([3]float64{0, 0, 1}, 7.8), rotAxis([3]float64{1, 0, 0}, 2))
 	up, pitch := simulateMount(m, 1.5)
-	c := computeMountCorrection(up, pitch)
+	c := ComputeMountCorrection(up, pitch)
 	if c.Status != mountOK || !c.Active() {
 		t.Fatalf("status %s (tilt %.2f check %.2f), want ok", c.Status, c.TiltDeg, c.CheckDeg)
 	}
-	if got := mulVec3(c.R, up); math.Abs(got[1]-1) > 1e-9 {
+	if got := MulVec3(c.R, up); math.Abs(got[1]-1) > 1e-9 {
 		t.Fatalf("R·up = %v, want (0,1,0)", got)
 	}
 	// Главное — перекрёстное влияние: чистый горизонтальный поворот корпуса после
 	// поправки почти не должен уходить в pitch/roll (без поправки ~14%).
-	yaw := mulVec3(transpose3(m), [3]float64{0, 100, 0})
+	yaw := MulVec3(Transpose3(m), [3]float64{0, 100, 0})
 	before := math.Hypot(yaw[0], yaw[2]) / 100
-	fixed := mulVec3(c.R, yaw)
+	fixed := MulVec3(c.R, yaw)
 	after := math.Hypot(fixed[0], fixed[2]) / 100
 	t.Logf("tilt %.2f° (вперёд %.2f, вправо %.2f), check %.2f°, утечка yaw: %.1f%% -> %.2f%%",
 		c.TiltDeg, c.ForwardDeg, c.RightDeg, c.CheckDeg, before*100, after*100)
@@ -61,24 +61,24 @@ func TestMountRealTiltIsCorrected(t *testing.T) {
 func TestMountAccelBiasIsRejected(t *testing.T) {
 	// Датчик стоит ровно, но акселерометр смещён на 0.136g по X: гироскоп наклона не видит.
 	up := [3]float64{-0.136, 1, 0}
-	_, pitch := simulateMount(identity3(), 0)
-	c := computeMountCorrection(up, pitch)
+	_, pitch := simulateMount(Identity3(), 0)
+	c := ComputeMountCorrection(up, pitch)
 	if c.Status != mountInconsistent || c.Active() {
 		t.Fatalf("status %s (tilt %.2f check %.2f), want inconsistent", c.Status, c.TiltDeg, c.CheckDeg)
 	}
 }
 
 func TestMountThresholds(t *testing.T) {
-	_, pitch := simulateMount(identity3(), 0)
-	if c := computeMountCorrection([3]float64{0.005, 1, 0}, pitch); c.Status != mountSmall || c.Active() {
+	_, pitch := simulateMount(Identity3(), 0)
+	if c := ComputeMountCorrection([3]float64{0.005, 1, 0}, pitch); c.Status != mountSmall || c.Active() {
 		t.Fatalf("small tilt: status %s", c.Status)
 	}
 	m := rotAxis([3]float64{1, 0, 0}, 40)
 	up, pitch := simulateMount(m, 0)
-	if c := computeMountCorrection(up, pitch); c.Status != mountTooLarge || c.Active() {
+	if c := ComputeMountCorrection(up, pitch); c.Status != mountTooLarge || c.Active() {
 		t.Fatalf("40°: status %s", c.Status)
 	}
-	if c := computeMountCorrection([3]float64{0.1, 1, 0}, nil); c.Status != mountNoData || c.Active() {
+	if c := ComputeMountCorrection([3]float64{0.1, 1, 0}, nil); c.Status != mountNoData || c.Active() {
 		t.Fatalf("no gesture: status %s", c.Status)
 	}
 }
@@ -86,12 +86,12 @@ func TestMountThresholds(t *testing.T) {
 func TestMountSignsMatchLevel(t *testing.T) {
 	// Датчик завален вперёд (дальний край вниз) = -θ вокруг X — так же, как в TestEulerSigns.
 	up, pitch := simulateMount(rotAxis([3]float64{1, 0, 0}, -6), 0)
-	c := computeMountCorrection(up, pitch)
+	c := ComputeMountCorrection(up, pitch)
 	if math.Abs(c.ForwardDeg-6) > 0.01 || math.Abs(c.RightDeg) > 0.01 {
 		t.Fatalf("вперёд %.2f вправо %.2f, want 6, 0", c.ForwardDeg, c.RightDeg)
 	}
 	up, pitch = simulateMount(rotAxis([3]float64{0, 0, 1}, -6), 0)
-	c = computeMountCorrection(up, pitch)
+	c = ComputeMountCorrection(up, pitch)
 	if math.Abs(c.RightDeg-6) > 0.01 || math.Abs(c.ForwardDeg) > 0.01 {
 		t.Fatalf("вперёд %.2f вправо %.2f, want 0, 6", c.ForwardDeg, c.RightDeg)
 	}
@@ -101,10 +101,10 @@ func TestMountApplyToDSU(t *testing.T) {
 	c := MountCorrection{Status: mountOK, Enabled: true, R: rotAxis([3]float64{1, 2, 3}, 10)}
 	rot := [3]float64{10, -20, 30}
 	acc := [3]float64{0.1, -0.9, 0.2}
-	r2, a2 := c.applyToDSU(rot, acc)
+	r2, a2 := c.ApplyToDSU(rot, acc)
 	// Физический кадр: ω = P·Rot, up = -Acc — оба должны повернуться одним R.
-	wantW := mulVec3(c.R, [3]float64{rot[0], -rot[1], -rot[2]})
-	wantU := mulVec3(c.R, [3]float64{-acc[0], -acc[1], -acc[2]})
+	wantW := MulVec3(c.R, [3]float64{rot[0], -rot[1], -rot[2]})
+	wantU := MulVec3(c.R, [3]float64{-acc[0], -acc[1], -acc[2]})
 	gotW := [3]float64{r2[0], -r2[1], -r2[2]}
 	gotU := [3]float64{-a2[0], -a2[1], -a2[2]}
 	for i := 0; i < 3; i++ {
@@ -158,7 +158,7 @@ func TestMountOnRealUSBCapture(t *testing.T) {
 
 	// Матрица и кадр датчика — как в сохранённом USB-профиле.
 	mat := [3][3]float64{{1, 0, 0}, {0, 0, -1}, {0, -1, 0}}
-	sf := sensorFrame{Q: identity3(), H: -1}
+	sf := SensorFrame{Q: Identity3(), H: -1}
 	runs := 0
 	for i := 0; i+1 < len(sessions); i++ {
 		rest, pitch := sessions[i], sessions[i+1]
@@ -171,7 +171,7 @@ func TestMountOnRealUSBCapture(t *testing.T) {
 				g[k] += s.acc[k] / float64(len(rest.samples))
 			}
 		}
-		n := norm3(g)
+		n := Norm3(g)
 		g = [3]float64{g[0] / n, g[1] / n, g[2] / n}
 		c := mountFromCalibration(mat, sf, g, pitch.samples)
 		runs++

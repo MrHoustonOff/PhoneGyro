@@ -15,7 +15,7 @@ var iosQ = [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}
 var userProfile = [3][3]float64{{0, 0, 1}, {0, 1, 0}, {1, 0, 0}}
 
 func rodrigues(v, axis [3]float64, angle float64) [3]float64 {
-	n := norm3(axis)
+	n := Norm3(axis)
 	if n < 1e-12 {
 		return v
 	}
@@ -50,7 +50,7 @@ func simulateIOSBursts(seconds float64, seed int64) []simFrame {
 		moving := phase < 0.5
 		if i%72 == 0 {
 			ax := [3]float64{rng.NormFloat64(), rng.NormFloat64(), rng.NormFloat64()}
-			sp := (60 + 340*rng.Float64()) * alignDegToRad / norm3(ax)
+			sp := (60 + 340*rng.Float64()) * DegToRad / Norm3(ax)
 			w = [3]float64{ax[0] * sp, ax[1] * sp, ax[2] * sp}
 		}
 		cur := w
@@ -64,12 +64,12 @@ func simulateIOSBursts(seconds float64, seed int64) []simFrame {
 				acc[k] += 0.5 * math.Sin(9*t+2*float64(k))
 			}
 		}
-		pk := mulVec3(iosQ, cur)
+		pk := MulVec3(iosQ, cur)
 		for k := 0; k < 3; k++ {
-			pk[k] = pk[k]/alignDegToRad + 0.3*rng.NormFloat64()
+			pk[k] = pk[k]/DegToRad + 0.3*rng.NormFloat64()
 		}
 		out = append(out, simFrame{rotPk: pk, acc: acc, tsUs: uint64(i) * 16667})
-		g = rodrigues(g, cur, -norm3(cur)*dt)
+		g = rodrigues(g, cur, -Norm3(cur)*dt)
 	}
 	return out
 }
@@ -83,20 +83,20 @@ func simulateIOS(seconds float64) []simFrame {
 	for i := 0; float64(i)*dt < seconds; i++ {
 		t := float64(i) * dt
 		w := [3]float64{2.0 * math.Sin(1.3*t), 1.5 * math.Sin(0.7*t+1), 2.5 * math.Sin(0.9*t+2)}
-		pk := mulVec3(iosQ, w)
+		pk := MulVec3(iosQ, w)
 		out = append(out, simFrame{
-			rotPk: [3]float64{pk[0] / alignDegToRad, pk[1] / alignDegToRad, pk[2] / alignDegToRad},
+			rotPk: [3]float64{pk[0] / DegToRad, pk[1] / DegToRad, pk[2] / DegToRad},
 			acc:   g,
 			tsUs:  uint64(i) * 16667,
 		})
-		g = rodrigues(g, w, -norm3(w)*dt) // world-fixed vector seen from the body
+		g = rodrigues(g, w, -Norm3(w)*dt) // world-fixed vector seen from the body
 	}
 	return out
 }
 
 func TestSensorAlignerLearnsIOSAxes(t *testing.T) {
 	for seed := int64(1); seed <= 20; seed++ {
-		s := newSensorAligner("")
+		s := NewSensorAligner("")
 		for _, f := range simulateIOSBursts(20, seed) {
 			s.Feed(f.rotPk, f.acc, f.tsUs)
 		}
@@ -108,8 +108,8 @@ func TestSensorAlignerLearnsIOSAxes(t *testing.T) {
 }
 
 func TestOutputMappingFlatRestReadsMinusY(t *testing.T) {
-	accMat, ys := buildOutputMapping(userProfile, sensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
-	a := mulVec3(accMat, [3]float64{0, 0, -1})
+	accMat, ys := BuildOutputMapping(userProfile, SensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
+	a := MulVec3(accMat, [3]float64{0, 0, -1})
 	if math.Abs(a[0]) > 1e-9 || math.Abs(a[1]+1) > 1e-9 || math.Abs(a[2]) > 1e-9 {
 		t.Fatalf("flat rest -> Acc %v, want [0 -1 0]", a)
 	}
@@ -138,14 +138,14 @@ func TestOutputMappingFlatRestReadsMinusY(t *testing.T) {
 // d(Acc)/dt = sign·(D·Rot) × Acc over the DSU output of a smooth iOS simulation.
 func dsuKinematicResidual(sign float64) float64 {
 	frames := simulateIOS(10)
-	accMat, ys := buildOutputMapping(userProfile, sensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
+	accMat, ys := BuildOutputMapping(userProfile, SensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
 	out := func(f simFrame) (r, a [3]float64) {
-		r = mulVec3(userProfile, f.rotPk)
-		r[1] *= ys * float64(dsuYawSign)
-		a = mulVec3(accMat, f.acc)
+		r = MulVec3(userProfile, f.rotPk)
+		r[1] *= ys * float64(DSUYawSign)
+		a = MulVec3(accMat, f.acc)
 		for k := 0; k < 3; k++ {
-			r[k] *= alignDegToRad
-			a[k] *= float64(dsuAccSign[k])
+			r[k] *= DegToRad
+			a[k] *= float64(DSUAccSign[k])
 		}
 		return r, a
 	}
@@ -160,14 +160,14 @@ func dsuKinematicResidual(sign float64) float64 {
 			d := (a2[k]-a1[k])*60 - sign*pred[k]
 			e += d * d
 		}
-		sum += math.Sqrt(e) / (norm3(r) + 1e-9)
+		sum += math.Sqrt(e) / (Norm3(r) + 1e-9)
 	}
 	return sum / float64(len(frames)-1)
 }
 
 func TestDSUOutputMatchesClientConvention(t *testing.T) {
-	flat, _ := buildOutputMapping(userProfile, sensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
-	if y := mulVec3(flat, [3]float64{0, 0, -1})[1] * float64(dsuAccSign[1]); math.Abs(y+1) > 1e-9 {
+	flat, _ := BuildOutputMapping(userProfile, SensorFrame{Q: iosQ, H: -1}, [3]float64{0, 0, -1})
+	if y := MulVec3(flat, [3]float64{0, 0, -1})[1] * float64(DSUAccSign[1]); math.Abs(y+1) > 1e-9 {
 		t.Fatalf("flat DSU AccY = %v, want -1", y)
 	}
 	if e := dsuKinematicResidual(-1); e > 0.05 {

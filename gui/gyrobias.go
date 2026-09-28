@@ -42,7 +42,7 @@ const (
 	biasMaxJumpDps   = 5.0  // среднее окна дальше от bias — не дрейф нуля
 )
 
-type gyroBiasTracker struct {
+type GyroBiasTracker struct {
 	start  time.Time
 	n      int
 	sum    [3]float64
@@ -51,14 +51,14 @@ type gyroBiasTracker struct {
 	aSumSq [3]float64
 }
 
-func (t *gyroBiasTracker) reset() { *t = gyroBiasTracker{} }
+func (t *GyroBiasTracker) reset() { *t = GyroBiasTracker{} }
 
 // Feed принимает сырой гироскоп (°/с), сырой акселерометр (g) и текущий bias.
 // Возвращает новый bias и true, когда окно покоя закрылось и bias обновлён.
-func (t *gyroBiasTracker) Feed(now time.Time, raw, acc, bias [3]float64) ([3]float64, bool) {
-	accMag := norm3(acc)
+func (t *GyroBiasTracker) Feed(now time.Time, raw, acc, bias [3]float64) ([3]float64, bool) {
+	accMag := Norm3(acc)
 	d := [3]float64{raw[0] - bias[0], raw[1] - bias[1], raw[2] - bias[2]}
-	if accMag < biasMinAccG || accMag > biasMaxAccG || norm3(d) > biasSampleMaxDps {
+	if accMag < biasMinAccG || accMag > biasMaxAccG || Norm3(d) > biasSampleMaxDps {
 		t.reset()
 		return bias, false
 	}

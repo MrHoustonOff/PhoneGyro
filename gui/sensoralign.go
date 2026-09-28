@@ -29,8 +29,8 @@ import (
 // 24 Q × 2 h hypotheses and check which one lands gravity where the accelerometer
 // reports it; the true mapping wins by a wide margin after a handful of tilts.
 
-// sensorFrame maps raw accelerometer axes into raw gyro packet axes.
-type sensorFrame struct {
+// SensorFrame maps raw accelerometer axes into raw gyro packet axes.
+type SensorFrame struct {
 	Q [3][3]float64 `json:"q"` // a_pk = Q · acc_raw (det = +1)
 	H float64       `json:"h"` // rate handedness: -1 right-handed, +1 left-handed
 }
@@ -55,14 +55,14 @@ const (
 	alignMaxErrDeg   = 20.0 // winner's mean prediction error
 	alignMarginRatio = 2.5  // runner-up must be this much worse
 	alignErrClampDeg = 45.0
-	alignDegToRad    = math.Pi / 180.0
+	DegToRad    = math.Pi / 180.0
 	alignPersistFile = "sensor_frame.json"
 )
 
-type sensorAligner struct {
+type SensorAligner struct {
 	mu     sync.Mutex
 	path   string
-	cands  []sensorFrame // 24 proper Q; h is scored separately
+	cands  []SensorFrame // 24 proper Q; h is scored separately
 	errSum []float64     // [2*i + (h==+1)] accumulated prediction error, degrees
 	pairs  int
 
@@ -78,23 +78,23 @@ type sensorAligner struct {
 	rotM      [3][3]float64
 	rotP      [3][3]float64
 
-	cur   sensorFrame
+	cur   SensorFrame
 	known bool
 }
 
-// newSensorAligner creates an aligner; dir only migrates a legacy global sensor_frame.json
+// NewSensorAligner creates an aligner; dir only migrates a legacy global sensor_frame.json
 // (the mapping now lives in each profile).
-func newSensorAligner(dir string) *sensorAligner {
-	s := &sensorAligner{
+func NewSensorAligner(dir string) *SensorAligner {
+	s := &SensorAligner{
 		cands: properSignedPermutations(),
-		cur:   sensorFrame{Q: identity3(), H: -1}, // W3C spec until proven otherwise
+		cur:   SensorFrame{Q: Identity3(), H: -1}, // W3C spec until proven otherwise
 	}
 	s.errSum = make([]float64, 2*len(s.cands))
 	if dir != "" {
 		s.path = filepath.Join(dir, alignPersistFile)
 		if data, err := os.ReadFile(s.path); err == nil {
-			var f sensorFrame
-			if json.Unmarshal(data, &f) == nil && math.Abs(f.H) == 1 && math.Abs(det3x3(f.Q)-1) < 1e-6 {
+			var f SensorFrame
+			if json.Unmarshal(data, &f) == nil && math.Abs(f.H) == 1 && math.Abs(Det3x3(f.Q)-1) < 1e-6 {
 				s.cur = f
 				s.known = true
 			}
@@ -110,7 +110,7 @@ func newSensorAligner(dir string) *sensorAligner {
 // reads 1.5g+), so gravity is only compared at still moments: integrate the gyro
 // from one still moment to the next and check where each hypothesis says gravity
 // should have ended up.
-func (s *sensorAligner) Feed(rot, acc [3]float64, tsUs uint64) {
+func (s *SensorAligner) Feed(rot, acc [3]float64, tsUs uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -122,19 +122,19 @@ func (s *sensorAligner) Feed(rot, acc [3]float64, tsUs uint64) {
 				dt = d
 			}
 		}
-		jerk = norm3([3]float64{acc[0] - s.prevAcc[0], acc[1] - s.prevAcc[1], acc[2] - s.prevAcc[2]})
+		jerk = Norm3([3]float64{acc[0] - s.prevAcc[0], acc[1] - s.prevAcc[1], acc[2] - s.prevAcc[2]})
 	}
 	s.prevAcc, s.prevTsUs, s.havePrev = acc, tsUs, true
 
-	w := [3]float64{rot[0] * alignDegToRad, rot[1] * alignDegToRad, rot[2] * alignDegToRad}
-	wn := norm3(w)
+	w := [3]float64{rot[0] * DegToRad, rot[1] * DegToRad, rot[2] * DegToRad}
+	wn := Norm3(w)
 	if s.anchored {
-		s.rotM = matMul(axisAngle(w, -wn*dt), s.rotM)
-		s.rotP = matMul(axisAngle(w, wn*dt), s.rotP)
+		s.rotM = MatMul(axisAngle(w, -wn*dt), s.rotM)
+		s.rotP = MatMul(axisAngle(w, wn*dt), s.rotP)
 		s.anchorAge += dt
 	}
 
-	still := wn < alignStillRate && math.Abs(norm3(acc)-1) < alignStillAccTol && jerk < alignStillJerk
+	still := wn < alignStillRate && math.Abs(Norm3(acc)-1) < alignStillAccTol && jerk < alignStillJerk
 	if !still {
 		return
 	}
@@ -145,15 +145,15 @@ func (s *sensorAligner) Feed(rot, acc [3]float64, tsUs uint64) {
 		s.scorePairLocked(acc)
 	}
 	s.anchored, s.anchorAcc, s.anchorAge = true, acc, 0
-	s.rotM, s.rotP = identity3(), identity3()
+	s.rotM, s.rotP = Identity3(), Identity3()
 }
 
-func (s *sensorAligner) scorePairLocked(acc [3]float64) {
+func (s *SensorAligner) scorePairLocked(acc [3]float64) {
 	for i, c := range s.cands {
-		from := mulVec3(c.Q, s.anchorAcc)
-		to := mulVec3(c.Q, acc)
-		s.errSum[2*i] += math.Min(angleDeg(mulVec3(s.rotM, from), to), alignErrClampDeg)
-		s.errSum[2*i+1] += math.Min(angleDeg(mulVec3(s.rotP, from), to), alignErrClampDeg)
+		from := MulVec3(c.Q, s.anchorAcc)
+		to := MulVec3(c.Q, acc)
+		s.errSum[2*i] += math.Min(angleDeg(MulVec3(s.rotM, from), to), alignErrClampDeg)
+		s.errSum[2*i+1] += math.Min(angleDeg(MulVec3(s.rotP, from), to), alignErrClampDeg)
 	}
 	s.pairs++
 	if s.pairs >= alignMinPairs {
@@ -161,7 +161,7 @@ func (s *sensorAligner) scorePairLocked(acc [3]float64) {
 	}
 }
 
-func (s *sensorAligner) decideLocked() {
+func (s *SensorAligner) decideLocked() {
 	best, second := -1, -1
 	for i := range s.errSum {
 		if best < 0 || s.errSum[i] < s.errSum[best] {
@@ -191,12 +191,12 @@ func (s *sensorAligner) decideLocked() {
 	s.pairs = 0
 }
 
-// iosSensorFrame is the axis relation iOS Safari has been observed to use for every
+// IOSSensorFrame is the axis relation iOS Safari has been observed to use for every
 // device tested so far (see docs/motion-pipeline.md §3): rotationRate reports
 // (beta, gamma, alpha) = (devY, devZ, devX), so a_pk = Q · acc_raw with
 // Q = [[0,1,0],[0,0,1],[1,0,0]], h = -1.
-func iosSensorFrame() sensorFrame {
-	return sensorFrame{Q: [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}, H: -1}
+func IOSSensorFrame() SensorFrame {
+	return SensorFrame{Q: [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}, H: -1}
 }
 
 // SeedGuess sets the working hypothesis used for the accelerometer mapping before any
@@ -206,7 +206,7 @@ func iosSensorFrame() sensorFrame {
 // from a profile (known == true) and never marks the guess as "known": the physics
 // scoring in scorePairLocked/decideLocked keeps running and will correct a wrong
 // guess exactly like it would correct the identity default.
-func (s *sensorAligner) SeedGuess(f sensorFrame) {
+func (s *SensorAligner) SeedGuess(f SensorFrame) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.known {
@@ -219,7 +219,7 @@ func (s *sensorAligner) SeedGuess(f sensorFrame) {
 // true, the current mapping is also marked unconfirmed so the wizard step must
 // re-earn it from scratch; cur is left untouched either way so accelerometer output
 // never regresses to identity mid-reset.
-func (s *sensorAligner) Reset(forgetKnown bool) {
+func (s *SensorAligner) Reset(forgetKnown bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for i := range s.errSum {
@@ -235,7 +235,7 @@ func (s *sensorAligner) Reset(forgetKnown bool) {
 // Progress reports how many informative still-tilt-still pairs have been scored since
 // the last Reset/lock, and how many are required to decide. Used by the wizard to show
 // a live "N of M tilts" readout during the explicit axis-alignment step.
-func (s *sensorAligner) Progress() (pairs, minPairs int, known bool) {
+func (s *SensorAligner) Progress() (pairs, minPairs int, known bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.pairs, alignMinPairs, s.known
@@ -245,7 +245,7 @@ func (s *sensorAligner) Progress() (pairs, minPairs int, known bool) {
 // saved mapping); known=false is only a starting guess for physics to confirm or
 // correct (e.g. the iOS default for a device with no saved mapping yet) — unlike a
 // confirmed frame, callers must not rely on it being exactly right.
-func (s *sensorAligner) SetFrame(f sensorFrame, known bool) {
+func (s *SensorAligner) SetFrame(f SensorFrame, known bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.cur, s.known = f, known
@@ -258,7 +258,7 @@ func (s *sensorAligner) SetFrame(f sensorFrame, known bool) {
 // AxisMapping describes the current accelerometer→gyro axis relation as three signed
 // axis labels (packet X, Y, Z <- raw device axis), e.g. ["+Y", "+Z", "+X"] for the iOS
 // default. Used by the wizard to show the user what was actually determined.
-func (s *sensorAligner) AxisMapping() [3]string {
+func (s *SensorAligner) AxisMapping() [3]string {
 	s.mu.Lock()
 	q := s.cur.Q
 	s.mu.Unlock()
@@ -278,13 +278,13 @@ func (s *sensorAligner) AxisMapping() [3]string {
 }
 
 // Frame returns the current mapping and whether it was learned (or loaded) rather than assumed.
-func (s *sensorAligner) Frame() (sensorFrame, bool) {
+func (s *SensorAligner) Frame() (SensorFrame, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.cur, s.known
 }
 
-// buildOutputMapping derives the DSU output transform from the gyro calibration matrix.
+// BuildOutputMapping derives the DSU output transform from the gyro calibration matrix.
 //
 // PadTest/Cemu run Madgwick on g = -Rot, a = D·Acc with D = diag(1,-1,-1) (see ahrs.go).
 // For gyro and gravity to agree there, the DSU fields must satisfy
@@ -296,10 +296,10 @@ func (s *sensorAligner) Frame() (sensorFrame, bool) {
 // The remaining ± is gravity's sign, which no kinematics can observe (browsers
 // disagree on it); we pick it so the calibration rest pose reads AccY = -1g,
 // the flat-on-table convention of Cemuhook DSU.
-func buildOutputMapping(mat [3][3]float64, f sensorFrame, calGravity [3]float64) (accMat [3][3]float64, yawSign float64) {
+func BuildOutputMapping(mat [3][3]float64, f SensorFrame, calGravity [3]float64) (accMat [3][3]float64, yawSign float64) {
 	// det(S)·det(mat) = h  →  ys = h·det(mat)
 	yawSign = 1
-	if f.H*det3x3(mat) < 0 {
+	if f.H*Det3x3(mat) < 0 {
 		yawSign = -1
 	}
 	dsm := mat
@@ -307,10 +307,10 @@ func buildOutputMapping(mat [3][3]float64, f sensorFrame, calGravity [3]float64)
 		dsm[1][j] *= -yawSign // D flips Y, S flips Y by yawSign
 		dsm[2][j] *= -1       // D flips Z
 	}
-	accMat = matMul(dsm, f.Q)
+	accMat = MatMul(dsm, f.Q)
 
-	if norm3(calGravity) > 0.3 {
-		if y := mulVec3(accMat, calGravity)[1]; y > 0 {
+	if Norm3(calGravity) > 0.3 {
+		if y := MulVec3(accMat, calGravity)[1]; y > 0 {
 			for i := 0; i < 3; i++ {
 				for j := 0; j < 3; j++ {
 					accMat[i][j] = -accMat[i][j]
@@ -327,13 +327,13 @@ func buildOutputMapping(mat [3][3]float64, f sensorFrame, calGravity [3]float64)
 // consistent fix that keeps flat = AccY -1g is Rot → S·Rot, Acc → -S·Acc with
 // S = diag(1,-1,1). Verified in PadTest: yaw mirrored and held tilts slid back
 // until all three were applied.
-const dsuYawSign float32 = -1
+const DSUYawSign float32 = -1
 
-var dsuAccSign = [3]float32{-1, 1, -1}
+var DSUAccSign = [3]float32{-1, 1, -1}
 
-func properSignedPermutations() []sensorFrame {
+func properSignedPermutations() []SensorFrame {
 	perms := [6][3]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}}
-	var out []sensorFrame
+	var out []SensorFrame
 	for _, p := range perms {
 		for signs := 0; signs < 8; signs++ {
 			var m [3][3]float64
@@ -344,20 +344,20 @@ func properSignedPermutations() []sensorFrame {
 				}
 				m[r][p[r]] = sg
 			}
-			if det3x3(m) > 0 {
-				out = append(out, sensorFrame{Q: m, H: -1})
+			if Det3x3(m) > 0 {
+				out = append(out, SensorFrame{Q: m, H: -1})
 			}
 		}
 	}
 	return out
 }
 
-func identity3() [3][3]float64 {
+func Identity3() [3][3]float64 {
 	return [3][3]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 }
 
-func mulVec3(m [3][3]float64, v [3]float64) [3]float64 {
-	x, y, z := applyMatrix(m, v[0], v[1], v[2])
+func MulVec3(m [3][3]float64, v [3]float64) [3]float64 {
+	x, y, z := ApplyMatrix(m, v[0], v[1], v[2])
 	return [3]float64{x, y, z}
 }
 
@@ -369,15 +369,15 @@ func cross3(a, b [3]float64) [3]float64 {
 	}
 }
 
-func norm3(v [3]float64) float64 {
+func Norm3(v [3]float64) float64 {
 	return math.Sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
 }
 
 // axisAngle returns the rotation matrix for angle (rad) about axis (any length).
 func axisAngle(axis [3]float64, angle float64) [3][3]float64 {
-	n := norm3(axis)
+	n := Norm3(axis)
 	if n < 1e-12 || angle == 0 {
-		return identity3()
+		return Identity3()
 	}
 	x, y, z := axis[0]/n, axis[1]/n, axis[2]/n
 	c, s := math.Cos(angle), math.Sin(angle)
@@ -390,11 +390,11 @@ func axisAngle(axis [3]float64, angle float64) [3][3]float64 {
 }
 
 func angleDeg(a, b [3]float64) float64 {
-	d := (a[0]*b[0] + a[1]*b[1] + a[2]*b[2]) / (norm3(a)*norm3(b) + 1e-12)
+	d := (a[0]*b[0] + a[1]*b[1] + a[2]*b[2]) / (Norm3(a)*Norm3(b) + 1e-12)
 	return math.Acos(math.Max(-1, math.Min(1, d))) * 180 / math.Pi
 }
 
-func transpose3(m [3][3]float64) [3][3]float64 {
+func Transpose3(m [3][3]float64) [3][3]float64 {
 	return [3][3]float64{
 		{m[0][0], m[1][0], m[2][0]},
 		{m[0][1], m[1][1], m[2][1]},

@@ -15,7 +15,7 @@ func TestSetProfileMountEnabled(t *testing.T) {
 	app.bank("phone") // saveProfiles also writes settings, which reads the phone bank
 	bank := app.bank("usb")
 	up, pitch := simulateMount(rotAxis([3]float64{0, 0, 1}, 8), 0)
-	m := computeMountCorrection(up, pitch)
+	m := ComputeMountCorrection(up, pitch)
 	if !m.Active() {
 		t.Fatalf("precondition: mount correction should be ok, got %s", m.Status)
 	}

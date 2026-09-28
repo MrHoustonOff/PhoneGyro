@@ -103,7 +103,7 @@ func TestYawSignNotFlipped(t *testing.T) {
 
 	// Matrix multiplication of pure clockwise turn: raw = [0, -40, 0]
 	rawClockwise := [3]float64{0, -40.0, 0}
-	rx, ry, rz := applyMatrix(res.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
+	rx, ry, rz := ApplyMatrix(res.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
 
 	if ry >= 0 {
 		t.Fatalf("RotY must be NEGATIVE for clockwise turn, got %f", ry)
@@ -361,7 +361,7 @@ func TestLandscapeCalibration_YawAndPadTest(t *testing.T) {
 
 	// Verify Yaw sign: Clockwise turn produces positive RotY
 	rawClockwise := [3]float64{0, 35.0, 0}
-	_, ry, _ := applyMatrix(val.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
+	_, ry, _ := ApplyMatrix(val.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
 	if ry <= 0 {
 		t.Fatalf("RotY must be POSITIVE for clockwise turn in landscape, got %f", ry)
 	}
@@ -395,7 +395,7 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 	}
 
 	// Test saving to slot 5 (6th slot)
-	mat := defaultMatrix3x3()
+	mat := DefaultMatrix3x3()
 	res := app.SaveProfile(5, "Slot Six Custom", "iPhone 15 Pro", "vertical", mat)
 	if res != "ok" {
 		t.Fatalf("failed to save slot 5: %s", res)

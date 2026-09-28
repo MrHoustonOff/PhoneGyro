@@ -31,8 +31,8 @@ func (a *App) deadbandFor(bank *motionBank) float64 {
 	return math.Float64frombits(a.gyroDeadbandBits.Load())
 }
 
-// deadbandScale возвращает множитель для вектора угловой скорости с модулем speed.
-func deadbandScale(speed, threshold float64) float64 {
+// DeadbandScale возвращает множитель для вектора угловой скорости с модулем speed.
+func DeadbandScale(speed, threshold float64) float64 {
 	if threshold <= 0 {
 		return 1
 	}

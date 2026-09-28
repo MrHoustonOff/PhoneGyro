@@ -2,14 +2,14 @@ package main
 
 import "math"
 
-// identity3x3 returns the 3x3 identity matrix
-func identity3x3() [3][3]float64 {
+// Identity3x3 returns the 3x3 identity matrix
+func Identity3x3() [3][3]float64 {
 	return [3][3]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
 }
 
-// defaultMatrix3x3 returns the canonical portrait orientation matrix for Cemuhook DSU:
+// DefaultMatrix3x3 returns the canonical portrait orientation matrix for Cemuhook DSU:
 // Pitch = +X, Yaw = +Y, Roll = -Z (det = -1.0)
-func defaultMatrix3x3() [3][3]float64 {
+func DefaultMatrix3x3() [3][3]float64 {
 	return [3][3]float64{
 		{1, 0, 0},
 		{0, 1, 0},
@@ -17,16 +17,16 @@ func defaultMatrix3x3() [3][3]float64 {
 	}
 }
 
-// applyMatrix multiplies a 3x3 matrix by a column vector [x, y, z]
-func applyMatrix(m [3][3]float64, x, y, z float64) (float64, float64, float64) {
+// ApplyMatrix multiplies a 3x3 matrix by a column vector [x, y, z]
+func ApplyMatrix(m [3][3]float64, x, y, z float64) (float64, float64, float64) {
 	rx := m[0][0]*x + m[0][1]*y + m[0][2]*z
 	ry := m[1][0]*x + m[1][1]*y + m[1][2]*z
 	rz := m[2][0]*x + m[2][1]*y + m[2][2]*z
 	return rx, ry, rz
 }
 
-// matMul multiplies two 3x3 matrices: c = a * b
-func matMul(a, b [3][3]float64) [3][3]float64 {
+// MatMul multiplies two 3x3 matrices: c = a * b
+func MatMul(a, b [3][3]float64) [3][3]float64 {
 	var c [3][3]float64
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
@@ -36,8 +36,8 @@ func matMul(a, b [3][3]float64) [3][3]float64 {
 	return c
 }
 
-// matTranspose returns the transpose of a 3x3 matrix
-func matTranspose(a [3][3]float64) [3][3]float64 {
+// MatTranspose returns the transpose of a 3x3 matrix
+func MatTranspose(a [3][3]float64) [3][3]float64 {
 	return [3][3]float64{
 		{a[0][0], a[1][0], a[2][0]},
 		{a[0][1], a[1][1], a[2][1]},
@@ -45,8 +45,8 @@ func matTranspose(a [3][3]float64) [3][3]float64 {
 	}
 }
 
-// quatToMatrix converts a unit quaternion (qx, qy, qz, qw) to a 3x3 SO(3) rotation matrix
-func quatToMatrix(qx, qy, qz, qw float64) [3][3]float64 {
+// QuatToMatrix converts a unit quaternion (qx, qy, qz, qw) to a 3x3 SO(3) rotation matrix
+func QuatToMatrix(qx, qy, qz, qw float64) [3][3]float64 {
 	norm := math.Sqrt(qx*qx + qy*qy + qz*qz + qw*qw)
 	if norm > 1e-9 {
 		qx /= norm
@@ -74,8 +74,8 @@ func quatToMatrix(qx, qy, qz, qw float64) [3][3]float64 {
 	}
 }
 
-// matrixToQuat converts a 3x3 SO(3) rotation matrix to a unit quaternion (qx, qy, qz, qw)
-func matrixToQuat(m [3][3]float64) (qx, qy, qz, qw float64) {
+// MatrixToQuat converts a 3x3 SO(3) rotation matrix to a unit quaternion (qx, qy, qz, qw)
+func MatrixToQuat(m [3][3]float64) (qx, qy, qz, qw float64) {
 	tr := m[0][0] + m[1][1] + m[2][2]
 	if tr > 0 {
 		s := 0.5 / math.Sqrt(tr+1.0)
@@ -128,8 +128,8 @@ func matrixToQuat(m [3][3]float64) (qx, qy, qz, qw float64) {
 	return qx, qy, qz, qw
 }
 
-// matrixToEuler extracts intuitive (Pitch, Roll, Yaw) in degrees from an SO(3) controller rotation matrix
-func matrixToEuler(m [3][3]float64) (pitch, roll, yaw float64) {
+// MatrixToEuler extracts intuitive (Pitch, Roll, Yaw) in degrees from an SO(3) controller rotation matrix
+func MatrixToEuler(m [3][3]float64) (pitch, roll, yaw float64) {
 	// Pitch: forward/backward tilt
 	sinp := -m[1][2]
 	if sinp >= 1.0 {
@@ -149,7 +149,7 @@ func matrixToEuler(m [3][3]float64) (pitch, roll, yaw float64) {
 	return pitch, roll, yaw
 }
 
-func det3x3(m [3][3]float64) float64 {
+func Det3x3(m [3][3]float64) float64 {
 	return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1]) -
 		m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0]) +
 		m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0])

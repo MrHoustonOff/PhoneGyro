@@ -68,11 +68,11 @@ func (m *MountCorrection) Active() bool {
 	return m != nil && m.Status == mountOK && m.Enabled
 }
 
-// computeMountCorrection: upRest — «верх» в покое (−Acc) в физическом кадре,
+// ComputeMountCorrection: upRest — «верх» в покое (−Acc) в физическом кадре,
 // pitchOmega — угловые скорости жеста «вперёд» в том же кадре, °/с.
-func computeMountCorrection(upRest [3]float64, pitchOmega [][3]float64) MountCorrection {
-	res := MountCorrection{Status: mountNoData, R: identity3()}
-	n := norm3(upRest)
+func ComputeMountCorrection(upRest [3]float64, pitchOmega [][3]float64) MountCorrection {
+	res := MountCorrection{Status: mountNoData, R: Identity3()}
+	n := Norm3(upRest)
 	if n < 0.5 {
 		return res
 	}
@@ -104,20 +104,20 @@ func computeMountCorrection(upRest [3]float64, pitchOmega [][3]float64) MountCor
 	return res
 }
 
-// applyToDSU поворачивает DSU-поля (RotX/Y/Z в °/с, AccX/Y/Z в g). Гироскоп
+// ApplyToDSU поворачивает DSU-поля (RotX/Y/Z в °/с, AccX/Y/Z в g). Гироскоп
 // в физическом кадре — P·Rot, P = diag(1,-1,-1), поэтому Rot' = P·R·P·Rot;
 // акселерометр — линейный (−Acc = up), Acc' = R·Acc.
-func (m *MountCorrection) applyToDSU(rot, acc [3]float64) (rotOut, accOut [3]float64) {
+func (m *MountCorrection) ApplyToDSU(rot, acc [3]float64) (rotOut, accOut [3]float64) {
 	p := [3]float64{1, -1, -1}
 	var w [3]float64
 	for i := 0; i < 3; i++ {
 		w[i] = p[i] * rot[i]
 	}
-	w = mulVec3(m.R, w)
+	w = MulVec3(m.R, w)
 	for i := 0; i < 3; i++ {
 		rotOut[i] = p[i] * w[i]
 	}
-	return rotOut, mulVec3(m.R, acc)
+	return rotOut, MulVec3(m.R, acc)
 }
 
 // principalAxis — главная ось вращения (собственный вектор Σωωᵀ с наибольшим
@@ -126,7 +126,7 @@ func principalAxis(omega [][3]float64, minRate float64) ([3]float64, bool) {
 	var m [3][3]float64
 	count := 0
 	for _, w := range omega {
-		if norm3(w) < minRate {
+		if Norm3(w) < minRate {
 			continue
 		}
 		count++
@@ -143,8 +143,8 @@ func principalAxis(omega [][3]float64, minRate float64) ([3]float64, bool) {
 	// доминирует (жест — вращение в основном вокруг одной оси).
 	v := [3]float64{1, 0.3, 0.2}
 	for it := 0; it < 100; it++ {
-		nv := mulVec3(m, v)
-		n := norm3(nv)
+		nv := MulVec3(m, v)
+		n := Norm3(nv)
 		if n < 1e-12 {
 			return [3]float64{}, false
 		}
@@ -161,12 +161,12 @@ func rotationBetween(a, b [3]float64) [3][3]float64 {
 	v := [3]float64{a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]}
 	c := a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
 	if c < -0.999999 {
-		return identity3() // противоположные векторы сюда не доходят (наклон ≤ mountMaxTiltDeg)
+		return Identity3() // противоположные векторы сюда не доходят (наклон ≤ mountMaxTiltDeg)
 	}
 	// R = I + [v]× + [v]×² / (1 + c)
 	k := 1 / (1 + c)
 	vx := [3][3]float64{{0, -v[2], v[1]}, {v[2], 0, -v[0]}, {-v[1], v[0], 0}}
-	r := identity3()
+	r := Identity3()
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 3; j++ {
 			sq := 0.0
@@ -188,21 +188,21 @@ func clamp1(x float64) float64 {
 // уже без bias) в физический кадр DSU-выхода — ровно тем же путём, что живой
 // конвейер в startup(): mat, yawSign, dsuYawSign для гироскопа; accMat и
 // dsuAccSign для акселерометра.
-func mountFromCalibration(mat [3][3]float64, sf sensorFrame, gravityRaw [3]float64, pitchSamples []captureSample) MountCorrection {
-	accMat, yawSign := buildOutputMapping(mat, sf, gravityRaw)
-	acc := mulVec3(accMat, gravityRaw)
+func mountFromCalibration(mat [3][3]float64, sf SensorFrame, gravityRaw [3]float64, pitchSamples []captureSample) MountCorrection {
+	accMat, yawSign := BuildOutputMapping(mat, sf, gravityRaw)
+	acc := MulVec3(accMat, gravityRaw)
 	up := [3]float64{
-		-float64(dsuAccSign[0]) * acc[0],
-		-float64(dsuAccSign[1]) * acc[1],
-		-float64(dsuAccSign[2]) * acc[2],
+		-float64(DSUAccSign[0]) * acc[0],
+		-float64(DSUAccSign[1]) * acc[1],
+		-float64(DSUAccSign[2]) * acc[2],
 	}
 	omega := make([][3]float64, 0, len(pitchSamples))
 	for _, s := range pitchSamples {
-		r := mulVec3(mat, s.rot)
-		r[1] *= yawSign * float64(dsuYawSign)
+		r := MulVec3(mat, s.rot)
+		r[1] *= yawSign * float64(DSUYawSign)
 		omega = append(omega, [3]float64{r[0], -r[1], -r[2]}) // ω = P·Rot
 	}
-	return computeMountCorrection(up, omega)
+	return ComputeMountCorrection(up, omega)
 }
 
 // ── Связка с App / motionBank ────────────────────────────────────────────────
@@ -247,7 +247,7 @@ func (a *App) stageWizardMount(bank *motionBank, matrix [3][3]float64) {
 	if a.GetInputMode() == "usb" {
 		bank.wizardAlignMu.Lock()
 		gravity, gravityOK := bank.wizardGravity, bank.wizardGravityValid
-		var sf sensorFrame
+		var sf SensorFrame
 		sfOK := false
 		if bank.wizardAlign != nil {
 			sf, sfOK = bank.wizardAlign.Frame()
@@ -335,7 +335,7 @@ func (a *App) SetProfileMountEnabled(slot int, enabled bool) string {
 // the profile's gravity may be absent (fresh install) or belong to another device,
 // and it decides the accelerometer's sign — with the wrong one the preview showed
 // gravity upside down and the model heavily tilted until the profile was saved.
-func (b *motionBank) outputFrameInputs(usePrev bool, sf sensorFrame, sfKnown bool, calGravity [3]float64) (sensorFrame, bool, [3]float64) {
+func (b *motionBank) outputFrameInputs(usePrev bool, sf SensorFrame, sfKnown bool, calGravity [3]float64) (SensorFrame, bool, [3]float64) {
 	if !usePrev {
 		return sf, sfKnown, calGravity
 	}

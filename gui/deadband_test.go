@@ -24,11 +24,11 @@ func TestDeadband_Edges(t *testing.T) {
 		{2 * db, 1}, {0.3, 1}, {1, 1}, {500, 1}, // выше 2·порога — без изменений
 	}
 	for _, c := range cases {
-		if got := deadbandScale(c.speed, db); math.Abs(got-c.want) > 1e-12 {
+		if got := DeadbandScale(c.speed, db); math.Abs(got-c.want) > 1e-12 {
 			t.Errorf("speed %.3f: scale %.6f, want %.6f", c.speed, got, c.want)
 		}
 	}
-	if deadbandScale(0.01, 0) != 1 {
+	if DeadbandScale(0.01, 0) != 1 {
 		t.Error("threshold 0 must disable the deadband")
 	}
 }
@@ -38,7 +38,7 @@ func TestDeadband_SmoothAndMonotonic(t *testing.T) {
 	prevOut, prevSlope := 0.0, 0.0
 	const h = 1e-5
 	for s := h; s <= 3*db; s += h {
-		out := s * deadbandScale(s, db)
+		out := s * DeadbandScale(s, db)
 		if out < prevOut-1e-12 {
 			t.Fatalf("output not monotonic at %.5f: %.6f < %.6f", s, out, prevOut)
 		}
@@ -59,7 +59,7 @@ func TestDeadband_SlowAimingKeepsSpeed(t *testing.T) {
 	const db = 0.10
 	for _, speed := range []float64{0.2, 0.3, 0.5, 1, 2, 5} {
 		oldLoss := 1 - oldDeadbandScale(speed, db)
-		newLoss := 1 - deadbandScale(speed, db)
+		newLoss := 1 - DeadbandScale(speed, db)
 		t.Logf("%.1f °/с: потеря скорости было %.1f%%, стало %.1f%%", speed, oldLoss*100, newLoss*100)
 		if newLoss > 1e-12 {
 			t.Errorf("%.1f °/с still loses %.2f%%", speed, newLoss*100)

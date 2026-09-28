@@ -15,10 +15,10 @@ func TestDeleteProfile(t *testing.T) {
 	app.bank("phone") // saveProfiles also writes settings, which reads the phone bank
 	bank := app.bank("usb")
 	up, pitch := simulateMount(rotAxis([3]float64{0, 0, 1}, 8), 0)
-	m := computeMountCorrection(up, pitch)
+	m := ComputeMountCorrection(up, pitch)
 	bank.profilesMu.Lock()
-	bank.profiles[1] = Profile{Slot: 1, Name: "A", Device: "Nano", Icon: "gamepad", Matrix: defaultMatrix3x3(), Mount: &m, Active: true}
-	bank.profiles[4] = Profile{Slot: 4, Name: "B", Device: "Nano", Icon: "gamepad", Matrix: defaultMatrix3x3()}
+	bank.profiles[1] = Profile{Slot: 1, Name: "A", Device: "Nano", Icon: "gamepad", Matrix: DefaultMatrix3x3(), Mount: &m, Active: true}
+	bank.profiles[4] = Profile{Slot: 4, Name: "B", Device: "Nano", Icon: "gamepad", Matrix: DefaultMatrix3x3()}
 	bank.activeSlot = 1
 	bank.profilesMu.Unlock()
 	app.applyProfileMount(bank, 1)

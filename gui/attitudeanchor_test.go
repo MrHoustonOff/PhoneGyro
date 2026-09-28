@@ -13,12 +13,12 @@ import (
 // simulateHandMotion returns 60 Hz samples of fast wobbly rotation: the gyro sample
 // (instantaneous rate with per-axis scale error and noise, device axes, rad/s) and
 // the true attitude (device -> world) integrated finely in between.
-func simulateHandMotion(seconds float64, seed int64) (gyro [][3]float64, truth []quat) {
+func simulateHandMotion(seconds float64, seed int64) (gyro [][3]float64, truth []Quat) {
 	rng := rand.New(rand.NewSource(seed))
 	const sub = 20
 	const dt = 1.0 / 60.0
 	scale := [3]float64{1.03, 0.98, 1.02}
-	q := quat{1, 0, 0, 0}
+	q := Quat{1, 0, 0, 0}
 	f := [3]float64{1.1 + rng.Float64(), 1.7 + rng.Float64(), 2.3 + rng.Float64()}
 	rate := func(t float64) [3]float64 {
 		if t > seconds-1.5 {
@@ -47,7 +47,7 @@ func simulateHandMotion(seconds float64, seed int64) (gyro [][3]float64, truth [
 // angle (deg) between the client's attitude and the true one.
 func clientDriftDeg(useAnchor, lag bool) float64 {
 	gyro, truth := simulateHandMotion(60, 3)
-	an := newAttitudeAnchor()
+	an := NewAttitudeAnchor()
 	client := truth[0]
 	for i := 1; i < len(truth); i++ {
 		w := gyro[i-1]                    // rate covering truth[i-1] -> truth[i]
@@ -62,7 +62,7 @@ func clientDriftDeg(useAnchor, lag bool) float64 {
 		}
 		client = qnormalize(qmul(client, qexp([3]float64{w[0] / 60, w[1] / 60, w[2] / 60})))
 	}
-	return norm3(qlog(qmul(qconj(client), truth[len(truth)-1]))) / alignDegToRad
+	return Norm3(qlog(qmul(qconj(client), truth[len(truth)-1]))) / DegToRad
 }
 
 func TestAttitudeAnchorRemovesIntegrationDrift(t *testing.T) {
@@ -88,7 +88,7 @@ func TestAttitudeAnchorRemovesIntegrationDrift(t *testing.T) {
 func TestAttitudeAnchorEngagesWithLaggingReference(t *testing.T) {
 	gyro, truth := simulateHandMotion(60, 5)
 	rng := rand.New(rand.NewSource(9))
-	an := newAttitudeAnchor()
+	an := NewAttitudeAnchor()
 	client := truth[0]
 	engagedAt := -1
 	for i := 1; i < len(truth); i++ {
@@ -108,7 +108,7 @@ func TestAttitudeAnchorEngagesWithLaggingReference(t *testing.T) {
 		}
 		client = qnormalize(qmul(client, qexp([3]float64{w[0] / 60, w[1] / 60, w[2] / 60})))
 	}
-	drift := norm3(qlog(qmul(qconj(client), truth[len(truth)-1]))) / alignDegToRad
+	drift := Norm3(qlog(qmul(qconj(client), truth[len(truth)-1]))) / DegToRad
 	t.Logf("engaged after %.1f s, drift after 60 s: %.2f deg", float64(engagedAt)/60, drift)
 	if engagedAt < 0 || engagedAt > 10*60 {
 		t.Fatalf("anchor did not engage within 10 s (engagedAt=%d)", engagedAt)
@@ -130,10 +130,10 @@ func TestAttitudeAnchorEngagesOnRealIPhone(t *testing.T) {
 	}
 	defer f.Close()
 	sfQ := [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}
-	an := newAttitudeAnchor()
+	an := NewAttitudeAnchor()
 	var prevTs uint64
 	engagedAt, frames := -1, 0
-	var client quat
+	var client Quat
 	var worst float64
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
@@ -152,13 +152,13 @@ func TestAttitudeAnchorEngagesOnRealIPhone(t *testing.T) {
 			dt = float64(ts-prevTs) / 1e6
 		}
 		prevTs = ts
-		ref := quat{v[3], v[4], v[5], v[6]}
-		dev := mulVec3(transpose3(sfQ), [3]float64{v[0] * alignDegToRad, v[1] * alignDegToRad, v[2] * alignDegToRad})
-		if client == (quat{}) {
+		ref := Quat{v[3], v[4], v[5], v[6]}
+		dev := MulVec3(Transpose3(sfQ), [3]float64{v[0] * DegToRad, v[1] * DegToRad, v[2] * DegToRad})
+		if client == (Quat{}) {
 			client = qnormalize(ref)
 		}
 		if engagedAt >= 0 {
-			worst = math.Max(worst, norm3(qlog(qmul(qconj(client), qnormalize(ref))))/alignDegToRad)
+			worst = math.Max(worst, Norm3(qlog(qmul(qconj(client), qnormalize(ref))))/DegToRad)
 		}
 		c := an.Correction(dev, ref, dt)
 		if an.mode >= 0 && engagedAt < 0 {

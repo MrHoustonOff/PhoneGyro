@@ -19,27 +19,27 @@ import (
 // frame-to-frame rotation of each candidate is compared against the gyro, and the
 // anchor only engages once one candidate clearly matches.
 
-type quat [4]float64 // w, x, y, z
+type Quat [4]float64 // w, x, y, z
 
 const (
 	anchorGain         = 2.0 // 1/s: fraction of the error removed per second
-	anchorMaxCorrRad   = 20.0 * alignDegToRad
-	anchorMinStepRad   = 0.5 * alignDegToRad // mean per-frame rotation a scoring window needs
+	anchorMaxCorrRad   = 20.0 * DegToRad
+	anchorMinStepRad   = 0.5 * DegToRad // mean per-frame rotation a scoring window needs
 	anchorWindowFrames = 15                  // ~250 ms scoring windows (see scoreWindow)
 	anchorScoreWindows = 8                   // decide after this many informative windows (~2 s of motion)
 	anchorMaxRelErr    = 0.25                // mean relative window mismatch of the winner
 	anchorMaxWindowRad = 2.0                 // ~115°: beyond this a window's rotation is too close to 180° to compare
 	anchorMarginRatio  = 4.0
 	anchorCandidates   = 4 // {q, q*} × {+, -} rotation sense
-	anchorMinQuatNorm  = 0.5
-	anchorDefaultDtSec = 1.0 / 60.0
+	AnchorMinQuatNorm  = 0.5
+	AnchorDefaultDtSec = 1.0 / 60.0
 )
 
-type attitudeAnchor struct {
+type AttitudeAnchor struct {
 	// Engage test window (scoreWindow): gyro rotation composed since the window
 	// opened, and the reference when it opened.
-	winG      quat
-	winRef0   quat
+	winG      Quat
+	winRef0   Quat
 	winFrames int
 	winOpen   bool
 
@@ -50,26 +50,26 @@ type attitudeAnchor struct {
 
 	// Attitude a client reaches by integrating our output, per candidate convention,
 	// tracked from the first frame so drift from before engagement is corrected too.
-	est     [anchorCandidates]quat
+	est     [anchorCandidates]Quat
 	haveEst bool
 }
 
-func newAttitudeAnchor() *attitudeAnchor {
-	return &attitudeAnchor{mode: -1}
+func NewAttitudeAnchor() *AttitudeAnchor {
+	return &AttitudeAnchor{mode: -1}
 }
 
 // Reset forgets the client model (keeps the learned convention). Call it when the
 // phone reconnects: its attitude reference restarts from an arbitrary heading.
-func (a *attitudeAnchor) Reset() {
+func (a *AttitudeAnchor) Reset() {
 	a.winOpen, a.haveEst = false, false
 }
 
 // Correction returns the correction rate (device axes, rad/s) to add to the gyro for
 // this frame. gyroDev is the bias-corrected gyro in device axes (rad/s), ref the
 // phone's attitude quaternion, dt the frame period.
-func (a *attitudeAnchor) Correction(gyroDev [3]float64, ref quat, dt float64) [3]float64 {
+func (a *AttitudeAnchor) Correction(gyroDev [3]float64, ref Quat, dt float64) [3]float64 {
 	var zero [3]float64
-	if qnorm(ref) < anchorMinQuatNorm {
+	if qnorm(ref) < AnchorMinQuatNorm {
 		a.winOpen, a.haveEst = false, false
 		return zero
 	}
@@ -94,7 +94,7 @@ func (a *attitudeAnchor) Correction(gyroDev [3]float64, ref quat, dt float64) [3
 		for k := 0; k < 3; k++ {
 			corr[k] = sense * anchorGain * e[k]
 		}
-		if n := norm3(corr); n > anchorMaxCorrRad {
+		if n := Norm3(corr); n > anchorMaxCorrRad {
 			for k := 0; k < 3; k++ {
 				corr[k] *= anchorMaxCorrRad / n
 			}
@@ -114,7 +114,7 @@ func (a *attitudeAnchor) Correction(gyroDev [3]float64, ref quat, dt float64) [3
 }
 
 // view maps the reference quaternion into candidate convention c.
-func view(c int, q quat) (quat, float64) {
+func view(c int, q Quat) (Quat, float64) {
 	if c/2 == 1 {
 		q = qconj(q)
 	}
@@ -137,21 +137,21 @@ func view(c int, q quat) (quat, float64) {
 // rotation over the same span taken one frame later, which is the same
 // one-frame alignment Correction uses (client model before this frame's output
 // vs this frame's reference).
-func (a *attitudeAnchor) scoreWindow(g [3]float64, ref quat) {
+func (a *AttitudeAnchor) scoreWindow(g [3]float64, ref Quat) {
 	if a.winOpen && a.winFrames >= anchorWindowFrames {
 		a.closeWindow(ref) // this call's reference ends the window the previous steps filled
 	}
 	if !a.winOpen {
-		a.winG, a.winRef0, a.winFrames, a.winOpen = quat{1, 0, 0, 0}, ref, 0, true
+		a.winG, a.winRef0, a.winFrames, a.winOpen = Quat{1, 0, 0, 0}, ref, 0, true
 	}
 	a.winG = qnormalize(qmul(a.winG, qexp(g)))
 	a.winFrames++
 }
 
-func (a *attitudeAnchor) closeWindow(end quat) {
+func (a *AttitudeAnchor) closeWindow(end Quat) {
 	a.winOpen = false
 	gw := qlog(a.winG)
-	gn := norm3(gw)
+	gn := Norm3(gw)
 	if gn < anchorMinStepRad*anchorWindowFrames {
 		return // too little motion to tell conventions apart
 	}
@@ -171,7 +171,7 @@ func (a *attitudeAnchor) closeWindow(end quat) {
 			d = [3]float64{-d[0], -d[1], -d[2]}
 		}
 		r := [3]float64{d[0] - gw[0], d[1] - gw[1], d[2] - gw[2]}
-		a.score[c] += math.Min(norm3(r)/gn, 2)
+		a.score[c] += math.Min(Norm3(r)/gn, 2)
 	}
 	a.n++
 	if a.n < anchorScoreWindows {
@@ -210,8 +210,8 @@ func (a *attitudeAnchor) closeWindow(end quat) {
 	a.n = 0
 }
 
-func qmul(a, b quat) quat {
-	return quat{
+func qmul(a, b Quat) Quat {
+	return Quat{
 		a[0]*b[0] - a[1]*b[1] - a[2]*b[2] - a[3]*b[3],
 		a[0]*b[1] + a[1]*b[0] + a[2]*b[3] - a[3]*b[2],
 		a[0]*b[2] - a[1]*b[3] + a[2]*b[0] + a[3]*b[1],
@@ -219,22 +219,22 @@ func qmul(a, b quat) quat {
 	}
 }
 
-func qconj(q quat) quat { return quat{q[0], -q[1], -q[2], -q[3]} }
+func qconj(q Quat) Quat { return Quat{q[0], -q[1], -q[2], -q[3]} }
 
-func qnorm(q quat) float64 { return math.Sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]) }
+func qnorm(q Quat) float64 { return math.Sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2] + q[3]*q[3]) }
 
-func qnormalize(q quat) quat {
+func qnormalize(q Quat) Quat {
 	n := qnorm(q)
-	return quat{q[0] / n, q[1] / n, q[2] / n, q[3] / n}
+	return Quat{q[0] / n, q[1] / n, q[2] / n, q[3] / n}
 }
 
 // qlog returns the rotation vector (axis·angle, shortest path) of a unit quaternion.
-func qlog(q quat) [3]float64 {
+func qlog(q Quat) [3]float64 {
 	if q[0] < 0 {
-		q = quat{-q[0], -q[1], -q[2], -q[3]}
+		q = Quat{-q[0], -q[1], -q[2], -q[3]}
 	}
 	v := [3]float64{q[1], q[2], q[3]}
-	s := norm3(v)
+	s := Norm3(v)
 	if s < 1e-12 {
 		return [3]float64{2 * v[0], 2 * v[1], 2 * v[2]}
 	}
@@ -243,11 +243,11 @@ func qlog(q quat) [3]float64 {
 }
 
 // qexp returns the unit quaternion of a rotation vector.
-func qexp(r [3]float64) quat {
-	th := norm3(r)
+func qexp(r [3]float64) Quat {
+	th := Norm3(r)
 	if th < 1e-12 {
-		return quat{1, r[0] / 2, r[1] / 2, r[2] / 2}
+		return Quat{1, r[0] / 2, r[1] / 2, r[2] / 2}
 	}
 	s := math.Sin(th/2) / th
-	return quat{math.Cos(th / 2), r[0] * s, r[1] * s, r[2] * s}
+	return Quat{math.Cos(th / 2), r[0] * s, r[1] * s, r[2] * s}
 }

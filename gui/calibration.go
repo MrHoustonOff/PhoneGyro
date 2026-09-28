@@ -77,7 +77,7 @@ type RawLogFrame struct {
 
 // getWizardAlign returns the active bank's calibration wizard scratch aligner, or nil
 // when no axis-align step is in progress (see wizardAlign field doc).
-func (a *App) getWizardAlign() *sensorAligner {
+func (a *App) getWizardAlign() *SensorAligner {
 	bank := a.activeBank()
 	bank.wizardAlignMu.RLock()
 	defer bank.wizardAlignMu.RUnlock()
@@ -546,12 +546,12 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 	mat[2] = rollRow
 
 	// Cemuhook DSU is left-handed parity convention -> det(M) must be -1.0 (§3.3)
-	if det3x3(mat) > 0 {
+	if Det3x3(mat) > 0 {
 		yawRow = [3]float64{-yawRow[0], -yawRow[1], -yawRow[2]}
 		mat[1] = yawRow
 	}
 
-	det := det3x3(mat)
+	det := Det3x3(mat)
 	if math.Abs(det+1.0) > 0.05 {
 		res := ValidationResult{
 			Success:   false,
@@ -602,7 +602,7 @@ func (a *App) StartAxisAlign(forgetKnown bool) {
 	_ = forgetKnown
 	bank := a.activeBank()
 	bank.wizardAlignMu.Lock()
-	bank.wizardAlign = newSensorAligner("")
+	bank.wizardAlign = NewSensorAligner("")
 	bank.wizardAlignMu.Unlock()
 }
 

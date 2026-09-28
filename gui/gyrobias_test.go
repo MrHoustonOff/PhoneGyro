@@ -13,7 +13,7 @@ import (
 )
 
 // feedSeconds кормит трекер dur секунд кадрами с частотой hz.
-func feedSeconds(tr *gyroBiasTracker, t0 time.Time, hz float64, dur time.Duration, bias [3]float64,
+func feedSeconds(tr *GyroBiasTracker, t0 time.Time, hz float64, dur time.Duration, bias [3]float64,
 	gen func(i int) (raw, acc [3]float64)) ([3]float64, time.Time, int) {
 	step := time.Duration(float64(time.Second) / hz)
 	updates := 0
@@ -43,7 +43,7 @@ func TestGyroBiasTracksUSBDrift(t *testing.T) {
 		acc[2] -= 1
 		return
 	}
-	var tr gyroBiasTracker
+	var tr GyroBiasTracker
 	bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 200, 20*time.Second, calBias, gen)
 	errDps := math.Abs(bias[0] - trueBias[0])
 	t.Logf("после 20 с покоя: bias X %.3f (истина %.3f, ошибка %.3f°/с), обновлений %d", bias[0], trueBias[0], errDps, updates)
@@ -65,7 +65,7 @@ func TestGyroBiasIgnoresHandheld(t *testing.T) {
 		acc[2] -= 1
 		return
 	}
-	var tr gyroBiasTracker
+	var tr GyroBiasTracker
 	bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 200, 20*time.Second, calBias, gen)
 	if updates != 0 || bias != calBias {
 		t.Fatalf("bias изменён в руке: %v, обновлений %d", bias, updates)
@@ -78,7 +78,7 @@ func TestGyroBiasIgnoresSlowSteadyRotation(t *testing.T) {
 	gen := func(int) (raw, acc [3]float64) {
 		return [3]float64{0, 7, 0}, [3]float64{0, -1, 0}
 	}
-	var tr gyroBiasTracker
+	var tr GyroBiasTracker
 	if bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 60, 10*time.Second, calBias, gen); updates != 0 {
 		t.Fatalf("медленное вращение принято за bias: %v", bias)
 	}
@@ -144,7 +144,7 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 					bias[k] += c.rot[k] / float64(len(s.samples))
 				}
 			}
-			var tr gyroBiasTracker
+			var tr GyroBiasTracker
 			updates := 0
 			now := time.Unix(0, 0)
 			for _, c := range s.samples {
