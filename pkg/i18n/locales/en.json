@@ -173,6 +173,18 @@
     "delete_profile_tip": "Delete profile",
     "profile_deleted": "Profile “{name}” deleted"
   },
+  "cemu_notice": {
+    "title": "Cemu Detected",
+    "bug": "Cemu has a bug: it mistakes slow motion for gyro bias, so the aim slowly drifts away, even while the controller is still.",
+    "guard_on": "PhoneGyro has a fix made specifically for Cemu. **It is on right now.**",
+    "guard_off": "PhoneGyro has a fix made specifically for Cemu. **It is off right now**; you can turn it on in Settings.",
+    "settings": "If something works wrong, you can turn the fix off: Settings → “Aim Motion Filtering (DSU)” → “Cemu Drift Guard”. This is not recommended.",
+    "upstream": "We have already prepared a fix for Cemu itself and reported the bug to its developers. If your Cemu is newer than 2.6 and PhoneGyro has not been updated yet, check whether the bug is fixed and turn this option off if it is.",
+    "pr": "Follow the fix: [Cemu pull request]({url})",
+    "pr_none": "A link to the fix in Cemu will come with a later PhoneGyro update.",
+    "dont_show": "Don't show again",
+    "close": "Close"
+  },
   "close_modal": {
     "title": "Close or Minimize to Tray?",
     "desc": "PhoneGyro can continue running in the system tray so motion streaming to your emulator is not interrupted.",

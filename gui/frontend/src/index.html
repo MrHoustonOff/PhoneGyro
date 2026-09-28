@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="css/header.css">
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/dialogs.css">
+  <link rel="stylesheet" href="css/cemu-notice.css">
   <link rel="stylesheet" href="css/profiles.css">
   <link rel="stylesheet" href="css/calibration.css">
   <link rel="stylesheet" href="css/navigation.css">
@@ -1882,6 +1883,43 @@
     </div>
   </div>
 
+  <!-- Cemu notice: temporary, goes away with the drift guard (gui/cemu_notice.go) -->
+  <div class="apple-dialog-overlay" id="cemu-notice-modal" style="display: none;" aria-modal="true" role="dialog">
+    <div class="apple-close-card cemu-notice-card">
+      <div class="apple-close-icon-wrap">
+        <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Shield: the drift guard -->
+          <path d="M14 3.5l8.5 3.2v6.4c0 5.2-3.6 9.6-8.5 11.4-4.9-1.8-8.5-6.2-8.5-11.4V6.7z"></path>
+          <polyline points="10.2 14.2 13 17 18 11.5"></polyline>
+        </svg>
+      </div>
+      <div class="apple-close-title" data-i18n="cemu_notice.title">Обнаружен Cemu</div>
+      <div class="cemu-notice-body">
+        <p data-i18n="cemu_notice.bug"></p>
+        <p class="cemu-notice-state" id="cemu-notice-state"></p>
+        <p data-i18n="cemu_notice.settings"></p>
+        <p data-i18n="cemu_notice.upstream"></p>
+        <p id="cemu-notice-pr"></p>
+      </div>
+
+      <label class="apple-close-remember-row" for="cemu-notice-hide">
+        <span class="apple-close-checkbox-custom">
+          <input type="checkbox" id="cemu-notice-hide" class="apple-close-checkbox-native">
+          <span class="apple-close-checkbox-box">
+            <svg viewBox="0 0 12 10" width="11" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1.5 5 4.5 8 10.5 1.5"></polyline>
+            </svg>
+          </span>
+        </span>
+        <span class="apple-close-remember-text" data-i18n="cemu_notice.dont_show">Больше не показывать</span>
+      </label>
+
+      <div class="apple-close-actions">
+        <button type="button" class="apple-close-btn apple-close-btn-minimize" id="cemu-notice-close" data-i18n="cemu_notice.close">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete profile confirmation (same sheet style as the close dialog) -->
   <div class="apple-dialog-overlay" id="profile-delete-modal" style="display: none;" aria-modal="true" role="dialog">
     <div class="apple-close-card">
@@ -2455,6 +2493,7 @@
   <script src="js/toast.js"></script>
   <script src="js/confirm.js"></script>
   <script src="js/close-dialog.js"></script>
+  <script src="js/cemu-notice.js"></script>
   <script src="js/profile-delete-dialog.js"></script>
   <script src="js/apple-select.js"></script>
   <script src="js/copy-chip.js"></script>

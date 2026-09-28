@@ -236,6 +236,7 @@ type App struct {
 	disconnectAlert   atomic.Bool
 	silenceDisconnect atomic.Bool
 	cemuDriftGuard    atomic.Bool // drift guard for Cemu clients (pkg/dsu/cemubias.go)
+	cemuNotice        cemuNoticeState
 	soundMode         string
 	soundVolume       atomic.Int32
 	soundVolumesMu    sync.RWMutex

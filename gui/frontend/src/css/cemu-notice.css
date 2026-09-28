@@ -1,0 +1,71 @@
+/* Cemu notice (temporary, see gui/cemu_notice.go): the close dialog's sheet
+   (dialogs.css .apple-close-*) with a longer, left-aligned text. */
+#cemu-notice-modal.apple-dialog-overlay {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.45);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#cemu-notice-modal .cemu-notice-card {
+  width: min(460px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#cemu-notice-modal.visible .cemu-notice-card {
+  transform: scale(1) translateY(0);
+}
+
+.cemu-notice-body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-sans);
+  font-size: 12.8px;
+  line-height: 1.48;
+  color: var(--text-secondary);
+  text-align: left;
+  width: 100%;
+  margin: 8px 0 14px 0;
+}
+
+.cemu-notice-body p {
+  margin: 0 0 9px 0;
+}
+
+.cemu-notice-body p:last-child {
+  margin-bottom: 0;
+}
+
+.cemu-notice-body strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* The drift guard's current state: green when on, amber when off. */
+.cemu-notice-state {
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: rgba(48, 209, 88, 0.1);
+  border: 1px solid rgba(48, 209, 88, 0.28);
+}
+
+.cemu-notice-state.is-off {
+  background: rgba(255, 159, 10, 0.1);
+  border-color: rgba(255, 159, 10, 0.3);
+}
+
+.cemu-notice-body .md-link {
+  color: #0A84FF;
+  text-decoration: none;
+}
+
+.cemu-notice-body .md-link:hover {
+  text-decoration: underline;
+}
+
+[data-theme="light"] .cemu-notice-body .md-link {
+  color: #007AFF;
+}
+
+#cemu-notice-modal .apple-close-actions {
+  margin-top: 4px;
+}

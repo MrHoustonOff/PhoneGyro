@@ -16,6 +16,7 @@ export namespace main {
 	    disconnectAlert: boolean;
 	    silenceDisconnect: boolean;
 	    cemuDriftGuard: boolean;
+	    cemuNoticeHidden?: boolean;
 	    soundMode: string;
 	    soundVolume: number;
 	    soundVolumes?: Record<string, number>;
@@ -49,6 +50,7 @@ export namespace main {
 	        this.disconnectAlert = source["disconnectAlert"];
 	        this.silenceDisconnect = source["silenceDisconnect"];
 	        this.cemuDriftGuard = source["cemuDriftGuard"];
+	        this.cemuNoticeHidden = source["cemuNoticeHidden"];
 	        this.soundMode = source["soundMode"];
 	        this.soundVolume = source["soundVolume"];
 	        this.soundVolumes = source["soundVolumes"];
@@ -313,6 +315,20 @@ export namespace main {
 	        this.vector = source["vector"];
 	        this.errorCode = source["errorCode"];
 	        this.errorMsg = source["errorMsg"];
+	    }
+	}
+	export class CemuNotice {
+	    guardOn: boolean;
+	    prUrl: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new CemuNotice(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.guardOn = source["guardOn"];
+	        this.prUrl = source["prUrl"];
 	    }
 	}
 	

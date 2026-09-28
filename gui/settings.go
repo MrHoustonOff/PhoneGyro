@@ -32,6 +32,7 @@ type AppSettings struct {
 	DisconnectAlert       bool           `json:"disconnectAlert"`
 	SilenceDisconnect     bool           `json:"silenceDisconnect"`
 	CemuDriftGuard        bool           `json:"cemuDriftGuard"`
+	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
 	SoundMode             string         `json:"soundMode"`
 	SoundVolume           int            `json:"soundVolume"`
 	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -153,6 +154,7 @@ func (a *App) loadSettings() {
 		DisconnectAlert       *bool          `json:"disconnectAlert"`
 		SilenceDisconnect     *bool          `json:"silenceDisconnect"`
 		CemuDriftGuard        *bool          `json:"cemuDriftGuard"`
+		CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
 		SoundMode             string         `json:"soundMode"`
 		SoundVolume           *int           `json:"soundVolume"`
 		SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -223,6 +225,7 @@ func (a *App) loadSettings() {
 	} else {
 		a.cemuDriftGuard.Store(true)
 	}
+	a.cemuNotice.hidden.Store(s.CemuNoticeHidden)
 	if s.SoundMode != "" {
 		a.soundMode = s.SoundMode
 	} else {
@@ -375,6 +378,7 @@ func (a *App) saveSettings() {
 		DisconnectAlert:       a.disconnectAlert.Load(),
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
 		CemuDriftGuard:        a.cemuDriftGuard.Load(),
+		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
 		SoundMode:             soundM,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
@@ -680,6 +684,7 @@ func (a *App) GetAppSettings() AppSettings {
 		DisconnectAlert:       a.disconnectAlert.Load(),
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
 		CemuDriftGuard:        a.cemuDriftGuard.Load(),
+		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
 		SoundMode:             soundM,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
@@ -762,6 +767,8 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
+	// CemuNoticeHidden is not a settings-window field: only the notice's own
+	// "don't show again" changes it (CloseCemuNotice).
 	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
 		a.SetCloseAction(s.CloseAction)

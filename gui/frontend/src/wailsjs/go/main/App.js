@@ -6,6 +6,10 @@ export function ClearPreview() {
   return window['go']['main']['App']['ClearPreview']();
 }
 
+export function CloseCemuNotice(arg1) {
+  return window['go']['main']['App']['CloseCemuNotice'](arg1);
+}
+
 export function ConfirmCloseChoice(arg1, arg2) {
   return window['go']['main']['App']['ConfirmCloseChoice'](arg1, arg2);
 }
@@ -104,6 +108,10 @@ export function MarkFirstLaunchDone() {
 
 export function OpenLiveDebugWindow() {
   return window['go']['main']['App']['OpenLiveDebugWindow']();
+}
+
+export function PendingCemuNotice() {
+  return window['go']['main']['App']['PendingCemuNotice']();
 }
 
 export function PlaySystemSound(arg1) {

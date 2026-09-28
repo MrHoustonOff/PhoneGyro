@@ -5,6 +5,8 @@ import {motion} from '../models';
 
 export function ClearPreview():Promise<void>;
 
+export function CloseCemuNotice(arg1:boolean):Promise<void>;
+
 export function ConfirmCloseChoice(arg1:string,arg2:boolean):Promise<void>;
 
 export function CopyCalibrationReport():Promise<string>;
@@ -54,6 +56,8 @@ export function IsFirstLaunch():Promise<boolean>;
 export function MarkFirstLaunchDone():Promise<void>;
 
 export function OpenLiveDebugWindow():Promise<void>;
+
+export function PendingCemuNotice():Promise<main.CemuNotice>;
 
 export function PlaySystemSound(arg1:string):Promise<void>;
 

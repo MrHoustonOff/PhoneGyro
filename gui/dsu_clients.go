@@ -153,6 +153,7 @@ func (a *App) dsuClientViews() []DSUClientView {
 			views[i].CemuGuard = want
 		}
 	}
+	a.announceCemuClients(views)
 	return views
 }
 
