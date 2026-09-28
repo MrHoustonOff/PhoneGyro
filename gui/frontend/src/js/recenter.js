@@ -380,7 +380,7 @@
           }
         });
 
-        // Heavy data loss on the active link (gui/lossalert.go decides when).
+        // Heavy data loss on the active link (gui/internal/link/alarm.go decides when).
         window.runtime.EventsOn('link:loss', () => {
           if (typeof SoundManager !== 'undefined') SoundManager.play('loss');
         });

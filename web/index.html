@@ -1619,7 +1619,7 @@ function quatLog(q) {
   return [x * k, y * k, z * k];
 }
 
-// Cumulative counters for the app's honest link statistics (gui/linkloss.go):
+// Cumulative counters for the app's honest link statistics (gui/internal/link/loss.go):
 // every DeviceMotion event, and the events whose rotation a very long stall
 // discarded. The server derives how many samples had to share one packet.
 let sensorEvents = 0, sensorDropped = 0, rotAccumEvents = 0;

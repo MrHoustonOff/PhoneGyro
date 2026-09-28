@@ -24,6 +24,7 @@ import (
 	"phonegyro/pkg/server"
 	"phonegyro/web"
 
+	"phonegyro-gui/internal/link"
 	"phonegyro-gui/internal/motion"
 	"phonegyro-gui/resmon"
 
@@ -141,9 +142,9 @@ type motionBank struct {
 	accFilterInit bool
 	// Живая подстройка нуля гироскопа в покое (motion/gyrobias.go), под biasMu.
 	biasTracker motion.GyroBiasTracker
-	// Потери канала для Live Debug (linkloss.go): USB — по SEQ, телефон — по
+	// Потери канала для Live Debug (link/loss.go): USB — по SEQ, телефон — по
 	// счётчикам событий датчика со страницы.
-	loss linkLoss
+	loss link.Loss
 	// Latest AHRS quaternion stored atomically for lock-free read by GetState.
 	// Q0=w, Q1=x, Q2=y, Q3=z (same as AHRS return values).
 	curAhrsQ0 atomic.Uint64
@@ -452,9 +453,9 @@ func (a *App) startup(ctx context.Context) {
 		bank := a.activeBank()
 		bank.lastMotionRecvTs.Store(recvTs)
 		if frame.HasEventCounters {
-			bank.loss.observePhone(frame.SensorEvents, frame.SensorDropped)
+			bank.loss.ObservePhone(frame.SensorEvents, frame.SensorDropped)
 		} else if frame.SampleClock == server.ClockNone {
-			bank.loss.markNoData() // старая страница телефона: счётчиков нет
+			bank.loss.MarkNoData() // старая страница телефона: счётчиков нет
 		}
 
 		if !bank.hasClient.Load() {
@@ -1252,25 +1253,25 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}()
 
-	// Тихий звук при сильной потере данных (lossalert.go): решение по настоящим
+	// Тихий звук при сильной потере данных (link/alarm.go): решение по настоящим
 	// счётчикам канала активного источника, звук играет фронтенд ("link:loss").
 	go func() {
 		ticker := time.NewTicker(250 * time.Millisecond)
 		defer ticker.Stop()
-		var alarm lossAlarm
+		var alarm link.Alarm
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case now := <-ticker.C:
 				bank := a.activeBank()
-				kind, total, merged, lost := bank.loss.snapshot()
+				kind, total, merged, lost := bank.loss.Snapshot()
 				active := bank.hasClient.Load() && !a.isPaused.Load()
 				var connectedFor time.Duration
 				if at := bank.connectedAt; !at.IsZero() {
 					connectedFor = now.Sub(at)
 				}
-				if reason, ok := alarm.check(now, active, connectedFor, kind, total, merged, lost); ok {
+				if reason, ok := alarm.Check(now, active, connectedFor, kind, total, merged, lost); ok {
 					a.logEvent("WARN", "link: heavy data loss (%s)", reason)
 					if a.ctx != nil {
 						wailsRuntime.EventsEmit(a.ctx, "link:loss", reason)

@@ -44,7 +44,7 @@ type MotionFrame struct {
 	// Phone page counters (58-byte frame), cumulative since page load:
 	// SensorEvents — DeviceMotion events seen; SensorDropped — events whose
 	// rotation was discarded (very long stall). Lets the app tell how many samples
-	// had to share one packet and how many were really lost (gui/linkloss.go).
+	// had to share one packet and how many were really lost (gui/internal/link/loss.go).
 	SensorEvents     uint32 `json:"-"`
 	SensorDropped    uint32 `json:"-"`
 	HasEventCounters bool   `json:"-"`

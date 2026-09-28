@@ -1,4 +1,4 @@
-package main
+package link
 
 import "sync"
 
@@ -18,7 +18,7 @@ import "sync"
 // Счётчики накопительные; окно (последние 60 с) считает страница Live Debug по
 // разностям.
 
-type linkLoss struct {
+type Loss struct {
 	mu     sync.Mutex
 	kind   string // "usb", "phone" или "" (нет данных: старая страница телефона)
 	total  uint64
@@ -34,9 +34,9 @@ type linkLoss struct {
 // не бывает: это перезагрузка страницы (счётчики начались заново), а не пропуск.
 const maxPlausibleEvents = 100_000
 
-// observeUSB учитывает кадр USB; gap — расстояние по SEQ от предыдущего кадра
+// ObserveUSB учитывает кадр USB; gap — расстояние по SEQ от предыдущего кадра
 // (1 — без пропусков).
-func (l *linkLoss) observeUSB(gap int) {
+func (l *Loss) ObserveUSB(gap int) {
 	if gap < 1 {
 		gap = 1
 	}
@@ -47,8 +47,8 @@ func (l *linkLoss) observeUSB(gap int) {
 	l.lost += uint64(gap - 1)
 }
 
-// observePhone учитывает пакет телефона с накопительными счётчиками страницы.
-func (l *linkLoss) observePhone(events, dropped uint32) {
+// ObservePhone учитывает пакет телефона с накопительными счётчиками страницы.
+func (l *Loss) ObservePhone(events, dropped uint32) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.kind = "phone"
@@ -69,15 +69,15 @@ func (l *linkLoss) observePhone(events, dropped uint32) {
 	l.total += uint64(dE)
 }
 
-// markNoData — источник не сообщает счётчиков (старая страница телефона).
-func (l *linkLoss) markNoData() {
+// MarkNoData — источник не сообщает счётчиков (старая страница телефона).
+func (l *Loss) MarkNoData() {
 	l.mu.Lock()
 	l.kind = ""
 	l.haveBase = false
 	l.mu.Unlock()
 }
 
-func (l *linkLoss) snapshot() (kind string, total, merged, lost uint64) {
+func (l *Loss) Snapshot() (kind string, total, merged, lost uint64) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.kind, l.total, l.merged, l.lost

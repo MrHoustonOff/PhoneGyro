@@ -1,10 +1,10 @@
-package main
+package link
 
 import "time"
 
 // Тихий звук при сильной потере данных (звук «loss» в микшере настроек).
 //
-// Решение принимается по настоящим счётчикам канала (linkloss.go) за скользящее
+// Решение принимается по настоящим счётчикам канала (loss.go) за скользящее
 // окно, а не по одному событию, и с защитой от ложных срабатываний:
 //   - USB: потеряно ≥ 5% кадров и не меньше 10 штук (единичный сбой CRC — не повод);
 //   - телефон: была настоящая потеря поворота (пауза связи > 0.85 с) или ≥ 60%
@@ -28,16 +28,16 @@ type lossSnap struct {
 	total, merged, lost uint64
 }
 
-type lossAlarm struct {
+type Alarm struct {
 	kind      string
 	hist      []lossSnap
 	lastAlert time.Time
 }
 
-// check вызывается периодически. active — источник подключён и вывод не на
+// Check вызывается периодически. active — источник подключён и вывод не на
 // паузе; connectedFor — сколько он уже подключён. Возвращает причину ("usb" /
 // "phone_lost" / "phone_merged") и true, когда пора подать звук.
-func (d *lossAlarm) check(now time.Time, active bool, connectedFor time.Duration,
+func (d *Alarm) Check(now time.Time, active bool, connectedFor time.Duration,
 	kind string, total, merged, lost uint64) (string, bool) {
 	if !active || kind == "" || connectedFor < lossGrace {
 		d.hist = d.hist[:0]

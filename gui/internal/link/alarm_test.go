@@ -1,4 +1,4 @@
-package main
+package link
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 // за тик (total, merged, lost). Возвращает времена срабатываний (в секундах).
 func lossSim(kind string, secs float64, active func(t float64) bool,
 	step func(t float64) (uint64, uint64, uint64)) []float64 {
-	var d lossAlarm
+	var d Alarm
 	var total, merged, lost uint64
 	t0 := time.Unix(1000, 0)
 	var fired []float64
@@ -18,7 +18,7 @@ func lossSim(kind string, secs float64, active func(t float64) bool,
 		total, merged, lost = total+dt, merged+dm, lost+dl
 		now := t0.Add(time.Duration(t * float64(time.Second)))
 		connectedFor := time.Duration((t + 5) * float64(time.Second)) // подключено давно
-		if _, ok := d.check(now, active(t), connectedFor, kind, total, merged, lost); ok {
+		if _, ok := d.Check(now, active(t), connectedFor, kind, total, merged, lost); ok {
 			fired = append(fired, t)
 		}
 	}
@@ -98,13 +98,13 @@ func TestLossAlarm_CooldownAndPause(t *testing.T) {
 }
 
 func TestLossAlarm_GraceAfterConnect(t *testing.T) {
-	var d lossAlarm
+	var d Alarm
 	t0 := time.Unix(0, 0)
 	var total, lost uint64
 	for i := 0; i < 8; i++ { // первые 2 с после подключения — сплошные потери
 		total, lost = total+50, lost+25
 		now := t0.Add(time.Duration(i) * 250 * time.Millisecond)
-		if _, ok := d.check(now, true, time.Duration(i)*250*time.Millisecond, "usb", total, 0, lost); ok {
+		if _, ok := d.Check(now, true, time.Duration(i)*250*time.Millisecond, "usb", total, 0, lost); ok {
 			t.Fatalf("alarm %v after connect, inside the %v grace period", time.Duration(i)*250*time.Millisecond, lossGrace)
 		}
 	}

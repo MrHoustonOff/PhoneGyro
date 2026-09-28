@@ -1575,7 +1575,7 @@
   }
 
   let lastPacketRecvTime = 0;
-  // Link loss (gui/linkloss.go): the backend sends cumulative counters of the
+  // Link loss (gui/internal/link/loss.go): the backend sends cumulative counters of the
   // active source; the card shows the last-60-s window as their differences.
   let lossKind = '';       // 'usb' | 'phone' | '' (no data)
   let lossWinBase = null;  // counters at the start of the window

@@ -244,7 +244,7 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 		}
 		st.lastSeq, st.haveSeq = f.Seq, true
 		if app.usbBank != nil {
-			app.usbBank.loss.observeUSB(gap) // карточка «Потери» в Live Debug (linkloss.go)
+			app.usbBank.loss.ObserveUSB(gap) // карточка «Потери» в Live Debug (link/loss.go)
 		}
 
 		// BUTTONS bit 0: reset centering, identical to the phone's recenter

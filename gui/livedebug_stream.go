@@ -54,7 +54,7 @@ type liveDebugMsg struct {
 	// LinkRttMs — измеренное время отклика канала телефона (PING/PONG), мс;
 	// -1 — не измерено (нет телефона, USB). Всегда в сообщении: 0 и -1 значимы.
 	LinkRttMs float64 `json:"link_rtt_ms"`
-	// Накопительные счётчики потерь активного источника (linkloss.go):
+	// Накопительные счётчики потерь активного источника (link/loss.go):
 	// LossKind "usb" | "phone" | "" (нет данных).
 	LossKind   string `json:"loss_kind"`
 	LossTotal  uint64 `json:"loss_total"`
@@ -103,7 +103,7 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 		msg.DsuClientList = a.dsuSrv.GetClientsInfo()
 	}
 	msg.LinkRttMs = a.linkRttMs()
-	msg.LossKind, msg.LossTotal, msg.LossMerged, msg.LossLost = a.activeBank().loss.snapshot()
+	msg.LossKind, msg.LossTotal, msg.LossMerged, msg.LossLost = a.activeBank().loss.Snapshot()
 
 	if len(extras) > 0 {
 		e := extras[0]

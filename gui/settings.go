@@ -81,7 +81,7 @@ func defaultSoundVolumes() map[string]int {
 		"recenter":   1,
 		"goal":       1,
 		"defeat":     1,
-		"loss":       1, // тихий сигнал сильной потери данных (lossalert.go)
+		"loss":       1, // тихий сигнал сильной потери данных (link/alarm.go)
 	}
 }
 
