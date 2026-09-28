@@ -37,7 +37,7 @@ Pick the source at the top of the window: **Smartphone** or **USB Controller**.
 Click **Calibrate** and follow the wizard (rest, nod, bank, axis alignment — about a minute). Calibration tells PhoneGyro where "forward" and "right" are for your grip; **without it the in-game aim turns along the wrong axis or backwards.** Perform this once per device and grip; phone and USB profiles are stored separately.
 
 ### 4½. Pick the profile and recenter
-On first connection PhoneGyro opens the recenter window: hold the device as you will hold it in game, pick your calibration profile, and press **Recenter** (or press Space).
+On first connection PhoneGyro opens the recenter window: hold the device as you will hold it in game, pick your calibration profile, and press **Recenter**.
 
 ### 5. Configure Emulator
 In your emulator's input/controller settings, configure the motion server:
