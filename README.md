@@ -103,6 +103,25 @@ wails build -tags native_webview2loader -platform windows/arm64 -o PhoneGyro-arm
 
 The compiled binaries will be placed in `gui/build/bin/`.
 
+### Project Layout
+
+```
+gui/                    Windows app (Wails): the App API the UI calls, settings,
+                        profiles, calibration, the frame pipeline, tray, USB host
+  internal/motion/      motion math: calibration matrices, axis alignment, AHRS,
+                        iOS attitude anchor, gyro bias, deadband, mount tilt
+  internal/hwproto/     USB hardware protocol wire format (frame, CRC, decoder)
+  internal/link/        link-loss statistics and the data-loss alarm
+  internal/resmon/      CPU / RAM monitor
+  frontend/src/         UI: index.html + js/ + css/, Live Debug window
+pkg/server/             phone HTTPS/WebSocket server, USB frame injection
+pkg/dsu/                Cemuhook DSU server
+pkg/ca/, pkg/pairing/   local certificate authority, QR codes
+pkg/i18n/               RU/EN translations
+web/                    the phone page
+docs/                   user guides, motion pipeline notes
+```
+
 ---
 
 ## License

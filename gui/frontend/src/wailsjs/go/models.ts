@@ -85,44 +85,6 @@ export namespace main {
 	        this.inputMode = source["inputMode"];
 	    }
 	}
-	export class MountCorrection {
-	    status: string;
-	    enabled: boolean;
-	    r: number[][];
-	    tiltDeg: number;
-	    forwardDeg: number;
-	    rightDeg: number;
-	    checkDeg: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new MountCorrection(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.status = source["status"];
-	        this.enabled = source["enabled"];
-	        this.r = source["r"];
-	        this.tiltDeg = source["tiltDeg"];
-	        this.forwardDeg = source["forwardDeg"];
-	        this.rightDeg = source["rightDeg"];
-	        this.checkDeg = source["checkDeg"];
-	    }
-	}
-	export class sensorFrame {
-	    q: number[][];
-	    h: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new sensorFrame(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.q = source["q"];
-	        this.h = source["h"];
-	    }
-	}
 	export class ProfileView {
 	    slot: number;
 	    name: string;
@@ -130,9 +92,9 @@ export namespace main {
 	    icon: string;
 	    matrix: number[][];
 	    calGravity?: number[];
-	    // Go type: sensorFrame
+	    // Go type: motion
 	    sensorFrame?: any;
-	    mount?: MountCorrection;
+	    mount?: motion.MountCorrection;
 	    active: boolean;
 	    version?: number;
 	    outdated: boolean;
@@ -150,7 +112,7 @@ export namespace main {
 	        this.matrix = source["matrix"];
 	        this.calGravity = source["calGravity"];
 	        this.sensorFrame = this.convertValues(source["sensorFrame"], null);
-	        this.mount = this.convertValues(source["mount"], MountCorrection);
+	        this.mount = this.convertValues(source["mount"], motion.MountCorrection);
 	        this.active = source["active"];
 	        this.version = source["version"];
 	        this.outdated = source["outdated"];
@@ -345,7 +307,6 @@ export namespace main {
 	    }
 	}
 	
-	
 	export class ValidationResult {
 	    success: boolean;
 	    errorCode: string;
@@ -370,6 +331,35 @@ export namespace main {
 	        this.pitchAxis = source["pitchAxis"];
 	        this.yawAxis = source["yawAxis"];
 	        this.rollAxis = source["rollAxis"];
+	    }
+	}
+
+}
+
+export namespace motion {
+	
+	export class MountCorrection {
+	    status: string;
+	    enabled: boolean;
+	    r: number[][];
+	    tiltDeg: number;
+	    forwardDeg: number;
+	    rightDeg: number;
+	    checkDeg: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MountCorrection(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.status = source["status"];
+	        this.enabled = source["enabled"];
+	        this.r = source["r"];
+	        this.tiltDeg = source["tiltDeg"];
+	        this.forwardDeg = source["forwardDeg"];
+	        this.rightDeg = source["rightDeg"];
+	        this.checkDeg = source["checkDeg"];
 	    }
 	}
 

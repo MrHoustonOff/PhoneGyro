@@ -103,6 +103,26 @@ wails build -tags native_webview2loader -platform windows/arm64 -o PhoneGyro-arm
 
 Скомпилированные файлы появятся в директории `gui/build/bin/`.
 
+### Структура проекта
+
+```
+gui/                    приложение для Windows (Wails): API для интерфейса,
+                        настройки, профили, калибровка, конвейер кадров, трей, USB
+  internal/motion/      математика движения: матрицы калибровки, совмещение осей,
+                        AHRS, якорь ориентации iOS, смещение гироскопа, порог дрожи,
+                        наклон платы
+  internal/hwproto/     формат кадров USB-протокола (кадр, CRC, декодер)
+  internal/link/        статистика потерь связи и звук потерь
+  internal/resmon/      монитор CPU / памяти
+  frontend/src/         интерфейс: index.html + js/ + css/, окно Live Debug
+pkg/server/             HTTPS/WebSocket-сервер для телефона, приём кадров USB
+pkg/dsu/                сервер Cemuhook DSU
+pkg/ca/, pkg/pairing/   локальный центр сертификации, QR-коды
+pkg/i18n/               переводы RU/EN
+web/                    страница телефона
+docs/                   руководства, заметки о конвейере движения
+```
+
 ---
 
 ## Лицензия
