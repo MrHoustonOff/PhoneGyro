@@ -21,7 +21,7 @@ type Profile struct {
 	CalGravity [3]float64 `json:"calGravity,omitempty"`
 	// Learned gyro↔accel axis relation of the device used with this profile.
 	SensorFrame *motion.SensorFrame `json:"sensorFrame,omitempty"`
-	// Поправка на наклон установки датчика (только USB, см. mountalign.go).
+	// Поправка на наклон установки датчика (только USB, см. mount.go).
 	Mount  *motion.MountCorrection `json:"mount,omitempty"`
 	Active bool                    `json:"active"` // is this the currently applied profile?
 	// Version is the calibration data generation this profile was captured with,

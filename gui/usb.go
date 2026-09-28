@@ -51,7 +51,7 @@ type usbConnState struct {
 	dataFrames    uint64
 
 	// What the metadata declared beyond the ranges, and how often it comes
-	// (usbproto.go shows it in Live Debug).
+	// (usb_status.go shows it in Live Debug).
 	protoVersion uint32
 	declaredHz   int16
 	caps         uint8
@@ -384,7 +384,7 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []hwp
 	_ = port.SetReadTimeout(usbReadTimeout)
 	buf := make([]byte, 256)
 
-	// Protocol status for Live Debug, once a second (usbproto.go).
+	// Protocol status for Live Debug, once a second (usb_status.go).
 	lastReport, lastFrames := time.Now(), state.dataFrames
 	report := func() {
 		now := time.Now()

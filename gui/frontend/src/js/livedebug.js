@@ -2305,7 +2305,7 @@
 
   setupTooltips();
 
-  // ── USB protocol status (gui/usbproto.go), once a second while a USB device streams ──
+  // ── USB protocol status (gui/usb_status.go), once a second while a USB device streams ──
   let usbProto = null;       // last status with connected === true
   let usbProtoPrevCrc = 0;   // CRC rejects in the previous message
   let usbProtoCrcGrew = false;
@@ -2568,7 +2568,7 @@
     };
 
     ws.onmessage = (event) => {
-      // Inside the app the native Go bridge (livedebug_app.go) already relays
+      // Inside the app the native Go bridge (livedebug_window.go) already relays
       // every message as "livedebug:telemetry"; handling both doubled each frame
       // (duplicated, reordered CSV rows). This socket is for external browsers.
       if (wailsBridgeRegistered) return;

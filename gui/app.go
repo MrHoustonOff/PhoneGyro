@@ -90,7 +90,7 @@ type motionBank struct {
 	// unsaved/cancelled wizard run never pollutes the live output or a profile.
 	wizardGravity      [3]float64
 	wizardGravityValid bool
-	// Поправка установки датчика (mountalign.go): mountLive — активного профиля,
+	// Поправка установки датчика (mount.go): mountLive — активного профиля,
 	// wizardMount — посчитанная мастером калибровки для кандидата (действует на
 	// превью, в профиль попадает только через SaveProfile).
 	mountMu     sync.RWMutex
@@ -718,7 +718,7 @@ func (a *App) startup(ctx context.Context) {
 		dsuAy := motion.DSUAccSign[1] * finalAy
 		dsuAz := motion.DSUAccSign[2] * finalAz
 
-		// Поправка на наклон установки датчика (USB, mountalign.go): один поворот
+		// Поправка на наклон установки датчика (USB, mount.go): один поворот
 		// на гироскоп и акселерометр, чтобы их согласованность не пострадала.
 		if mc := bank.activeMount(usePrev); mc.Active() {
 			r, ac := mc.ApplyToDSU(
@@ -841,7 +841,7 @@ func (a *App) startup(ctx context.Context) {
 		disconnectMu.Unlock()
 
 		// This callback fires only for phone WebSocket connections -- USB has
-		// its own separate lifecycle handling in usbdevice.go -- so it always
+		// its own separate lifecycle handling in usb.go -- so it always
 		// targets phoneBank directly, never activeBank().
 		a.phoneBank.hasClient.Store(true)
 		a.phoneBank.resetAnchor.Store(true)
