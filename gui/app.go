@@ -26,7 +26,7 @@ import (
 
 	"phonegyro-gui/internal/link"
 	"phonegyro-gui/internal/motion"
-	"phonegyro-gui/resmon"
+	"phonegyro-gui/internal/resmon"
 
 	"github.com/gorilla/websocket"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
