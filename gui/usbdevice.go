@@ -268,9 +268,9 @@ func (st *usbConnState) handle(f usbFrame, app *App) {
 			AccY:        float32(float64(f.Accel[1]) / 32768.0 * st.accelRangeG),
 			AccZ:        float32(float64(f.Accel[2]) / 32768.0 * st.accelRangeG),
 			// Qx/Qy/Qz/Qw stay zero: this reference transport carries no
-			// on-device orientation estimate. attitudeanchor.go already
+			// on-device orientation estimate. motion/attitudeanchor.go already
 			// treats a near-zero quaternion as "no reference available" and
-			// no-ops (see anchorMinQuatNorm in attitudeanchor.go) — exactly
+			// no-ops (see AnchorMinQuatNorm in motion/attitudeanchor.go) — exactly
 			// the behavior we want here.
 		}
 		if app.srv != nil {

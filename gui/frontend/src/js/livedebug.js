@@ -2101,7 +2101,7 @@
 
       // IN row: timestamp_ms,IN,seq,gx,gy,gz,ax,ay,az,recv_ts,,,,,,
       // Device clock + the phone's own orientation: lets the attitude anchor be
-      // analysed offline (gui/attitudeanchor.go).
+      // analysed offline (gui/internal/motion/attitudeanchor.go).
       const devTs = typeof data.dev_ts_us === 'number' ? data.dev_ts_us : '';
       const rq = ['ref_qw', 'ref_qx', 'ref_qy', 'ref_qz'].map(k => typeof data[k] === 'number' ? data[k].toFixed(6) : '').join(',');
       const inRow = `${nowEpoch},IN,${seq},${gx},${gy},${gz},${ax},${ay},${az},${recvTs},,,,,,,${devTs},${rq}`;
@@ -2496,7 +2496,7 @@
       if (!isPhoneConnected) {
         setPhoneConnected(true);
       }
-      // Кадр AHRS = кадр three.js -- без ремапа, как в песочнице "тема" (gui/ahrs.go).
+      // Кадр AHRS = кадр three.js -- без ремапа, как в песочнице "тема" (gui/internal/motion/ahrs.go).
       liveQuat.set(q1, q2, q3, q0);
       liveQuat.normalize();
     }

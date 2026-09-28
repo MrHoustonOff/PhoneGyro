@@ -36,7 +36,7 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		OnStartup:  app.startup,
+		OnStartup: app.startup,
 		OnDomReady: func(ctx context.Context) {
 			wailsRuntime.WindowCenter(ctx)
 		},

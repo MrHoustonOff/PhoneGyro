@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"phonegyro-gui/internal/motion"
 )
 
 // Profile represents a saved calibration profile with a 3x3 signed-permutation matrix.
@@ -19,10 +20,10 @@ type Profile struct {
 	// gravity sign differs between platforms (iOS reads -1g flat, Android +1g).
 	CalGravity [3]float64 `json:"calGravity,omitempty"`
 	// Learned gyro↔accel axis relation of the device used with this profile.
-	SensorFrame *SensorFrame `json:"sensorFrame,omitempty"`
+	SensorFrame *motion.SensorFrame `json:"sensorFrame,omitempty"`
 	// Поправка на наклон установки датчика (только USB, см. mountalign.go).
-	Mount  *MountCorrection `json:"mount,omitempty"`
-	Active bool             `json:"active"` // is this the currently applied profile?
+	Mount  *motion.MountCorrection `json:"mount,omitempty"`
+	Active bool                    `json:"active"` // is this the currently applied profile?
 	// Version is the calibration data generation this profile was captured with,
 	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
 	// is behind CurrentProfileVersion is definitely missing data the current
@@ -88,7 +89,7 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 				Name:   "",
 				Device: "Unknown",
 				Icon:   "default",
-				Matrix: DefaultMatrix3x3(),
+				Matrix: motion.DefaultMatrix3x3(),
 				Active: false,
 			}
 		}
@@ -105,7 +106,7 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 				Name:   "",
 				Device: "Unknown",
 				Icon:   "default",
-				Matrix: DefaultMatrix3x3(),
+				Matrix: motion.DefaultMatrix3x3(),
 				Active: false,
 			}
 		}
@@ -117,8 +118,8 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 			bank.profiles[i].Icon = "default"
 		}
 		// Validate matrix: determinant must be |det| ≈ 1.0 (valid signed-permutation matrix)
-		if math.Abs(math.Abs(Det3x3(bank.profiles[i].Matrix))-1.0) > 0.05 {
-			bank.profiles[i].Matrix = DefaultMatrix3x3()
+		if math.Abs(math.Abs(motion.Det3x3(bank.profiles[i].Matrix))-1.0) > 0.05 {
+			bank.profiles[i].Matrix = motion.DefaultMatrix3x3()
 		}
 		// Deliberately no "it already has a SensorFrame, so back-fill Version"
 		// shortcut here: a populated SensorFrame isn't proof it was actually earned
@@ -146,7 +147,7 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 		bank.calGravity = stored.CalGravity
 	}
 	// profilesMu is held here: read the active profile's gravity directly.
-	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && Norm3(bank.profiles[bank.activeSlot].CalGravity) > 0.3 {
+	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && motion.Norm3(bank.profiles[bank.activeSlot].CalGravity) > 0.3 {
 		bank.calGravity = bank.profiles[bank.activeSlot].CalGravity
 	}
 	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) {
@@ -323,7 +324,7 @@ func (a *App) applyProfileGravity(bank *motionBank, slot int) {
 	bank.profilesMu.RLock()
 	g := bank.profiles[slot].CalGravity
 	bank.profilesMu.RUnlock()
-	if Norm3(g) > 0.3 {
+	if motion.Norm3(g) > 0.3 {
 		bank.biasMu.Lock()
 		bank.calGravity = g
 		bank.biasMu.Unlock()
@@ -342,7 +343,7 @@ func (a *App) applyProfileSensorFrame(bank *motionBank, slot int) {
 	if bank.align == nil {
 		return
 	}
-	var f *SensorFrame
+	var f *motion.SensorFrame
 	bank.profilesMu.RLock()
 	if slot >= 0 && slot < len(bank.profiles) {
 		f = bank.profiles[slot].SensorFrame
@@ -352,9 +353,9 @@ func (a *App) applyProfileSensorFrame(bank *motionBank, slot int) {
 		bank.align.SetFrame(*f, true)
 		return
 	}
-	guess := SensorFrame{Q: Identity3(), H: -1}
+	guess := motion.SensorFrame{Q: motion.Identity3(), H: -1}
 	if dn, _ := bank.deviceName.Load().(string); dn == "iPhone" || dn == "iPad" {
-		guess = IOSSensorFrame()
+		guess = motion.IOSSensorFrame()
 	}
 	bank.align.SetFrame(guess, false)
 }
@@ -413,7 +414,7 @@ func (a *App) SetActiveProfile(slot int) string {
 		bank.activeMatrix = bank.profiles[slot].Matrix
 		bank.profilesMu.RUnlock()
 	} else {
-		bank.activeMatrix = DefaultMatrix3x3()
+		bank.activeMatrix = motion.DefaultMatrix3x3()
 	}
 	bank.matrixMu.Unlock()
 	a.applyProfileGravity(bank, slot)
@@ -444,7 +445,7 @@ func (a *App) DeleteProfile(slot int) string {
 		bank.profilesMu.Unlock()
 		return "empty slot"
 	}
-	bank.profiles[slot] = Profile{Slot: slot, Name: "", Device: "Unknown", Icon: "default", Matrix: DefaultMatrix3x3()}
+	bank.profiles[slot] = Profile{Slot: slot, Name: "", Device: "Unknown", Icon: "default", Matrix: motion.DefaultMatrix3x3()}
 	wasActive := bank.activeSlot == slot
 	next := -1
 	for i := range bank.profiles {

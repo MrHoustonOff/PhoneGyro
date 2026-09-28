@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"bufio"
@@ -39,7 +39,7 @@ func TestMountRealTiltIsCorrected(t *testing.T) {
 	m := MatMul(rotAxis([3]float64{0, 0, 1}, 7.8), rotAxis([3]float64{1, 0, 0}, 2))
 	up, pitch := simulateMount(m, 1.5)
 	c := ComputeMountCorrection(up, pitch)
-	if c.Status != mountOK || !c.Active() {
+	if c.Status != MountOK || !c.Active() {
 		t.Fatalf("status %s (tilt %.2f check %.2f), want ok", c.Status, c.TiltDeg, c.CheckDeg)
 	}
 	if got := MulVec3(c.R, up); math.Abs(got[1]-1) > 1e-9 {
@@ -63,22 +63,22 @@ func TestMountAccelBiasIsRejected(t *testing.T) {
 	up := [3]float64{-0.136, 1, 0}
 	_, pitch := simulateMount(Identity3(), 0)
 	c := ComputeMountCorrection(up, pitch)
-	if c.Status != mountInconsistent || c.Active() {
+	if c.Status != MountInconsistent || c.Active() {
 		t.Fatalf("status %s (tilt %.2f check %.2f), want inconsistent", c.Status, c.TiltDeg, c.CheckDeg)
 	}
 }
 
 func TestMountThresholds(t *testing.T) {
 	_, pitch := simulateMount(Identity3(), 0)
-	if c := ComputeMountCorrection([3]float64{0.005, 1, 0}, pitch); c.Status != mountSmall || c.Active() {
+	if c := ComputeMountCorrection([3]float64{0.005, 1, 0}, pitch); c.Status != MountSmall || c.Active() {
 		t.Fatalf("small tilt: status %s", c.Status)
 	}
 	m := rotAxis([3]float64{1, 0, 0}, 40)
 	up, pitch := simulateMount(m, 0)
-	if c := ComputeMountCorrection(up, pitch); c.Status != mountTooLarge || c.Active() {
+	if c := ComputeMountCorrection(up, pitch); c.Status != MountTooLarge || c.Active() {
 		t.Fatalf("40°: status %s", c.Status)
 	}
-	if c := ComputeMountCorrection([3]float64{0.1, 1, 0}, nil); c.Status != mountNoData || c.Active() {
+	if c := ComputeMountCorrection([3]float64{0.1, 1, 0}, nil); c.Status != MountNoData || c.Active() {
 		t.Fatalf("no gesture: status %s", c.Status)
 	}
 }
@@ -98,7 +98,7 @@ func TestMountSignsMatchLevel(t *testing.T) {
 }
 
 func TestMountApplyToDSU(t *testing.T) {
-	c := MountCorrection{Status: mountOK, Enabled: true, R: rotAxis([3]float64{1, 2, 3}, 10)}
+	c := MountCorrection{Status: MountOK, Enabled: true, R: rotAxis([3]float64{1, 2, 3}, 10)}
 	rot := [3]float64{10, -20, 30}
 	acc := [3]float64{0.1, -0.9, 0.2}
 	r2, a2 := c.ApplyToDSU(rot, acc)
@@ -173,7 +173,7 @@ func TestMountOnRealUSBCapture(t *testing.T) {
 		}
 		n := Norm3(g)
 		g = [3]float64{g[0] / n, g[1] / n, g[2] / n}
-		c := mountFromCalibration(mat, sf, g, pitch.samples)
+		c := MountFromCalibration(mat, sf, g, sampleRots(pitch.samples))
 		runs++
 		t.Logf("калибровка #%d: %s  наклон %.2f° (вперёд %.2f, вправо %.2f)  проверка %.2f°",
 			runs, c.Status, c.TiltDeg, c.ForwardDeg, c.RightDeg, c.CheckDeg)

@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"math"
@@ -51,7 +51,7 @@ type GyroBiasTracker struct {
 	aSumSq [3]float64
 }
 
-func (t *GyroBiasTracker) reset() { *t = GyroBiasTracker{} }
+func (t *GyroBiasTracker) Reset() { *t = GyroBiasTracker{} }
 
 // Feed принимает сырой гироскоп (°/с), сырой акселерометр (g) и текущий bias.
 // Возвращает новый bias и true, когда окно покоя закрылось и bias обновлён.
@@ -59,7 +59,7 @@ func (t *GyroBiasTracker) Feed(now time.Time, raw, acc, bias [3]float64) ([3]flo
 	accMag := Norm3(acc)
 	d := [3]float64{raw[0] - bias[0], raw[1] - bias[1], raw[2] - bias[2]}
 	if accMag < biasMinAccG || accMag > biasMaxAccG || Norm3(d) > biasSampleMaxDps {
-		t.reset()
+		t.Reset()
 		return bias, false
 	}
 	if t.n == 0 {
@@ -89,7 +89,7 @@ func (t *GyroBiasTracker) Feed(now time.Time, raw, acc, bias [3]float64) ([3]flo
 			still = false
 		}
 	}
-	t.reset()
+	t.Reset()
 	if !still {
 		return bias, false
 	}

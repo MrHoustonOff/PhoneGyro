@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"math"
@@ -120,7 +120,7 @@ func TestOutputMappingFlatRestReadsMinusY(t *testing.T) {
 
 // NOTE: TestPadTestMadgwickAgreesAfterAlignment / madgwickGravityError used to
 // live here. They ran our OWN internal AHRS clone as a stand-in for "real
-// PadTest's Madgwick" to sanity-check that buildOutputMapping's gyro and accel
+// PadTest's Madgwick" to sanity-check that BuildOutputMapping's gyro and accel
 // agree from PadTest's point of view. That only worked while our internal
 // filter was a literal sign-for-sign clone of the (as it turned out, wrongly
 // reverse-engineered) old PadTest formula. ahrs.go is now a different,

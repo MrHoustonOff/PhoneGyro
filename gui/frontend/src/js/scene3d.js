@@ -302,7 +302,7 @@
               // real dead end, not just a style choice: tilting about axes confined to
               // a single plane leaves the accelerometer's third axis mathematically
               // undetermined — d(gravity)/dt = h·(ω×g) can't observe it, so the
-              // physics in sensoralign.go ties forever between two candidate mappings
+              // physics in gui/internal/motion/sensoralign.go ties forever between two candidate mappings
               // and never locks (reproduced in gui/sensoralign_test.go-style
               // simulation: pure pitch/roll motion never converges; the same motion
               // with a twist mixed in locks almost immediately). So every hold below
@@ -409,7 +409,7 @@
           if (!isNaN(q0) && !isNaN(q1) && !isNaN(q2) && !isNaN(q3) &&
               (q0 !== 0 || q1 !== 0 || q2 !== 0 || q3 !== 0)) {
             // Кадр AHRS = кадр three.js (X вправо, Y вверх, Z на зрителя) -- кладём
-            // как есть, без ремапа, ровно как в песочнице "тема" (см. gui/ahrs.go).
+            // как есть, без ремапа, ровно как в песочнице "тема" (см. gui/internal/motion/ahrs.go).
             liveQuat.set(q1, q2, q3, q0);
             liveQuat.normalize();
           }

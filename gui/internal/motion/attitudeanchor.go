@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"log"
@@ -25,10 +25,10 @@ const (
 	anchorGain         = 2.0 // 1/s: fraction of the error removed per second
 	anchorMaxCorrRad   = 20.0 * DegToRad
 	anchorMinStepRad   = 0.5 * DegToRad // mean per-frame rotation a scoring window needs
-	anchorWindowFrames = 15                  // ~250 ms scoring windows (see scoreWindow)
-	anchorScoreWindows = 8                   // decide after this many informative windows (~2 s of motion)
-	anchorMaxRelErr    = 0.25                // mean relative window mismatch of the winner
-	anchorMaxWindowRad = 2.0                 // ~115°: beyond this a window's rotation is too close to 180° to compare
+	anchorWindowFrames = 15             // ~250 ms scoring windows (see scoreWindow)
+	anchorScoreWindows = 8              // decide after this many informative windows (~2 s of motion)
+	anchorMaxRelErr    = 0.25           // mean relative window mismatch of the winner
+	anchorMaxWindowRad = 2.0            // ~115°: beyond this a window's rotation is too close to 180° to compare
 	anchorMarginRatio  = 4.0
 	anchorCandidates   = 4 // {q, q*} × {+, -} rotation sense
 	AnchorMinQuatNorm  = 0.5

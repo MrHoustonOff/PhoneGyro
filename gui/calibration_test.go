@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"phonegyro-gui/internal/motion"
 	"strings"
 	"testing"
 )
@@ -40,7 +41,7 @@ func TestCalibration_StillnessStep0(t *testing.T) {
 	for i := 0; i < 30; i++ {
 		app.phoneBank.captureMu.Lock()
 		app.phoneBank.captureBuffer = append(app.phoneBank.captureBuffer, captureSample{
-			rot: [3]float64{float64(i % 5) * 3.0, 0.0, 0.0},
+			rot: [3]float64{float64(i%5) * 3.0, 0.0, 0.0},
 			acc: [3]float64{0, 0, 1.0},
 		})
 		app.phoneBank.captureMu.Unlock()
@@ -103,7 +104,7 @@ func TestYawSignNotFlipped(t *testing.T) {
 
 	// Matrix multiplication of pure clockwise turn: raw = [0, -40, 0]
 	rawClockwise := [3]float64{0, -40.0, 0}
-	rx, ry, rz := ApplyMatrix(res.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
+	rx, ry, rz := motion.ApplyMatrix(res.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
 
 	if ry >= 0 {
 		t.Fatalf("RotY must be NEGATIVE for clockwise turn, got %f", ry)
@@ -193,9 +194,9 @@ func TestCalibration_EndToEnd_StandardPortraitFlow(t *testing.T) {
 	}
 
 	expectedMatrix := [3][3]float64{
-		{1, 0, 0},   // Pitch = +X
-		{0, 1, 0},   // Yaw   = +Y
-		{0, 0, -1},  // Roll  = -Z
+		{1, 0, 0},  // Pitch = +X
+		{0, 1, 0},  // Yaw   = +Y
+		{0, 0, -1}, // Roll  = -Z
 	}
 	if val.Matrix != expectedMatrix {
 		t.Fatalf("Matrix mismatch. Got %v, expected %v", val.Matrix, expectedMatrix)
@@ -316,7 +317,7 @@ func TestCalibration_UnconstrainedGestureRecognition(t *testing.T) {
 
 func TestPadTest_Convergence(t *testing.T) {
 	testCases := []struct {
-		name string
+		name       string
 		ax, ay, az float32
 	}{
 		{"AccX=-1.0 (Current bug)", -1.0, 0.0, 0.0},
@@ -327,7 +328,7 @@ func TestPadTest_Convergence(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		ahrs := NewAHRS()
+		ahrs := motion.NewAHRS()
 		// Run 300 steps (5 seconds at 60 Hz) of stationary holding
 		for i := 0; i < 300; i++ {
 			ahrs.Update(0, 0, 0, tc.ax, tc.ay, tc.az, 1.0/60.0)
@@ -351,9 +352,9 @@ func TestLandscapeCalibration_YawAndPadTest(t *testing.T) {
 	}
 
 	expectedMatrix := [3][3]float64{
-		{0, 0, 1},  // Pitch = +Z
-		{0, 1, 0},  // Yaw   = +Y (natural right-handed yaw, matches Three.js and PadTest)
-		{1, 0, 0},  // Roll  = +X
+		{0, 0, 1}, // Pitch = +Z
+		{0, 1, 0}, // Yaw   = +Y (natural right-handed yaw, matches Three.js and PadTest)
+		{1, 0, 0}, // Roll  = +X
 	}
 	if val.Matrix != expectedMatrix {
 		t.Fatalf("Matrix mismatch. Got %v, expected %v", val.Matrix, expectedMatrix)
@@ -361,7 +362,7 @@ func TestLandscapeCalibration_YawAndPadTest(t *testing.T) {
 
 	// Verify Yaw sign: Clockwise turn produces positive RotY
 	rawClockwise := [3]float64{0, 35.0, 0}
-	_, ry, _ := ApplyMatrix(val.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
+	_, ry, _ := motion.ApplyMatrix(val.Matrix, rawClockwise[0], rawClockwise[1], rawClockwise[2])
 	if ry <= 0 {
 		t.Fatalf("RotY must be POSITIVE for clockwise turn in landscape, got %f", ry)
 	}
@@ -395,7 +396,7 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 	}
 
 	// Test saving to slot 5 (6th slot)
-	mat := DefaultMatrix3x3()
+	mat := motion.DefaultMatrix3x3()
 	res := app.SaveProfile(5, "Slot Six Custom", "iPhone 15 Pro", "vertical", mat)
 	if res != "ok" {
 		t.Fatalf("failed to save slot 5: %s", res)

@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"encoding/json"
@@ -55,7 +55,7 @@ const (
 	alignMaxErrDeg   = 20.0 // winner's mean prediction error
 	alignMarginRatio = 2.5  // runner-up must be this much worse
 	alignErrClampDeg = 45.0
-	DegToRad    = math.Pi / 180.0
+	DegToRad         = math.Pi / 180.0
 	alignPersistFile = "sensor_frame.json"
 )
 

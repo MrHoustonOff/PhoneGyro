@@ -733,7 +733,7 @@
 
     // ── Step 3: Explicit accelerometer↔gyro axis alignment ─────────────────────
     // Unlike steps 0-2 (fixed-duration buffered capture), this step polls the live
-    // physics-based aligner (gui/sensoralign.go) while the user keeps tilting the
+    // physics-based aligner (gui/internal/motion/sensoralign.go) while the user keeps tilting the
     // phone, and reports success the moment it locks a confident mapping.
 
     async _enterAxisAlignStep() {

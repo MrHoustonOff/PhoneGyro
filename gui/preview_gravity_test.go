@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"phonegyro-gui/internal/motion"
 	"testing"
 )
 
@@ -11,12 +12,12 @@ import (
 // что измерил, иначе знак акселерометра неверный и модель «лежит вверх ногами».
 func TestPreviewUsesWizardGravity(t *testing.T) {
 	mat := [3][3]float64{{1, 0, 0}, {0, 1, 0}, {0, 0, -1}}
-	sf := SensorFrame{Q: [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}, H: -1}
+	sf := motion.SensorFrame{Q: [3][3]float64{{0, 1, 0}, {0, 0, 1}, {1, 0, 0}}, H: -1}
 	rest := [3]float64{-0.02796, -0.01334, -0.99952} // шаг «Покой», телефон экраном вверх
 
-	dsuAccY := func(calGravity [3]float64, s SensorFrame) float64 {
-		accMat, _ := BuildOutputMapping(mat, s, calGravity)
-		return float64(DSUAccSign[1]) * MulVec3(accMat, rest)[1]
+	dsuAccY := func(calGravity [3]float64, s motion.SensorFrame) float64 {
+		accMat, _ := motion.BuildOutputMapping(mat, s, calGravity)
+		return float64(motion.DSUAccSign[1]) * motion.MulVec3(accMat, rest)[1]
 	}
 
 	// Как было: превью брало гравитацию профиля, а её ещё нет.

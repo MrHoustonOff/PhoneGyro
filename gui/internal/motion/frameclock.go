@@ -1,4 +1,4 @@
-package main
+package motion
 
 import (
 	"time"
@@ -23,6 +23,9 @@ type FrameClock struct {
 	have     bool
 	prevWall time.Time
 }
+
+// Started — были ли уже кадры с часами устройства (после сброса — нет).
+func (c *FrameClock) Started() bool { return c.have }
 
 // Interval возвращает интервал в секундах и true, если он взят с часов устройства.
 func (c *FrameClock) Interval(frame server.MotionFrame, now time.Time) (float64, bool) {

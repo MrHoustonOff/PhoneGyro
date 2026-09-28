@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"phonegyro-gui/internal/motion"
 	"strings"
 	"time"
 )
@@ -13,6 +14,15 @@ import (
 type captureSample struct {
 	rot [3]float64 // RotX, RotY, RotZ in °/s
 	acc [3]float64 // AccX, AccY, AccZ in g
+}
+
+// sampleRots returns just the rotation rates of the samples, in order.
+func sampleRots(samples []captureSample) [][3]float64 {
+	out := make([][3]float64, len(samples))
+	for i, s := range samples {
+		out[i] = s.rot
+	}
+	return out
 }
 
 // CaptureResult represents the computed result of a calibration gesture
@@ -42,7 +52,7 @@ type ValidationResult struct {
 }
 
 // AxisAlignStatus reports the live state of the accelerometer↔gyro axis relation
-// (gui/sensoralign.go) for the explicit "determine axes" wizard step: how many
+// (gui/internal/motion/sensoralign.go) for the explicit "determine axes" wizard step: how many
 // informative still-tilt-still pairs have been scored, and whether physics has
 // locked a confident mapping yet.
 type AxisAlignStatus struct {
@@ -77,7 +87,7 @@ type RawLogFrame struct {
 
 // getWizardAlign returns the active bank's calibration wizard scratch aligner, or nil
 // when no axis-align step is in progress (see wizardAlign field doc).
-func (a *App) getWizardAlign() *SensorAligner {
+func (a *App) getWizardAlign() *motion.SensorAligner {
 	bank := a.activeBank()
 	bank.wizardAlignMu.RLock()
 	defer bank.wizardAlignMu.RUnlock()
@@ -546,12 +556,12 @@ func (a *App) ValidateCalibration(pitch, roll [3]float64) ValidationResult {
 	mat[2] = rollRow
 
 	// Cemuhook DSU is left-handed parity convention -> det(M) must be -1.0 (§3.3)
-	if Det3x3(mat) > 0 {
+	if motion.Det3x3(mat) > 0 {
 		yawRow = [3]float64{-yawRow[0], -yawRow[1], -yawRow[2]}
 		mat[1] = yawRow
 	}
 
-	det := Det3x3(mat)
+	det := motion.Det3x3(mat)
 	if math.Abs(det+1.0) > 0.05 {
 		res := ValidationResult{
 			Success:   false,
@@ -602,7 +612,7 @@ func (a *App) StartAxisAlign(forgetKnown bool) {
 	_ = forgetKnown
 	bank := a.activeBank()
 	bank.wizardAlignMu.Lock()
-	bank.wizardAlign = NewSensorAligner("")
+	bank.wizardAlign = motion.NewSensorAligner("")
 	bank.wizardAlignMu.Unlock()
 }
 

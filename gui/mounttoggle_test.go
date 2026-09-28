@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"phonegyro-gui/internal/motion"
 	"testing"
 )
 
@@ -15,7 +16,7 @@ func TestSetProfileMountEnabled(t *testing.T) {
 	app.bank("phone") // saveProfiles also writes settings, which reads the phone bank
 	bank := app.bank("usb")
 	up, pitch := simulateMount(rotAxis([3]float64{0, 0, 1}, 8), 0)
-	m := ComputeMountCorrection(up, pitch)
+	m := motion.ComputeMountCorrection(up, pitch)
 	if !m.Active() {
 		t.Fatalf("precondition: mount correction should be ok, got %s", m.Status)
 	}

@@ -1478,7 +1478,7 @@ function onOrientation(e) {
 
   // W3C DeviceOrientation: R = Rz(alpha) · Rx(beta) · Ry(gamma), device → world.
   // iOS computes this attitude internally at a high rate, so the server uses it
-  // to keep the 60 Hz gyro integration from drifting (gui/attitudeanchor.go).
+  // to keep the 60 Hz gyro integration from drifting (gui/internal/motion/attitudeanchor.go).
   outQw = cA * cB * cC - sA * sB * sC;
   outQx = cA * sB * cC - sA * cB * sC;
   outQy = cA * cB * sC + sA * sB * cC;
