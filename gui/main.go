@@ -17,6 +17,7 @@ import (
 var assets embed.FS
 
 func main() {
+	startProfilerIfAsked()
 	for _, arg := range os.Args[1:] {
 		if arg == "--livedebug" {
 			runLiveDebug()

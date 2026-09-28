@@ -426,7 +426,7 @@ func (s *Server) listenLoop() {
 
 func (s *Server) handleRequest(msgType uint32, payload []byte, remoteAddr *net.UDPAddr) {
 	// Register / keepalive client subscription
-	s.touchClient(remoteAddr)
+	isNew := s.touchClient(remoteAddr)
 
 	switch msgType {
 	case MsgTypeVersion:
@@ -434,13 +434,22 @@ func (s *Server) handleRequest(msgType uint32, payload []byte, remoteAddr *net.U
 	case MsgTypeListPorts:
 		s.sendPortInfoRsp(remoteAddr, payload)
 	case MsgTypePadData:
-		// Client is actively querying / subscribing to pad data.
-		// Send the latest frame immediately as an acknowledgment!
-		s.sendLatestPadDataTo(remoteAddr)
+		// A data request is a subscription; the stream itself comes from
+		// SendMotion (device frames) and heartbeatLoop (device silent). Cemu
+		// repeats the request after every packet it receives, so answering each
+		// one made the two ping-pong thousands of packets a second -- a whole CPU
+		// core, and every packet repeated the last rotation rate, which Cemu turned
+		// into a slow in-game drift (field report 2026-09-28). Only a brand new
+		// subscriber gets one packet right away, at rest, so it sees the pad at once.
+		if isNew {
+			s.sendRestPadDataTo(remoteAddr)
+		}
 	}
 }
 
-func (s *Server) sendLatestPadDataTo(remoteAddr *net.UDPAddr) {
+// sendRestPadDataTo sends one pad-data packet with the last orientation data but
+// zero rotation rates: it announces the pad without moving anything.
+func (s *Server) sendRestPadDataTo(remoteAddr *net.UDPAddr) {
 	if !s.running.Load() {
 		return
 	}
@@ -448,6 +457,7 @@ func (s *Server) sendLatestPadDataTo(remoteAddr *net.UDPAddr) {
 	s.lastFrameMu.RLock()
 	frame := s.lastFrame
 	s.lastFrameMu.RUnlock()
+	frame.RotX, frame.RotY, frame.RotZ = 0, 0, 0
 
 	// If no motion frame has ever been received, provide neutral gravity down
 	if frame.AccX == 0 && frame.AccY == 0 && frame.AccZ == 0 {
@@ -588,7 +598,8 @@ func (s *Server) sendPortInfoRsp(remoteAddr *net.UDPAddr, payload []byte) {
 	}
 }
 
-func (s *Server) touchClient(addr *net.UDPAddr) {
+// touchClient registers or refreshes a subscription; true if it is new.
+func (s *Server) touchClient(addr *net.UDPAddr) bool {
 	key := addr.String()
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
@@ -603,9 +614,10 @@ func (s *Server) touchClient(addr *net.UDPAddr) {
 			connectCb := s.OnClientConnect
 			go connectCb(addr)
 		}
-	} else {
-		client.LastSeen = time.Now()
+		return true
 	}
+	client.LastSeen = time.Now()
+	return false
 }
 
 func (s *Server) cleanupLoop() {
