@@ -235,6 +235,7 @@ type App struct {
 	stillnessHint     atomic.Bool
 	disconnectAlert   atomic.Bool
 	silenceDisconnect atomic.Bool
+	cemuDriftGuard    atomic.Bool // drift guard for Cemu clients (pkg/dsu/cemubias.go)
 	soundMode         string
 	soundVolume       atomic.Int32
 	soundVolumesMu    sync.RWMutex
@@ -355,6 +356,7 @@ func NewApp() *App {
 	app.stillnessHint.Store(true)
 	app.disconnectAlert.Store(true)
 	app.silenceDisconnect.Store(true)
+	app.cemuDriftGuard.Store(true)
 	app.soundMode = "cute"
 	app.soundVolume.Store(1)
 	app.soundVolumes = defaultSoundVolumes()

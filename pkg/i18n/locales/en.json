@@ -437,6 +437,8 @@
     "silence_disconnect": "Disconnect on Sensor Silence",
     "silence_disconnect_desc": "Drop connection after 2s of frozen or missing sensor data",
     "silence_disconnect_tip": "Instantly disconnect when the phone screen turns off or sensor data freezes for 2 seconds, preventing corrupted calibration or stuck DSU output.",
+    "cemu_drift_guard": "Cemu Drift Guard",
+    "cemu_drift_guard_tip": "Cemu mistakes slow motion for gyro bias and then keeps turning the aim by it, so the aim drifts even while the controller is still. The guard silently cancels that error during play. It only applies to Cemu; other emulators are unaffected.",
     "minimize_to_tray": "Minimize to System Tray",
     "minimize_to_tray_desc": "Hides window to tray on close, keeping streaming active",
     "minimize_to_tray_tip": "When closing the window, hides it into the Windows notification area so gyro motion streaming remains uninterrupted during gameplay.",
@@ -562,7 +564,8 @@
     "dsu_client_tip_switch": "Click to switch to {name}",
     "dsu_client_remove": "Disconnect this client",
     "dsu_client_removed": "{name} disconnected from DSU",
-    "dsu_client_cemu_bias": "Gyro bias as Cemu sees it: {bias} °/s"
+    "dsu_client_cemu_bias": "Gyro bias as Cemu sees it: {bias} °/s",
+    "dsu_client_cemu_guard": "Drift guard is on"
   },
   "recenter": {
     "btn_main": "Recenter 3D View",

@@ -31,6 +31,7 @@ type AppSettings struct {
 	StillnessHint         bool           `json:"stillnessHint"`
 	DisconnectAlert       bool           `json:"disconnectAlert"`
 	SilenceDisconnect     bool           `json:"silenceDisconnect"`
+	CemuDriftGuard        bool           `json:"cemuDriftGuard"`
 	SoundMode             string         `json:"soundMode"`
 	SoundVolume           int            `json:"soundVolume"`
 	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -151,6 +152,7 @@ func (a *App) loadSettings() {
 		StillnessHint         *bool          `json:"stillnessHint"`
 		DisconnectAlert       *bool          `json:"disconnectAlert"`
 		SilenceDisconnect     *bool          `json:"silenceDisconnect"`
+		CemuDriftGuard        *bool          `json:"cemuDriftGuard"`
 		SoundMode             string         `json:"soundMode"`
 		SoundVolume           *int           `json:"soundVolume"`
 		SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -215,6 +217,11 @@ func (a *App) loadSettings() {
 		a.silenceDisconnect.Store(*s.SilenceDisconnect)
 	} else {
 		a.silenceDisconnect.Store(true)
+	}
+	if s.CemuDriftGuard != nil {
+		a.cemuDriftGuard.Store(*s.CemuDriftGuard)
+	} else {
+		a.cemuDriftGuard.Store(true)
 	}
 	if s.SoundMode != "" {
 		a.soundMode = s.SoundMode
@@ -367,6 +374,7 @@ func (a *App) saveSettings() {
 		StillnessHint:         a.stillnessHint.Load(),
 		DisconnectAlert:       a.disconnectAlert.Load(),
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
+		CemuDriftGuard:        a.cemuDriftGuard.Load(),
 		SoundMode:             soundM,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
@@ -671,6 +679,7 @@ func (a *App) GetAppSettings() AppSettings {
 		StillnessHint:         a.stillnessHint.Load(),
 		DisconnectAlert:       a.disconnectAlert.Load(),
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
+		CemuDriftGuard:        a.cemuDriftGuard.Load(),
 		SoundMode:             soundM,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
@@ -752,6 +761,8 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
+	a.cemuDriftGuard.Store(s.CemuDriftGuard)
+	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
 		a.SetCloseAction(s.CloseAction)
 	} else {

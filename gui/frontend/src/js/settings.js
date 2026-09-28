@@ -21,6 +21,7 @@
       stillnessHint: true,
       disconnectAlert: true,
       silenceDisconnect: true,
+      cemuDriftGuard: true,
       closeAction: 'ask',
       soundMode: 'cute',
       soundVolume: 1,
@@ -815,6 +816,11 @@
         silenceCheckbox.checked = (s.silenceDisconnect !== false);
       }
 
+      const cemuGuardCheckbox = document.getElementById('setting-cemu-drift-guard');
+      if (cemuGuardCheckbox) {
+        cemuGuardCheckbox.checked = (s.cemuDriftGuard !== false);
+      }
+
       const closeActionSelect = document.getElementById('setting-close-action');
       if (closeActionSelect) {
         closeActionSelect.value = s.closeAction || (s.minimizeToTray ? 'minimize' : 'ask');
@@ -960,6 +966,7 @@
 
       // 10. Silence Disconnect
       setModified('silenceDisconnect', !!silenceCheckbox?.checked !== this.DEFAULTS.silenceDisconnect);
+      setModified('cemuDriftGuard', !!document.getElementById('setting-cemu-drift-guard')?.checked !== this.DEFAULTS.cemuDriftGuard);
 
       // 11. Close Action
       setModified('closeAction', (closeActionSelect?.value || 'ask') !== this.DEFAULTS.closeAction);
@@ -1037,6 +1044,7 @@
       const stillnessHint = !!document.getElementById('setting-stillness-hint')?.checked;
       const disconnectAlert = !!document.getElementById('setting-disconnect-alert')?.checked;
       const silenceDisconnect = !!document.getElementById('setting-silence-disconnect')?.checked;
+      const cemuDriftGuard = !!document.getElementById('setting-cemu-drift-guard')?.checked;
       const closeAction = document.getElementById('setting-close-action')?.value || 'ask';
       const soundMode = document.getElementById('setting-sound-mode')?.value || 'cute';
       const soundVolume = parseInt(document.getElementById('setting-sound-volume')?.value || '1', 10);
@@ -1070,6 +1078,7 @@
         stillnessHint: stillnessHint,
         disconnectAlert: disconnectAlert,
         silenceDisconnect: silenceDisconnect,
+        cemuDriftGuard: cemuDriftGuard,
         closeAction: closeAction,
         minimizeToTray: closeAction === 'minimize',
         soundMode: soundMode,

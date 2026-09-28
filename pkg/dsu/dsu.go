@@ -37,7 +37,10 @@ type ClientSub struct {
 	Addr        *net.UDPAddr
 	LastSeen    time.Time
 	ConnectedAt time.Time // the list is ordered by it (stable in the UI)
-	cemu        cemuBiasModel // what Cemu's filter makes of the packets we sent
+	// CemuGuard: this client is Cemu and gets the drift guard's correction
+	// packets (cemubias.go). Set by the app, which knows the program's name.
+	CemuGuard bool
+	cemu      cemuBiasModel // what Cemu's filter makes of the packets we sent
 }
 
 var padPacketPool = sync.Pool{
@@ -143,6 +146,7 @@ type ClientInfo struct {
 	ConnectedAtMs int64      `json:"connectedAtMs"` // unix ms; the list is sorted by it
 	CemuBias      [3]float64 `json:"cemuBias"`
 	CemuSamples   uint64     `json:"cemuSamples"`
+	CemuGuard     bool       `json:"cemuGuard"`
 }
 
 // ActiveClientCount returns the number of currently active DSU subscribers.
@@ -175,6 +179,7 @@ func (s *Server) GetClientsInfo() []ClientInfo {
 			Active:        ms < 3500,
 			CemuBias:      c.cemu.biasDps(),
 			CemuSamples:   c.cemu.n,
+			CemuGuard:     c.CemuGuard,
 			ConnectedAtMs: c.ConnectedAt.UnixMilli(),
 		})
 	}
@@ -226,15 +231,18 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	}
 
 	s.lastFrameMu.Lock()
+	prev := s.lastFrame
 	s.lastFrame = frame
 	s.lastMotionTime = time.Now()
 	s.lastFrameMu.Unlock()
 
+	s.clientsMu.Lock()
+	// Corrections go out before this frame is stamped: they take the microsecond
+	// right after the previous packet, and this frame still spans its interval.
+	s.sendCemuCorrectionsLocked(prev)
 	// Stamp even with no clients: the chain must see every device frame, or the
 	// first packet after a client subscribes would span an arbitrary interval.
 	ts := s.stampMotion(frame)
-
-	s.clientsMu.Lock()
 	if len(s.clients) == 0 {
 		s.clientsMu.Unlock()
 		return // Fast path: zero emulators subscribed, zero allocations, zero packet work!
@@ -372,9 +380,11 @@ func (s *Server) stampIdle() uint64 {
 	return s.emitTsLocked(s.wallAdvanceLocked(now), now)
 }
 
-// stampRepeat returns the timestamp for a re-send of the last frame (reply to a
-// client's data request). Its rates were already delivered, so it must span no
-// time at all, or the client would integrate them a second time: +1 us.
+// stampRepeat returns the timestamp for a packet that must span no time at all
+// (the welcome packet of a new subscriber, a drift guard correction): +1 us.
+// The wall-time reference stays at the last real packet, so the next frame
+// without a device clock still spans its whole interval, not the time since this
+// packet.
 func (s *Server) stampRepeat() uint64 {
 	now := time.Now()
 	s.timeMu.Lock()
@@ -382,7 +392,8 @@ func (s *Server) stampRepeat() uint64 {
 	if s.currentDsuTsUs == 0 {
 		return s.emitTsLocked(uint64(now.UnixMicro()), now)
 	}
-	return s.emitTsLocked(s.currentDsuTsUs+1, now)
+	s.currentDsuTsUs++
+	return s.currentDsuTsUs
 }
 
 func (s *Server) wallAdvanceLocked(now time.Time) uint64 {
@@ -498,6 +509,51 @@ func (s *Server) sendRestPadDataTo(remoteAddr *net.UDPAddr) {
 	_, _ = s.conn.WriteToUDP(pkt, remoteAddr)
 
 	padPacketPool.Put(bufPtr)
+
+	s.clientsMu.Lock()
+	if c := s.clients[remoteAddr.String()]; c != nil {
+		c.cemu.add(0, 0, 0)
+	}
+	s.clientsMu.Unlock()
+}
+
+// sendCemuCorrectionsLocked sends each guarded client whose Cemu bias sum is not
+// zero a packet that cancels it (cemubias.go), stamped 1 us after the previous
+// packet so it rotates nothing. prev is the frame the client got last: the same
+// acceleration keeps Cemu's accAcceleration of the next real frame right. Called
+// with clientsMu held, before the next packet is stamped.
+func (s *Server) sendCemuCorrectionsLocked(prev server.MotionFrame) {
+	var ts uint64
+	for _, c := range s.clients {
+		if !c.CemuGuard {
+			continue
+		}
+		rx, ry, rz, ok := c.cemu.correction()
+		if !ok {
+			continue
+		}
+		if ts == 0 {
+			ts = s.stampRepeat()
+		}
+		f := prev
+		f.RotX, f.RotY, f.RotZ = rx, ry, rz
+		bufPtr := padPacketPool.Get().(*[]byte)
+		s.fillPadDataPacket(*bufPtr, atomic.AddUint32(&s.packetCounter, 1), f, ts)
+		_, _ = s.conn.WriteToUDP(*bufPtr, c.Addr)
+		padPacketPool.Put(bufPtr)
+		c.cemu.add(rx, ry, rz)
+	}
+}
+
+// SetCemuGuard turns the drift guard on or off for a subscribed client (by the
+// address in ClientInfo.Address). The app turns it on for clients it identified
+// as Cemu; other emulators never get correction packets.
+func (s *Server) SetCemuGuard(address string, on bool) {
+	s.clientsMu.Lock()
+	if c := s.clients[address]; c != nil {
+		c.CemuGuard = on
+	}
+	s.clientsMu.Unlock()
 }
 
 // idleAfter is how long the device stream must be silent before heartbeat
@@ -546,13 +602,13 @@ func (s *Server) heartbeatLoop() {
 				idleFrame.AccY = -1.0
 			}
 
-			packetNum := atomic.AddUint32(&s.packetCounter, 1)
+			s.clientsMu.Lock()
+			s.sendCemuCorrectionsLocked(idleFrame)
 
+			packetNum := atomic.AddUint32(&s.packetCounter, 1)
 			bufPtr := padPacketPool.Get().(*[]byte)
 			pkt := *bufPtr
 			s.fillPadDataPacket(pkt, packetNum, idleFrame, s.stampIdle())
-
-			s.clientsMu.Lock()
 			for _, client := range s.clients {
 				_, _ = s.conn.WriteToUDP(pkt, client.Addr)
 				client.cemu.add(0, 0, 0)

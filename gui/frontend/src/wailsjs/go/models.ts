@@ -15,6 +15,7 @@ export namespace main {
 	    stillnessHint: boolean;
 	    disconnectAlert: boolean;
 	    silenceDisconnect: boolean;
+	    cemuDriftGuard: boolean;
 	    soundMode: string;
 	    soundVolume: number;
 	    soundVolumes?: Record<string, number>;
@@ -47,6 +48,7 @@ export namespace main {
 	        this.stillnessHint = source["stillnessHint"];
 	        this.disconnectAlert = source["disconnectAlert"];
 	        this.silenceDisconnect = source["silenceDisconnect"];
+	        this.cemuDriftGuard = source["cemuDriftGuard"];
 	        this.soundMode = source["soundMode"];
 	        this.soundVolume = source["soundVolume"];
 	        this.soundVolumes = source["soundVolumes"];
@@ -69,6 +71,7 @@ export namespace main {
 	    connectedAtMs: number;
 	    cemuBias: number[];
 	    cemuSamples: number;
+	    cemuGuard: boolean;
 	    process?: string;
 	    pid?: number;
 	
@@ -86,6 +89,7 @@ export namespace main {
 	        this.connectedAtMs = source["connectedAtMs"];
 	        this.cemuBias = source["cemuBias"];
 	        this.cemuSamples = source["cemuSamples"];
+	        this.cemuGuard = source["cemuGuard"];
 	        this.process = source["process"];
 	        this.pid = source["pid"];
 	    }

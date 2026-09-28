@@ -1035,6 +1035,28 @@
                         <span class="setting-range-badge" id="setting-gyro-sens-badge" style="display:none;">1.00x</span>
                       </div>
                     </div>
+
+                    <!-- Cemu drift guard (pkg/dsu/cemubias.go) -->
+                    <div class="setting-row" data-setting-key="cemuDriftGuard">
+                      <div class="setting-info">
+                        <div class="setting-label-row">
+                          <span class="setting-label" data-i18n="settings_modal.cemu_drift_guard">Защита от дрейфа в Cemu</span>
+                          <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.cemu_drift_guard_tip" aria-label="Info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="setting-control">
+                        <label class="apple-toggle">
+                          <input type="checkbox" id="setting-cemu-drift-guard" checked>
+                          <span class="apple-toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

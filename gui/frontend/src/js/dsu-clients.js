@@ -55,6 +55,7 @@ const DsuClientList = {
     if (c && /^cemu$/i.test(c.process || '') && Array.isArray(c.cemuBias)) {
       const b = c.cemuBias.map(v => (v >= 0 ? '+' : '') + v.toFixed(3)).join(' / ');
       lines.push((I18n.t('status.dsu_client_cemu_bias') || 'Смещение гироскопа по версии Cemu: {bias} °/с').replace('{bias}', b));
+      if (c.cemuGuard) lines.push(I18n.t('status.dsu_client_cemu_guard') || 'Защита от дрейфа включена');
     }
     return lines.join('\n');
   },

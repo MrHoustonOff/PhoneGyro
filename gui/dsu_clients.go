@@ -137,12 +137,23 @@ func nameDSUClients(clients []dsu.ClientInfo) []DSUClientView {
 	return out
 }
 
-// dsuClientViews is the subscribed clients with their program names.
+// dsuClientViews is the subscribed clients with their program names. It also
+// keeps the drift guard (pkg/dsu/cemubias.go) on for exactly the clients that
+// are Cemu while the setting is on: it runs on every connect, even with the
+// window hidden.
 func (a *App) dsuClientViews() []DSUClientView {
 	if a.dsuSrv == nil {
 		return nil
 	}
-	return nameDSUClients(a.dsuSrv.GetClientsInfo())
+	views := nameDSUClients(a.dsuSrv.GetClientsInfo())
+	for i, v := range views {
+		want := a.cemuDriftGuard.Load() && strings.EqualFold(v.Process, "Cemu")
+		if want != v.CemuGuard {
+			a.dsuSrv.SetCemuGuard(v.Address, want)
+			views[i].CemuGuard = want
+		}
+	}
+	return views
 }
 
 // DisconnectDSUClient disconnects a subscribed client by its address. It stays
