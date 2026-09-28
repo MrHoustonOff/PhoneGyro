@@ -45,6 +45,19 @@ jobs:
           if ("${{ github.ref_type }}" -eq "tag") {
             $ver = "${{ github.ref_name }}" -replace '^v',''
             $ldflags = "-X main.releaseVersion=$ver -X main.buildTag=000 -X main.buildChannel=release"
+
+            # Stamp the tag into the exe's file properties (wails.json -> version
+            # resource and manifest), so "Properties > Details" always matches the
+            # release. Windows wants four numbers: "2.0.1-rc1" -> "2.0.1.0".
+            if ($ver -match '^(\d+)\.(\d+)\.(\d+)') {
+              $num = "$($Matches[1]).$($Matches[2]).$($Matches[3])"
+              $cfg = Get-Content gui/wails.json -Raw -Encoding UTF8 | ConvertFrom-Json
+              $cfg.version = $num
+              $cfg.info.productVersion = "$num.0"
+              # UTF-8 without BOM: Go's JSON parser rejects a BOM.
+              [System.IO.File]::WriteAllText((Join-Path (Get-Location) "gui/wails.json"), ($cfg | ConvertTo-Json -Depth 10), (New-Object System.Text.UTF8Encoding $false))
+              Write-Host "File version stamped: $num.0"
+            }
           } else {
             $ldflags = ""
           }

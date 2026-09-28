@@ -13,7 +13,7 @@
     "companyName": "MrHoustonOff",
     "productName": "PhoneGyro",
     "productVersion": "2.0.0.0",
-    "copyright": "Copyright 2026 MrHoustonOff",
-    "comments": "Open-source smartphone motion controller bridge for Cemuhook DSU"
+    "copyright": "Copyright © 2026 MrHoustonOff. MIT License.",
+    "comments": "Turns an iPhone, Android phone or USB controller into a Cemuhook DSU motion source. Open source: https://github.com/MrHoustonOff/PhoneGyro"
   }
 }

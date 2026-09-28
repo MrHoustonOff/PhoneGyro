@@ -3,7 +3,16 @@
 *.exe~
 bin/
 dist/
-gui/build/
+# Build output is not tracked, but the exe's identity is: the release CI builds
+# from a clean checkout, and without these Wails falls back to its own logo,
+# empty file properties and a template manifest.
+gui/build/*
+!gui/build/appicon.png
+!gui/build/windows/
+gui/build/windows/*
+!gui/build/windows/icon.ico
+!gui/build/windows/info.json
+!gui/build/windows/wails.exe.manifest
 
 # Generated TLS certificates and keys
 certs/
