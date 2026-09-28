@@ -29,6 +29,18 @@ const (
 	usbReadTimeout   = 300 * time.Millisecond
 	usbMetaGraceTime = 500 * time.Millisecond
 
+	// A streaming device sends data frames at 100-200 Hz; this long without a
+	// single NEW one means the link is dead even if the port still "reads". Seen in
+	// the field (2026-09-28): after a flaky port dropped and came back, the handle
+	// replayed the same stale frame ~12 000 times a second without an error, or
+	// returned 0 bytes at once. Longer than the ~1.8 s an Arduino is silent while
+	// it reboots on port open.
+	usbSilenceTimeout = 3 * time.Second
+	// A read that returns nothing sooner than this ignored the read timeout
+	// (dead handle): pause instead of spinning a CPU core.
+	usbInstantRead = 5 * time.Millisecond
+	usbSpinPause   = 50 * time.Millisecond
+
 	// Protocol Level 3 safe defaults, used until (or unless) a metadata frame
 	// declares the device's real sensor range.
 	usbDefaultGyroRangeDps = 250.0
@@ -49,6 +61,15 @@ type usbConnState struct {
 	lastSeq       uint8
 	droppedFrames uint64
 	dataFrames    uint64
+
+	// The previous data frame, to reject replays: a real device never sends two
+	// data frames with the same SEQ and device timestamp in a row.
+	haveData bool
+	lastData struct {
+		seq uint8
+		ts  uint32
+	}
+	duplicates uint64
 
 	// What the metadata declared beyond the ranges, and how often it comes
 	// (usb_status.go shows it in Live Debug).
@@ -82,7 +103,10 @@ func metaRangeOrDefault(v int16, def float64) float64 {
 // handle processes one decoded frame: applies metadata (Level 3), tracks
 // dropped frames via SEQ, handles the reset button (Level 5), and — for a
 // data frame — injects the converted result into the app's core pipeline.
-func (st *usbConnState) handle(f hwproto.Frame, app *App) {
+// handle reports whether f was fresh data from the device: a data frame that is
+// not a replay of the previous one. Metadata and name frames repeat by design
+// and never count as proof that the device is alive.
+func (st *usbConnState) handle(f hwproto.Frame, app *App) (fresh bool) {
 	switch f.Type {
 	case hwproto.TypeMeta:
 		// Applied whenever it arrives, not only at the start: since protocol v1.1
@@ -117,6 +141,15 @@ func (st *usbConnState) handle(f hwproto.Frame, app *App) {
 			app.emitStateChange()
 		}
 	case hwproto.TypeData:
+		if st.haveData && f.Seq == st.lastData.seq && f.TimestampUs == st.lastData.ts {
+			// A replayed frame (stale handle): feeding it on would integrate the
+			// same rotation thousands of times a second.
+			st.duplicates++
+			return false
+		}
+		st.haveData = true
+		st.lastData.seq, st.lastData.ts = f.Seq, f.TimestampUs
+		fresh = true
 		if !st.haveMeta && time.Now().After(st.metaDeadline) {
 			st.haveMeta = true // give up waiting; declared/default range stands as-is
 		}
@@ -172,6 +205,7 @@ func (st *usbConnState) handle(f hwproto.Frame, app *App) {
 			app.srv.InjectMotionFrame(mf)
 		}
 	}
+	return fresh
 }
 
 // usbDeviceManager implements protocol Level 4 auto-discovery: while active,
@@ -397,20 +431,32 @@ func (m *usbDeviceManager) readLoop(port serial.Port, name string, initial []hwp
 	}
 	defer m.app.broadcastLiveDebugJSON(usbProtoStatus{Type: "usb_proto"})
 
+	lastFrameAt := time.Now()
 	for {
 		report()
 		if !m.isConnected() {
 			break
 		}
+		if time.Since(lastFrameAt) > usbSilenceTimeout {
+			m.app.logEvent("WARN", "USB: no fresh data from %s for %s (%d replayed frames dropped), reconnecting",
+				name, usbSilenceTimeout, state.duplicates)
+			break
+		}
+		readStart := time.Now()
 		n, err := port.Read(buf)
 		if err != nil {
 			break // device unplugged or port error: drop and let scanning resume
 		}
 		if n == 0 {
+			if time.Since(readStart) < usbInstantRead {
+				time.Sleep(usbSpinPause) // dead handle: the timeout was ignored
+			}
 			continue // read timeout; loop again so Stop() is noticed promptly
 		}
 		for _, f := range dec.Push(buf[:n]) {
-			state.handle(f, m.app)
+			if state.handle(f, m.app) {
+				lastFrameAt = time.Now()
+			}
 		}
 	}
 

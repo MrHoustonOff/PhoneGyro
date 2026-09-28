@@ -245,6 +245,7 @@ type App struct {
 	gyroSensitivityBits atomic.Uint64 // float64 (multiplier, default 1.00)
 	tuningActive        atomic.Bool
 	lastTuningEmit      atomic.Int64
+	lastLiveDebugNs     atomic.Int64 // last telemetry message to Live Debug (rate cap)
 	fontScaleBits       atomic.Uint64
 	// System Tray & Window Lifecycle
 	minimizeToTray atomic.Bool

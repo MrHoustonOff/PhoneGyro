@@ -82,6 +82,11 @@ func (a *App) linkRttMs() float64 {
 	return -1
 }
 
+// liveDebugMinInterval caps telemetry to Live Debug. Real sources top out at 200 Hz
+// (USB); a fault must not drown the window -- a stale USB handle once replayed
+// one frame ~12 000 times a second and the window never managed to paint.
+const liveDebugMinInterval = time.Second / 250
+
 func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg) {
 	a.liveDebugMu.RLock()
 	clientCount := len(a.liveDebugClients)
@@ -89,6 +94,11 @@ func (a *App) broadcastLiveDebug(q0, q1, q2, q3 float32, extras ...liveDebugMsg)
 	if clientCount == 0 {
 		return
 	}
+	now := time.Now().UnixNano()
+	if now-a.lastLiveDebugNs.Load() < int64(liveDebugMinInterval) {
+		return
+	}
+	a.lastLiveDebugNs.Store(now)
 
 	msg := liveDebugMsg{
 		DeviceConnected: a.activeBank().hasClient.Load(),
