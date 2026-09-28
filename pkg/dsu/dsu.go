@@ -37,9 +37,7 @@ type ClientSub struct {
 	Addr        *net.UDPAddr
 	LastSeen    time.Time
 	ConnectedAt time.Time // the list is ordered by it (stable in the UI)
-	// RestFill: dilute Cemu's gyro-bias estimate while at rest (cemubias.go).
-	RestFill bool
-	cemu     cemuBiasModel // what Cemu's filter makes of the packets we sent
+	cemu        cemuBiasModel // what Cemu's filter makes of the packets we sent
 }
 
 var padPacketPool = sync.Pool{
@@ -70,10 +68,6 @@ type Server struct {
 
 	stopChan chan struct{}
 	running  atomic.Bool
-
-	// RestFillEnabled switches the rest-time dilution for SetRestFill clients
-	// (cemubias.go); on by default.
-	RestFillEnabled atomic.Bool
 
 	// DSU timestamp chain (see stampMotion). Clients integrate RotX/Y/Z over the
 	// delta between consecutive packet timestamps, so for device frames that
@@ -119,7 +113,6 @@ func NewServer(port int, mac ...[6]byte) *Server {
 		clients:  make(map[string]*ClientSub),
 		stopChan: make(chan struct{}),
 	}
-	s.RestFillEnabled.Store(true)
 
 	return s
 }
@@ -150,7 +143,6 @@ type ClientInfo struct {
 	ConnectedAtMs int64      `json:"connectedAtMs"` // unix ms; the list is sorted by it
 	CemuBias      [3]float64 `json:"cemuBias"`
 	CemuSamples   uint64     `json:"cemuSamples"`
-	RestFill      bool       `json:"restFill"`
 }
 
 // ActiveClientCount returns the number of currently active DSU subscribers.
@@ -183,7 +175,6 @@ func (s *Server) GetClientsInfo() []ClientInfo {
 			Active:        ms < 3500,
 			CemuBias:      c.cemu.biasDps(),
 			CemuSamples:   c.cemu.n,
-			RestFill:      c.RestFill,
 			ConnectedAtMs: c.ConnectedAt.UnixMilli(),
 		})
 	}
@@ -256,23 +247,9 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	pkt := *bufPtr
 	s.fillPadDataPacket(pkt, packetNum, frame, ts)
 
-	atRest := frame.RotX == 0 && frame.RotY == 0 && frame.RotZ == 0
-	fill := false
 	for _, client := range s.clients {
 		_, _ = s.conn.WriteToUDP(pkt, client.Addr)
 		client.cemu.add(frame.RotX, frame.RotY, frame.RotZ)
-		fill = fill || (atRest && client.RestFill && s.RestFillEnabled.Load())
-	}
-	if fill {
-		for i := 0; i < restFillPackets; i++ {
-			s.fillPadDataPacket(pkt, atomic.AddUint32(&s.packetCounter, 1), frame, s.stampRepeat())
-			for _, client := range s.clients {
-				if client.RestFill {
-					_, _ = s.conn.WriteToUDP(pkt, client.Addr)
-					client.cemu.add(0, 0, 0)
-				}
-			}
-		}
 	}
 	s.clientsMu.Unlock()
 

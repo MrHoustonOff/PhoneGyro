@@ -69,7 +69,6 @@ export namespace main {
 	    connectedAtMs: number;
 	    cemuBias: number[];
 	    cemuSamples: number;
-	    restFill: boolean;
 	    process?: string;
 	    pid?: number;
 	
@@ -87,7 +86,6 @@ export namespace main {
 	        this.connectedAtMs = source["connectedAtMs"];
 	        this.cemuBias = source["cemuBias"];
 	        this.cemuSamples = source["cemuSamples"];
-	        this.restFill = source["restFill"];
 	        this.process = source["process"];
 	        this.pid = source["pid"];
 	    }

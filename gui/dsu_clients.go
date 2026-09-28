@@ -142,16 +142,7 @@ func (a *App) dsuClientViews() []DSUClientView {
 	if a.dsuSrv == nil {
 		return nil
 	}
-	views := nameDSUClients(a.dsuSrv.GetClientsInfo())
-	for _, v := range views {
-		// Cemu keeps a lifetime gyro-bias mean and hands the game "rate - bias":
-		// dilute it while the device is at rest (pkg/dsu/cemubias.go).
-		isCemu := strings.EqualFold(v.Process, "Cemu")
-		if isCemu != v.RestFill {
-			a.dsuSrv.SetRestFill(v.Address, isCemu)
-		}
-	}
-	return views
+	return nameDSUClients(a.dsuSrv.GetClientsInfo())
 }
 
 // DisconnectDSUClient disconnects a subscribed client by its address. It stays

@@ -46,20 +46,3 @@ func (m *cemuBiasModel) biasDps() [3]float64 {
 	}
 	return b
 }
-
-// restFillPackets: while the device is at rest (the frame's rates are exactly
-// zero) a client marked with SetRestFill gets this many extra zero-rate packets
-// per frame, each +1 us on the timestamp chain. Zero rates over 1 us cannot
-// rotate anything, but every one counts as a sample in Cemu's bias mean: the
-// bias left by slow motion fades ten times faster instead of staying for good.
-const restFillPackets = 9
-
-// SetRestFill turns the rest-time bias dilution on or off for one client (by
-// ClientInfo.Address). PhoneGyro enables it for clients it identifies as Cemu.
-func (s *Server) SetRestFill(address string, on bool) {
-	s.clientsMu.Lock()
-	if c, ok := s.clients[address]; ok {
-		c.RestFill = on
-	}
-	s.clientsMu.Unlock()
-}
