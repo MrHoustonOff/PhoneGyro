@@ -21,7 +21,9 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          # The version the GUI module declares, not a hand-kept number that falls
+          # behind it (it was 1.21 against go 1.25 and only built via toolchain download).
+          go-version-file: gui/go.mod
           cache: false
 
       - name: Setup Node.js
@@ -30,7 +32,9 @@ jobs:
           node-version: '20'
 
       - name: Install Wails CLI
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        # Same version as the wails module in gui/go.mod: a new CLI release must not
+        # change a release build without us noticing.
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
         shell: powershell
 
       - name: Compute Version
