@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"sort"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,9 +21,9 @@ const (
 	MagicClient = "DSUC"
 	ProtocolVer = 1001
 
-	MsgTypeVersion  = 0x100000
+	MsgTypeVersion   = 0x100000
 	MsgTypeListPorts = 0x100001
-	MsgTypePadData  = 0x100002
+	MsgTypePadData   = 0x100002
 
 	SlotStateDisconnected = 0
 	SlotStateConnected    = 2
@@ -33,8 +34,9 @@ const (
 
 // ClientSub represents an active client (Cemu / PadTest / Dolphin) subscribed to motion stream.
 type ClientSub struct {
-	Addr     *net.UDPAddr
-	LastSeen time.Time
+	Addr        *net.UDPAddr
+	LastSeen    time.Time
+	ConnectedAt time.Time // the list is ordered by it (stable in the UI)
 	// RestFill: dilute Cemu's gyro-bias estimate while at rest (cemubias.go).
 	RestFill bool
 	cemu     cemuBiasModel // what Cemu's filter makes of the packets we sent
@@ -145,9 +147,10 @@ type ClientInfo struct {
 	Active     bool   `json:"active"`
 	// CemuBias is the gyro bias (deg/s) Cemu's filter would hold if this client
 	// is Cemu, replayed from the packets sent since it subscribed (cemubias.go).
-	CemuBias    [3]float64 `json:"cemuBias"`
-	CemuSamples uint64     `json:"cemuSamples"`
-	RestFill    bool       `json:"restFill"`
+	ConnectedAtMs int64      `json:"connectedAtMs"` // unix ms; the list is sorted by it
+	CemuBias      [3]float64 `json:"cemuBias"`
+	CemuSamples   uint64     `json:"cemuSamples"`
+	RestFill      bool       `json:"restFill"`
 }
 
 // ActiveClientCount returns the number of currently active DSU subscribers.
@@ -173,16 +176,24 @@ func (s *Server) GetClientsInfo() []ClientInfo {
 	for _, c := range s.clients {
 		ms := now.Sub(c.LastSeen).Milliseconds()
 		res = append(res, ClientInfo{
-			Address:     c.Addr.String(),
-			IP:          c.Addr.IP.String(),
-			Port:        c.Addr.Port,
-			LastSeenMs:  ms,
-			Active:      ms < 3500,
-			CemuBias:    c.cemu.biasDps(),
-			CemuSamples: c.cemu.n,
-			RestFill:    c.RestFill,
+			Address:       c.Addr.String(),
+			IP:            c.Addr.IP.String(),
+			Port:          c.Addr.Port,
+			LastSeenMs:    ms,
+			Active:        ms < 3500,
+			CemuBias:      c.cemu.biasDps(),
+			CemuSamples:   c.cemu.n,
+			RestFill:      c.RestFill,
+			ConnectedAtMs: c.ConnectedAt.UnixMilli(),
 		})
 	}
+	// Map order is random: without this the UI list shuffled on every update.
+	sort.SliceStable(res, func(i, j int) bool {
+		if res[i].ConnectedAtMs != res[j].ConnectedAtMs {
+			return res[i].ConnectedAtMs < res[j].ConnectedAtMs
+		}
+		return res[i].Address < res[j].Address
+	})
 	return res
 }
 
@@ -294,9 +305,9 @@ func (s *Server) fillPadDataPacket(buf []byte, packetNum uint32, frame server.Mo
 	// --- 2. Payload (80 bytes, offsets relative to 20) ---
 	p := buf[20:]
 	p[0] = 0                    // Slot 0
-	p[1] = SlotStateConnected  // 2 = Connected
-	p[2] = ModelFullGamepad    // 2 = Full Gyro Gamepad
-	p[3] = ConnTypeBluetooth   // 2 = Bluetooth / Wireless
+	p[1] = SlotStateConnected   // 2 = Connected
+	p[2] = ModelFullGamepad     // 2 = Full Gyro Gamepad
+	p[3] = ConnTypeBluetooth    // 2 = Bluetooth / Wireless
 	copy(p[4:10], s.macAddr[:]) // MAC Address
 	p[10] = BatteryFull         // 5 = Full Battery
 	p[11] = 1                   // Active state
@@ -689,9 +700,11 @@ func (s *Server) touchClient(addr *net.UDPAddr) bool {
 
 	client, exists := s.clients[key]
 	if !exists {
+		now := time.Now()
 		s.clients[key] = &ClientSub{
-			Addr:     addr,
-			LastSeen: time.Now(),
+			Addr:        addr,
+			LastSeen:    now,
+			ConnectedAt: now,
 		}
 		if s.OnClientConnect != nil {
 			connectCb := s.OnClientConnect

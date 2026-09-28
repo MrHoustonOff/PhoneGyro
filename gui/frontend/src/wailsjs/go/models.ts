@@ -66,6 +66,7 @@ export namespace main {
 	    port: number;
 	    lastSeenMs: number;
 	    active: boolean;
+	    connectedAtMs: number;
 	    cemuBias: number[];
 	    cemuSamples: number;
 	    restFill: boolean;
@@ -83,6 +84,7 @@ export namespace main {
 	        this.port = source["port"];
 	        this.lastSeenMs = source["lastSeenMs"];
 	        this.active = source["active"];
+	        this.connectedAtMs = source["connectedAtMs"];
 	        this.cemuBias = source["cemuBias"];
 	        this.cemuSamples = source["cemuSamples"];
 	        this.restFill = source["restFill"];

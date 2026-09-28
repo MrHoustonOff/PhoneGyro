@@ -113,3 +113,35 @@ func TestDSU_KickIgnoresUntilSilent(t *testing.T) {
 		t.Fatal("client could not return after staying silent")
 	}
 }
+
+// TestDSU_ClientsInConnectionOrder: the list must not shuffle between calls
+// (map order is random); the first subscriber comes first.
+func TestDSU_ClientsInConnectionOrder(t *testing.T) {
+	srv := NewServer(0)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	var addrs []string
+	for i := 0; i < 3; i++ {
+		c, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer c.Close()
+		_, _ = c.Write(padDataRequest(uint32(i)))
+		addrs = append(addrs, c.LocalAddr().String())
+		time.Sleep(20 * time.Millisecond)
+	}
+	for k := 0; k < 50; k++ {
+		list := srv.GetClientsInfo()
+		if len(list) != 3 {
+			t.Fatalf("%d clients", len(list))
+		}
+		for i := range list {
+			if list[i].Address != addrs[i] {
+				t.Fatalf("call %d: position %d is %s, want %s", k, i, list[i].Address, addrs[i])
+			}
+		}
+	}
+}
