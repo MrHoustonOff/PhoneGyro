@@ -1,0 +1,484 @@
+/* ── Authentic Apple HIG Confirmation Dialog Modal ────────────────────────────── */
+.apple-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-dialog-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.apple-dialog-card {
+  width: min(360px, 90vw);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 22px 20px 22px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: scale(0.92);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.apple-dialog-overlay.visible .apple-dialog-card {
+  transform: scale(1);
+}
+
+.apple-dialog-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 159, 10, 0.14);
+  color: #FF9F0A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.apple-dialog-title {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.apple-dialog-message {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 22px;
+}
+
+.apple-dialog-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.apple-dialog-btn {
+  flex: 1;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+[data-theme="light"] .apple-dialog-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .apple-dialog-card {
+  background: #FFFFFF;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+/* ═════════════════════════════════════════════════════════════════════════════ */
+/* Authentic Apple HIG Close / Minimize Confirmation Sheet                      */
+/* ═════════════════════════════════════════════════════════════════════════════ */
+#apple-close-modal.apple-dialog-overlay {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.45);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-close-card {
+  width: min(410px, 92vw);
+  background: rgba(30, 30, 32, 0.88);
+  backdrop-filter: blur(35px) saturate(190%);
+  -webkit-backdrop-filter: blur(35px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 26px 22px 20px 22px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transform: scale(0.94) translateY(6px);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+#apple-close-modal.visible .apple-close-card {
+  transform: scale(1) translateY(0);
+}
+
+[data-theme="light"] .apple-close-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+
+/* Apple Squircle Icon Badge */
+.apple-close-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(10, 132, 255, 0.22) 0%, rgba(10, 132, 255, 0.08) 100%);
+  border: 1px solid rgba(10, 132, 255, 0.38);
+  box-shadow: 0 6px 18px rgba(10, 132, 255, 0.18), 0 1px 0 inset rgba(255, 255, 255, 0.2);
+  color: #0A84FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  flex-shrink: 0;
+}
+
+[data-theme="light"] .apple-close-icon-wrap {
+  background: linear-gradient(145deg, rgba(0, 122, 255, 0.14) 0%, rgba(0, 122, 255, 0.05) 100%);
+  border: 1px solid rgba(0, 122, 255, 0.25);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.12);
+  color: #007AFF;
+}
+
+/* Destructive variant (delete profile) */
+.apple-close-icon-wrap.apple-close-icon-danger {
+  background: linear-gradient(145deg, rgba(255, 69, 58, 0.22) 0%, rgba(255, 69, 58, 0.08) 100%);
+  border: 1px solid rgba(255, 69, 58, 0.38);
+  box-shadow: 0 6px 18px rgba(255, 69, 58, 0.18), 0 1px 0 inset rgba(255, 255, 255, 0.2);
+  color: #FF453A;
+}
+
+[data-theme="light"] .apple-close-icon-wrap.apple-close-icon-danger {
+  background: linear-gradient(145deg, rgba(255, 59, 48, 0.14) 0%, rgba(255, 59, 48, 0.05) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.25);
+  box-shadow: 0 6px 16px rgba(255, 59, 48, 0.12);
+  color: #D70015;
+}
+
+/* Dialog Title */
+.apple-close-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-sans);
+  font-size: 16.5px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  line-height: 1.35;
+  margin: 0 0 7px 0;
+}
+
+/* Dialog Message */
+.apple-close-message {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-sans);
+  font-size: 12.8px;
+  font-weight: 400;
+  line-height: 1.48;
+  color: var(--text-secondary);
+  margin: 0 auto 16px auto;
+  max-width: 340px;
+}
+
+/* Apple Custom Squircle Checkbox Row */
+.apple-close-remember-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.apple-close-remember-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] .apple-close-remember-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.apple-close-checkbox-custom {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apple-close-checkbox-native {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.apple-close-checkbox-box {
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.26);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-sizing: border-box;
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-close-checkbox-box svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-close-remember-row:hover .apple-close-checkbox-box {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.apple-close-checkbox-native:checked + .apple-close-checkbox-box {
+  background: #0A84FF;
+  border-color: #0A84FF;
+  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.45);
+}
+
+.apple-close-checkbox-native:checked + .apple-close-checkbox-box svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+[data-theme="light"] .apple-close-checkbox-box {
+  background: rgba(0, 0, 0, 0.04);
+  border: 1.5px solid rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="light"] .apple-close-remember-row:hover .apple-close-checkbox-box {
+  border-color: rgba(0, 0, 0, 0.38);
+  background: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .apple-close-checkbox-native:checked + .apple-close-checkbox-box {
+  background: #007AFF;
+  border-color: #007AFF;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
+}
+
+.apple-close-remember-text {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-sans);
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
+}
+
+.apple-close-remember-row:hover .apple-close-remember-text {
+  color: var(--text);
+}
+
+/* Action Buttons Container */
+.apple-close-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.apple-close-btn {
+  flex: 1;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-sans);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  text-transform: none !important;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-sizing: border-box;
+  outline: none;
+  border: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.apple-close-btn:focus-visible {
+  box-shadow: 0 0 0 2.5px rgba(10, 132, 255, 0.55);
+}
+
+/* Cancel (Secondary Neutral) */
+.apple-close-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.apple-close-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.apple-close-btn-cancel:active {
+  transform: translateY(0) scale(0.975);
+}
+
+[data-theme="light"] .apple-close-btn-cancel {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .apple-close-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.09);
+  border-color: rgba(0, 0, 0, 0.16);
+  color: #000000;
+}
+
+/* Quit (Destructive Action) */
+.apple-close-btn-quit {
+  background: rgba(255, 69, 58, 0.12);
+  color: #FF453A;
+  border: 1px solid rgba(255, 69, 58, 0.28);
+}
+
+.apple-close-btn-quit:hover {
+  background: rgba(255, 69, 58, 0.22);
+  border-color: rgba(255, 69, 58, 0.48);
+  color: #FF3B30;
+  box-shadow: 0 3px 12px rgba(255, 69, 58, 0.2);
+  transform: translateY(-1px);
+}
+
+.apple-close-btn-quit:active {
+  transform: translateY(0) scale(0.975);
+}
+
+[data-theme="light"] .apple-close-btn-quit {
+  background: rgba(255, 59, 48, 0.09);
+  color: #D70015;
+  border: 1px solid rgba(255, 59, 48, 0.22);
+}
+
+[data-theme="light"] .apple-close-btn-quit:hover {
+  background: rgba(255, 59, 48, 0.16);
+  border-color: rgba(255, 59, 48, 0.38);
+  color: #C90013;
+}
+
+/* Minimize to Tray (Primary Action — Apple System Accent Blue) */
+.apple-close-btn-minimize {
+  background: linear-gradient(180deg, #0A84FF 0%, #0071E3 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.35);
+  font-weight: 600;
+}
+
+.apple-close-btn-minimize:hover {
+  background: linear-gradient(180deg, #1C8DFF 0%, #0077ED 100%);
+  box-shadow: 0 6px 18px rgba(10, 132, 255, 0.48);
+  transform: translateY(-1px);
+}
+
+.apple-close-btn-minimize:active {
+  transform: translateY(0) scale(0.975);
+  opacity: 0.94;
+}
+
+[data-theme="light"] .apple-close-btn-minimize {
+  background: linear-gradient(180deg, #007AFF 0%, #0066D6 100%);
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+[data-theme="light"] .apple-close-btn-minimize:hover {
+  background: linear-gradient(180deg, #0A84FF 0%, #0071E3 100%);
+  box-shadow: 0 6px 16px rgba(0, 122, 255, 0.4);
+}
+
+/* ── Responsive Tablet & Mobile Adjustments ─────────────────────────────────── */
+@media (max-width: 700px) {
+  .ios-step-split,
+  .android-split {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .ios-step-info-col {
+    text-align: center;
+    align-items: center;
+  }
+
+  .step-1-qr-card {
+    align-items: center;
+  }
+
+  .step-screenshot-wrap {
+    max-width: 280px;
+  }
+
+  .step-screenshot-img {
+    max-height: 440px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    height: 56px;
+    min-height: 56px;
+    padding: 0 14px;
+  }
+
+  .app-main {
+    padding: 12px 8px;
+  }
+
+  .apple-card {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+
+  .wizard-nav-row {
+    flex-direction: column-reverse;
+    gap: 12px;
+  }
+
+  .wizard-nav-row button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .angles-cluster {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+

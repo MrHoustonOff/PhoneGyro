@@ -1,0 +1,1441 @@
+/* ── Calibration Wizard Modal ─────────────────────────────────────────────── */
+.cal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  animation: calOverlayIn 0.2s ease;
+}
+
+@keyframes calOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cal-modal {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  width: min(940px, 94%);
+  max-height: 88%;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-tertiary) transparent;
+  display: flex;
+  flex-direction: column;
+  animation: calModalIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+@keyframes calModalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.cal-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cal-title {
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.cal-subtitle {
+  font-size: clamp(12px, 1.3vw, 14px);
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.cal-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition-fast);
+}
+
+.cal-close-btn:hover { background: var(--surface-elevated); }
+
+.cal-close-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+  fill: none;
+}
+
+.cal-screen {
+  padding: 20px 24px 24px;
+}
+
+.cal-screen-hint {
+  font-size: clamp(13px, 1.4vw, 15px);
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+/* Slot List (Screen A) */
+.cal-slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cal-slot-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  gap: 12px;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.cal-slot-card.active {
+  border-color: rgba(var(--apple-green-rgb), 0.35);
+  background: rgba(var(--apple-green-rgb), 0.08);
+}
+
+.cal-slot-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.cal-slot-card-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cal-slot-card-name {
+  font-size: clamp(13px, 1.4vw, 15px);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-slot-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Step Progress Indicator ────────────────────────────────────────────── */
+.cal-wizard-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  gap: 6px;
+}
+
+.cal-step-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cal-step-pill:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.cal-step-pill .step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-elevated);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cal-step-pill.active {
+  background: rgba(0, 122, 255, 0.12);
+  color: #007AFF;
+  border: 1px solid rgba(0, 122, 255, 0.3);
+}
+
+.cal-step-pill.active .step-num {
+  background: #007AFF;
+  color: #ffffff;
+}
+
+.cal-step-pill.completed {
+  color: var(--dot-online);
+}
+
+.cal-step-pill.completed .step-num {
+  background: var(--dot-online);
+  color: #ffffff;
+}
+
+.cal-step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--border-subtle);
+  border-radius: 1px;
+}
+
+/* ── Capture Layout ──────────────────────────────────────────────────────── */
+.cal-capture-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.08fr;
+  gap: 20px;
+  min-height: 380px;
+}
+
+.cal-capture-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cal-step-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.cal-step-headline {
+  font-size: clamp(17px, 2vw, 20px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.cal-step-instruction {
+  font-size: clamp(13px, 1.3vw, 14px);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Live 3-Axis Telemetry & Status Strip ── */
+.cal-axes-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.axis-meter-capsule {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.axis-meter-capsule.locked {
+  background: rgba(var(--apple-green-rgb), 0.1);
+  border-color: rgba(var(--apple-green-rgb), 0.35);
+}
+
+.axis-meter-capsule.predicted {
+  background: rgba(255, 149, 0, 0.1);
+  border-color: rgba(255, 149, 0, 0.4);
+}
+
+.capsule-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.capsule-letter {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.capsule-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.axis-meter-capsule.locked .capsule-tag {
+  background: rgba(var(--apple-green-rgb), 0.2);
+  color: var(--dot-online);
+}
+
+.axis-meter-capsule.predicted .capsule-tag {
+  background: rgba(255, 149, 0, 0.22);
+  color: #FF9500;
+}
+
+.capsule-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.capsule-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.axis-meter-capsule.locked .capsule-val {
+  color: var(--dot-online);
+  font-weight: 700;
+}
+
+.axis-meter-capsule.predicted .capsule-val {
+  color: #FF9500;
+  font-weight: 700;
+}
+
+.capsule-meter-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.capsule-meter-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--apple-blue);
+  border-radius: var(--radius-pill);
+  transition: width 0.06s linear;
+}
+
+.axis-meter-capsule.locked .capsule-meter-fill {
+  background: var(--dot-online);
+}
+
+.axis-meter-capsule.predicted .capsule-meter-fill {
+  background: #FF9500;
+}
+
+/* ── Unified Non-Jumping Action Box ── */
+.cal-action-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 154px;
+  padding: 16px 18px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: border-color 0.2s ease;
+}
+
+.cal-action-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.cal-action-phase.fade-in {
+  animation: phaseFadeIn 0.2s ease-out;
+}
+
+@keyframes phaseFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cal-motion-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Текст статуса занимает всё место до бейджа и переносится внутри него —
+   ширина доступного места больше не зависит от значения бейджа. */
+.cal-motion-status-bar .status-text-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #007AFF;
+  box-shadow: 0 0 8px #007AFF;
+  flex-shrink: 0;
+}
+
+.status-pulse-dot.countdown {
+  background: #FF9500;
+  box-shadow: 0 0 10px #FF9500;
+  animation: pulseDot 0.6s infinite alternate;
+}
+
+.status-pulse-dot.active {
+  background: var(--dot-online);
+  animation: pulseDot 0.4s infinite alternate;
+}
+
+@keyframes pulseDot {
+  from { transform: scale(0.9); opacity: 0.7; }
+  to { transform: scale(1.3); opacity: 1; }
+}
+
+.speed-badge {
+  margin-left: auto;
+  /* Фиксированная ширина под самое длинное значение ("2000°/с"): иначе бейдж
+     растёт/сжимается с числом цифр, текст статуса слева переносится иначе и
+     вся карточка скачет по высоте несколько раз в секунду. */
+  flex-shrink: 0;
+  min-width: 7ch;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  background: rgba(var(--apple-green-rgb), 0.12);
+  border: 1px solid rgba(var(--apple-green-rgb), 0.3);
+  border-radius: var(--radius-pill);
+  color: var(--dot-online);
+  font-weight: 700;
+}
+
+/* Timer & Progress Bar */
+.cal-timer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cal-timer-countdown {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: 24px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--dot-online);
+  text-align: center;
+  letter-spacing: -0.02em;
+}
+
+.cal-progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface-elevated);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.cal-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #007AFF, var(--dot-online));
+  border-radius: var(--radius-pill);
+  transition: width 0.05s linear;
+}
+
+.btn-capture-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-capture-action.counting-down {
+  background: linear-gradient(135deg, #FF9500, #E07000) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 24px rgba(255, 149, 0, 0.5) !important;
+  border-color: #FFB340 !important;
+  animation: pulseOrangeBtn 0.75s infinite alternate !important;
+}
+
+/* Axis-align step: a live status, not a button to press. */
+.btn-capture-action.listening,
+.btn-capture-action.listening:disabled {
+  background: rgba(40, 167, 69, 0.10) !important;
+  color: var(--dot-online) !important;
+  border: 1px solid rgba(40, 167, 69, 0.35) !important;
+  box-shadow: none !important;
+  cursor: default !important;
+  opacity: 1 !important;
+  animation: listeningBreath 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes listeningBreath {
+  from { background-color: rgba(40, 167, 69, 0.06); }
+  to   { background-color: rgba(40, 167, 69, 0.16); }
+}
+
+.btn-capture-action.recording {
+  background: linear-gradient(135deg, #28A745, #218838) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  border-color: #28A745 !important;
+}
+
+@keyframes pulseOrangeBtn {
+  from { filter: brightness(1); transform: scale(1); }
+  to   { filter: brightness(1.16); transform: scale(1.018); }
+}
+
+.capture-play-icon {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+/* ── Result Feedback Phase ── */
+.result-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-badge-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.result-badge-icon.success {
+  background: rgba(var(--apple-green-rgb), 0.14);
+  border: 1px solid rgba(var(--apple-green-rgb), 0.35);
+  color: var(--dot-online);
+}
+
+.result-badge-icon.error {
+  background: rgba(255, 149, 0, 0.15);
+  border: 1px solid rgba(255, 149, 0, 0.4);
+  color: #FF9500;
+}
+
+.result-headline {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.result-headline strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.result-subtext {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.result-subtext strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.result-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  width: 100%;
+}
+
+.btn-cal-next {
+  flex: 2;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: #0071E3 !important;
+  color: #FFFFFF !important;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.45);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-cal-next:hover {
+  background: #0077ED !important;
+  box-shadow: 0 6px 18px rgba(0, 113, 227, 0.6);
+  transform: translateY(-1px);
+}
+
+.btn-cal-next:active {
+  transform: scale(0.98);
+}
+
+.btn-cal-retry {
+  flex: 1;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-cal-retry:hover {
+  background: var(--surface-hover);
+  border-color: var(--text-secondary);
+}
+
+.btn-cal-retry:active {
+  transform: scale(0.98);
+}
+
+/* ── 3D Viewport Panel ───────────────────────────────────────────────────── */
+.cal-3d-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 380px;
+}
+
+.cal-3d-panel {
+  flex: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  position: relative;
+  min-height: 340px;
+  background: radial-gradient(ellipse at 50% 45%, #1d212d 0%, #0a0b10 100%);
+  border: 1px solid var(--border);
+  box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.5);
+}
+
+.cal-3d-disclaimer {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  text-align: center;
+  line-height: 1.35;
+  padding: 0 6px;
+  user-select: none;
+}
+
+[data-theme="light"] .cal-3d-panel {
+  background: radial-gradient(ellipse at 50% 45%, #ffffff 0%, #e1e6ef 100%);
+  box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.04);
+}
+
+.cal-3d-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.cal-3d-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cal-3d-badge .badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #007AFF;
+}
+
+.cal-3d-badge.live .badge-dot {
+  background: var(--dot-online);
+}
+
+.cal-3d-caption {
+  position: absolute;
+  bottom: 12px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.cal-3d-recenter-pill {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+.cal-3d-recenter-pill:hover {
+  background: rgba(0, 122, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.03);
+}
+.cal-3d-recenter-pill:active {
+  transform: scale(0.97);
+}
+
+.cal-link-button {
+  background: none;
+  border: none;
+  color: #007AFF;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 10px;
+  margin-left: auto;
+}
+
+.cal-link-button:hover {
+  text-decoration: underline;
+}
+
+/* ── Confirm Screen ──────────────────────────────────────────────────────── */
+.cal-matrix-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.matrix-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.matrix-chips-row {
+  display: flex;
+  gap: 8px;
+}
+
+.matrix-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+.matrix-det-status {
+  font-size: 12px;
+  color: var(--dot-online);
+  font-weight: 700;
+}
+
+.cal-mount-text {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.cal-mount-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cal-confirm-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.cal-confirm-btns .btn-apple-primary,
+.cal-confirm-btns .btn-apple-secondary {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-cal-restart-footer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-cal-restart-footer:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+/* ── Manual Mapping Grid ─────────────────────────────────────────────────── */
+.cal-manual-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.cal-manual-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cal-manual-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  width: 120px;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.cal-axis-select {
+  padding: 7px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  flex: 1;
+}
+
+.cal-invert-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.cal-invert-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #007AFF;
+}
+
+.cal-manual-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  text-align: left;
+}
+
+.status-dot-sm {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #007AFF;
+  flex-shrink: 0;
+}
+
+.status-dot-sm.ok { background: var(--dot-online); }
+.status-dot-sm.error { background: #FF3B30; }
+
+/* ── Save Form (Screen E) ────────────────────────────────────────────────── */
+.cal-save-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: left;
+  gap: 14px;
+  max-width: 460px;
+  margin: 10px auto;
+  width: 100%;
+}
+
+.cal-save-header {
+  text-align: center;
+  width: 100%;
+}
+
+.cal-save-section {
+  width: 100%;
+}
+
+.cal-save-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cal-save-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255, 159, 10, 0.12);
+  border: 1px solid rgba(255, 159, 10, 0.35);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  width: 100%;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.cal-save-warning-icon {
+  width: 18px;
+  height: 18px;
+  stroke: #ff9f0a;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* 3-Icon Selector */
+.cal-icon-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+.cal-icon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 6px;
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  border: 1.5px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-secondary);
+}
+
+.cal-icon-card:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+.cal-icon-card.selected {
+  border-color: #007AFF;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--text);
+  box-shadow: 0 0 0 1px #007AFF;
+}
+
+.cal-icon-card-svg {
+  width: 26px;
+  height: 26px;
+}
+
+.cal-icon-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.cal-device-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+}
+
+.cal-name-input {
+  padding: 12px 16px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.cal-name-input:focus {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+}
+
+.cal-name-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.cal-save-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.cal-save-actions .btn-apple-primary {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cal-save-actions button {
+  flex: 1;
+}
+
+.cal-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.cal-btn-sm {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* Dedicated Wizard Footer: anchored under both columns without floating */
+.cal-wizard-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.cal-wizard-footer #cal-jump-manual {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Compact Forward Button in Calibration Wizard */
+.btn-wizard-forward {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: var(--apple-blue, #0071E3);
+  color: #ffffff !important;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: auto;
+}
+
+.btn-wizard-forward:hover:not(:disabled) {
+  background: #0077ED;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-wizard-forward:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-wizard-forward:disabled {
+  background: var(--surface-card, rgba(255, 255, 255, 0.05)) !important;
+  color: var(--text-tertiary, #666666) !important;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: none !important;
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .cal-capture-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .cal-capture-left {
+    order: 1;
+  }
+  .cal-3d-wrapper {
+    order: 2;
+    min-height: 250px;
+  }
+  .cal-3d-panel {
+    min-height: 220px;
+  }
+  .cal-wizard-footer {
+    order: 3;
+    margin-top: 16px;
+  }
+  .profiles-tabs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── First-Time Device Calibration Radiant Red Aura (20s Apple HIG Animation) ── */
+.apple-card.first-device-alert-active {
+  position: relative;
+  border-color: rgba(255, 59, 48, 0.85) !important;
+  animation: cardAuraPulseRed 2.4s infinite ease-in-out;
+}
+
+@keyframes cardAuraPulseRed {
+  0% {
+    box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.70),
+                0 0 32px rgba(255, 59, 48, 0.38),
+                0 16px 48px rgba(0, 0, 0, 0.60);
+    border-color: rgba(255, 59, 48, 0.80);
+  }
+  50% {
+    box-shadow: 0 0 0 3.5px rgba(255, 69, 58, 0.92),
+                0 0 54px rgba(255, 59, 48, 0.62),
+                0 20px 60px rgba(0, 0, 0, 0.70);
+    border-color: rgba(255, 69, 58, 0.95);
+  }
+  100% {
+    box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.70),
+                0 0 32px rgba(255, 59, 48, 0.38),
+                0 16px 48px rgba(0, 0, 0, 0.60);
+    border-color: rgba(255, 59, 48, 0.80);
+  }
+}
+
+/* ── First-Connect Bright Red Notice Banner (Brand Red HIG) ──────────────── */
+.first-connect-banner {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.16) 0%, rgba(255, 45, 85, 0.22) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.45);
+  box-shadow: 0 8px 32px rgba(255, 59, 48, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 0 16px;
+  margin-bottom: 0;
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.97);
+  pointer-events: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  text-align: left;
+  position: relative;
+  transition: max-height 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              margin-bottom 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              padding 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.6s ease,
+              border-color 0.6s ease;
+  cursor: pointer;
+}
+
+[data-theme="light"] .first-connect-banner {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.10) 0%, rgba(255, 45, 85, 0.14) 100%);
+  border: 1px solid rgba(255, 59, 48, 0.35);
+  box-shadow: 0 8px 24px rgba(255, 59, 48, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.first-connect-banner.show {
+  max-height: 240px;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  margin-bottom: 18px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  pointer-events: auto;
+}
+
+.first-connect-banner.fade-out {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+}
+
+.banner-top-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.banner-icon-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 59, 48, 0.22);
+  border: 1px solid rgba(255, 59, 48, 0.65);
+  color: #FF3B30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.banner-icon-badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.banner-text-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FF3B30;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.banner-desc {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+[data-theme="light"] .banner-desc {
+  color: #1C1C1E;
+}
+
+.banner-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.banner-close-btn:hover {
+  color: var(--text);
+}
+
+.banner-close-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.banner-progress-track {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+[data-theme="light"] .banner-progress-track {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.banner-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #FF3B30, #FF6961);
+  border-radius: 2px;
+  transform-origin: left;
+}
+
+/* Bottom "Калибровать" Button Highlight Glow (Brand Red) */
+.btn-calibrate-trigger.highlight-pulse {
+  background: linear-gradient(135deg, #FF3B30, #FF453A) !important;
+  color: #FFFFFF !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.6), 0 0 20px rgba(255, 59, 48, 0.5) !important;
+  animation: calibrateBtnPulse 1.8s infinite ease-in-out;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+@keyframes calibrateBtnPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.6), 0 0 16px rgba(255, 59, 48, 0.4);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 3.5px rgba(255, 69, 58, 0.85), 0 0 28px rgba(255, 69, 58, 0.65);
+  }
+}
+

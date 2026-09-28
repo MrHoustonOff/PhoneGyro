@@ -1,0 +1,177 @@
+/* ── Apple Style Header Bar ─────────────────────────────────────────────────── */
+.app-header {
+  position: relative;
+  height: 60px;
+  min-height: 60px;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
+  padding: 0 clamp(12px, 2.5vw, 24px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: border-color var(--transition-theme), background-color var(--transition-theme);
+  z-index: 10;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-size: clamp(18px, 2.2vw, 22px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── Theme Toggle Icon Button ───────────────────────────────────────────────── */
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.btn-icon:active {
+  transform: scale(0.93);
+}
+
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* ── Apple Segmented Control (RU / EN) ──────────────────────────────────────── */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--segmented-bg);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  height: 36px;
+  transition: background-color var(--transition-theme);
+}
+
+.segmented-btn {
+  background: transparent;
+  border: none;
+  color: var(--segmented-text);
+  font-family: var(--font-sans);
+  font-size: clamp(13px, 1.5vw, 14px);
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  line-height: 1;
+}
+
+.segmented-btn.active {
+  background-color: var(--segmented-active);
+  color: var(--segmented-text-active);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Apple Status Capsule ───────────────────────────────────────────────────── */
+.status-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: clamp(12px, 1.4vw, 14px);
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  transition: all var(--transition-theme);
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color var(--transition-theme);
+}
+
+.status-capsule.offline .status-dot {
+  background-color: var(--dot-offline);
+}
+
+.status-capsule.online .status-dot {
+  background-color: var(--dot-online);
+  animation: pulse-online 2s infinite ease-in-out;
+}
+
+.status-capsule.paused .status-dot {
+  background-color: var(--dot-paused);
+}
+
+.status-capsule.waiting-usb {
+  border-color: rgba(100, 210, 255, 0.35);
+  background: rgba(100, 210, 255, 0.08);
+}
+
+.status-capsule.waiting-usb .status-dot {
+  background-color: #64D2FF;
+  animation: pulse-online 2s infinite ease-in-out;
+}
+
+[data-theme="light"] .status-capsule.waiting-usb {
+  border-color: rgba(0, 113, 227, 0.3);
+  background: rgba(0, 113, 227, 0.06);
+}
+
+[data-theme="light"] .status-capsule.waiting-usb .status-dot {
+  background-color: #0071E3;
+}
+
+@keyframes pulse-online {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.25); }
+}
+
+.status-text {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+

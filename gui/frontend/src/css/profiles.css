@@ -1,0 +1,500 @@
+/* ── Apple Profiles Module (Online View) ─────────────────────────────────── */
+.profiles-module {
+  width: 100%;
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: background-color var(--transition-theme), border-color var(--transition-theme);
+}
+
+.profiles-module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.profiles-module-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.profile-active-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dot-online);
+  background: rgba(var(--apple-green-rgb), 0.12);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(var(--apple-green-rgb), 0.3);
+}
+
+/* ── Apple-Styled Profile Selector Dropdown ── */
+.profile-dropdown-wrap {
+  position: relative;
+  width: 100%;
+  z-index: 50;
+}
+
+.profile-dropdown-wrap.open {
+  z-index: 100;
+}
+
+.profile-dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.profile-dropdown-trigger:hover {
+  background: var(--surface-hover);
+  border-color: var(--text-tertiary);
+}
+
+.profile-dropdown-trigger.open {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.25);
+}
+
+.profile-trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profile-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.profile-trigger-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-trigger-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-trigger-device {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-trigger-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.profile-active-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--dot-online);
+  background: rgba(var(--apple-green-rgb), 0.12);
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(var(--apple-green-rgb), 0.3);
+}
+
+.profile-chevron {
+  width: 14px;
+  height: 14px;
+  stroke: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.profile-dropdown-trigger.open .profile-chevron {
+  transform: rotate(180deg);
+}
+
+/* Floating Dropdown Menu (Overlays on top, opens UPWARDS above trigger on main screen) */
+.profile-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background-color: var(--surface-modal);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.2);
+  padding: 6px;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+[data-theme="light"] .profile-dropdown-menu {
+  background-color: #FFFFFF;
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.profile-dropdown-menu.show {
+  display: flex;
+  animation: dropdownSlideDown 0.15s ease-out;
+}
+
+/* Main screen profile dropdown opens UPWARDS (dropup) */
+#main-profile-dropdown-wrap .profile-dropdown-menu,
+.profile-dropdown-menu.dropup {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+#main-profile-dropdown-wrap .profile-dropdown-menu.show,
+.profile-dropdown-menu.dropup.show {
+  animation: dropdownSlideUp 0.15s ease-out;
+}
+
+@keyframes dropdownSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dropdownSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  transition: all var(--transition-fast);
+  color: var(--text);
+  width: 100%;
+  position: relative;
+  user-select: none;
+}
+
+.profile-dropdown-item * {
+  pointer-events: none;
+}
+
+.profile-dropdown-item:hover {
+  background: var(--surface-hover);
+}
+
+[data-theme="light"] .profile-dropdown-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.profile-dropdown-item:active {
+  transform: scale(0.985);
+}
+
+.profile-dropdown-item.active {
+  background: rgba(0, 122, 255, 0.1);
+  border-color: rgba(0, 122, 255, 0.3);
+}
+
+.profile-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.profile-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.profile-dropdown-item.active .profile-item-icon {
+  color: #007AFF;
+  border-color: rgba(0, 122, 255, 0.4);
+}
+
+.profile-item-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.profile-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-item-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.profile-item-check {
+  color: #007AFF;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Delete cross: appears on hover of its row, turns red under the pointer. */
+.profile-dropdown-item .profile-item-delete {
+  pointer-events: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.profile-dropdown-item:hover .profile-item-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.profile-dropdown-item .profile-item-delete:hover {
+  background: rgba(255, 69, 58, 0.16);
+  color: #FF453A;
+}
+
+.profile-dropdown-item .profile-item-delete:active {
+  transform: scale(0.9);
+}
+
+[data-theme="light"] .profile-dropdown-item .profile-item-delete:hover {
+  background: rgba(255, 59, 48, 0.12);
+  color: #D70015;
+}
+
+/* Outdated profile: red, not amber — this is "unconfirmed data" territory, a step up
+   from the amber advisory tone used elsewhere (DSU/save-overwrite banners). */
+.profile-outdated-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  color: rgb(255, 69, 58);
+  background: rgba(255, 69, 58, 0.16);
+  border: 1px solid rgba(255, 69, 58, 0.35);
+}
+
+[data-theme="light"] .profile-outdated-badge {
+  color: rgb(255, 59, 48);
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.35);
+}
+
+.profile-dropdown-item.profile-outdated {
+  background: rgba(255, 69, 58, 0.055);
+}
+
+#main-profile-trigger.profile-outdated {
+  box-shadow: 0 0 0 1px rgba(255, 69, 58, 0.4) inset;
+}
+
+/* Loud, unmissable: this is a "your controller is running on unconfirmed data,
+   go fix it" state, not a passive label — plus a pulsing highlight on the one
+   button that actually resolves it. Switching profiles is never blocked by this;
+   it's a nudge, not a gate. */
+.profile-outdated-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255, 69, 58, 0.16);
+  border: 1px solid rgba(255, 69, 58, 0.45);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  animation: profileOutdatedFadeIn 0.25s ease;
+}
+
+.profile-mount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+[data-theme="light"] .profile-outdated-warning {
+  background: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.45);
+}
+
+.profile-outdated-warning .cal-save-warning-icon {
+  stroke: #ff453a;
+}
+
+[data-theme="light"] .profile-outdated-warning .cal-save-warning-icon {
+  stroke: #ff3b30;
+}
+
+@keyframes profileOutdatedFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-calibrate-trigger.profile-outdated-highlight {
+  color: #ff453a;
+  border-color: rgba(255, 69, 58, 0.6);
+  background: rgba(255, 69, 58, 0.14);
+  animation: profileOutdatedPulse 1.8s ease-in-out infinite;
+}
+
+[data-theme="light"] .btn-calibrate-trigger.profile-outdated-highlight {
+  color: #ff3b30;
+}
+
+@keyframes profileOutdatedPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 69, 58, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 69, 58, 0); }
+}
+
+/* Switch Animation Ripple */
+@keyframes profileSwitchRipple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--apple-green-rgb), 0.4);
+    border-color: var(--dot-online);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(var(--apple-green-rgb), 0);
+    border-color: var(--dot-online);
+  }
+  100% {
+    box-shadow: none;
+    border-color: var(--border);
+  }
+}
+
+.profile-dropdown-trigger.switched {
+  animation: profileSwitchRipple 0.8s ease-out;
+}
+
+/* Profile Status Bar & Calibrate Button */
+.profile-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 4px;
+  gap: 12px;
+}
+
+.profile-status-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.profile-status-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.profile-status-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.btn-calibrate-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.icon-calibrate {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+

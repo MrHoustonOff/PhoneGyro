@@ -1,0 +1,228 @@
+/* ── PhoneGyro Apple-Style Modular Design System ────────────────────────────
+   Cupertino aesthetics: inset grouped cards, 1px subtle borders, bold typography,
+   segmented controls, dark/light themes, zero emojis, fully responsive scaling,
+   spacious two-column iOS setup wizard with large legible screenshots.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Dark Mode (Default) - Apple Dark Palette */
+  --bg: #000000;
+  --surface: #1C1C1E;
+  --surface-hover: #2C2C2E;
+  --surface-elevated: #242426;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --text: #FFFFFF;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #636366;
+
+  /* Button Tokens */
+  --apple-blue: #0A84FF;
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-text: #000000;
+  --btn-primary-hover: #E5E5EA;
+  --btn-secondary-bg: #2C2C2E;
+  --btn-secondary-text: #FFFFFF;
+  --btn-secondary-border: rgba(255, 255, 255, 0.12);
+  --btn-secondary-hover: #3A3A3C;
+
+  /* Segmented Control */
+  --segmented-bg: #2C2C2E;
+  --segmented-active: #636366;
+  --segmented-text: #8E8E93;
+  --segmented-text-active: #FFFFFF;
+
+  /* Status Tokens (Apple System Colors) */
+  --apple-green: #28A745;
+  --apple-green-rgb: 40, 167, 69;
+  --apple-red: #FF3B30;
+  --dot-online: #28A745;
+  --dot-offline: #FF3B30;
+  --dot-paused: #FF9F0A;
+  --surface-modal: #242426;
+
+  /* Shadows */
+  --card-shadow: 0 8px 36px rgba(0, 0, 0, 0.5);
+  --qr-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, monospace;
+
+  --radius-xl: 24px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --radius-pill: 9999px;
+
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-theme: 0.25s ease;
+}
+
+[data-theme="light"] {
+  /* Light Mode - Apple Light Palette */
+  --bg: #F2F2F7;
+  --surface: #FFFFFF;
+  --surface-hover: #F2F2F7;
+  --surface-elevated: #E5E5EA;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --text: #000000;
+  --text-secondary: #6C6C70;
+  --text-tertiary: #AEAEB2;
+
+  --apple-blue: #0071E3;
+  --apple-green: #248A3D;
+  --apple-green-rgb: 36, 138, 61;
+  --apple-red: #FF3B30;
+  --btn-primary-bg: #000000;
+  --btn-primary-text: #FFFFFF;
+  --btn-primary-hover: #1C1C1E;
+  --btn-secondary-bg: #E5E5EA;
+  --btn-secondary-text: #000000;
+  --btn-secondary-border: rgba(0, 0, 0, 0.08);
+  --btn-secondary-hover: #D1D1D6;
+
+  --segmented-bg: #E5E5EA;
+  --segmented-active: #FFFFFF;
+  --segmented-text: #8E8E93;
+  --segmented-text-active: #000000;
+
+  --dot-online: #248A3D;
+  --dot-offline: #FF3B30;
+  --dot-paused: #FF9500;
+  --surface-modal: #FFFFFF;
+
+  --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --qr-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Global Reset & Native Scrollbar Removal ───────────────────────────────── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden; /* Absolutely prevent native Windows/browser scrollbar! */
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: clamp(16px, 1.85vw, 18px);
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  transition: background-color var(--transition-theme), color var(--transition-theme);
+}
+
+/* ── Apple-Style Custom Rounded Thin Scrollbars ────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+[data-theme="light"] * {
+  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* ── High-Fidelity Markdown Typography & Code Badges ───────────────────────── */
+strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+em {
+  font-style: italic;
+  color: var(--text);
+}
+
+.md-code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  font-weight: 700;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  color: var(--text);
+  display: inline-block;
+  vertical-align: baseline;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .md-code {
+  background: #E5E5EA;
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #000000;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.md-link {
+  color: #0A84FF;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.md-link:hover {
+  color: #409CFF;
+  text-decoration: underline;
+}
+
+[data-theme="light"] .md-link {
+  color: #0071E3;
+}
+
+[data-theme="light"] .md-link:hover {
+  color: #005BB5;
+}
+
+.md-link .md-code {
+  color: inherit;
+  border-color: rgba(10, 132, 255, 0.35);
+  background: rgba(10, 132, 255, 0.12);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.md-link:hover .md-code {
+  border-color: rgba(10, 132, 255, 0.6);
+  background: rgba(10, 132, 255, 0.22);
+}
+
