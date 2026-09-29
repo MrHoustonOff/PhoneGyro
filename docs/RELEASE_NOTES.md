@@ -1,32 +1,4 @@
 Changelog:
 
-- Cemu: fixed the aim slowly drifting while the controller is still. Cemu's gyro bias estimate keeps every slow sample it has ever seen, so aiming one way and snapping back leaves a bias the game turns by forever. PhoneGyro now keeps that estimate at zero for connected Cemu instances, during play and at rest (Settings > DSU aim filtering > Cemu drift guard, on by default; only for a process named Cemu)
-- Cemu: a notice explains the drift issue when Cemu connects and whether the guard is on; it can be turned off for good
-- Fixed PhoneGyro and Cemu exchanging thousands of packets per second (a full CPU core) and the slow drift it caused. A client's data request is now only a subscription
-- Emulators in the DSU client list are shown by program name (Cemu, PadTest) instead of an address; the address is in the tooltip. Clicking a client switches to its window, the cross disconnects it, and a disconnected client can be connected again
-- The DSU client list keeps connection order instead of reshuffling
-- The first time a device connects in a session, the app asks to pick the profile and center before playing
-- Saved profiles can be deleted from the main profile menu
-- USB mount-tilt compensation can be switched on and off from the main window without recalibrating
-- Separate tremor thresholds for the phone and the USB controller; the threshold now goes up to 1.00 deg/s, and each level says when to pick it
-- Removed pause from the phone page. The main button now only reconnects and enables sensors
-- Fixed wrong rotation after a Wi-Fi stall during fast multi-axis motion (up to 66 degrees off on real recordings): the phone page now composes rotations instead of adding them
-- Fixed the model staying turned around the vertical after starting or recentering with the device tilted on two axes
-- The iOS attitude anchor now engages on real iPhones and brings the heading back after disturbances
-- The LEVEL indicator, tilt game and test bench no longer jump near 90 degrees of tilt
-- USB: a port handle that replays one stale frame no longer causes 100% CPU and a black Live Debug; the port is reopened after 3 seconds without fresh data
-- USB: a board that did not report its sensor range on connect is restarted instead of turning 8x too slow
-- USB: sensor range metadata is applied whenever it arrives, not only at boot
-- USB: no data-loss alarm when the board reboots on connect
-- Live Debug: new USB protocol status panel, level by level
-- Live Debug: fixed every telemetry message being handled twice, which duplicated and reordered rows in CSV recordings
-- The footer shows the app's CPU load next to RAM. Both now include the WebView2 processes that draw the UI, and measuring them costs less than measuring the app alone did before
-- Header buttons no longer overlap the theme, language and status controls in narrow windows or at large font scales
-- Ping, rate and connection quality pills keep a fixed width; the ping chart scales from 0 to at least 60 ms
-- Toasts are no longer hidden behind the calibration wizard and the recenter sheet
-- Fixed missing backgrounds and focus outlines on several controls
-- Lower CPU use: the main window at rest about 5x less, calibration previews about 3x less, Live Debug shadows computed once per frame in quad view, no UI updates while the window is in the tray
-- The iOS setup screenshots are loaded only when the guide is opened
-- The exe has proper file properties (version, description) and the PhoneGyro icon
-- Dev builds show their version from the last release tag
-- Internal: the app is split into packages, frontend colours and layers moved to design tokens
+- Profiles show when they were calibrated (in the profile menu and under the active profile; the full date and the app version are in the tooltip). Profiles saved before this version show no date
+- Profiles are marked outdated only when a new version really needs data they lack, not on every update: the app keeps a range of supported calibration versions
