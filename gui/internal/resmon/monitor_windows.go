@@ -5,6 +5,7 @@ package resmon
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -23,6 +24,11 @@ const (
 	processQueryInformation = 0x0400
 	processQueryLimitedInfo = 0x1000
 	processVMRead           = 0x0010
+
+	// The process tree changes rarely (Live Debug opens, WebView2 restarts a
+	// renderer): rebuilding it walks every process on the machine, so it is
+	// done this often, not on every sample.
+	treeRefreshEvery = 10 * time.Second
 )
 
 // processMemoryCounters matches Windows PROCESS_MEMORY_COUNTERS layout.
@@ -52,12 +58,20 @@ type memoryStatusEx struct {
 	ullAvailExtendedVirtual uint64
 }
 
+// tracked is one process of the app: its handle stays open between samples.
+type tracked struct {
+	h       syscall.Handle
+	own     bool  // the handle belongs to us (not the pseudo handle of this process)
+	lastCPU int64 // kernel+user time at the previous sample, ns; -1 = not sampled yet
+}
+
 type windowsMonitor struct {
-	rootPID      uint32
-	rootHandle   syscall.Handle
-	lastCPUTimes map[uint32]int64
-	lastWall     time.Time
-	totalRAM     uint64
+	rootPID  uint32
+	procs    map[uint32]*tracked
+	lastTree time.Time
+	lastWall time.Time
+	totalRAM uint64
+	ncpu     int
 }
 
 func readTotalRAMWindows() uint64 {
@@ -77,18 +91,23 @@ func newPlatformMonitor() (Monitor, error) {
 	}
 	rootPID := uint32(os.Getpid())
 	m := &windowsMonitor{
-		rootPID:      rootPID,
-		rootHandle:   h,
-		lastCPUTimes: make(map[uint32]int64),
-		lastWall:     time.Now(),
-		totalRAM:     readTotalRAMWindows(),
+		rootPID:  rootPID,
+		procs:    map[uint32]*tracked{rootPID: {h: h, lastCPU: -1}},
+		lastWall: time.Now(),
+		totalRAM: readTotalRAMWindows(),
+		ncpu:     runtime.NumCPU(),
 	}
-	m.lastCPUTimes, _ = m.queryTreeStats()
+	m.refreshTree()
+	m.Sample() // baseline: the first real sample then covers one interval
 	return m, nil
 }
 
-// getProcessTreePIDs collects rootPID and all descendant child PIDs belonging to PhoneGyro.
-func getProcessTreePIDs(rootPID uint32) []uint32 {
+// appTreePIDs is the app's processes: this one, its own children (the Live
+// Debug window is PhoneGyro.exe --livedebug) and the WebView2 processes that
+// render their UI (msedgewebview2.exe and everything they start: renderer,
+// GPU, utility). WebView2 does most of the UI work, so leaving it out would
+// under-report both CPU and memory.
+func appTreePIDs(rootPID uint32) []uint32 {
 	snap, err := syscall.CreateToolhelp32Snapshot(syscall.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
 		return []uint32{rootPID}
@@ -97,139 +116,119 @@ func getProcessTreePIDs(rootPID uint32) []uint32 {
 
 	var entry syscall.ProcessEntry32
 	entry.Size = uint32(unsafe.Sizeof(entry))
-
 	if err := syscall.Process32First(snap, &entry); err != nil {
 		return []uint32{rootPID}
 	}
 
 	exePath, _ := os.Executable()
-	ourExeName := strings.ToLower(filepath.Base(exePath))
-
+	ourExe := strings.ToLower(filepath.Base(exePath))
 	childrenOf := make(map[uint32][]uint32)
-	exeNameOf := make(map[uint32]string)
-
+	nameOf := make(map[uint32]string)
 	for {
-		name := strings.ToLower(syscall.UTF16ToString(entry.ExeFile[:]))
-		exeNameOf[entry.ProcessID] = name
+		nameOf[entry.ProcessID] = strings.ToLower(syscall.UTF16ToString(entry.ExeFile[:]))
 		childrenOf[entry.ParentProcessID] = append(childrenOf[entry.ParentProcessID], entry.ProcessID)
 		if err := syscall.Process32Next(snap, &entry); err != nil {
 			break
 		}
 	}
 
-	treePIDs := []uint32{rootPID}
+	pids := []uint32{rootPID}
 	queue := []uint32{rootPID}
-	visited := make(map[uint32]bool)
-	visited[rootPID] = true
-
+	seen := map[uint32]bool{rootPID: true}
 	for len(queue) > 0 {
-		curr := queue[0]
+		cur := queue[0]
 		queue = queue[1:]
-
-		for _, child := range childrenOf[curr] {
-			if !visited[child] {
-				visited[child] = true
-				childName := exeNameOf[child]
-				// Only track our own executable instances (e.g. main app and --livedebug child process)
-				if ourExeName == "" || childName == ourExeName || strings.HasPrefix(childName, "phonegyro") {
-					treePIDs = append(treePIDs, child)
-					queue = append(queue, child)
-				}
-			}
-		}
-	}
-
-	return treePIDs
-}
-
-func (m *windowsMonitor) queryTreeStats() (map[uint32]int64, uint64) {
-	pids := getProcessTreePIDs(m.rootPID)
-	cpuTimes := make(map[uint32]int64, len(pids))
-	var totalRSS uint64
-
-	toNanos := func(ft syscall.Filetime) int64 {
-		return (int64(ft.HighDateTime)<<32 | int64(ft.LowDateTime)) * 100
-	}
-
-	for _, pid := range pids {
-		var h syscall.Handle
-		var mustClose bool
-
-		if pid == m.rootPID {
-			h = m.rootHandle
-			mustClose = false
-		} else {
-			var err error
-			h, err = syscall.OpenProcess(processQueryInformation|processVMRead, false, pid)
-			if err != nil {
-				h, err = syscall.OpenProcess(processQueryLimitedInfo|processVMRead, false, pid)
-			}
-			if err != nil {
+		for _, c := range childrenOf[cur] {
+			if seen[c] || c == 0 {
 				continue
 			}
-			mustClose = true
-		}
-
-		// Read CPU times
-		var creation, exit, k, u syscall.Filetime
-		r, _, _ := procGetProcessTimes.Call(
-			uintptr(h),
-			uintptr(unsafe.Pointer(&creation)),
-			uintptr(unsafe.Pointer(&exit)),
-			uintptr(unsafe.Pointer(&k)),
-			uintptr(unsafe.Pointer(&u)),
-		)
-		if r != 0 {
-			cpuTimes[pid] = toNanos(k) + toNanos(u)
-		}
-
-		// Read RAM Working Set
-		var pmc processMemoryCounters
-		pmc.cb = uint32(unsafe.Sizeof(pmc))
-		r, _, _ = procGetProcessMemoryInfo.Call(
-			uintptr(h),
-			uintptr(unsafe.Pointer(&pmc)),
-			uintptr(pmc.cb),
-		)
-		if r != 0 {
-			totalRSS += uint64(pmc.WorkingSetSize)
-		}
-
-		if mustClose {
-			syscall.CloseHandle(h)
-		}
-	}
-
-	return cpuTimes, totalRSS
-}
-
-func (m *windowsMonitor) Sample() Stats {
-	nowCPUTimes, totalRSS := m.queryTreeStats()
-	now := time.Now()
-
-	var totalCPUDeltaNanos int64
-	for pid, nowCPU := range nowCPUTimes {
-		if prevCPU, ok := m.lastCPUTimes[pid]; ok {
-			delta := nowCPU - prevCPU
-			if delta > 0 {
-				totalCPUDeltaNanos += delta
+			n := nameOf[c]
+			// our own executable, WebView2, and anything WebView2 itself started
+			if n == ourExe || strings.HasPrefix(n, "phonegyro") || n == "msedgewebview2.exe" || nameOf[cur] == "msedgewebview2.exe" {
+				seen[c] = true
+				pids = append(pids, c)
+				queue = append(queue, c)
 			}
 		}
-		// Newly discovered process: establish baseline without false cumulative delta spike
+	}
+	return pids
+}
+
+// refreshTree opens handles for processes that joined the app and closes the
+// ones that left.
+func (m *windowsMonitor) refreshTree() {
+	m.lastTree = time.Now()
+	now := make(map[uint32]bool)
+	for _, pid := range appTreePIDs(m.rootPID) {
+		now[pid] = true
+		if _, ok := m.procs[pid]; ok {
+			continue
+		}
+		h, err := syscall.OpenProcess(processQueryInformation|processVMRead, false, pid)
+		if err != nil {
+			h, err = syscall.OpenProcess(processQueryLimitedInfo|processVMRead, false, pid)
+		}
+		if err != nil {
+			continue
+		}
+		m.procs[pid] = &tracked{h: h, own: true, lastCPU: -1}
+	}
+	for pid, p := range m.procs {
+		if !now[pid] && pid != m.rootPID {
+			m.drop(pid, p)
+		}
+	}
+}
+
+func (m *windowsMonitor) drop(pid uint32, p *tracked) {
+	if p.own {
+		syscall.CloseHandle(p.h)
+	}
+	delete(m.procs, pid)
+}
+
+func filetimeNanos(ft syscall.Filetime) int64 {
+	return (int64(ft.HighDateTime)<<32 | int64(ft.LowDateTime)) * 100
+}
+
+// Sample: one GetProcessTimes and one GetProcessMemoryInfo per app process
+// (the tree itself is rebuilt only every treeRefreshEvery).
+func (m *windowsMonitor) Sample() Stats {
+	if time.Since(m.lastTree) >= treeRefreshEvery {
+		m.refreshTree()
+	}
+	now := time.Now()
+	var cpuDelta int64
+	var rss uint64
+	for pid, p := range m.procs {
+		var creation, exit, kernel, user syscall.Filetime
+		r, _, _ := procGetProcessTimes.Call(uintptr(p.h),
+			uintptr(unsafe.Pointer(&creation)), uintptr(unsafe.Pointer(&exit)),
+			uintptr(unsafe.Pointer(&kernel)), uintptr(unsafe.Pointer(&user)))
+		if r == 0 || (pid != m.rootPID && filetimeNanos(exit) != 0) {
+			if pid != m.rootPID {
+				m.drop(pid, p) // exited: its handle would otherwise keep the process object alive
+			}
+			continue
+		}
+		cpu := filetimeNanos(kernel) + filetimeNanos(user)
+		if p.lastCPU >= 0 && cpu > p.lastCPU {
+			cpuDelta += cpu - p.lastCPU
+		}
+		p.lastCPU = cpu
+
+		var pmc processMemoryCounters
+		pmc.cb = uint32(unsafe.Sizeof(pmc))
+		if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(p.h), uintptr(unsafe.Pointer(&pmc)), uintptr(pmc.cb)); r != 0 {
+			rss += uint64(pmc.WorkingSetSize)
+		}
 	}
 
-	wallDeltaNanos := now.Sub(m.lastWall).Nanoseconds()
-	var cpuPercent float64
-	if wallDeltaNanos > 0 {
-		cpuPercent = float64(totalCPUDeltaNanos) / float64(wallDeltaNanos) * 100
-	}
-
-	m.lastCPUTimes = nowCPUTimes
+	wall := now.Sub(m.lastWall).Nanoseconds()
 	m.lastWall = now
-
-	return Stats{
-		CPUPercent:    cpuPercent,
-		RAMBytes:      totalRSS,
-		TotalRAMBytes: m.totalRAM,
+	var cpuPercent float64
+	if wall > 0 && m.ncpu > 0 {
+		cpuPercent = float64(cpuDelta) / float64(wall) / float64(m.ncpu) * 100
 	}
+	return Stats{CPUPercent: cpuPercent, RAMBytes: rss, TotalRAMBytes: m.totalRAM}
 }

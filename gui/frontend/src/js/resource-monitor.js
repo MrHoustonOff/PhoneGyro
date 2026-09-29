@@ -1,6 +1,8 @@
 'use strict';
 
-  // ── Process Resource Monitor (RAM) ─────────────────────────────────────────
+  // ── Process Resource Monitor (CPU, RAM) ────────────────────────────────────
+  // Both cover the whole app: its processes and the WebView2 ones drawing the
+  // UI (gui/internal/resmon). CPU is a share of the machine, like Task Manager.
   const ResourceMonitor = {
     lastStats: null,
 
@@ -25,6 +27,12 @@
     update(stats) {
       if (!stats) return;
       this.lastStats = stats;
+
+      const cpu = typeof stats.cpuPercent === 'number' ? stats.cpuPercent : null;
+      const cpuValEl = document.getElementById('footer-cpu-val');
+      if (cpuValEl && cpu !== null) {
+        cpuValEl.textContent = `${cpu < 10 ? cpu.toFixed(1) : Math.round(cpu)} %`;
+      }
 
       const ramMb = typeof stats.ramMb === 'number' ? stats.ramMb : 0;
       const totalRamMb = typeof stats.totalRamMb === 'number' ? stats.totalRamMb : 0;

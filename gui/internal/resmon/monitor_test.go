@@ -56,3 +56,35 @@ func TestResmon_ChildProcessTree(t *testing.T) {
 		t.Errorf("Expected RAMBytes > 0, got 0")
 	}
 }
+
+// TestResmon_SeesBusyCPU: a busy core shows up as roughly 1/NumCPU of the
+// machine (Task Manager's scale), not as zero.
+func TestResmon_SeesBusyCPU(t *testing.T) {
+	m, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.Sample()
+	deadline := time.Now().Add(400 * time.Millisecond)
+	x := 0
+	for time.Now().Before(deadline) {
+		x++
+	}
+	s := m.Sample()
+	if s.CPUPercent <= 0 || s.CPUPercent > 100 {
+		t.Fatalf("busy loop measured as %.2f%% of the machine (x=%d)", s.CPUPercent, x)
+	}
+	t.Logf("one busy core: %.1f%% of the machine", s.CPUPercent)
+}
+
+// BenchmarkSample: what one measurement costs (the app samples every 1.5 s).
+func BenchmarkSample(b *testing.B) {
+	m, err := New()
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.Sample()
+	}
+}

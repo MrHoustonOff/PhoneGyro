@@ -1907,6 +1907,11 @@
   min-width: 68px;
 }
 
+/* Percent is at most "100 %": a fixed width keeps the RAM capsule from moving. */
+.footer-metric-val.footer-metric-val-cpu {
+  min-width: 6ch;
+}
+
 .footer-metric-sub {
   font-size: 12px;
   color: var(--text-secondary);

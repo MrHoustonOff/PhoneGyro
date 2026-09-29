@@ -5,6 +5,7 @@ package resmon
 import (
 	"bytes"
 	"os"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -115,7 +116,7 @@ func (m *linuxMonitor) Sample() Stats {
 		wallSeconds := now.Sub(m.lastWall).Seconds()
 		if wallSeconds > 0 {
 			cpuSeconds := float64(deltaTicks) / float64(clockTicksHz)
-			cpuPercent = (cpuSeconds / wallSeconds) * 100
+			cpuPercent = (cpuSeconds / wallSeconds) / float64(runtime.NumCPU()) * 100
 		}
 		m.lastTotal = nowTotal
 	}

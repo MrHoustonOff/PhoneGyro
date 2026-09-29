@@ -198,8 +198,10 @@
     "resume": "RESUME"
   },
   "footer": {
+    "cpu": "CPU",
+    "cpu_tip": "CPU used by the whole app (including its WebView2 UI) as a share of the machine, like Task Manager",
     "ram": "RAM",
-    "ram_tip": "Process working set memory and percentage of total RAM"
+    "ram_tip": "Physical memory of the app (working set), including its WebView2 UI"
   },
   "live_debug": {
     "cam_dynamic": "Dynamic",

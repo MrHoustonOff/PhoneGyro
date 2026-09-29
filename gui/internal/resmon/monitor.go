@@ -4,12 +4,13 @@ import "time"
 
 // Stats represents a snapshot of process resource consumption metrics.
 type Stats struct {
-	CPUPercent    float64 // Single core percentage (e.g., 2.5 means 2.5% of one core)
+	CPUPercent    float64 // share of the whole machine, like Task Manager (100 = every core busy)
 	RAMBytes      uint64  // RSS / Working Set memory in bytes
 	TotalRAMBytes uint64  // Total physical RAM in bytes
 }
 
-// Monitor collects resource statistics for the current process.
+// Monitor collects resource statistics for the app: this process, its own child
+// processes and (on Windows) the WebView2 processes rendering its UI.
 // A single instance should be reused across the application lifecycle.
 type Monitor interface {
 	// Sample returns the current snapshot. Call no more often than once per 1-2 seconds.

@@ -1799,6 +1799,11 @@
   <!-- Apple Style Footer Bar -->
   <footer class="app-footer">
     <div class="footer-metrics" id="footer-metrics">
+      <!-- CPU: the whole app (its processes and the WebView2 ones), share of the machine -->
+      <div class="footer-metric-item" id="footer-metric-cpu" data-i18n-title="footer.cpu_tip">
+        <span class="footer-metric-label" data-i18n="footer.cpu">ЦП</span>
+        <span class="footer-metric-val footer-metric-val-cpu" id="footer-cpu-val">-- %</span>
+      </div>
       <!-- RAM Monitor Capsule -->
       <div class="footer-metric-item" id="footer-metric-ram" data-i18n-title="footer.ram_tip">
         <span class="footer-metric-label" data-i18n="footer.ram">ОЗУ</span>

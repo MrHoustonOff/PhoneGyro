@@ -18,7 +18,11 @@ async function run(dir) {
   try {
     const p = await b.page(backendStub({ fontScale: opt['font-scale'] ? Number(opt['font-scale']) : 1 }));
     await p.goto(`${srv.base}/${pageName}`, 3000);
-    if (pageName === 'index.html') await p.evaluate(`__benchStart(${JSON.stringify(scenario)})`);
+    if (pageName === 'index.html') {
+      await p.evaluate(`__benchStart(${JSON.stringify(scenario)})`);
+      // measure the main screen, not the first-connection centring sheet
+      if (scenario !== 'offline') await p.evaluate('FirstCenterGate.done.phone = true; setTimeout(() => RecenterManager.close(true), 300)');
+    }
     if (opt.eval) await p.evaluate(opt.eval);
     await sleep(1500);
     const m0 = await p.metrics();
