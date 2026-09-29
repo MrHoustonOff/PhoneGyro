@@ -595,56 +595,39 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 
 <script>
 (() => {
-  const rt = window.runtime, app = window.go && window.go.app && window.go.app.App;
-  if (!rt || !app) return; // opened outside the app (e.g. a plain browser)
+  // ── 1. Global & State variables ───────────────────────────
+  let currentLang = 'ru';
+  let currentStatus = 'offline';
+  let currentMode = 'phone';
+  let lastState = null;
+  let wailsConnected = false;
+
   const bar = document.getElementById('titlebar');
+  const segModePhone = document.getElementById('seg-mode-phone');
+  const segModeUsb = document.getElementById('seg-mode-usb');
+  const viewSmartphone = document.getElementById('view-smartphone');
+  const viewUsb = document.getElementById('view-usb');
+  const connQrImg = document.getElementById('conn-qr-img');
+  const connQrPlaceholder = document.getElementById('conn-qr-placeholder');
+  const connUrlText = document.getElementById('conn-url-text');
+  const btnCopyUrl = document.getElementById('btn-copy-url');
+  const btnInitialSetup = document.getElementById('btn-initial-setup');
+  const usbDevName = document.getElementById('usb-dev-name');
+  const usbStatusBadge = document.getElementById('usb-status-badge');
+  const usbHzBadge = document.getElementById('usb-hz-badge');
+  const usbPortBadge = document.getElementById('usb-port-badge');
+  const usbDial = document.getElementById('usb-dial');
+  const usbDialBubble = document.getElementById('usb-dial-bubble');
+  const usbTimer = document.getElementById('usb-timer');
+  const btnRecenter = document.getElementById('btn-recenter');
+  const btnPauseToggle = document.getElementById('btn-pause-toggle');
+  const btnCalibrate = document.getElementById('btn-calibrate');
+  const stub = document.getElementById('pg-stub');
+  const stubTitle = document.getElementById('pg-stub-title');
+  const stubDesc = document.getElementById('pg-stub-desc');
+  const stubClose = document.getElementById('pg-stub-close');
 
-  // ── 1. Window controls & title bar ───────────────────────
-  const syncMax = () => rt.WindowIsMaximised().then((m) => bar.classList.toggle('is-max', m));
-
-  document.getElementById('wc-min').onclick = () => rt.WindowMinimise();
-  document.getElementById('wc-max').onclick = () => { rt.WindowToggleMaximise(); setTimeout(syncMax, 30); };
-  document.getElementById('wc-close').onclick = () => app.CloseWindow();
-  bar.addEventListener('dblclick', (e) => {
-    if (!e.target.closest('.pg-titlebar__ctl')) {
-      rt.WindowToggleMaximise();
-      setTimeout(syncMax, 30);
-    }
-  });
-
-  let t = 0;
-  addEventListener('resize', () => { clearTimeout(t); t = setTimeout(syncMax, 60); });
-  syncMax();
-
-  addEventListener('blur', () => bar.classList.add('is-blur'));
-  addEventListener('focus', () => bar.classList.remove('is-blur'));
-
-  // ── 2. Theme synchronization ─────────────────────────────
-  const setTheme = (theme) => {
-    document.documentElement.setAttribute('data-theme', theme);
-    if (app.SetTheme) app.SetTheme(theme);
-  };
-
-  document.getElementById('btn-theme').onclick = () => {
-    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-    setTheme(cur === 'dark' ? 'light' : 'dark');
-  };
-
-  if (app.GetTheme) {
-    app.GetTheme().then(theme => {
-      if (theme) document.documentElement.setAttribute('data-theme', theme);
-    }).catch(() => {});
-  }
-  if (rt.EventsOn) {
-    rt.EventsOn('theme-sync', theme => {
-      if (theme) document.documentElement.setAttribute('data-theme', theme);
-    });
-    rt.EventsOn('theme:changed', theme => {
-      if (theme) document.documentElement.setAttribute('data-theme', theme);
-    });
-  }
-
-  // ── 3. Localization & language switcher ──────────────────
+  // ── 2. Localization Dictionary ───────────────────────────
   const I18N = {
     ru: {
       'nav.settings': 'Настройки',
@@ -714,19 +697,19 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     }
   };
 
-  let currentLang = 'ru';
-  let currentStatus = 'offline';
-  let lastState = null;
-
   const applyLang = (lang) => {
     currentLang = lang === 'en' ? 'en' : 'ru';
     document.documentElement.lang = currentLang;
     const btnRu = document.getElementById('lang-ru');
     const btnEn = document.getElementById('lang-en');
-    btnRu.classList.toggle('is-active', currentLang === 'ru');
-    btnEn.classList.toggle('is-active', currentLang === 'en');
-    btnRu.setAttribute('aria-checked', String(currentLang === 'ru'));
-    btnEn.setAttribute('aria-checked', String(currentLang === 'en'));
+    if (btnRu) {
+      btnRu.classList.toggle('is-active', currentLang === 'ru');
+      btnRu.setAttribute('aria-checked', String(currentLang === 'ru'));
+    }
+    if (btnEn) {
+      btnEn.classList.toggle('is-active', currentLang === 'en');
+      btnEn.setAttribute('aria-checked', String(currentLang === 'en'));
+    }
 
     const dict = I18N[currentLang];
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -738,41 +721,47 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     if (statusEl) {
       statusEl.textContent = dict['status.' + currentStatus] || currentStatus;
     }
-    const stubDesc = document.getElementById('pg-stub-desc');
-    const stubClose = document.getElementById('pg-stub-close');
     if (stubDesc) stubDesc.textContent = dict['stub.desc'];
     if (stubClose) stubClose.textContent = dict['stub.close'];
 
-    if (typeof renderState === 'function' && lastState) {
+    if (lastState) {
       renderState(lastState);
     }
   };
-  applyLang('ru');
 
   const setLang = (lang) => {
     applyLang(lang);
-    if (app.SetLang) app.SetLang(lang);
+    const app = window.go && window.go.app && window.go.app.App;
+    if (app && app.SetLang) app.SetLang(lang);
   };
 
-  document.getElementById('lang-ru').onclick = () => setLang('ru');
-  document.getElementById('lang-en').onclick = () => setLang('en');
+  const btnRu = document.getElementById('lang-ru');
+  const btnEn = document.getElementById('lang-en');
+  if (btnRu) btnRu.onclick = () => setLang('ru');
+  if (btnEn) btnEn.onclick = () => setLang('en');
+  applyLang('ru');
 
-  if (app.GetLang) {
-    app.GetLang().then(lang => {
-      if (lang) applyLang(lang);
-    }).catch(() => {});
-  }
-  if (rt.EventsOn) {
-    rt.EventsOn('lang-sync', lang => {
-      if (lang) applyLang(lang);
-    });
+  // ── 3. Theme ──────────────────────────────────────────────
+  const setTheme = (theme) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    const app = window.go && window.go.app && window.go.app.App;
+    if (app && app.SetTheme) app.SetTheme(theme);
+  };
+
+  const btnTheme = document.getElementById('btn-theme');
+  if (btnTheme) {
+    btnTheme.onclick = () => {
+      const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+      setTheme(cur === 'dark' ? 'light' : 'dark');
+    };
   }
 
-  // ── 4. Connection status indicator ───────────────────────
+  // ── 4. Connection Status Pill ─────────────────────────────
   const setStatus = (status) => {
     currentStatus = status || 'offline';
     const wrap = document.getElementById('conn-status');
     const text = document.getElementById('conn-status-text');
+    if (!wrap || !text) return;
     wrap.className = 'pg-status';
     if (currentStatus === 'online') {
       wrap.classList.add('pg-status--online');
@@ -783,88 +772,58 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     text.textContent = dict['status.' + currentStatus] || currentStatus;
   };
 
-
-
-  // ── 5. Navigation tabs & stub view ───────────────────────
-  const stub = document.getElementById('pg-stub');
-  const stubTitle = document.getElementById('pg-stub-title');
-  const stubClose = document.getElementById('pg-stub-close');
+  // ── 5. Navigation Tabs & Stub Views ───────────────────────
   const tabIds = ['nav-settings', 'nav-stats', 'nav-docs'];
   let activeTab = null;
 
   const closeStub = () => {
-    stub.hidden = true;
-    tabIds.forEach(id => document.getElementById(id).classList.remove('is-active'));
+    if (stub) stub.hidden = true;
+    tabIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('is-active');
+    });
     activeTab = null;
   };
 
   tabIds.forEach(id => {
     const btn = document.getElementById(id);
+    if (!btn) return;
     btn.onclick = () => {
       if (activeTab === id) {
         closeStub();
         return;
       }
-      tabIds.forEach(otherId => document.getElementById(otherId).classList.remove('is-active'));
+      tabIds.forEach(otherId => {
+        const otherEl = document.getElementById(otherId);
+        if (otherEl) otherEl.classList.remove('is-active');
+      });
       btn.classList.add('is-active');
       activeTab = id;
-      const label = btn.querySelector('.pg-tab__l').textContent;
+      const labelEl = btn.querySelector('.pg-tab__l');
+      const label = labelEl ? labelEl.textContent : '';
       const dict = I18N[currentLang] || I18N.ru;
-      stubTitle.textContent = `${label} — ${dict['stub.title']}`;
-      stub.hidden = false;
+      if (stubTitle) stubTitle.textContent = `${label} — ${dict['stub.title']}`;
+      if (stub) stub.hidden = false;
     };
   });
 
-  stubClose.onclick = closeStub;
+  if (stubClose) stubClose.onclick = closeStub;
 
-  // ── 6. Bottom-right GitHub link & version sync ───────────
-  document.getElementById('repo-link').onclick = (e) => {
-    e.preventDefault();
-    if (rt && rt.BrowserOpenURL) {
-      rt.BrowserOpenURL('https://github.com/MrHoustonOff/PhoneGyro');
-    } else {
-      window.open('https://github.com/MrHoustonOff/PhoneGyro', '_blank');
-    }
-  };
-
-  if (app.GetAppVersion) {
-    app.GetAppVersion().then(v => {
-      const verStr = v.release + '.' + v.build;
-      document.getElementById('ver').textContent = verStr;
-      document.getElementById('footer-ver').textContent = verStr;
-      const badge = document.getElementById('footer-badge');
-      if (badge) {
-        const ch = (v.channel || 'dev').toUpperCase();
-        badge.textContent = ch;
-        badge.className = 'pg-badge pg-badge--sm ' + (ch === 'RELEASE' ? 'pg-badge--ok' : 'pg-badge--warn');
+  // ── 6. Bottom-Right GitHub Link ───────────────────────────
+  const repoLink = document.getElementById('repo-link');
+  if (repoLink) {
+    repoLink.onclick = (e) => {
+      e.preventDefault();
+      const rt = window.runtime;
+      if (rt && rt.BrowserOpenURL) {
+        rt.BrowserOpenURL('https://github.com/MrHoustonOff/PhoneGyro');
+      } else {
+        window.open('https://github.com/MrHoustonOff/PhoneGyro', '_blank');
       }
-    }).catch(() => {});
+    };
   }
 
-  // ── 7. Central Connection Workspace & USB Controller ─────
-  const segModePhone = document.getElementById('seg-mode-phone');
-  const segModeUsb = document.getElementById('seg-mode-usb');
-  const viewSmartphone = document.getElementById('view-smartphone');
-  const viewUsb = document.getElementById('view-usb');
-
-  const connQrImg = document.getElementById('conn-qr-img');
-  const connUrlText = document.getElementById('conn-url-text');
-  const btnCopyUrl = document.getElementById('btn-copy-url');
-  const btnInitialSetup = document.getElementById('btn-initial-setup');
-
-  const usbDevName = document.getElementById('usb-dev-name');
-  const usbStatusBadge = document.getElementById('usb-status-badge');
-  const usbHzBadge = document.getElementById('usb-hz-badge');
-  const usbPortBadge = document.getElementById('usb-port-badge');
-  const usbDial = document.getElementById('usb-dial');
-  const usbDialBubble = document.getElementById('usb-dial-bubble');
-  const usbTimer = document.getElementById('usb-timer');
-  const btnRecenter = document.getElementById('btn-recenter');
-  const btnPauseToggle = document.getElementById('btn-pause-toggle');
-  const btnCalibrate = document.getElementById('btn-calibrate');
-
-  let currentMode = 'phone';
-
+  // ── 7. Mode Switcher (Smartphone vs USB Controller) ───────
   const setInputMode = (mode) => {
     currentMode = mode === 'usb' ? 'usb' : 'phone';
     if (segModePhone) {
@@ -878,44 +837,71 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     if (viewSmartphone) viewSmartphone.style.display = currentMode === 'phone' ? 'flex' : 'none';
     if (viewUsb) viewUsb.style.display = currentMode === 'usb' ? 'grid' : 'none';
 
-    if (app.SetInputMode) app.SetInputMode(currentMode);
+    const app = window.go && window.go.app && window.go.app.App;
+    if (app && app.SetInputMode) app.SetInputMode(currentMode);
   };
 
   if (segModePhone) segModePhone.onclick = () => setInputMode('phone');
   if (segModeUsb) segModeUsb.onclick = () => setInputMode('usb');
 
+  // Copy URL with robust clipboard fallback
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) resolve(); else reject(new Error('copy failed'));
+      } catch (e) {
+        document.body.removeChild(ta);
+        reject(e);
+      }
+    });
+  };
+
   if (btnCopyUrl) {
     btnCopyUrl.onclick = () => {
       const url = connUrlText ? connUrlText.textContent : '';
       if (!url || url === 'https://...') return;
-      navigator.clipboard.writeText(url).then(() => {
+      copyToClipboard(url).then(() => {
         const dict = I18N[currentLang] || I18N.ru;
         btnCopyUrl.textContent = dict['conn.copied'];
         setTimeout(() => {
           btnCopyUrl.textContent = dict['conn.copy'];
         }, 1800);
-      }).catch(() => {});
+      }).catch((e) => console.error('Copy failed:', e));
     };
   }
 
   if (btnInitialSetup) {
     btnInitialSetup.onclick = () => {
       const dict = I18N[currentLang] || I18N.ru;
-      stubTitle.textContent = dict['conn.initial_setup'];
-      stubDesc.textContent = dict['conn.setup_desc'];
-      stub.hidden = false;
+      if (stubTitle) stubTitle.textContent = dict['conn.initial_setup'];
+      if (stubDesc) stubDesc.textContent = dict['conn.setup_desc'];
+      if (stub) stub.hidden = false;
     };
   }
 
   if (btnRecenter) {
     btnRecenter.onclick = () => {
-      if (app.ResetAHRS) app.ResetAHRS();
+      const app = window.go && window.go.app && window.go.app.App;
+      if (app && app.ResetAHRS) app.ResetAHRS();
     };
   }
 
   if (btnPauseToggle) {
     btnPauseToggle.onclick = () => {
-      if (app.TogglePause) {
+      const app = window.go && window.go.app && window.go.app.App;
+      if (app && app.TogglePause) {
         app.TogglePause().then(renderState).catch(() => {});
       }
     };
@@ -924,9 +910,9 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
   if (btnCalibrate) {
     btnCalibrate.onclick = () => {
       const dict = I18N[currentLang] || I18N.ru;
-      stubTitle.textContent = dict['usb.calibrate'];
-      stubDesc.textContent = dict['usb.calibrate_desc'];
-      stub.hidden = false;
+      if (stubTitle) stubTitle.textContent = dict['usb.calibrate'];
+      if (stubDesc) stubDesc.textContent = dict['usb.calibrate_desc'];
+      if (stub) stub.hidden = false;
     };
   }
 
@@ -968,8 +954,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     if (st.qrCode && connQrImg) {
       if (connQrImg.src !== st.qrCode) connQrImg.src = st.qrCode;
       connQrImg.style.display = 'block';
-      const ph = document.getElementById('conn-qr-placeholder');
-      if (ph) ph.style.display = 'none';
+      if (connQrPlaceholder) connQrPlaceholder.style.display = 'none';
     }
     if (st.gamepadUrl && connUrlText) {
       connUrlText.textContent = st.gamepadUrl;
@@ -1031,11 +1016,98 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     }
   };
 
-  if (app.GetState) {
-    app.GetState().then(renderState).catch(() => {});
-  }
-  if (rt.EventsOn) {
-    rt.EventsOn('state:change', renderState);
+  // ── 8. Wails Connection (Resilient Polling) ────────────────
+  const connectWails = () => {
+    if (wailsConnected) return true;
+    const rt = window.runtime;
+    const app = window.go && window.go.app && window.go.app.App;
+    if (!app) return false;
+    wailsConnected = true;
+
+    // Window controls
+    if (rt && rt.WindowIsMaximised && bar) {
+      const syncMax = () => rt.WindowIsMaximised().then((m) => bar.classList.toggle('is-max', m));
+      const wcMin = document.getElementById('wc-min');
+      const wcMax = document.getElementById('wc-max');
+      const wcClose = document.getElementById('wc-close');
+      if (wcMin) wcMin.onclick = () => rt.WindowMinimise();
+      if (wcMax) wcMax.onclick = () => { rt.WindowToggleMaximise(); setTimeout(syncMax, 30); };
+      if (wcClose) wcClose.onclick = () => app.CloseWindow();
+      bar.ondblclick = (e) => {
+        if (!e.target.closest('.pg-titlebar__ctl')) {
+          rt.WindowToggleMaximise();
+          setTimeout(syncMax, 30);
+        }
+      };
+      let t = 0;
+      addEventListener('resize', () => { clearTimeout(t); t = setTimeout(syncMax, 60); });
+      syncMax();
+    }
+
+    // Load initial state
+    if (app.GetState) {
+      app.GetState().then(renderState).catch(e => console.error('GetState error:', e));
+    }
+
+    // Load theme
+    if (app.GetTheme) {
+      app.GetTheme().then(theme => {
+        if (theme) document.documentElement.setAttribute('data-theme', theme);
+      }).catch(() => {});
+    }
+
+    // Load lang
+    if (app.GetLang) {
+      app.GetLang().then(lang => {
+        if (lang) applyLang(lang);
+      }).catch(() => {});
+    }
+
+    // Load version
+    if (app.GetAppVersion) {
+      app.GetAppVersion().then(v => {
+        if (!v) return;
+        const verStr = v.release + '.' + v.build;
+        const elVer = document.getElementById('ver');
+        const elFVer = document.getElementById('footer-ver');
+        if (elVer) elVer.textContent = verStr;
+        if (elFVer) elFVer.textContent = verStr;
+        const badge = document.getElementById('footer-badge');
+        if (badge) {
+          const ch = (v.channel || 'dev').toUpperCase();
+          badge.textContent = ch;
+          badge.className = 'pg-badge pg-badge--sm ' + (ch === 'RELEASE' ? 'pg-badge--ok' : 'pg-badge--warn');
+        }
+      }).catch(() => {});
+    }
+
+    // Backend events
+    if (rt && rt.EventsOn) {
+      rt.EventsOn('state:change', renderState);
+      rt.EventsOn('theme-sync', theme => {
+        if (theme) document.documentElement.setAttribute('data-theme', theme);
+      });
+      rt.EventsOn('theme:changed', theme => {
+        if (theme) document.documentElement.setAttribute('data-theme', theme);
+      });
+      rt.EventsOn('lang-sync', lang => {
+        if (lang) applyLang(lang);
+      });
+    }
+
+    return true;
+  };
+
+  if (!connectWails()) {
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (connectWails() || attempts > 100) {
+        clearInterval(interval);
+      }
+    }, 30);
+    window.addEventListener('DOMContentLoaded', connectWails);
+    window.addEventListener('load', connectWails);
   }
 })();
 </script>
