@@ -19,22 +19,22 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 149, 0, 0.08);
-  border: 1px solid rgba(255, 149, 0, 0.28);
+  background: rgba(var(--palette-orange-rgb), 0.08);
+  border: 1px solid rgba(var(--palette-orange-rgb), 0.28);
   border-radius: var(--radius-md);
   padding: 8px 12px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 14px rgba(var(--palette-black-rgb), 0.06);
 }
 
 [data-theme="dark"] .level-recal-inner {
-  background: rgba(255, 149, 0, 0.12);
-  border-color: rgba(255, 149, 0, 0.35);
+  background: rgba(var(--palette-orange-rgb), 0.12);
+  border-color: rgba(var(--palette-orange-rgb), 0.35);
 }
 
 .level-recal-icon {
   width: 17px;
   height: 17px;
-  color: #FF9500;
+  color: var(--palette-orange);
   flex-shrink: 0;
 }
 
@@ -69,13 +69,13 @@
 
 .level-recal-close:hover {
   color: var(--text);
-  background: rgba(120, 120, 128, 0.15);
+  background: rgba(var(--palette-fill-rgb), 0.15);
 }
 
 /* ── Calibration Disconnect Modal Card Alert & Blur (Scoped to Modal) ── */
 .cal-modal.cal-modal-disconnected {
-  border-color: rgba(255, 59, 48, 0.65) !important;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 59, 48, 0.22) !important;
+  border-color: rgba(var(--palette-red-rgb), 0.65) !important;
+  box-shadow: 0 24px 70px rgba(var(--palette-black-rgb), 0.5), 0 0 30px rgba(var(--palette-red-rgb), 0.22) !important;
 }
 
 /* Modal Disconnect Warning Blur Overlay (Scoped strictly inside .cal-modal) */
@@ -87,7 +87,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(18, 18, 20, 0.76);
+  background: rgba(var(--palette-graphite-950-rgb), 0.76);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: inherit;
@@ -95,7 +95,7 @@
 }
 
 [data-theme="light"] .cal-disconnect-overlay {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(var(--palette-white-rgb), 0.82);
 }
 
 @keyframes calDisconnectFadeIn {
@@ -111,14 +111,14 @@
   max-width: 380px;
   width: 100%;
   background: var(--surface-elevated);
-  border: 1px solid rgba(255, 59, 48, 0.25);
+  border: 1px solid rgba(var(--palette-red-rgb), 0.25);
   border-radius: var(--radius-lg);
   padding: 28px 24px;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: var(--shadow-lg), 0 0 32px rgba(255, 59, 48, 0.15);
+  box-shadow: var(--shadow-lg), 0 0 32px rgba(var(--palette-red-rgb), 0.15);
   animation: calDisconnectCardPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -137,13 +137,13 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: rgba(255, 59, 48, 0.12);
-  border: 1px solid rgba(255, 59, 48, 0.3);
+  background: rgba(var(--palette-red-rgb), 0.12);
+  border: 1px solid rgba(var(--palette-red-rgb), 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 16px;
-  color: #ff3b30;
+  color: var(--palette-red);
 }
 
 .cal-disconnect-icon-box svg {
@@ -171,22 +171,22 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255, 59, 48, 0.09);
-  border: 1px solid rgba(255, 59, 48, 0.22);
+  background: rgba(var(--palette-red-rgb), 0.09);
+  border: 1px solid rgba(var(--palette-red-rgb), 0.22);
   border-radius: var(--radius-pill);
   padding: 5px 12px;
   margin-bottom: 20px;
   font-size: 12px;
   font-weight: 500;
-  color: #ff453a;
+  color: var(--palette-red-dark);
 }
 
 .cal-disconnect-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ff3b30;
-  box-shadow: 0 0 8px #ff3b30;
+  background: var(--palette-red);
+  box-shadow: 0 0 8px var(--palette-red);
   animation: calDisconnectDotBlink 1.2s infinite ease-in-out;
 }
 

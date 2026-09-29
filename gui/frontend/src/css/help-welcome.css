@@ -48,7 +48,7 @@
   width: 38px;
   height: 38px;
   border-radius: var(--radius-sm);
-  background: rgba(120, 120, 128, 0.1);
+  background: rgba(var(--palette-fill-rgb), 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -202,8 +202,8 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background-color: var(--apple-blue, #0A84FF);
-  box-shadow: 0 0 6px rgba(10, 132, 255, 0.6);
+  background-color: var(--apple-blue, var(--palette-blue-dark));
+  box-shadow: 0 0 6px rgba(var(--palette-blue-dark-rgb), 0.6);
   transform: translateY(-50%) scale(0);
   opacity: 0;
   pointer-events: none;
@@ -217,7 +217,7 @@
 }
 
 [data-theme="light"] .setting-row::before {
-  box-shadow: 0 0 5px rgba(0, 113, 227, 0.5);
+  box-shadow: 0 0 5px rgba(var(--palette-blue-web-rgb), 0.5);
 }
 
 .setting-row:last-child {
@@ -262,7 +262,7 @@
   width: 19px;
   height: 19px;
   border-radius: 50%;
-  background: rgba(120, 120, 128, 0.16);
+  background: rgba(var(--palette-fill-rgb), 0.16);
   color: var(--text-secondary);
   cursor: pointer;
   border: none;
@@ -274,7 +274,7 @@
 .setting-infotip:hover,
 .setting-infotip.is-active-tip {
   background: var(--accent);
-  color: #FFFFFF;
+  color: var(--palette-white);
   transform: scale(1.1);
 }
 
@@ -315,11 +315,11 @@
 .setting-input-num:focus {
   border-color: var(--accent);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(var(--palette-blue-rgb), 0.2);
 }
 
 .setting-input-num.error {
-  border-color: #FF3B30 !important;
-  box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.25) !important;
+  border-color: var(--palette-red) !important;
+  box-shadow: 0 0 0 3px rgba(var(--palette-red-rgb), 0.25) !important;
 }
 

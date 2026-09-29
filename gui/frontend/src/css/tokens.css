@@ -4,54 +4,150 @@
    values here; components only reference var(--…).
    ========================================================================== */
 
+/* ── Palette ─────────────────────────────────────────────────────────────────
+   Raw colours, the same in both themes. Components and the semantic tokens
+   below reference these; a restyle retunes them here. *-rgb: for rgba(). */
+:root {
+  --palette-black: #000000; /* Black */
+  --palette-black-rgb: 0, 0, 0;
+  --palette-white: #FFFFFF; /* White */
+  --palette-white-rgb: 255, 255, 255;
+  --palette-red: #FF3B30; /* systemRed */
+  --palette-red-rgb: 255, 59, 48;
+  --palette-red-dark: #FF453A; /* systemRed, dark */
+  --palette-red-dark-rgb: 255, 69, 58;
+  --palette-red-deep: #D70015; /* red on light surfaces */
+  --palette-red-deeper: #C90013; /* red, pressed */
+  --palette-red-soft: #FF6961; /* soft red */
+  --palette-pink: #FF2D55; /* systemPink */
+  --palette-pink-rgb: 255, 45, 85;
+  --palette-blue: #007AFF; /* systemBlue */
+  --palette-blue-rgb: 0, 122, 255;
+  --palette-blue-dark: #0A84FF; /* systemBlue, dark */
+  --palette-blue-dark-rgb: 10, 132, 255;
+  --palette-blue-web: #0071E3; /* apple.com blue */
+  --palette-blue-web-rgb: 0, 113, 227;
+  --palette-blue-web-hover: #0077ED; /* apple.com blue, hover */
+  --palette-blue-soft: #409CFF; /* soft blue */
+  --palette-blue-bright: #1C8DFF; /* bright blue */
+  --palette-blue-deep: #005BB5; /* deep blue */
+  --palette-blue-pressed: #0066D6; /* blue, pressed */
+  --palette-green: #34C759; /* systemGreen */
+  --palette-green-rgb: 52, 199, 89;
+  --palette-green-dark: #30D158; /* systemGreen, dark */
+  --palette-green-dark-rgb: 48, 209, 88;
+  --palette-green-vivid: #28CD41; /* vivid green */
+  --palette-green-muted: #28A745; /* muted green */
+  --palette-green-muted-rgb: 40, 167, 69;
+  --palette-green-muted-dark: #218838; /* muted green, hover */
+  --palette-green-muted-deep: #1E7E34; /* muted green, pressed */
+  --palette-orange: #FF9500; /* systemOrange */
+  --palette-orange-rgb: 255, 149, 0;
+  --palette-orange-dark: #FF9F0A; /* systemOrange, dark */
+  --palette-orange-dark-rgb: 255, 159, 10;
+  --palette-orange-deep: #E07000; /* deep orange */
+  --palette-orange-soft: #FFB340; /* soft orange */
+  --palette-amber: #FFA726; /* amber */
+  --palette-yellow-dark: #FFD60A; /* systemYellow, dark */
+  --palette-yellow-dark-rgb: 255, 214, 10;
+  --palette-cyan-dark: #64D2FF; /* systemCyan, dark */
+  --palette-cyan-dark-rgb: 100, 210, 255;
+  --palette-cyan-pure: #00FFFF; /* pure cyan */
+  --palette-teal: #30B0C7; /* systemTeal */
+  --palette-violet: #9C88FF; /* violet */
+  --palette-fill: #787880; /* systemFill base (used with alpha) */
+  --palette-fill-rgb: 120, 120, 128;
+  --palette-gray: #8E8E93; /* systemGray */
+  --palette-gray-rgb: 142, 142, 147;
+  --palette-gray-2-dark: #636366; /* systemGray2, dark */
+  --palette-gray-neutral: #666666; /* neutral grey */
+  --palette-gray-5: #E5E5EA; /* systemGray5 */
+  --palette-gray-6: #F2F2F7; /* systemGray6 */
+  --palette-gray-6-rgb: 242, 242, 247;
+  --palette-snow: #F5F5F7; /* apple.com light background */
+  --palette-gray-6-dark: #1C1C1E; /* systemGray6, dark */
+  --palette-gray-6-dark-rgb: 28, 28, 30;
+  --palette-ink: #1D1D1F; /* apple.com near-black text */
+  --palette-gray-5-dark: #2C2C2E; /* systemGray5, dark */
+  --palette-gray-4-dark: #3A3A3C; /* systemGray4, dark */
+  --palette-gray-4: #D1D1D6; /* systemGray4 */
+  --palette-gray-3: #AEAEB2; /* systemGray3 */
+  --palette-gray-label: #6C6C70; /* secondary label, light */
+  --palette-graphite-850: #242426; /* elevated surface, dark */
+  --palette-green-deep: #248A3D; /* systemGreen on light surfaces */
+  --palette-graphite-950: #121214; /* deep graphite surface */
+  --palette-graphite-950-rgb: 18, 18, 20;
+  --palette-graphite-925: #141416; /* graphite surface */
+  --palette-graphite-900: #1E1E20; /* graphite surface */
+  --palette-graphite-900-rgb: 30, 30, 32;
+  --palette-graphite-875: #202024; /* graphite surface */
+  --palette-graphite-875-rgb: 32, 32, 36;
+  --palette-slate-300: #CBD6E4; /* slate */
+  --palette-slate-200: #DCE4EE; /* slate */
+  --palette-slate-150: #E1E6EF; /* slate */
+  --palette-slate-100: #E2EAF4; /* slate */
+  --palette-slate-50: #EDF3FA; /* slate */
+  --palette-slate-25: #EEF5FC; /* slate */
+  --palette-navy-750: #1D212D; /* navy */
+  --palette-navy-800: #141C28; /* navy */
+  --palette-navy-850: #0F172A; /* navy */
+  --palette-navy-850-rgb: 15, 23, 42;
+  --palette-navy-875: #0E1726; /* navy */
+  --palette-navy-900: #0A0B10; /* navy */
+  --palette-navy-925: #080B12; /* navy */
+  --palette-navy-940: #06090F; /* navy */
+  --palette-navy-950: #06080E; /* navy */
+  --palette-navy-975: #030508; /* navy */
+}
+
 :root {
   /* Dark Mode (Default) - Apple Dark Palette */
-  --bg: #000000;
-  --surface: #1C1C1E;
-  --surface-hover: #2C2C2E;
-  --surface-elevated: #242426;
-  --border: rgba(255, 255, 255, 0.12);
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --text: #FFFFFF;
-  --text-secondary: #8E8E93;
-  --text-tertiary: #636366;
+  --bg: var(--palette-black);
+  --surface: var(--palette-gray-6-dark);
+  --surface-hover: var(--palette-gray-5-dark);
+  --surface-elevated: var(--palette-graphite-850);
+  --border: rgba(var(--palette-white-rgb), 0.12);
+  --border-subtle: rgba(var(--palette-white-rgb), 0.07);
+  --text: var(--palette-white);
+  --text-secondary: var(--palette-gray);
+  --text-tertiary: var(--palette-gray-2-dark);
 
   /* Button Tokens */
-  --apple-blue: #0A84FF;
-  --btn-primary-bg: #FFFFFF;
-  --btn-primary-text: #000000;
-  --btn-primary-hover: #E5E5EA;
-  --btn-secondary-bg: #2C2C2E;
-  --btn-secondary-text: #FFFFFF;
-  --btn-secondary-border: rgba(255, 255, 255, 0.12);
-  --btn-secondary-hover: #3A3A3C;
+  --apple-blue: var(--palette-blue-dark);
+  --btn-primary-bg: var(--palette-white);
+  --btn-primary-text: var(--palette-black);
+  --btn-primary-hover: var(--palette-gray-5);
+  --btn-secondary-bg: var(--palette-gray-5-dark);
+  --btn-secondary-text: var(--palette-white);
+  --btn-secondary-border: rgba(var(--palette-white-rgb), 0.12);
+  --btn-secondary-hover: var(--palette-gray-4-dark);
 
   /* Segmented Control */
-  --segmented-bg: #2C2C2E;
-  --segmented-active: #636366;
-  --segmented-text: #8E8E93;
-  --segmented-text-active: #FFFFFF;
+  --segmented-bg: var(--palette-gray-5-dark);
+  --segmented-active: var(--palette-gray-2-dark);
+  --segmented-text: var(--palette-gray);
+  --segmented-text-active: var(--palette-white);
 
   /* Status Tokens (Apple System Colors) */
-  --apple-green: #28A745;
+  --apple-green: var(--palette-green-muted);
   --apple-green-rgb: 40, 167, 69;
-  --apple-red: #FF3B30;
-  --dot-online: #28A745;
-  --dot-offline: #FF3B30;
-  --dot-paused: #FF9F0A;
-  --surface-modal: #242426;
+  --apple-red: var(--palette-red);
+  --dot-online: var(--palette-green-muted);
+  --dot-offline: var(--palette-red);
+  --dot-paused: var(--palette-orange-dark);
+  --surface-modal: var(--palette-graphite-850);
 
   /* Shadows */
-  --card-shadow: 0 8px 36px rgba(0, 0, 0, 0.5);
-  --qr-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --card-shadow: 0 8px 36px rgba(var(--palette-black-rgb), 0.5);
+  --qr-shadow: 0 4px 20px rgba(var(--palette-black-rgb), 0.22);
+  --shadow-sm: 0 1px 3px rgba(var(--palette-black-rgb), 0.35);
   --shadow-lg: var(--card-shadow);
 
   /* Aliases used by components (were referenced but never defined) */
   --accent: var(--apple-blue);
   --accent-rgb: 10, 132, 255;
   --surface-card: var(--surface);
-  --surface-translucent: rgba(28, 28, 30, 0.72);
+  --surface-translucent: rgba(var(--palette-gray-6-dark-rgb), 0.72);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, monospace;
@@ -68,41 +164,41 @@
 
 [data-theme="light"] {
   /* Light Mode - Apple Light Palette */
-  --bg: #F2F2F7;
-  --surface: #FFFFFF;
-  --surface-hover: #F2F2F7;
-  --surface-elevated: #E5E5EA;
-  --border: rgba(0, 0, 0, 0.08);
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --text: #000000;
-  --text-secondary: #6C6C70;
-  --text-tertiary: #AEAEB2;
+  --bg: var(--palette-gray-6);
+  --surface: var(--palette-white);
+  --surface-hover: var(--palette-gray-6);
+  --surface-elevated: var(--palette-gray-5);
+  --border: rgba(var(--palette-black-rgb), 0.08);
+  --border-subtle: rgba(var(--palette-black-rgb), 0.05);
+  --text: var(--palette-black);
+  --text-secondary: var(--palette-gray-label);
+  --text-tertiary: var(--palette-gray-3);
 
-  --apple-blue: #0071E3;
-  --apple-green: #248A3D;
+  --apple-blue: var(--palette-blue-web);
+  --apple-green: var(--palette-green-deep);
   --apple-green-rgb: 36, 138, 61;
-  --apple-red: #FF3B30;
-  --btn-primary-bg: #000000;
-  --btn-primary-text: #FFFFFF;
-  --btn-primary-hover: #1C1C1E;
-  --btn-secondary-bg: #E5E5EA;
-  --btn-secondary-text: #000000;
-  --btn-secondary-border: rgba(0, 0, 0, 0.08);
-  --btn-secondary-hover: #D1D1D6;
+  --apple-red: var(--palette-red);
+  --btn-primary-bg: var(--palette-black);
+  --btn-primary-text: var(--palette-white);
+  --btn-primary-hover: var(--palette-gray-6-dark);
+  --btn-secondary-bg: var(--palette-gray-5);
+  --btn-secondary-text: var(--palette-black);
+  --btn-secondary-border: rgba(var(--palette-black-rgb), 0.08);
+  --btn-secondary-hover: var(--palette-gray-4);
 
-  --segmented-bg: #E5E5EA;
-  --segmented-active: #FFFFFF;
-  --segmented-text: #8E8E93;
-  --segmented-text-active: #000000;
+  --segmented-bg: var(--palette-gray-5);
+  --segmented-active: var(--palette-white);
+  --segmented-text: var(--palette-gray);
+  --segmented-text-active: var(--palette-black);
 
-  --dot-online: #248A3D;
-  --dot-offline: #FF3B30;
-  --dot-paused: #FF9500;
-  --surface-modal: #FFFFFF;
+  --dot-online: var(--palette-green-deep);
+  --dot-offline: var(--palette-red);
+  --dot-paused: var(--palette-orange);
+  --surface-modal: var(--palette-white);
 
-  --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-  --qr-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 8px 30px rgba(var(--palette-black-rgb), 0.08);
+  --qr-shadow: 0 4px 14px rgba(var(--palette-black-rgb), 0.06);
+  --shadow-sm: 0 1px 3px rgba(var(--palette-black-rgb), 0.08);
   --accent-rgb: 0, 113, 227;
-  --surface-translucent: rgba(255, 255, 255, 0.72);
+  --surface-translucent: rgba(var(--palette-white-rgb), 0.72);
 }

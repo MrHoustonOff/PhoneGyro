@@ -6,16 +6,16 @@
   height: 36px;
   box-sizing: border-box;
   padding: 0 14px;
-  background: rgba(120, 120, 128, 0.08);
-  border: 1px solid rgba(120, 120, 128, 0.18);
+  background: rgba(var(--palette-fill-rgb), 0.08);
+  border: 1px solid rgba(var(--palette-fill-rgb), 0.18);
   border-radius: 6px;
   user-select: none;
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .header-brand-bubble:hover {
-  background: rgba(120, 120, 128, 0.14);
-  border-color: rgba(120, 120, 128, 0.28);
+  background: rgba(var(--palette-fill-rgb), 0.14);
+  border-color: rgba(var(--palette-fill-rgb), 0.28);
 }
 
 .header-brand-title {
@@ -64,8 +64,8 @@
   height: 36px;
   box-sizing: border-box;
   padding: 0 13px;
-  background: rgba(120, 120, 128, 0.08);
-  border: 1px solid rgba(120, 120, 128, 0.18);
+  background: rgba(var(--palette-fill-rgb), 0.08);
+  border: 1px solid rgba(var(--palette-fill-rgb), 0.18);
   border-radius: 6px;
   font-family: inherit;
   font-size: 13px;
@@ -78,20 +78,20 @@
 }
 
 .header-bubble-btn:hover {
-  background: rgba(120, 120, 128, 0.16);
-  border-color: rgba(120, 120, 128, 0.32);
+  background: rgba(var(--palette-fill-rgb), 0.16);
+  border-color: rgba(var(--palette-fill-rgb), 0.32);
   transform: translateY(-1px);
 }
 
 .header-bubble-btn:active {
   transform: translateY(0);
-  background: rgba(120, 120, 128, 0.22);
+  background: rgba(var(--palette-fill-rgb), 0.22);
 }
 
 .header-bubble-btn.active {
-  background: rgba(10, 132, 255, 0.2);
-  border-color: rgba(10, 132, 255, 0.5);
-  color: #0A84FF;
+  background: rgba(var(--palette-blue-dark-rgb), 0.2);
+  border-color: rgba(var(--palette-blue-dark-rgb), 0.5);
+  color: var(--palette-blue-dark);
 }
 
 .header-bubble-svg {
@@ -221,12 +221,12 @@
 }
 
 .footer-version .footer-version-channel.dev {
-  color: rgb(255, 149, 0);
-  background: rgba(255, 159, 10, 0.14);
+  color: rgb(var(--palette-orange-rgb));
+  background: rgba(var(--palette-orange-dark-rgb), 0.14);
 }
 
 .footer-version .footer-version-channel.release {
-  color: #30d158;
-  background: rgba(48, 209, 88, 0.14);
+  color: var(--palette-green-dark);
+  background: rgba(var(--palette-green-dark-rgb), 0.14);
 }
 

@@ -33,11 +33,11 @@ body {
 /* ── Apple-Style Custom Rounded Thin Scrollbars ────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(var(--palette-white-rgb), 0.22) transparent;
 }
 
 [data-theme="light"] * {
-  scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+  scrollbar-color: rgba(var(--palette-black-rgb), 0.22) transparent;
 }
 
 ::-webkit-scrollbar {
@@ -50,20 +50,20 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--palette-white-rgb), 0.22);
   border-radius: var(--radius-pill);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--palette-white-rgb), 0.45);
 }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(var(--palette-black-rgb), 0.22);
 }
 
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(var(--palette-black-rgb), 0.45);
 }
 
 /* ── High-Fidelity Markdown Typography & Code Badges ───────────────────────── */
@@ -90,18 +90,18 @@ em {
   vertical-align: baseline;
   line-height: 1.35;
   letter-spacing: -0.01em;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(var(--palette-black-rgb), 0.15);
 }
 
 [data-theme="light"] .md-code {
-  background: #E5E5EA;
-  border-color: rgba(0, 0, 0, 0.12);
-  color: #000000;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  background: var(--palette-gray-5);
+  border-color: rgba(var(--palette-black-rgb), 0.12);
+  color: var(--palette-black);
+  box-shadow: 0 1px 2px rgba(var(--palette-black-rgb), 0.05);
 }
 
 .md-link {
-  color: #0A84FF;
+  color: var(--palette-blue-dark);
   text-decoration: underline;
   text-underline-offset: 3px;
   font-weight: 600;
@@ -110,27 +110,27 @@ em {
 }
 
 .md-link:hover {
-  color: #409CFF;
+  color: var(--palette-blue-soft);
   text-decoration: underline;
 }
 
 [data-theme="light"] .md-link {
-  color: #0071E3;
+  color: var(--palette-blue-web);
 }
 
 [data-theme="light"] .md-link:hover {
-  color: #005BB5;
+  color: var(--palette-blue-deep);
 }
 
 .md-link .md-code {
   color: inherit;
-  border-color: rgba(10, 132, 255, 0.35);
-  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(var(--palette-blue-dark-rgb), 0.35);
+  background: rgba(var(--palette-blue-dark-rgb), 0.12);
   transition: border-color var(--transition-fast), background var(--transition-fast);
 }
 
 .md-link:hover .md-code {
-  border-color: rgba(10, 132, 255, 0.6);
-  background: rgba(10, 132, 255, 0.22);
+  border-color: rgba(var(--palette-blue-dark-rgb), 0.6);
+  background: rgba(var(--palette-blue-dark-rgb), 0.22);
 }
 

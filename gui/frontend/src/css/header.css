@@ -103,7 +103,7 @@
 .segmented-btn.active {
   background-color: var(--segmented-active);
   color: var(--segmented-text-active);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(var(--palette-black-rgb), 0.12);
 }
 
 /* ── Apple Status Capsule ───────────────────────────────────────────────────── */
@@ -147,22 +147,22 @@
 }
 
 .status-capsule.waiting-usb {
-  border-color: rgba(100, 210, 255, 0.35);
-  background: rgba(100, 210, 255, 0.08);
+  border-color: rgba(var(--palette-cyan-dark-rgb), 0.35);
+  background: rgba(var(--palette-cyan-dark-rgb), 0.08);
 }
 
 .status-capsule.waiting-usb .status-dot {
-  background-color: #64D2FF;
+  background-color: var(--palette-cyan-dark);
   animation: pulse-online 2s infinite ease-in-out;
 }
 
 [data-theme="light"] .status-capsule.waiting-usb {
-  border-color: rgba(0, 113, 227, 0.3);
-  background: rgba(0, 113, 227, 0.06);
+  border-color: rgba(var(--palette-blue-web-rgb), 0.3);
+  background: rgba(var(--palette-blue-web-rgb), 0.06);
 }
 
 [data-theme="light"] .status-capsule.waiting-usb .status-dot {
-  background-color: #0071E3;
+  background-color: var(--palette-blue-web);
 }
 
 @keyframes pulse-online {
