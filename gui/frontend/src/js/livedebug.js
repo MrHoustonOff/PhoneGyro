@@ -446,6 +446,10 @@
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // The shadow map depends on the light and the model, not on the camera: render
+  // it once per frame (renderFrame) instead of once per view -- quad mode draws
+  // four views a frame.
+  renderer.shadowMap.autoUpdate = false;
 
   const scene = new THREE.Scene();
 
@@ -879,6 +883,7 @@
     const w = viewportWrap.clientWidth;
     const h = viewportWrap.clientHeight;
     if (w <= 0 || h <= 0) return;
+    renderer.shadowMap.needsUpdate = true; // the first view of this frame redraws it
 
     if (currentCamMode === 'quad') {
       const halfW = Math.floor(w / 2);
