@@ -44,6 +44,14 @@
   /* Shadows */
   --card-shadow: 0 8px 36px rgba(0, 0, 0, 0.5);
   --qr-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-lg: var(--card-shadow);
+
+  /* Aliases used by components (were referenced but never defined) */
+  --accent: var(--apple-blue);
+  --accent-rgb: 10, 132, 255;
+  --surface-card: var(--surface);
+  --surface-translucent: rgba(28, 28, 30, 0.72);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, monospace;
@@ -94,6 +102,9 @@
 
   --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
   --qr-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --accent-rgb: 0, 113, 227;
+  --surface-translucent: rgba(255, 255, 255, 0.72);
 }
 
 /* ── Global Reset & Native Scrollbar Removal ───────────────────────────────── */
