@@ -242,7 +242,7 @@
 
         try {
           btn?.classList.add('spinning');
-          const newMac = await window.go.main.App.RegenerateDSUMAC();
+          const newMac = await window.go.app.App.RegenerateDSUMAC();
           const macInput = document.getElementById('setting-dsu-mac');
           if (macInput) macInput.value = newMac;
           showToast(I18n.t('settings_modal.dsu_mac_regen_success') || 'MAC-адрес успешно обновлен');
@@ -541,7 +541,7 @@
       const sensSlider = document.getElementById('setting-gyro-sensitivity');
       const sens = parseFloat(sensInput?.value || sensSlider?.value || '1.00');
       if (window.go?.main?.App?.SetTuningFilterParams) {
-        window.go.main.App.SetTuningFilterParams(deadband, deadbandUsb, sens);
+        window.go.app.App.SetTuningFilterParams(deadband, deadbandUsb, sens);
       }
     },
 
@@ -664,7 +664,7 @@
     async fetchSettings() {
       try {
         if (window.go?.main?.App?.GetAppSettings) {
-          const s = await window.go.main.App.GetAppSettings();
+          const s = await window.go.app.App.GetAppSettings();
           if (s) {
             this.currentSettings = s;
             if (typeof s.fontScale === 'number' && s.fontScale > 0) {
@@ -723,7 +723,7 @@
 
       // Start live test bench telemetry
       if (window.go?.main?.App?.SetTuningActive) {
-        window.go.main.App.SetTuningActive(true);
+        window.go.app.App.SetTuningActive(true);
       }
       this.syncLiveFilter();
       TuningBench.start();
@@ -1104,7 +1104,7 @@
         this.setSaveStatus('saving');
         try {
           if (window.go?.main?.App?.SaveAppSettings) {
-            await window.go.main.App.SaveAppSettings(payload);
+            await window.go.app.App.SaveAppSettings(payload);
           }
           this.currentSettings = payload;
           SoundManager.soundVolumes = payload.soundVolumes;
@@ -1243,7 +1243,7 @@
         this.autoSaveTimer = null;
         const payload = this.collectPayload();
         if (payload && window.go?.main?.App?.SaveAppSettings) {
-          window.go.main.App.SaveAppSettings(payload);
+          window.go.app.App.SaveAppSettings(payload);
           this.currentSettings = payload;
         }
       }
@@ -1258,7 +1258,7 @@
 
       TuningBench.stop();
       if (window.go?.main?.App?.SetTuningActive) {
-        window.go.main.App.SetTuningActive(false);
+        window.go.app.App.SetTuningActive(false);
       }
 
       const vSettings = document.getElementById('view-settings');

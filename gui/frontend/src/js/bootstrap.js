@@ -40,7 +40,7 @@
     };
 
     pollWails = setInterval(() => {
-      if (window.go && window.go.main && window.go.main.App) {
+      if (window.go && window.go.app && window.go.app.App) {
         startApp();
       }
     }, 40);

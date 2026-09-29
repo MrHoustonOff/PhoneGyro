@@ -45,7 +45,7 @@
           if (sel) sel.value = 'minimize';
         }
         if (window.go?.main?.App?.ConfirmCloseChoice) {
-          await window.go.main.App.ConfirmCloseChoice('minimize', remember);
+          await window.go.app.App.ConfirmCloseChoice('minimize', remember);
         }
       };
 
@@ -57,7 +57,7 @@
           if (sel) sel.value = 'quit';
         }
         if (window.go?.main?.App?.ConfirmCloseChoice) {
-          await window.go.main.App.ConfirmCloseChoice('quit', remember);
+          await window.go.app.App.ConfirmCloseChoice('quit', remember);
         }
       };
 

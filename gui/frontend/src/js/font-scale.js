@@ -105,8 +105,8 @@
       if (typeof HeaderManager !== 'undefined') HeaderManager.update();
 
       if (broadcast) {
-        if (window.go && window.go.main && window.go.main.App && window.go.main.App.SetFontScale) {
-          window.go.main.App.SetFontScale(val);
+        if (window.go && window.go.app && window.go.app.App && window.go.app.App.SetFontScale) {
+          window.go.app.App.SetFontScale(val);
         } else {
           fetch('http://127.0.0.1:8080/livedebug/font-scale?value=' + encodeURIComponent(val), { method: 'POST' }).catch(() => {});
         }

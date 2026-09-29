@@ -178,7 +178,7 @@
       try {
         let result = 'ok';
         if (window.go?.main?.App?.SetActiveProfile) {
-          result = await window.go.main.App.SetActiveProfile(slot);
+          result = await window.go.app.App.SetActiveProfile(slot);
         }
         // Outdated profiles switch normally — the warning banner and highlighted
         // Calibrate button (see render()) do the nudging, not a forced wizard.

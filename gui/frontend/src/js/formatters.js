@@ -6,7 +6,7 @@
     const el = document.getElementById('footer-version');
     if (!el || !window.go?.main?.App?.GetAppVersion) return;
     try {
-      const v = await window.go.main.App.GetAppVersion();
+      const v = await window.go.app.App.GetAppVersion();
       el.innerHTML = `<span>${v.release}.${v.build}</span><span class="footer-version-channel ${v.channel}">${v.channel}</span>`;
       el.title = `PhoneGyro ${v.release} • build ${v.build} • ${v.channel}`;
     } catch (e) {

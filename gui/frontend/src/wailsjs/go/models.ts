@@ -1,41 +1,4 @@
-export namespace dsuclients {
-	
-	export class View {
-	    address: string;
-	    ip: string;
-	    port: number;
-	    lastSeenMs: number;
-	    active: boolean;
-	    connectedAtMs: number;
-	    cemuBias: number[];
-	    cemuSamples: number;
-	    cemuGuard: boolean;
-	    process?: string;
-	    pid?: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new View(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.address = source["address"];
-	        this.ip = source["ip"];
-	        this.port = source["port"];
-	        this.lastSeenMs = source["lastSeenMs"];
-	        this.active = source["active"];
-	        this.connectedAtMs = source["connectedAtMs"];
-	        this.cemuBias = source["cemuBias"];
-	        this.cemuSamples = source["cemuSamples"];
-	        this.cemuGuard = source["cemuGuard"];
-	        this.process = source["process"];
-	        this.pid = source["pid"];
-	    }
-	}
-
-}
-
-export namespace main {
+export namespace app {
 	
 	export class AppSettings {
 	    theme: string;
@@ -345,6 +308,43 @@ export namespace main {
 	        this.pitchAxis = source["pitchAxis"];
 	        this.yawAxis = source["yawAxis"];
 	        this.rollAxis = source["rollAxis"];
+	    }
+	}
+
+}
+
+export namespace dsuclients {
+	
+	export class View {
+	    address: string;
+	    ip: string;
+	    port: number;
+	    lastSeenMs: number;
+	    active: boolean;
+	    connectedAtMs: number;
+	    cemuBias: number[];
+	    cemuSamples: number;
+	    cemuGuard: boolean;
+	    process?: string;
+	    pid?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new View(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.ip = source["ip"];
+	        this.port = source["port"];
+	        this.lastSeenMs = source["lastSeenMs"];
+	        this.active = source["active"];
+	        this.connectedAtMs = source["connectedAtMs"];
+	        this.cemuBias = source["cemuBias"];
+	        this.cemuSamples = source["cemuSamples"];
+	        this.cemuGuard = source["cemuGuard"];
+	        this.process = source["process"];
+	        this.pid = source["pid"];
 	    }
 	}
 

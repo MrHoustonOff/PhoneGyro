@@ -102,7 +102,7 @@
       if (type === 'loss') {
         if (mode === 'windows') {
           if (window.go?.main?.App?.PlaySystemSound) {
-            try { window.go.main.App.PlaySystemSound('loss'); } catch (e) {}
+            try { window.go.app.App.PlaySystemSound('loss'); } catch (e) {}
           }
         } else {
           this.playCuteLoss();
@@ -112,7 +112,7 @@
       if (type === 'defeat') {
         if (mode === 'windows') {
           if (window.go?.main?.App?.PlaySystemSound) {
-            try { window.go.main.App.PlaySystemSound('defeat'); } catch (e) {}
+            try { window.go.app.App.PlaySystemSound('defeat'); } catch (e) {}
           }
         } else {
           this.playCuteDefeat();
@@ -122,7 +122,7 @@
       if (type === 'recenter') {
         if (mode === 'windows') {
           if (window.go?.main?.App?.PlaySystemSound) {
-            try { window.go.main.App.PlaySystemSound('recenter'); } catch (e) {}
+            try { window.go.app.App.PlaySystemSound('recenter'); } catch (e) {}
           }
         } else {
           this.playCuteRecenter();
@@ -132,7 +132,7 @@
       if (type === 'dsu') {
         if (mode === 'windows') {
           if (window.go?.main?.App?.PlaySystemSound) {
-            try { window.go.main.App.PlaySystemSound('dsu'); } catch (e) {}
+            try { window.go.app.App.PlaySystemSound('dsu'); } catch (e) {}
           }
         } else {
           this.playCuteDSUConnect();
@@ -143,7 +143,7 @@
       if (mode === 'windows') {
         if (window.go?.main?.App?.PlaySystemSound) {
           try {
-            window.go.main.App.PlaySystemSound(type);
+            window.go.app.App.PlaySystemSound(type);
           } catch (e) {
             console.warn('PlaySystemSound error:', e);
           }
@@ -393,7 +393,7 @@
       if (mode === 'off') return;
       if (mode === 'windows') {
         if (window.go?.main?.App?.PlaySystemSound) {
-          try { window.go.main.App.PlaySystemSound('connect'); } catch (e) {}
+          try { window.go.app.App.PlaySystemSound('connect'); } catch (e) {}
         }
       } else {
         this.playCuteConnect();

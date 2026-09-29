@@ -63,8 +63,8 @@
     async setLanguage(lang, broadcast = true) {
       try {
         let jsonStr = '';
-        if (window.go && window.go.main && window.go.main.App) {
-          jsonStr = await window.go.main.App.GetTranslations(lang);
+        if (window.go && window.go.app && window.go.app.App) {
+          jsonStr = await window.go.app.App.GetTranslations(lang);
         }
         this.dictionary = JSON.parse(jsonStr || '{}');
         this.currentLang = lang;
@@ -90,8 +90,8 @@
         }
 
         if (broadcast) {
-          if (window.go && window.go.main && window.go.main.App && window.go.main.App.SetLang) {
-            window.go.main.App.SetLang(lang);
+          if (window.go && window.go.app && window.go.app.App && window.go.app.App.SetLang) {
+            window.go.app.App.SetLang(lang);
           } else {
             fetch('http://127.0.0.1:8080/livedebug/lang?value=' + encodeURIComponent(lang), { method: 'POST' }).catch(() => {});
           }
@@ -111,9 +111,9 @@
           }
         });
       }
-      if (window.go && window.go.main && window.go.main.App && window.go.main.App.GetLang) {
+      if (window.go && window.go.app && window.go.app.App && window.go.app.App.GetLang) {
         try {
-          const backendLang = await window.go.main.App.GetLang();
+          const backendLang = await window.go.app.App.GetLang();
           if (backendLang) {
             this.currentLang = backendLang;
           }

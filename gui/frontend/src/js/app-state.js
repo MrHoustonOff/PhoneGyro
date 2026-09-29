@@ -380,7 +380,7 @@
       this._lastIsOffline = null;
 
       if (!fromBackend && window.go?.main?.App?.SetInputMode) {
-        window.go.main.App.SetInputMode(mode).catch(console.error);
+        window.go.app.App.SetInputMode(mode).catch(console.error);
       }
 
       const card = document.querySelector('.apple-card');
@@ -861,8 +861,8 @@
         if (pauseBusy) return;
         pauseBusy = true;
         try {
-          if (window.go && window.go.main && window.go.main.App) {
-            const newState = await window.go.main.App.TogglePause();
+          if (window.go && window.go.app && window.go.app.App) {
+            const newState = await window.go.app.App.TogglePause();
             this.render(newState);
           }
         } catch (err) {
@@ -934,7 +934,7 @@
       const onOpenStats = (e) => {
         if (e) e.preventDefault();
         if (window.go?.main?.App?.OpenLiveDebugWindow) {
-          window.go.main.App.OpenLiveDebugWindow();
+          window.go.app.App.OpenLiveDebugWindow();
         } else {
           window.open('http://127.0.0.1:8080/livedebug', '_blank');
         }
@@ -996,18 +996,18 @@
       }
 
       // Initial state load
-      if (window.go && window.go.main && window.go.main.App) {
-        const state = await window.go.main.App.GetState();
+      if (window.go && window.go.app && window.go.app.App) {
+        const state = await window.go.app.App.GetState();
         this.render(state);
-        if (window.go.main.App.GetInputMode) {
-          window.go.main.App.GetInputMode().then((m) => {
+        if (window.go.app.App.GetInputMode) {
+          window.go.app.App.GetInputMode().then((m) => {
             if (m && m !== AppState.inputMode) {
               AppState.setInputMode(m, true);
             }
           }).catch(() => {});
         }
-        if (window.go.main.App.GetDSUStatus) {
-          window.go.main.App.GetDSUStatus().then((dsu) => {
+        if (window.go.app.App.GetDSUStatus) {
+          window.go.app.App.GetDSUStatus().then((dsu) => {
             if (dsu) {
               AppState.updateDSU(dsu.count, dsu.clients, dsu.kicked || []);
             }

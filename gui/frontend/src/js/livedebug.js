@@ -346,7 +346,7 @@
     }
 
     if (window.go?.main?.LiveDebugApp?.SetWindowTheme) {
-      try { window.go.main.LiveDebugApp.SetWindowTheme(theme); } catch (e) {}
+      try { window.go.app.LiveDebugApp.SetWindowTheme(theme); } catch (e) {}
     }
 
     update3DTheme(theme);
@@ -1091,7 +1091,7 @@
   async function checkDeviceStatus() {
     if (window.go?.main?.LiveDebugApp?.GetFullStatus) {
       try {
-        const st = await window.go.main.LiveDebugApp.GetFullStatus();
+        const st = await window.go.app.LiveDebugApp.GetFullStatus();
         if (st) {
           if (typeof st.device_connected === 'boolean') {
             if (st.device_connected) {
@@ -1109,7 +1109,7 @@
       } catch (e) {}
     } else if (window.go?.main?.LiveDebugApp?.GetDeviceStatus) {
       try {
-        const connected = await window.go.main.LiveDebugApp.GetDeviceStatus();
+        const connected = await window.go.app.LiveDebugApp.GetDeviceStatus();
         if (typeof connected === 'boolean') {
           if (connected) {
             lastFrameTime = performance.now();
@@ -1168,7 +1168,7 @@
     fetch(`${coreBaseUrl}/livedebug/recenter`, { method: 'POST' }).catch(() => {});
 
     if (window.go?.main?.LiveDebugApp?.ResetAHRS) {
-      try { window.go.main.LiveDebugApp.ResetAHRS(); } catch (e) {}
+      try { window.go.app.LiveDebugApp.ResetAHRS(); } catch (e) {}
     }
   }
 
@@ -2221,7 +2221,7 @@
     const btnOpenFolder = document.getElementById('btn-modal-open-folder');
 
     if (window.go?.main?.LiveDebugApp?.SaveCSVFile) {
-      window.go.main.LiveDebugApp.SaveCSVFile(defaultName, csvContent)
+      window.go.app.LiveDebugApp.SaveCSVFile(defaultName, csvContent)
         .then(filePath => {
           if (filePath) {
             savedFilePath = filePath;
@@ -2283,7 +2283,7 @@
   function openSavedFolder() {
     if (!savedFilePath) return;
     if (window.go?.main?.LiveDebugApp?.OpenInFolder) {
-      window.go.main.LiveDebugApp.OpenInFolder(savedFilePath);
+      window.go.app.LiveDebugApp.OpenInFolder(savedFilePath);
     } else {
       fetch(`${coreBaseUrl}/livedebug/show-in-folder?path=${encodeURIComponent(savedFilePath)}`).catch(() => {});
     }

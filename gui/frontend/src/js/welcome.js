@@ -10,8 +10,8 @@
       this.initialized = true;
 
       document.getElementById('btn-welcome-start')?.addEventListener('click', async () => {
-        if (window.go && window.go.main && window.go.main.App && window.go.main.App.MarkFirstLaunchDone) {
-          try { await window.go.main.App.MarkFirstLaunchDone(); } catch (e) {}
+        if (window.go && window.go.app && window.go.app.App && window.go.app.App.MarkFirstLaunchDone) {
+          try { await window.go.app.App.MarkFirstLaunchDone(); } catch (e) {}
         }
         this.close();
         if (typeof SetupWizard !== 'undefined') {
@@ -20,17 +20,17 @@
       });
 
       document.getElementById('btn-welcome-skip')?.addEventListener('click', async () => {
-        if (window.go && window.go.main && window.go.main.App && window.go.main.App.MarkFirstLaunchDone) {
-          try { await window.go.main.App.MarkFirstLaunchDone(); } catch (e) {}
+        if (window.go && window.go.app && window.go.app.App && window.go.app.App.MarkFirstLaunchDone) {
+          try { await window.go.app.App.MarkFirstLaunchDone(); } catch (e) {}
         }
         this.close();
       });
     },
 
     async checkFirstLaunch() {
-      if (window.go && window.go.main && window.go.main.App && window.go.main.App.IsFirstLaunch) {
+      if (window.go && window.go.app && window.go.app.App && window.go.app.App.IsFirstLaunch) {
         try {
-          const isFirst = await window.go.main.App.IsFirstLaunch();
+          const isFirst = await window.go.app.App.IsFirstLaunch();
           if (isFirst) {
             this.open();
           }

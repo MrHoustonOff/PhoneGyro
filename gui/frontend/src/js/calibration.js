@@ -103,7 +103,7 @@
         this._resetCaptureTimer();
         this._resetCaptureUI();
         if (window.go?.main?.App) {
-          window.go.main.App.StopCapture(this.captureStep).catch(() => {});
+          window.go.app.App.StopCapture(this.captureStep).catch(() => {});
         }
       }
 
@@ -190,7 +190,7 @@
       ['cal-3d-canvas', 'cal-3d-canvas-confirm', 'cal-3d-canvas-manual'].forEach(id => Scene3D.destroy(id));
       this.currentScreen = 'slots';
       if (window.go?.main?.App) {
-        window.go.main.App.ClearPreview().catch(() => {});
+        window.go.app.App.ClearPreview().catch(() => {});
       }
     },
 
@@ -222,19 +222,19 @@
         }
         if (window.go?.main?.App) {
           if (this.builtMatrix) {
-            window.go.main.App.PreviewMatrix(this.builtMatrix)
+            window.go.app.App.PreviewMatrix(this.builtMatrix)
               .then(() => this._renderMountCard())
               .catch(() => {});
           } else {
             this._renderMountCard();
           }
-          window.go.main.App.ResetAHRS().catch(() => {});
+          window.go.app.App.ResetAHRS().catch(() => {});
         }
       } else if (screen === 'manual') {
         const s = Scene3D.mount('cal-3d-canvas-manual', { mode: 'live' });
         if (s) s.resetQuat();
         if (window.go?.main?.App) {
-          window.go.main.App.ResetAHRS().catch(() => {});
+          window.go.app.App.ResetAHRS().catch(() => {});
         }
         this._buildManualMatrix();
       } else if (screen === 'save') {
@@ -305,7 +305,7 @@
       // session for this slot. Forget it immediately so step 4 always re-earns it from
       // scratch instead of silently reusing (possibly stale/wrong) old data.
       if (window.go?.main?.App) {
-        window.go.main.App.StartAxisAlign(true).catch(() => {});
+        window.go.app.App.StartAxisAlign(true).catch(() => {});
       }
       this.showScreen('capture');
       this.updateTelemetry(AppState.lastState);
@@ -515,7 +515,7 @@
       if (speedBadge) speedBadge.style.display = 'inline-block';
 
       if (window.go?.main?.App) {
-        await window.go.main.App.StartCapture();
+        await window.go.app.App.StartCapture();
       }
 
       const totalDurationMs = cfg.durationMs || 2400;
@@ -549,7 +549,7 @@
 
       let result = { success: false, errorMsg: I18n.t('calibration.no_signal') || 'Нет соединения' };
       if (window.go?.main?.App) {
-        result = await window.go.main.App.StopCapture(this.captureStep);
+        result = await window.go.app.App.StopCapture(this.captureStep);
       }
 
       const resultIcon = document.getElementById('result-icon');
@@ -640,7 +640,7 @@
 
           let valRes = { success: true };
           if (window.go?.main?.App) {
-            valRes = await window.go.main.App.ValidateCalibration(
+            valRes = await window.go.app.App.ValidateCalibration(
               this.capturedVectors[1], // Pitch
               this.capturedVectors[2]  // Roll
             );
@@ -751,7 +751,7 @@
       if (this.axisAlignKnown) {
         let status = { known: false, pairs: 0, minPairs: 6, mapping: [] };
         if (window.go?.main?.App) {
-          try { status = await window.go.main.App.GetAxisAlignStatus(); } catch (e) {}
+          try { status = await window.go.app.App.GetAxisAlignStatus(); } catch (e) {}
         }
         this._showAxisAlignResult(true, status, /*alreadyKnown=*/true);
       }
@@ -785,7 +785,7 @@
       // Forget any prior, possibly-wrong mapping only on an explicit redo (Retry);
       // a fresh profile has nothing to forget, so this is always safe here.
       if (window.go?.main?.App) {
-        await window.go.main.App.StartAxisAlign(true);
+        await window.go.app.App.StartAxisAlign(true);
       }
 
       const startTime = Date.now();
@@ -794,7 +794,7 @@
       this.axisAlignInterval = setInterval(async () => {
         if (!window.go?.main?.App) return;
         let status;
-        try { status = await window.go.main.App.GetAxisAlignStatus(); } catch (e) { return; }
+        try { status = await window.go.app.App.GetAxisAlignStatus(); } catch (e) { return; }
         if (!this.isCapturing) return;
 
         const pct = Math.min(100, Math.round((status.pairs / Math.max(1, status.minPairs)) * 100));
@@ -978,7 +978,7 @@
         const s = Scene3D.get('cal-3d-canvas-manual');
         if (s) s.setMatrix(mat);
         if (window.go?.main?.App) {
-          window.go.main.App.PreviewMatrix(mat).catch(() => {});
+          window.go.app.App.PreviewMatrix(mat).catch(() => {});
         }
       }
     },
@@ -1170,7 +1170,7 @@
         this.axisAlignKnown = false;
         this._stopAxisAlignPoll();
         if (window.go?.main?.App) {
-          window.go.main.App.StartAxisAlign(true).catch(() => {});
+          window.go.app.App.StartAxisAlign(true).catch(() => {});
         }
       }
 
@@ -1228,9 +1228,9 @@
       const icon = this.selectedIcon || 'default';
 
       if (window.go?.main?.App) {
-        const result = await window.go.main.App.SaveProfile(slot, name, device, icon, mat);
+        const result = await window.go.app.App.SaveProfile(slot, name, device, icon, mat);
         if (result === 'ok') {
-          await window.go.main.App.SetActiveProfile(slot);
+          await window.go.app.App.SetActiveProfile(slot);
           this.close();
           const savedMsg = (I18n.t('calibration.profile_saved') || 'Профиль «{name}» успешно сохранён').replace('{name}', name);
           showToast(savedMsg);
@@ -1290,7 +1290,7 @@
         if (this.isTransitioning) return;
         if (this.captureStep === 2 && !this.builtMatrix && this.capturedVectors[1] && this.capturedVectors[2]) {
           if (window.go?.main?.App) {
-            window.go.main.App.ValidateCalibration(this.capturedVectors[1], this.capturedVectors[2]).then(valRes => {
+            window.go.app.App.ValidateCalibration(this.capturedVectors[1], this.capturedVectors[2]).then(valRes => {
               if (valRes.success) this.builtMatrix = valRes.matrix;
               this.nextStep();
             });
@@ -1364,7 +1364,7 @@
       // Recenter 3D orientation (Button, Canvas click, or Space key)
       const doRecenterConfirm = () => {
         if (window.go?.main?.App?.ResetAHRS) {
-          window.go.main.App.ResetAHRS().catch(() => {});
+          window.go.app.App.ResetAHRS().catch(() => {});
         }
         const scConfirm = Scene3D.get('cal-3d-canvas-confirm');
         if (scConfirm && scConfirm.resetQuat) scConfirm.resetQuat();
@@ -1391,9 +1391,9 @@
         try {
           let report = '';
           if (window.go?.main?.App?.CopyCalibrationReport) {
-            report = await window.go.main.App.CopyCalibrationReport();
-          } else if (window['go']?.['main']?.['App']?.['CopyCalibrationReport']) {
-            report = await window['go']['main']['App']['CopyCalibrationReport']();
+            report = await window.go.app.App.CopyCalibrationReport();
+          } else if (window['go']?.['app']?.['App']?.['CopyCalibrationReport']) {
+            report = await window['go']['app']['App']['CopyCalibrationReport']();
           }
           if (!report) report = 'No calibration report data available';
           if (navigator.clipboard && navigator.clipboard.writeText) {

@@ -295,7 +295,7 @@
 
       // Reset backend AHRS orientation
       if (window.go?.main?.App?.ResetAHRS) {
-        window.go.main.App.ResetAHRS().catch(() => {});
+        window.go.app.App.ResetAHRS().catch(() => {});
       }
 
       // Reset 3D scenes if active

@@ -58,8 +58,8 @@
       });
 
       if (broadcast) {
-        if (window.go && window.go.main && window.go.main.App && window.go.main.App.SetTheme) {
-          window.go.main.App.SetTheme(theme);
+        if (window.go && window.go.app && window.go.app.App && window.go.app.App.SetTheme) {
+          window.go.app.App.SetTheme(theme);
         } else {
           fetch('http://127.0.0.1:8080/livedebug/theme?value=' + encodeURIComponent(theme), { method: 'POST' }).catch(() => {});
         }

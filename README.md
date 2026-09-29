@@ -106,8 +106,9 @@ The compiled binaries will be placed in `gui/build/bin/`.
 ### Project Layout
 
 ```
-gui/                    Windows app (Wails): the App API the UI calls, settings,
-                        profiles, calibration, the frame pipeline, tray, USB host
+gui/                    Windows app (Wails); main.go only embeds the UI and starts it
+  internal/app/         the App API the UI calls, settings, profiles, calibration,
+                        the frame pipeline, USB host
   internal/motion/      motion math: calibration matrices, axis alignment, AHRS,
                         iOS attitude anchor, gyro bias, deadband, mount tilt
   internal/hwproto/     USB hardware protocol wire format (frame, CRC, decoder)

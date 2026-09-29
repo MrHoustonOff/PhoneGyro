@@ -719,7 +719,7 @@
       this.spawnHole();
       this.updateHud();
       if (window.go?.main?.App?.ResetAHRS) {
-        window.go.main.App.ResetAHRS().catch(() => {});
+        window.go.app.App.ResetAHRS().catch(() => {});
       }
     },
 
