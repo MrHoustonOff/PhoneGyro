@@ -532,12 +532,6 @@
         this.updateUsbStatus(state.usbConnected, state.usbPort);
       }
 
-      if (window._liveDebugWin && !window._liveDebugWin.closed && window._liveDebugWin.updateFromState) {
-        try {
-          window._liveDebugWin.updateFromState(state);
-        } catch (e) {}
-      }
-
       const viewOffline = document.getElementById('view-offline');
       const viewOnline = document.getElementById('view-online');
       const viewUsb = document.getElementById('view-usb-mode');
@@ -545,7 +539,6 @@
       const badgeStatus = document.getElementById('badge-status');
       const statusText = document.getElementById('status-text');
       const btnPause = document.getElementById('btn-pause-resume');
-      const linkLiveDebug = document.getElementById('link-live-debug');
 
       // Populate QR codes and URLs for Android and iOS Setup screens
       const imgQrAndroid = document.getElementById('img-qr-android');
@@ -590,7 +583,6 @@
             this._setDisplay(viewUsb, 'flex');
           }
         }
-        this._setDisplay(linkLiveDebug, 'none');
         this.hideRecalHint(true);
 
         if (enteringWaiting) {
@@ -657,7 +649,6 @@
             void viewOffline.offsetWidth;
             viewOffline.classList.add('view-fade-in');
           }
-          if (linkLiveDebug) linkLiveDebug.style.display = 'none';
         } else {
           if (!wizardBlocksView) {
             this.morphToView(() => {
@@ -668,7 +659,6 @@
             void viewOnline.offsetWidth;
             viewOnline.classList.add('view-fade-in');
           }
-          if (linkLiveDebug) linkLiveDebug.style.display = 'inline-flex';
         }
       }
 
@@ -707,7 +697,6 @@
           this._setDisplay(viewOffline, 'none');
           this._setDisplay(viewOnline, 'flex');
         }
-        this._setDisplay(linkLiveDebug, 'inline-flex');
 
         const deviceIconWrap = document.getElementById('device-icon-wrap');
         const deviceStatusBadge = document.getElementById('device-status-badge');
@@ -939,7 +928,6 @@
         }
       };
       document.getElementById('btn-header-stats')?.addEventListener('click', onOpenStats);
-      document.getElementById('link-live-debug')?.addEventListener('click', onOpenStats);
 
       // Listen for real-time state changes from Wails backend
       if (window.runtime && window.runtime.EventsOn) {

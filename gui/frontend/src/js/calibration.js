@@ -1358,12 +1358,6 @@
         this.startCaptureFlow(this.targetSlot);
       });
 
-      // Confirm back: returns to step 2 (Roll) in capture screen
-      document.getElementById('cal-confirm-back')?.addEventListener('click', () => {
-        this.captureStep = 2;
-        this.showScreen('capture');
-      });
-
       // Recenter 3D orientation (Button, Canvas click, or Space key)
       const doRecenterConfirm = () => {
         if (window.go?.app?.App?.ResetAHRS) {

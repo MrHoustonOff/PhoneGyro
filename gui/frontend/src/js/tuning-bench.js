@@ -91,10 +91,6 @@
       document.getElementById('btn-bench-recenter-platform')?.addEventListener('click', () => {
         PlatformGame.recenter();
       });
-      document.getElementById('btn-bench-recenter')?.addEventListener('click', () => {
-        this.recenter();
-        PlatformGame.recenter();
-      });
 
       // Window resize listener
       window.addEventListener('resize', () => {
