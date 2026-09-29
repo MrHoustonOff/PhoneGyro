@@ -102,6 +102,25 @@
       this._wakeInclinometer();
     },
 
+    // render runs 15 times a second: writing an unchanged text or display still
+    // invalidates style and layout, so these write only on change.
+    _setText(el, v) {
+      if (el && el.textContent !== v) el.textContent = v;
+    },
+    _setDisplay(el, v) {
+      if (el && el.style.display !== v) el.style.display = v;
+    },
+    _lastHideAuthor: null,
+    _applyAuthorSignature(hide) {
+      hide = !!hide;
+      if (this._lastHideAuthor === hide) return;
+      this._lastHideAuthor = hide;
+      ['author-signature', 'help-author-sig', 'setup-author-sig'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = hide ? 'none' : '';
+      });
+    },
+
     findEmptyOrActiveSlot() {
       const profiles = (this.lastState && this.lastState.profiles) || ProfileManager.profiles || [];
       for (let i = 0; i < 6; i++) {
@@ -534,23 +553,17 @@
         imgQrAndroid.src = state.qrCode;
       }
       const linkUrlAndroidText = document.getElementById('link-url-android-text');
-      if (linkUrlAndroidText && state.gamepadUrl) {
-        linkUrlAndroidText.textContent = state.gamepadUrl;
-      }
+      if (state.gamepadUrl) this._setText(linkUrlAndroidText, state.gamepadUrl);
 
       const imgQrSetup = document.getElementById('img-qr-setup');
       if (state.setupQrCode && imgQrSetup && imgQrSetup.src !== state.setupQrCode) {
         imgQrSetup.src = state.setupQrCode;
       }
       const linkUrlSetupText = document.getElementById('link-url-setup-text');
-      if (linkUrlSetupText && state.setupUrl) {
-        linkUrlSetupText.textContent = state.setupUrl;
-      }
+      if (state.setupUrl) this._setText(linkUrlSetupText, state.setupUrl);
 
       const isWizardOpen = !!(SetupWizard?.isOpen || HelpManager?.isOpen || SettingsManager?.isOpen || WelcomeManager?.isOpen || CalibrationWizard?.isOpen);
-      if (cardModeHeader) {
-        cardModeHeader.style.display = isWizardOpen ? 'none' : 'flex';
-      }
+      this._setDisplay(cardModeHeader, isWizardOpen ? 'none' : 'flex');
 
       // Mode Branch: Stationary USB Controller Mode, before a device is found.
       // Once state.usbConnected flips true we deliberately fall through to the
@@ -560,7 +573,7 @@
       // on their own, so reusing that view is both correct and free.
       if (this.inputMode === 'usb' && !state.usbConnected) {
         const enteringWaiting = this._lastStatus !== 'waiting_usb';
-        if (viewOffline) viewOffline.style.display = 'none';
+        this._setDisplay(viewOffline, 'none');
         if (!isWizardOpen) {
           if (enteringWaiting) {
             this.morphToView(() => {
@@ -573,11 +586,11 @@
               viewUsb.classList.add('view-fade-in');
             }
           } else {
-            if (viewOnline) viewOnline.style.display = 'none';
-            if (viewUsb) viewUsb.style.display = 'flex';
+            this._setDisplay(viewOnline, 'none');
+            this._setDisplay(viewUsb, 'flex');
           }
         }
-        if (linkLiveDebug) linkLiveDebug.style.display = 'none';
+        this._setDisplay(linkLiveDebug, 'none');
         this.hideRecalHint(true);
 
         if (enteringWaiting) {
@@ -589,19 +602,7 @@
           }
         }
 
-        // Author signature visibility
-        const authorSig = document.getElementById('author-signature');
-        const helpAuthorSig = document.getElementById('help-author-sig');
-        const setupAuthorSig = document.getElementById('setup-author-sig');
-        if (state.hideAuthor) {
-          if (authorSig) authorSig.style.display = 'none';
-          if (helpAuthorSig) helpAuthorSig.style.display = 'none';
-          if (setupAuthorSig) setupAuthorSig.style.display = 'none';
-        } else {
-          if (authorSig) authorSig.style.display = '';
-          if (helpAuthorSig) helpAuthorSig.style.display = '';
-          if (setupAuthorSig) setupAuthorSig.style.display = '';
-        }
+        this._applyAuthorSignature(state.hideAuthor);
         return;
       }
 
@@ -610,12 +611,12 @@
       // (state.status flips to "online"). Keep showing the USB waiting view
       // through that gap instead of ever flashing the phone QR screen below.
       if (this.inputMode === 'usb' && state.status === 'offline') {
-        if (viewOnline) viewOnline.style.display = 'none';
-        if (viewOffline) viewOffline.style.display = 'none';
-        if (viewUsb && !isWizardOpen) viewUsb.style.display = 'flex';
+        this._setDisplay(viewOnline, 'none');
+        this._setDisplay(viewOffline, 'none');
+        if (!isWizardOpen) this._setDisplay(viewUsb, 'flex');
         return;
       }
-      if (viewUsb) viewUsb.style.display = 'none';
+      this._setDisplay(viewUsb, 'none');
 
       // Status capsule: only mutate DOM when status actually changes
       if (this._lastStatus !== state.status) {
@@ -698,16 +699,15 @@
 
         if (this.currentUrl !== (state.gamepadUrl || '')) {
           this.currentUrl = state.gamepadUrl || '';
-          const linkUrlText = document.getElementById('link-url-text');
-          if (linkUrlText) linkUrlText.textContent = this.currentUrl || '...';
+          this._setText(document.getElementById('link-url-text'), this.currentUrl || '...');
         }
       } else {
         // State 2 & 3: Online or Paused
         if (!SetupWizard?.isOpen && !HelpManager?.isOpen && !SettingsManager?.isOpen && !WelcomeManager?.isOpen) {
-          viewOffline.style.display = 'none';
-          viewOnline.style.display = 'flex';
+          this._setDisplay(viewOffline, 'none');
+          this._setDisplay(viewOnline, 'flex');
         }
-        if (linkLiveDebug) linkLiveDebug.style.display = 'inline-flex';
+        this._setDisplay(linkLiveDebug, 'inline-flex');
 
         const deviceIconWrap = document.getElementById('device-icon-wrap');
         const deviceStatusBadge = document.getElementById('device-status-badge');
@@ -724,11 +724,11 @@
           const knownName = (state.deviceName && state.deviceName !== 'Controller')
             ? state.deviceName
             : (I18n.t('usb_mode.connected_name') || 'USB-контроллер');
-          deviceNameEl.textContent = knownName + portLabel;
+          this._setText(deviceNameEl, knownName + portLabel);
         } else {
-          deviceNameEl.textContent = state.deviceName || 'Controller';
+          this._setText(deviceNameEl, state.deviceName || 'Controller');
         }
-        document.getElementById('device-hz').textContent = `${Math.round(state.hz || 60)} Hz`;
+        this._setText(document.getElementById('device-hz'), `${Math.round(state.hz || 60)} Hz`);
 
         // Ping/network-quality pills are meaningless over a wired USB link --
         // repurpose them to show the port and a plain "direct connection"
@@ -737,28 +737,19 @@
         const netSpark = document.getElementById('main-net-spark-canvas');
         const networkHealthEl = document.getElementById('network-health');
         if (isUsbSource) {
-          if (pingTxt) pingTxt.textContent = state.usbPort || 'USB';
-          else {
-            const devPing = document.getElementById('device-ping');
-            if (devPing) devPing.textContent = state.usbPort || 'USB';
-          }
-          if (netSpark) netSpark.style.display = 'none';
+          this._setText(pingTxt || document.getElementById('device-ping'), state.usbPort || 'USB');
+          this._setDisplay(netSpark, 'none');
           if (networkHealthEl) {
-            networkHealthEl.removeAttribute('data-i18n');
-            networkHealthEl.textContent = I18n.t('usb_mode.direct_connection') || 'Прямое USB-подключение';
+            if (networkHealthEl.hasAttribute('data-i18n')) networkHealthEl.removeAttribute('data-i18n');
+            this._setText(networkHealthEl, I18n.t('usb_mode.direct_connection') || 'Прямое USB-подключение');
           }
         } else {
           // Real round-trip time of the phone link (server PING/PONG, 1/s);
           // -1 until the first answer arrives.
           const pingVal = (typeof state.pingMs === 'number') ? state.pingMs : -1;
           const pingLabel = pingVal >= 0 ? `${pingVal} ms` : '—';
-          if (pingTxt) {
-            pingTxt.textContent = pingLabel;
-          } else {
-            const devPing = document.getElementById('device-ping');
-            if (devPing) devPing.textContent = pingLabel;
-          }
-          if (netSpark) netSpark.style.display = '';
+          this._setText(pingTxt || document.getElementById('device-ping'), pingLabel);
+          this._setDisplay(netSpark, '');
           const qualityKey = pingVal < 0 ? 'calibration.network_quality_measuring'
             : pingVal < 40 ? 'calibration.network_quality_optimal'
             : pingVal < 100 ? 'calibration.network_quality_fair'
@@ -767,15 +758,12 @@
             networkHealthEl.setAttribute('data-i18n', qualityKey);
             networkHealthEl.innerHTML = renderMarkdown(I18n.t(qualityKey));
           }
-          const benchPing = document.getElementById('bench-net-ping');
-          if (benchPing) {
-            benchPing.textContent = pingLabel;
-          }
+          this._setText(document.getElementById('bench-net-ping'), pingLabel);
           if (typeof NetSparkline !== 'undefined') {
             NetSparkline.push(pingVal);
           }
         }
-        document.getElementById('device-time').textContent = state.connectedTime || '00:00:00';
+        this._setText(document.getElementById('device-time'), state.connectedTime || '00:00:00');
 
         // Update target Euler angles (P, R, Y) for continuous RAF lerp smoothing loop
         if (state.isPaused) {
@@ -858,19 +846,7 @@
       const manualScene = Scene3D.get('cal-3d-canvas-manual');
       if (manualScene) manualScene.updateFromState(state);
 
-      // Author signature visibility
-      const authorSig = document.getElementById('author-signature');
-      const helpAuthorSig = document.getElementById('help-author-sig');
-      const setupAuthorSig = document.getElementById('setup-author-sig');
-      if (state.hideAuthor) {
-        if (authorSig) authorSig.style.display = 'none';
-        if (helpAuthorSig) helpAuthorSig.style.display = 'none';
-        if (setupAuthorSig) setupAuthorSig.style.display = 'none';
-      } else {
-        if (authorSig) authorSig.style.display = '';
-        if (helpAuthorSig) helpAuthorSig.style.display = '';
-        if (setupAuthorSig) setupAuthorSig.style.display = '';
-      }
+      this._applyAuthorSignature(state.hideAuthor);
     },
 
     async init() {
