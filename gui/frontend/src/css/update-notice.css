@@ -1,0 +1,70 @@
+/* Update notice (gui/internal/app/update_check.go): the close dialog's sheet
+   (dialogs.css .apple-close-*) with left-aligned steps, like the Cemu notice. */
+#update-modal.apple-dialog-overlay {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(var(--palette-black-rgb), 0.45);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#update-modal .update-card {
+  width: min(420px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#update-modal.visible .update-card {
+  transform: scale(1) translateY(0);
+}
+
+.update-body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-sans);
+  font-size: 12.8px;
+  line-height: 1.48;
+  color: var(--text-secondary);
+  text-align: left;
+  width: 100%;
+  margin: 8px 0 14px 0;
+}
+
+.update-body p {
+  margin: 0 0 9px 0;
+}
+
+.update-body p:last-child {
+  margin-bottom: 0;
+}
+
+.update-versions {
+  text-align: center;
+}
+
+.update-steps {
+  margin: 0 0 10px 0;
+  padding: 8px 11px 8px 30px;
+  border-radius: 10px;
+  background: rgba(var(--palette-blue-dark-rgb), 0.08);
+  border: 1px solid rgba(var(--palette-blue-dark-rgb), 0.24);
+  color: var(--text);
+}
+
+.update-steps li + li {
+  margin-top: 4px;
+}
+
+.update-body .md-link {
+  color: var(--palette-blue-dark);
+  text-decoration: none;
+}
+
+.update-body .md-link:hover {
+  text-decoration: underline;
+}
+
+[data-theme="light"] .update-body .md-link {
+  color: var(--palette-blue);
+}
+
+#update-modal .apple-close-actions {
+  margin-top: 4px;
+}

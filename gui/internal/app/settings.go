@@ -83,6 +83,8 @@ func (a *App) applySettings(s AppSettings) {
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	a.cemuNotice.hidden.Store(s.CemuNoticeHidden)
+	a.update.enabled.Store(s.CheckUpdates)
+	a.update.setSkipped(s.SkippedUpdate)
 	a.soundMode = s.SoundMode
 	a.soundVolume.Store(int32(s.SoundVolume))
 	a.setSoundVolumes(s.SoundVolumes)
@@ -161,6 +163,8 @@ func (a *App) settingsSnapshot() AppSettings {
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
 		CemuDriftGuard:        a.cemuDriftGuard.Load(),
 		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
+		CheckUpdates:          a.update.enabled.Load(),
+		SkippedUpdate:         a.update.getSkipped(),
 		SoundMode:             soundMode,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
@@ -463,7 +467,10 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	// CemuNoticeHidden is not a settings-window field: only the notice's own
-	// "don't show again" changes it (CloseCemuNotice).
+	// "don't show again" changes it (CloseCemuNotice). Same for SkippedUpdate.
+	if !a.update.enabled.Swap(s.CheckUpdates) && s.CheckUpdates {
+		go a.checkForUpdate() // just switched on: check now, not at the next start
+	}
 	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
 		a.SetCloseAction(s.CloseAction)

@@ -175,6 +175,16 @@
     "delete_profile_tip": "Delete profile",
     "profile_deleted": "Profile “{name}” deleted"
   },
+  "update_notice": {
+    "title": "PhoneGyro {version} is out",
+    "versions": "You have version {current}.",
+    "step_download": "Download the new PhoneGyro.exe.",
+    "step_run": "From now on run only the new file. You can delete the old one; your settings and profiles stay.",
+    "release_page": "What's new: release page",
+    "skip": "Don't remind me about this version",
+    "later": "Later",
+    "download": "Download"
+  },
   "cemu_notice": {
     "title": "Cemu Detected",
     "bug": "Cemu has a bug: it mistakes slow motion for gyro bias, so the aim slowly drifts away, even while the controller is still.",
@@ -374,6 +384,8 @@
     "data_dir": "Data folder",
     "data_dir_tip": "Where PhoneGyro keeps its settings, calibration profiles (USB ones in the usb subfolder), the iPhone certificate (ca), logs and window data. It cannot be moved. To reset or remove the app completely, close it and delete this folder.",
     "data_dir_open": "Open folder",
+    "check_updates": "Check for updates at startup",
+    "check_updates_tip": "Once per start PhoneGyro asks GitHub for the latest version number and, if a new one is out, shows a window with a download link. Nothing about you is sent. This is the only thing the app does over the internet: while it is off, PhoneGyro works fully offline.",
     "dsu_mac_regen_confirm": "Regenerate MAC address? Existing controller bindings in Cemu, Yuzu and other emulators will need to be re-selected.",
     "dsu_mac_regen_success": "MAC address regenerated successfully",
     "http_port": "HTTP Port (Pairing)",

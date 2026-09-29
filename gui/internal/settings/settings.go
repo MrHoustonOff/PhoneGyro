@@ -51,6 +51,8 @@ type Settings struct {
 	SilenceDisconnect     bool           `json:"silenceDisconnect"`
 	CemuDriftGuard        bool           `json:"cemuDriftGuard"`
 	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
+	CheckUpdates          bool           `json:"checkUpdates"`            // off by default: the only request PhoneGyro makes to the internet
+	SkippedUpdate         string         `json:"skippedUpdate,omitempty"` // "don't remind me about this version"
 	SoundMode             string         `json:"soundMode"`
 	SoundVolume           int            `json:"soundVolume"`
 	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -185,6 +187,8 @@ type stored struct {
 	SilenceDisconnect     *bool          `json:"silenceDisconnect"`
 	CemuDriftGuard        *bool          `json:"cemuDriftGuard"`
 	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
+	CheckUpdates          bool           `json:"checkUpdates"`
+	SkippedUpdate         string         `json:"skippedUpdate,omitempty"`
 	SoundMode             string         `json:"soundMode"`
 	SoundVolume           *int           `json:"soundVolume"`
 	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
@@ -252,6 +256,8 @@ func Load(dir string) (s Settings, found bool) {
 		s.CemuDriftGuard = *r.CemuDriftGuard
 	}
 	s.CemuNoticeHidden = r.CemuNoticeHidden
+	s.CheckUpdates = r.CheckUpdates
+	s.SkippedUpdate = strings.TrimSpace(r.SkippedUpdate)
 	if r.SoundMode != "" {
 		s.SoundMode = r.SoundMode
 	}

@@ -22,6 +22,7 @@
       disconnectAlert: true,
       silenceDisconnect: true,
       cemuDriftGuard: true,
+      checkUpdates: false,
       closeAction: 'ask',
       soundMode: 'cute',
       soundVolume: 1,
@@ -317,7 +318,7 @@
       });
 
       // Checkbox toggles
-      ['setting-stillness-hint', 'setting-disconnect-alert', 'setting-silence-disconnect', 'setting-cemu-drift-guard'].forEach(id => {
+      ['setting-stillness-hint', 'setting-disconnect-alert', 'setting-silence-disconnect', 'setting-cemu-drift-guard', 'setting-check-updates'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
           this.autoSave(true);
         });
@@ -833,6 +834,11 @@
         cemuGuardCheckbox.checked = (s.cemuDriftGuard !== false);
       }
 
+      const checkUpdatesCheckbox = document.getElementById('setting-check-updates');
+      if (checkUpdatesCheckbox) {
+        checkUpdatesCheckbox.checked = !!s.checkUpdates;
+      }
+
       const closeActionSelect = document.getElementById('setting-close-action');
       if (closeActionSelect) {
         closeActionSelect.value = s.closeAction || (s.minimizeToTray ? 'minimize' : 'ask');
@@ -979,6 +985,7 @@
       // 10. Silence Disconnect
       setModified('silenceDisconnect', !!silenceCheckbox?.checked !== this.DEFAULTS.silenceDisconnect);
       setModified('cemuDriftGuard', !!document.getElementById('setting-cemu-drift-guard')?.checked !== this.DEFAULTS.cemuDriftGuard);
+      setModified('checkUpdates', !!document.getElementById('setting-check-updates')?.checked !== this.DEFAULTS.checkUpdates);
 
       // 11. Close Action
       setModified('closeAction', (closeActionSelect?.value || 'ask') !== this.DEFAULTS.closeAction);
@@ -1091,6 +1098,7 @@
         disconnectAlert: disconnectAlert,
         silenceDisconnect: silenceDisconnect,
         cemuDriftGuard: cemuDriftGuard,
+        checkUpdates: !!document.getElementById('setting-check-updates')?.checked,
         closeAction: closeAction,
         minimizeToTray: closeAction === 'minimize',
         soundMode: soundMode,
@@ -1193,6 +1201,11 @@
       const cemuGuardCheckbox = document.getElementById('setting-cemu-drift-guard');
       if (cemuGuardCheckbox) {
         cemuGuardCheckbox.checked = true;
+      }
+
+      const checkUpdatesReset = document.getElementById('setting-check-updates');
+      if (checkUpdatesReset) {
+        checkUpdatesReset.checked = false;
       }
 
       const closeActionSelectReset = document.getElementById('setting-close-action');

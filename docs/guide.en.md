@@ -99,7 +99,7 @@ iOS setup is explained in step-by-step detail **directly inside the app** on PC 
 > **Technical Fact:**  
 > Modern mobile web browsers (especially Safari on iOS and Chrome on Android) strictly **block gyroscope and accelerometer sensor APIs over insecure plain `http://` connections** for security reasons.
 > 
-> Buying an official public TLS certificate for a private home LAN makes no technical or financial sense. This application is **completely local and runs 100% offline**.
+> Buying an official public TLS certificate for a private home LAN makes no technical or financial sense. This application is **completely local and runs 100% offline**. The only exception is the optional update check (Settings → "Check for updates at startup"), which is off by default.
 > 
 > You generate a local root certificate (for iPhone) or explicitly trust **YOUR OWN LOCAL IP ADDRESS** (for Android). This is completely safe, keeps everything local without third-party servers, and grants sensor access. **Thanks to this solution, you can turn literally any smartphone into a motion controller!**
 
@@ -340,6 +340,8 @@ Everything PhoneGyro saves is in one folder, `%APPDATA%\PhoneGyro`:
 * the iPhone certificate (`ca`);
 * logs (`logs`) — useful when reporting a problem;
 * the app window's own data (`WebView2_*`).
+
+Next to it is "Check for updates at startup" (off by default): when on, PhoneGyro asks GitHub for the latest version number once per start and, if a new one is out, shows a window with a download link. To update, download the new `PhoneGyro.exe` and run that from now on; you can delete the old file, your settings and profiles stay in the data folder.
 
 The path and an "Open folder" button are in **Settings → Behavior & notifications → Data folder**. The folder cannot be changed.
 

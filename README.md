@@ -71,7 +71,7 @@ Click the **Settings** button in the header to access advanced options:
 
 ## Security, Antivirus & Transparency
 
-PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections whatsoever — all communication is strictly between your phone and your PC over your local home Wi-Fi.
+PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections by default — all communication is strictly between your phone and your PC over your local home Wi-Fi. The only exception is the optional "Check for updates at startup" setting (off by default): when you turn it on, PhoneGyro asks GitHub for the latest release number once per start and sends nothing else.
 
 ### Antivirus False Positives Notice
 Independent open-source developers rarely purchase proprietary EV (Extended Validation) code signing certificates due to exorbitant recurring costs ($400+/year). Because of this, automated machine-learning heuristics in certain antivirus software (e.g., Microsoft Defender generic `!ml` tags) might flag freshly compiled binaries as unfamiliar.

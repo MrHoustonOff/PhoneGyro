@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="css/dashboard.css">
   <link rel="stylesheet" href="css/dialogs.css">
   <link rel="stylesheet" href="css/cemu-notice.css">
+  <link rel="stylesheet" href="css/update-notice.css">
   <link rel="stylesheet" href="css/profiles.css">
   <link rel="stylesheet" href="css/calibration.css">
   <link rel="stylesheet" href="css/navigation.css">
@@ -1416,6 +1417,28 @@
 
                     </div>
 
+                    <!-- Update check: off by default, the only request to the internet (update_check.go) -->
+                    <div class="setting-row" data-setting-key="checkUpdates">
+                      <div class="setting-info">
+                        <div class="setting-label-row">
+                          <span class="setting-label" data-i18n="settings_modal.check_updates">Проверять обновления при запуске</span>
+                          <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.check_updates_tip" aria-label="Info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="setting-control">
+                        <label class="apple-toggle">
+                          <input type="checkbox" id="setting-check-updates">
+                          <span class="apple-toggle-slider"></span>
+                        </label>
+                      </div>
+                    </div>
+
                     <!-- Data folder: where settings, profiles, certificates and logs live -->
                     <div class="setting-row" data-setting-key="dataDir">
                       <div class="setting-info">
@@ -1948,6 +1971,46 @@
 
       <div class="apple-close-actions">
         <button type="button" class="apple-close-btn apple-close-btn-minimize" id="cemu-notice-close" data-i18n="cemu_notice.close">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update notice (gui/internal/app/update_check.go) -->
+  <div hidden class="apple-dialog-overlay" id="update-modal" aria-modal="true" role="dialog">
+    <div class="apple-close-card update-card">
+      <div class="apple-close-icon-wrap">
+        <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Arrow down into a tray: download -->
+          <path d="M14 4v13"></path>
+          <polyline points="8.5 11.5 14 17 19.5 11.5"></polyline>
+          <path d="M5 19v3.5h18V19"></path>
+        </svg>
+      </div>
+      <div class="apple-close-title" id="update-title">Вышла новая версия</div>
+      <div class="update-body">
+        <p class="update-versions" id="update-versions"></p>
+        <ol class="update-steps">
+          <li data-i18n="update_notice.step_download">Скачайте новый PhoneGyro.exe.</li>
+          <li data-i18n="update_notice.step_run">Запускайте теперь только его. Старый файл можно удалить — настройки и профили сохранятся.</li>
+        </ol>
+        <p><a class="md-link" id="update-release-link" href="#" data-i18n="update_notice.release_page">Что нового — страница релиза</a></p>
+      </div>
+
+      <label class="apple-close-remember-row" for="update-skip">
+        <span class="apple-close-checkbox-custom">
+          <input type="checkbox" id="update-skip" class="apple-close-checkbox-native">
+          <span class="apple-close-checkbox-box">
+            <svg viewBox="0 0 12 10" width="11" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="1.5 5 4.5 8 10.5 1.5"></polyline>
+            </svg>
+          </span>
+        </span>
+        <span class="apple-close-remember-text" data-i18n="update_notice.skip">Не напоминать об этой версии</span>
+      </label>
+
+      <div class="apple-close-actions">
+        <button type="button" class="apple-close-btn apple-close-btn-cancel" id="update-later" data-i18n="update_notice.later">Позже</button>
+        <button type="button" class="apple-close-btn apple-close-btn-minimize" id="update-download" data-i18n="update_notice.download">Скачать</button>
       </div>
     </div>
   </div>
@@ -2528,6 +2591,7 @@
   <script src="js/confirm.js"></script>
   <script src="js/close-dialog.js"></script>
   <script src="js/cemu-notice.js"></script>
+  <script src="js/update-notice.js"></script>
   <script src="js/profile-delete-dialog.js"></script>
   <script src="js/apple-select.js"></script>
   <script src="js/copy-chip.js"></script>
