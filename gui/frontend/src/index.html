@@ -196,11 +196,14 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-btn-icon:hover{background:var(--surface-hover);color:var(--ink)}
 .pg-btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-/* Segmented control inside island */
-.pg-seg{display:inline-flex;align-items:center;gap:2px;height:32px;padding:2px;border-radius:var(--radius-pill);background:var(--surface-inset);box-shadow:var(--shadow-inset)}
-.pg-seg__btn{display:inline-flex;align-items:center;justify-content:center;height:26px;padding:0 10px;border:0;border-radius:var(--radius-pill);background:transparent;color:var(--ink-2);font:600 12px/1 var(--font-mono);cursor:pointer;transition:background .15s,color .15s,box-shadow .15s}
+/* Segmented controls */
+.pg-seg{display:inline-flex;align-items:center;gap:2px;height:36px;padding:3px;border-radius:var(--radius-md);background:var(--surface-inset);box-shadow:var(--shadow-inset)}
+.pg-seg__btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 var(--space-3);border:0;border-radius:var(--radius-sm);background:transparent;color:var(--ink-2);font-family:var(--font-sans);font-size:13px;font-weight:600;line-height:1;cursor:pointer;white-space:nowrap;transition:background .15s,color .15s}
 .pg-seg__btn:hover{color:var(--ink)}
-.pg-seg__btn.is-active{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-key),0 0 0 1px var(--line)}
+.pg-seg__btn.is-active,.pg-seg__btn[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-key),0 0 0 1px var(--line)}
+.pg-seg__btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pg-island .pg-seg{height:32px;padding:2px;border-radius:var(--radius-pill)}
+.pg-island .pg-seg__btn{height:26px;padding:0 10px;font:600 12px/1 var(--font-mono);border-radius:var(--radius-pill)}
 
 /* Status capsule */
 .pg-status{display:inline-flex;align-items:center;gap:var(--space-2);height:32px;padding:0 10px 0 6px;border:0;background:transparent;font:400 12px/1 var(--font-mono);letter-spacing:.02em;text-transform:lowercase;color:var(--ink)}
@@ -213,9 +216,13 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 @keyframes pg-ping{0%{transform:scale(.7);opacity:.7}100%{transform:scale(1.7);opacity:0}}
 
 /* Badges */
-.pg-badge{display:inline-flex;align-items:center;gap:var(--space-1);height:16px;padding:0 6px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-inset);color:var(--ink-2);font:600 10px/1 var(--font-mono);letter-spacing:.02em;white-space:nowrap}
+.pg-badge{display:inline-flex;align-items:center;gap:var(--space-1);height:20px;padding:0 8px;border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-inset);color:var(--ink-2);font:600 11px/1 var(--font-mono);letter-spacing:.02em;white-space:nowrap}
 .pg-badge--ok{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface);border-color:var(--accent-line);color:var(--accent-text)}
 .pg-badge--warn{background:linear-gradient(var(--warn-soft),var(--warn-soft)),var(--surface);border-color:var(--warn-line);color:var(--warn-text)}
+.pg-badge--danger{background:linear-gradient(var(--danger-soft),var(--danger-soft)),var(--surface);border-color:var(--danger-line);color:var(--danger-text)}
+.pg-badge--info{background:linear-gradient(var(--info-soft),var(--info-soft)),var(--surface);border-color:var(--info-line);color:var(--info-text)}
+.pg-badge--dot::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pg-badge--sm{height:16px;padding:0 6px;font-size:10px}
 
 /* Repo link in footer */
 .pg-f-repo{text-decoration:none;cursor:pointer;transition:background .15s,border-color .15s,transform .12s}
@@ -230,7 +237,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-shell__body{position:absolute;inset:0;padding:calc(var(--pg-tb) + var(--pg-hh)) 0 var(--pg-fh);box-sizing:border-box;overflow-y:auto;overflow-x:hidden}
 
 /* ---- Central connection view and cards ---- */
-.display-lg{font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:800;letter-spacing:-0.005em}
+.display-lg{font-family:var(--font-display);font-size:28px;line-height:30px;font-weight:800;letter-spacing:-0.005em;text-align:center}
 .pg-card{background:var(--surface) var(--tex-grain);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-4);position:relative}
 .pg-card--hero{border-radius:var(--radius-xl);padding:var(--space-6);overflow:hidden}
 .pg-rings-corner::after{content:"";position:absolute;right:-70px;top:-70px;width:220px;height:220px;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(circle at center,transparent 0 14px,var(--accent-soft) 14px 18px);-webkit-mask:radial-gradient(circle at center,#000 0,transparent 70%);mask:radial-gradient(circle at center,#000 0,transparent 70%)}
@@ -249,21 +256,21 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-btn--info{background:var(--info);border-color:transparent;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.18)}
 .pg-btn--info:hover{filter:brightness(1.08);background:var(--info)}
 :root[data-theme="dark"] .pg-btn--info{color:#0b0b0b;text-shadow:none}
-.pg-btn--lg{min-height:44px;padding:0 var(--space-6);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+.pg-btn--lg{min-height:46px;padding:0 var(--space-6);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
 .pg-btn--sm{min-height:28px;padding:0 var(--space-3);font-size:12px;line-height:16px;border-radius:var(--radius-sm)}
 .pg-btn--block{display:flex;width:100%}
 
 /* ---- Page container ---- */
-.pg-page{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:6px 16px 20px;gap:12px}
+.pg-page{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:10px 16px 20px;gap:14px}
 .pg-page--center{align-items:center}
-.pg-conn{width:100%;max-width:560px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 32px;margin:0 auto}
+.pg-conn{width:100%;max-width:600px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:12px;padding:22px 36px}
 .pg-conn>*{max-width:100%;min-width:0}
 
 /* ---- QR Code & URL ---- */
 .pg-qr{display:inline-flex;padding:var(--space-4);border-radius:var(--radius-xl);background:#ffffff;border:1px solid var(--line);box-shadow:var(--shadow-card)}
 .pg-qr img,.pg-qr svg{display:block;image-rendering:pixelated}
 .pg-url{display:inline-flex;align-items:center;gap:var(--space-3);height:44px;padding:0 6px 0 var(--space-4);border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-inset);box-shadow:var(--shadow-inset);max-width:100%}
-.pg-url__text{font:600 14px/1 var(--font-mono);letter-spacing:.01em;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-url__text{font:600 15px/1 var(--font-mono);letter-spacing:.01em;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pg-url svg{width:16px;height:16px;stroke:var(--ink-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 
 /* ---- Notice ---- */
@@ -274,7 +281,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-notice--ok{--nb:var(--accent-soft);border-color:var(--accent-line)}.pg-notice--ok::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .pg-notice b{font-weight:600}
 .pg-notice__sub{display:block;color:var(--ink-2);font-size:12px;margin-top:1px}
-.pg-notice__row{display:flex;flex:1;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.pg-notice__row{display:flex;flex:1;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap}
 .pg-code{display:inline-block;font:600 .88em/1.35 var(--font-mono);padding:1px 6px;border-radius:var(--radius-sm);background:var(--surface-inset);border:1px solid var(--line);color:var(--ink)}
 
 /* ---- USB controller layout ---- */
@@ -413,7 +420,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
   <main class="pg-shell__body">
     <div class="pg-page pg-page--center">
       <!-- Mode segmented switcher -->
-      <div class="pg-seg" id="seg-mode" role="radiogroup" aria-label="Input Mode" style="margin-top:2px;margin-bottom:2px">
+      <div class="pg-seg" id="seg-mode" role="radiogroup" aria-label="Input Mode">
         <button class="pg-seg__btn is-active" id="seg-mode-phone" type="button" role="radio" aria-checked="true">
           <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
           <span data-i18n="conn.mode.phone">Смартфон</span>
@@ -428,7 +435,14 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
       <section class="pg-card pg-card--hero pg-rings-corner pg-conn" id="view-smartphone">
         <div class="display-lg" data-i18n="conn.scan">Отсканируйте камерой телефона</div>
         <div class="pg-qr" id="conn-qr-wrap">
-          <img id="conn-qr-img" width="176" height="176" alt="QR Code" src="" style="display:block; image-rendering:pixelated;" />
+          <img id="conn-qr-img" width="176" height="176" alt="" src="" style="display:none; image-rendering:pixelated;" />
+          <div id="conn-qr-placeholder" style="width:176px;height:176px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#ffffff;border-radius:var(--radius-lg)">
+            <svg class="pg-mark" viewBox="0 0 512 512" style="width:54px;height:54px;opacity:0.35" aria-hidden="true">
+              <path class="o" d="M60 270A196 66 0 0 1 452 270" transform="rotate(-14 256 270)"/>
+              <g transform="rotate(20 256 256)"><rect class="p" x="180" y="92" width="152" height="328" rx="38"/><path class="p" d="M230 134h52"/></g>
+              <path class="o" d="M452 270A196 66 0 0 1 60 270" transform="rotate(-14 256 270)"/>
+            </svg>
+          </div>
         </div>
         <div class="pg-url">
           <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
@@ -733,6 +747,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
       renderState(lastState);
     }
   };
+  applyLang('ru');
 
   const setLang = (lang) => {
     applyLang(lang);
@@ -821,7 +836,11 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
       if (badge) {
         const ch = (v.channel || 'dev').toUpperCase();
         badge.textContent = ch;
-        badge.className = 'pg-badge ' + (ch === 'RELEASE' ? 'pg-badge--ok' : 'pg-badge--warn');
+        badge.className = 'pg-badge pg-badge--sm ' + (ch === 'RELEASE' ? 'pg-badge--ok' : 'pg-badge--warn');
+      }
+    }).catch(() => {});
+  }
+
   // ── 7. Central Connection Workspace & USB Controller ─────
   const segModePhone = document.getElementById('seg-mode-phone');
   const segModeUsb = document.getElementById('seg-mode-usb');
@@ -946,8 +965,11 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     if (st.status) setStatus(st.status);
 
     // 1. QR Code & Gamepad URL
-    if (st.qrCode && connQrImg && connQrImg.src !== st.qrCode) {
-      connQrImg.src = st.qrCode;
+    if (st.qrCode && connQrImg) {
+      if (connQrImg.src !== st.qrCode) connQrImg.src = st.qrCode;
+      connQrImg.style.display = 'block';
+      const ph = document.getElementById('conn-qr-placeholder');
+      if (ph) ph.style.display = 'none';
     }
     if (st.gamepadUrl && connUrlText) {
       connUrlText.textContent = st.gamepadUrl;
