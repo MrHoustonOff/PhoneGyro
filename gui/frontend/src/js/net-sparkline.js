@@ -67,15 +67,15 @@
       const startX = w - pad - (n - 1) * dx;
 
       const lastPing = this.history[n - 1];
-      let strokeColor = '#30D158'; // Apple Green
-      let fillColor = 'rgba(48, 209, 88, 0.22)';
+      let strokeColor = CssVars.get('--palette-green-dark'); // Apple Green
+      let fillColor = CssVars.rgba('--palette-green-dark', 0.22);
       if (lastPing > 35) {
-        strokeColor = '#FF9F0A'; // Apple Orange
-        fillColor = 'rgba(255, 159, 10, 0.22)';
+        strokeColor = CssVars.get('--palette-orange-dark'); // Apple Orange
+        fillColor = CssVars.rgba('--palette-orange-dark', 0.22);
       }
       if (lastPing > 75) {
-        strokeColor = '#FF453A'; // Apple Red
-        fillColor = 'rgba(255, 69, 58, 0.22)';
+        strokeColor = CssVars.get('--palette-red-dark'); // Apple Red
+        fillColor = CssVars.rgba('--palette-red-dark', 0.22);
       }
 
       ctx.beginPath();
@@ -99,7 +99,7 @@
       ctx.closePath();
       const grad = ctx.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, fillColor);
-      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      grad.addColorStop(1, CssVars.rgba('--palette-black', 0));
       ctx.fillStyle = grad;
       ctx.fill();
 

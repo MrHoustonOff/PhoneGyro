@@ -55,6 +55,16 @@
   --palette-cyan-pure: #00FFFF; /* pure cyan */
   --palette-teal: #30B0C7; /* systemTeal */
   --palette-violet: #9C88FF; /* violet */
+  --palette-indigo-dark: #5E5CE6; /* systemIndigo, dark */
+  --palette-blue-strong: #0062D2; /* strong blue on light surfaces */
+  --palette-slate-400: #94A3B8; /* slate */
+  --palette-slate-400-rgb: 148, 163, 184;
+  --palette-slate-500: #64748B; /* slate */
+  --palette-slate-500-rgb: 100, 116, 139;
+  --palette-sky-400: #38BDF8; /* sky */
+  --palette-sky-400-rgb: 56, 189, 248;
+  --palette-sky-600: #0284C7; /* sky */
+  --palette-sky-600-rgb: 2, 132, 199;
   --palette-fill: #787880; /* systemFill base (used with alpha) */
   --palette-fill-rgb: 120, 120, 128;
   --palette-gray: #8E8E93; /* systemGray */
@@ -160,6 +170,25 @@
 
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-theme: 0.25s ease;
+}
+
+/* ── 3D scenes (calibration previews, Live Debug, bench) ───────────────────────
+   Read by JS through CssVars (js/css-vars.js); *-dark / *-light per theme. */
+:root {
+  --scene-model: #282A30;              /* the gamepad, both themes */
+  --scene-light-key: var(--palette-white);
+  --scene-light-fill-dark: #8EB6FF;
+  --scene-light-fill-light: #C8DDFF;
+  --scene-light-rim-dark: var(--palette-blue);
+  --scene-light-rim-light: var(--palette-blue-soft);
+  --scene-light-bounce: #3A455A;
+  /* Live Debug cube faces (axis colours) */
+  --scene-cube-right: #E53935;
+  --scene-cube-left: #8E24AA;
+  --scene-cube-top: #43A047;
+  --scene-cube-down: #546E7A;
+  --scene-cube-front: #1E88E5;
+  --scene-cube-back: #FB8C00;
 }
 
 [data-theme="light"] {

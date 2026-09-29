@@ -528,9 +528,9 @@
 
       // Theme-aware high contrast stroke colors for canvas elements
       const isLight = (document.documentElement.getAttribute('data-theme') === 'light' || document.body.getAttribute('data-theme') === 'light');
-      const gridSeparator = isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.08)';
-      const gridCenter = isLight ? 'rgba(0, 0, 0, 0.32)' : 'rgba(255, 255, 255, 0.18)';
-      const gridBounds = isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.06)';
+      const gridSeparator = isLight ? CssVars.rgba('--palette-black', 0.12) : CssVars.rgba('--palette-white', 0.08);
+      const gridCenter = isLight ? CssVars.rgba('--palette-black', 0.32) : CssVars.rgba('--palette-white', 0.18);
+      const gridBounds = isLight ? CssVars.rgba('--palette-black', 0.12) : CssVars.rgba('--palette-white', 0.06);
 
       if (this.activeAxis === 'all') {
         // Stacked 3-Axis Oscilloscope Mode
@@ -580,13 +580,13 @@
           const badgeX = 8;
           const badgeY = topY + 4;
 
-          ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
+          ctx.fillStyle = isLight ? CssVars.rgba('--palette-black', 0.08) : CssVars.rgba('--palette-white', 0.12);
           if (ctx.roundRect) {
             ctx.beginPath();
             ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
             ctx.fill();
             if (isLight) {
-              ctx.strokeStyle = 'rgba(0, 0, 0, 0.16)';
+              ctx.strokeStyle = CssVars.rgba('--palette-black', 0.16);
               ctx.lineWidth = 1;
               ctx.stroke();
             }
@@ -594,14 +594,14 @@
             ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
           }
 
-          ctx.fillStyle = isLight ? '#000000' : '#ffffff';
+          ctx.fillStyle = isLight ? CssVars.get('--palette-black') : CssVars.get('--palette-white');
           ctx.fillText(title, badgeX + 6, badgeY + 12);
 
           // Numeric DSU rate readout on right of track
           const curFilt = filtArr.length ? filtArr[filtArr.length - 1] : 0;
           const liveText = `DSU: ${(curFilt >= 0 ? '+' : '')}${curFilt.toFixed(1)}°/s`;
           ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-          ctx.fillStyle = isLight ? '#0062D2' : '#0A84FF';
+          ctx.fillStyle = isLight ? CssVars.get('--palette-blue-strong') : CssVars.get('--palette-blue-dark');
           const liveMetrics = ctx.measureText(liveText);
           ctx.fillText(liveText, w - liveMetrics.width - 8, badgeY + 12);
 
@@ -620,7 +620,7 @@
 
           // 1. Filtered DSU trace (Electric Cyan/Blue, drawn first)
           ctx.beginPath();
-          ctx.strokeStyle = isLight ? '#0071E3' : '#0A84FF';
+          ctx.strokeStyle = isLight ? CssVars.get('--palette-blue-web') : CssVars.get('--palette-blue-dark');
           ctx.lineWidth = 2.2;
           for (let i = 0; i < n; i++) {
             const x = startX + i * dx;
@@ -632,7 +632,7 @@
 
           // 2. Raw trace (Apple Orange, drawn on top so sensor noise spikes are clearly visible)
           ctx.beginPath();
-          ctx.strokeStyle = isLight ? '#FF9500' : '#FF9F0A';
+          ctx.strokeStyle = isLight ? CssVars.get('--palette-orange') : CssVars.get('--palette-orange-dark');
           ctx.lineWidth = isLight ? 1.6 : 1.4;
           for (let i = 0; i < n; i++) {
             const x = startX + i * dx;
@@ -684,13 +684,13 @@
         const badgeX = 8;
         const badgeY = 6;
 
-        ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.12)';
+        ctx.fillStyle = isLight ? CssVars.rgba('--palette-black', 0.08) : CssVars.rgba('--palette-white', 0.12);
         if (ctx.roundRect) {
           ctx.beginPath();
           ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
           ctx.fill();
           if (isLight) {
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.16)';
+            ctx.strokeStyle = CssVars.rgba('--palette-black', 0.16);
             ctx.lineWidth = 1;
             ctx.stroke();
           }
@@ -698,13 +698,13 @@
           ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
         }
 
-        ctx.fillStyle = isLight ? '#000000' : '#ffffff';
+        ctx.fillStyle = isLight ? CssVars.get('--palette-black') : CssVars.get('--palette-white');
         ctx.fillText(axisTitle, badgeX + 6, badgeY + 13);
 
         const curFilt = (filtArr && filtArr.length) ? filtArr[filtArr.length - 1] : 0;
         const liveText = `DSU: ${(curFilt >= 0 ? '+' : '')}${curFilt.toFixed(1)}°/s`;
         ctx.font = '600 10.5px ui-monospace, SFMono-Regular, Menlo, monospace';
-        ctx.fillStyle = isLight ? '#0062D2' : '#0A84FF';
+        ctx.fillStyle = isLight ? CssVars.get('--palette-blue-strong') : CssVars.get('--palette-blue-dark');
         const liveMetrics = ctx.measureText(liveText);
         ctx.fillText(liveText, w - liveMetrics.width - 8, badgeY + 13);
 
@@ -722,7 +722,7 @@
 
           // 1. Draw Filtered DSU trace (Apple Cyan/Blue, drawn first)
           ctx.beginPath();
-          ctx.strokeStyle = isLight ? '#0071E3' : '#0A84FF';
+          ctx.strokeStyle = isLight ? CssVars.get('--palette-blue-web') : CssVars.get('--palette-blue-dark');
           ctx.lineWidth = 2.2;
           for (let i = 0; i < n; i++) {
             const x = startX + i * dx;
@@ -734,7 +734,7 @@
 
           // 2. Draw Raw trace (Apple Orange, drawn on top so sensor noise spikes are clearly visible)
           ctx.beginPath();
-          ctx.strokeStyle = isLight ? '#FF9500' : '#FF9F0A';
+          ctx.strokeStyle = isLight ? CssVars.get('--palette-orange') : CssVars.get('--palette-orange-dark');
           ctx.lineWidth = isLight ? 1.8 : 1.6;
           for (let i = 0; i < n; i++) {
             const x = startX + i * dx;

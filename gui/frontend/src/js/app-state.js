@@ -357,7 +357,7 @@
         chip.textContent = clientWord;
 
         if (dot) {
-          dot.style.backgroundColor = isOnline ? '#34C759' : '#FF9F0A';
+          dot.style.backgroundColor = isOnline ? CssVars.get('--palette-green') : CssVars.get('--palette-orange-dark');
           dot.className = `status-dot ${isOnline ? 'online' : ''}`;
         }
 

@@ -91,18 +91,18 @@
         dark: {
           ambientIntensity: 0.85,
           keyIntensity: 1.25,
-          fillColor: 0x8eb6ff,
+          fillColor: CssVars.hex('--scene-light-fill-dark'),
           fillIntensity: 0.45,
-          rimColor: 0x007aff,   // Vibrant Apple electric-blue rim accent on dark background
+          rimColor: CssVars.hex('--scene-light-rim-dark'),   // Vibrant Apple electric-blue rim accent on dark background
           rimIntensity: 0.85,
           bounceIntensity: 0.25,
         },
         light: {
           ambientIntensity: 0.95,
           keyIntensity: 1.15,
-          fillColor: 0xc8ddff,
+          fillColor: CssVars.hex('--scene-light-fill-light'),
           fillIntensity: 0.40,
-          rimColor: 0x409cff,   // Subtle sky-blue rim accent on light studio background
+          rimColor: CssVars.hex('--scene-light-rim-light'),   // Subtle sky-blue rim accent on light studio background
           rimIntensity: 0.50,
           bounceIntensity: 0.20,
         }
@@ -122,11 +122,11 @@
       camera.lookAt(camTarget);
 
       // Studio Lighting
-      const ambLight = new THREE.AmbientLight(0xffffff, curPreset.ambientIntensity);
+      const ambLight = new THREE.AmbientLight(CssVars.hex('--scene-light-key'), curPreset.ambientIntensity);
       scene.add(ambLight);
 
       // Key light: main top-front-right highlight
-      const mainLight = new THREE.DirectionalLight(0xffffff, curPreset.keyIntensity);
+      const mainLight = new THREE.DirectionalLight(CssVars.hex('--scene-light-key'), curPreset.keyIntensity);
       mainLight.position.set(3, 7, 4);
       scene.add(mainLight);
 
@@ -136,7 +136,7 @@
       scene.add(fillLight);
 
       // Bounce light: underside definition
-      const bounceLight = new THREE.DirectionalLight(0x3a455a, curPreset.bounceIntensity);
+      const bounceLight = new THREE.DirectionalLight(CssVars.hex('--scene-light-bounce'), curPreset.bounceIntensity);
       bounceLight.position.set(0, -4, 2);
       scene.add(bounceLight);
 
@@ -156,7 +156,7 @@
         const ctx = cvs.getContext('2d');
 
         // 1. Draw regular grid lines strictly symmetrically from center
-        ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.38)' : 'rgba(100, 116, 139, 0.42)';
+        ctx.strokeStyle = isDarkMode ? CssVars.rgba('--palette-slate-400', 0.38) : CssVars.rgba('--palette-slate-500', 0.42);
         ctx.lineWidth = 1.8;
 
         ctx.beginPath();
@@ -169,7 +169,7 @@
         ctx.stroke();
 
         // 2. Draw the exact center axes passing directly through origin (0, 0)
-        ctx.strokeStyle = isDarkMode ? 'rgba(56, 189, 248, 0.65)' : 'rgba(2, 132, 199, 0.65)';
+        ctx.strokeStyle = isDarkMode ? CssVars.rgba('--palette-sky-400', 0.65) : CssVars.rgba('--palette-sky-600', 0.65);
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         ctx.moveTo(center, 0); ctx.lineTo(center, size);
@@ -212,7 +212,7 @@
 
       // Apple soft-touch frosted ultra-matte material: iconic dark gray Nintendo Switch controller
       const appleGamepadMaterial = new THREE.MeshStandardMaterial({
-        color: 0x282a30,        // Classic Nintendo dark charcoal slate
+        color: CssVars.hex('--scene-model'),        // Classic Nintendo dark charcoal slate
         roughness: 0.92,        // Ultra-matte soft-touch finish
         metalness: 0.0,         // Pure dielectric matte polycarbonate
       });

@@ -515,10 +515,10 @@
   cameraIso.lookAt(0, 0, 0);
 
   // Studio Lighting
-  const ambLight = new THREE.AmbientLight(0xffffff, 0.90);
+  const ambLight = new THREE.AmbientLight(CssVars.hex('--scene-light-key'), 0.90);
   scene.add(ambLight);
 
-  const mainLight = new THREE.DirectionalLight(0xffffff, 1.30);
+  const mainLight = new THREE.DirectionalLight(CssVars.hex('--scene-light-key'), 1.30);
   mainLight.position.set(3.5, 9.5, 4.5);
   mainLight.castShadow = true;
   mainLight.shadow.mapSize.width = 1024;
@@ -532,11 +532,11 @@
   mainLight.shadow.bias = -0.001;
   scene.add(mainLight);
 
-  const fillLight = new THREE.DirectionalLight(0x8eb6ff, 0.50);
+  const fillLight = new THREE.DirectionalLight(CssVars.hex('--scene-light-fill-dark'), 0.50);
   fillLight.position.set(-3.5, 6, 3.5);
   scene.add(fillLight);
 
-  const rimLight = new THREE.DirectionalLight(0x007aff, 0.90);
+  const rimLight = new THREE.DirectionalLight(CssVars.hex('--scene-light-rim-dark'), 0.90);
   rimLight.position.set(0, -2, -5);
   scene.add(rimLight);
 
@@ -552,7 +552,7 @@
     const center = size / 2;
 
     // 1. Concentric distance rings
-    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.16)';
+    ctx.strokeStyle = isDark ? CssVars.rgba('--palette-white', 0.24) : CssVars.rgba('--palette-black', 0.16);
     ctx.lineWidth = 1.8;
     for (let r = 48; r < center; r += 48) {
       ctx.beginPath();
@@ -563,7 +563,7 @@
     // 2. High-contrast Key Highlight Rings
     const highlightRings = [center * 0.35, center * 0.65, center * 0.90];
     ctx.lineWidth = 3.0;
-    ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.90)' : 'rgba(0, 113, 227, 0.80)';
+    ctx.strokeStyle = isDark ? CssVars.rgba('--palette-sky-400', 0.90) : CssVars.rgba('--palette-blue-web', 0.80);
     highlightRings.forEach(r => {
       ctx.beginPath();
       ctx.arc(center, center, r, 0, Math.PI * 2);
@@ -572,7 +572,7 @@
 
     // 3. Diagonal 45-degree angle guides
     ctx.lineWidth = 1.4;
-    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)';
+    ctx.strokeStyle = isDark ? CssVars.rgba('--palette-white', 0.16) : CssVars.rgba('--palette-black', 0.12);
     const diagDist = center * 0.95;
     const diagCos = Math.cos(Math.PI / 4) * diagDist;
     const diagSin = Math.sin(Math.PI / 4) * diagDist;
@@ -586,7 +586,7 @@
 
     // 4. Bold Cartesian Crosshairs / Coordinate Axes
     ctx.lineWidth = 3.6;
-    ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 1.0)' : 'rgba(0, 113, 227, 0.95)';
+    ctx.strokeStyle = isDark ? CssVars.rgba('--palette-sky-400', 1.0) : CssVars.rgba('--palette-blue-web', 0.95);
     ctx.beginPath();
     ctx.moveTo(center, center - center * 0.95);
     ctx.lineTo(center, center + center * 0.95);
@@ -638,9 +638,9 @@
     const isDark = (theme === 'dark');
     ambLight.intensity = isDark ? 0.90 : 1.0;
     mainLight.intensity = isDark ? 1.30 : 1.20;
-    fillLight.color.setHex(isDark ? 0x8eb6ff : 0xc8ddff);
+    fillLight.color.setHex(isDark ? CssVars.hex('--scene-light-fill-dark') : CssVars.hex('--scene-light-fill-light'));
     fillLight.intensity = isDark ? 0.50 : 0.42;
-    rimLight.color.setHex(isDark ? 0x007aff : 0x409cff);
+    rimLight.color.setHex(isDark ? CssVars.hex('--scene-light-rim-dark') : CssVars.hex('--scene-light-rim-light'));
     rimLight.intensity = isDark ? 0.90 : 0.60;
 
     shadowMat.opacity = isDark ? 0.40 : 0.22;
@@ -657,7 +657,7 @@
   scene.add(gamepadGroup);
 
   const appleGamepadMaterial = new THREE.MeshStandardMaterial({
-    color: 0x282a30,
+    color: CssVars.hex('--scene-model'),
     roughness: 0.92,
     metalness: 0.0,
   });
@@ -717,12 +717,12 @@
     ctx.fillRect(0, 0, size, size);
 
     // Subtle inner border
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.strokeStyle = CssVars.rgba('--palette-white', 0.45);
     ctx.lineWidth = 14;
     ctx.strokeRect(10, 10, size - 20, size - 20);
 
     // Center Text
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = CssVars.get('--palette-white');
     ctx.font = 'bold 80px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -735,12 +735,12 @@
 
   // Cube faces: Right (+X), Left (-X), Top (+Y), Down (-Y), Front (+Z), Back (-Z)
   const cubeMaterials = [
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('RIGHT', '#E53935'), roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('LEFT', '#8E24AA'), roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('TOP', '#43A047'), roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('DOWN', '#546E7A'), roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('FRONT', '#1E88E5'), roughness: 0.6 }),
-    new THREE.MeshStandardMaterial({ map: createFaceTexture('BACK', '#FB8C00'), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('RIGHT', CssVars.get('--scene-cube-right')), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('LEFT', CssVars.get('--scene-cube-left')), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('TOP', CssVars.get('--scene-cube-top')), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('DOWN', CssVars.get('--scene-cube-down')), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('FRONT', CssVars.get('--scene-cube-front')), roughness: 0.6 }),
+    new THREE.MeshStandardMaterial({ map: createFaceTexture('BACK', CssVars.get('--scene-cube-back')), roughness: 0.6 }),
   ];
 
   const cubeMesh = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), cubeMaterials);
@@ -1274,7 +1274,7 @@
 
   // ── Helper: Color Converter for Ambient Glow & Fills ──
   function hexToRgba(hex, alpha) {
-    if (!hex) return `rgba(10, 132, 255, ${alpha})`;
+    if (!hex) return CssVars.rgba('--palette-blue-dark', alpha);
     if (hex.startsWith('rgba')) return hex;
     let c = hex.replace('#', '');
     if (c.length === 3) c = c.split('').map(x => x + x).join('');
@@ -1332,7 +1332,7 @@
 
     // Subtle midpoint guide line
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.06)';
+    ctx.strokeStyle = isLight ? CssVars.rgba('--palette-black', 0.06) : CssVars.rgba('--palette-white', 0.06);
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 4]);
     ctx.beginPath();
@@ -1416,7 +1416,7 @@
 
     ctx.beginPath();
     ctx.arc(lastPt.x, lastPt.y, 2.4, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = CssVars.get('--palette-white');
     ctx.fill();
     ctx.lineWidth = 1.2;
     ctx.strokeStyle = strokeColor;
@@ -1456,7 +1456,7 @@
 
     // Center zero-baseline guide line
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isLight ? CssVars.rgba('--palette-black', 0.08) : CssVars.rgba('--palette-white', 0.08);
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 4]);
     ctx.beginPath();
@@ -1524,7 +1524,7 @@
 
       ctx.beginPath();
       ctx.arc(lastPt.x, lastPt.y, 2.0, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = CssVars.get('--palette-white');
       ctx.fill();
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = color;
@@ -1787,19 +1787,19 @@
     lastChartFlushTime = now;
     chartsDirty = false;
 
-    if (hzHistory.length >= 2) drawAppleChart('spark-in-hz', hzHistory, 30, 80, '#34C759');
-    if (latencyHistory.length >= 2) drawAppleChart('spark-latency', latencyHistory, 0, 50, '#0A84FF');
+    if (hzHistory.length >= 2) drawAppleChart('spark-in-hz', hzHistory, 30, 80, CssVars.get('--palette-green'));
+    if (latencyHistory.length >= 2) drawAppleChart('spark-latency', latencyHistory, 0, 50, CssVars.get('--palette-blue-dark'));
 
     // Honest calm Jitter time-series (0 to 30ms scale, calm Apple Teal)
     if (jitterHistory.length >= 2) {
       const maxJitter = Math.max(30, ...jitterHistory);
-      drawAppleChart('spark-jitter', jitterHistory, 0, maxJitter, '#30B0C7');
+      drawAppleChart('spark-jitter', jitterHistory, 0, maxJitter, CssVars.get('--palette-teal'));
     }
 
     // Loss chart: 0 baseline is calm flat line; spikes jump upward
     if (lossHistory.length >= 2) {
       const maxLoss = Math.max(3, ...lossHistory);
-      drawAppleChart('spark-loss', lossHistory, 0, maxLoss, '#FF3B30');
+      drawAppleChart('spark-loss', lossHistory, 0, maxLoss, CssVars.get('--palette-red'));
     }
 
     // Raw Gyro multi-line motion chart (X: red, Y: green, Z: blue, no fill)
@@ -1811,9 +1811,9 @@
         ...rawGzHistory.map(Math.abs)
       );
       drawAppleMultiLineChart('spark-raw-gyro', [
-        { data: rawGxHistory, color: '#FF3B30' },
-        { data: rawGyHistory, color: '#34C759' },
-        { data: rawGzHistory, color: '#007AFF' }
+        { data: rawGxHistory, color: CssVars.get('--palette-red') },
+        { data: rawGyHistory, color: CssVars.get('--palette-green') },
+        { data: rawGzHistory, color: CssVars.get('--palette-blue') }
       ], -maxG, maxG);
     }
 
@@ -1826,15 +1826,15 @@
         ...rawAzHistory.map(Math.abs)
       );
       drawAppleMultiLineChart('spark-raw-accel', [
-        { data: rawAxHistory, color: '#FF3B30' },
-        { data: rawAyHistory, color: '#34C759' },
-        { data: rawAzHistory, color: '#007AFF' }
+        { data: rawAxHistory, color: CssVars.get('--palette-red') },
+        { data: rawAyHistory, color: CssVars.get('--palette-green') },
+        { data: rawAzHistory, color: CssVars.get('--palette-blue') }
       ], -maxA, maxA);
     }
 
     // Output metrics
-    if (outHzHistory.length >= 2) drawAppleChart('spark-out-hz', outHzHistory, 30, 80, '#5E5CE6');
-    if (pipeMsHistory.length >= 2) drawAppleChart('spark-pipe-ms', pipeMsHistory, 0, 3.5, '#30D158');
+    if (outHzHistory.length >= 2) drawAppleChart('spark-out-hz', outHzHistory, 30, 80, CssVars.get('--palette-indigo-dark'));
+    if (pipeMsHistory.length >= 2) drawAppleChart('spark-pipe-ms', pipeMsHistory, 0, 3.5, CssVars.get('--palette-green-dark'));
 
     // DSU Out Gyro multi-line motion chart
     if (outGxHistory.length >= 2) {
@@ -1845,9 +1845,9 @@
         ...outGzHistory.map(Math.abs)
       );
       drawAppleMultiLineChart('spark-out-gyro', [
-        { data: outGxHistory, color: '#FF3B30' },
-        { data: outGyHistory, color: '#34C759' },
-        { data: outGzHistory, color: '#007AFF' }
+        { data: outGxHistory, color: CssVars.get('--palette-red') },
+        { data: outGyHistory, color: CssVars.get('--palette-green') },
+        { data: outGzHistory, color: CssVars.get('--palette-blue') }
       ], -maxOutG, maxOutG);
     }
   }
@@ -1879,7 +1879,7 @@
 
     if (valDsuClientsEl) valDsuClientsEl.textContent = count;
     if (dsuStatusDotEl) {
-      dsuStatusDotEl.style.backgroundColor = count > 0 ? '#34C759' : 'var(--text-secondary)';
+      dsuStatusDotEl.style.backgroundColor = count > 0 ? CssVars.get('--palette-green') : 'var(--text-secondary)';
     }
     if (dsuPulseDotEl) {
       dsuPulseDotEl.classList.toggle('active', count > 0);
@@ -1905,10 +1905,10 @@
           const tagLabel = isAct ? (currentLang === 'ru' ? 'АКТИВЕН' : 'ACTIVE') : (currentLang === 'ru' ? 'ОЖИДАНИЕ' : 'IDLE');
           return `<div class="dsu-client-pill" title="${addr}">
             <div class="dsu-client-left">
-              <span class="dsu-client-dot" style="${isAct ? '' : 'background: #FF9500; box-shadow: none;'}"></span>
+              <span class="dsu-client-dot" style="${isAct ? '' : 'background: var(--palette-orange); box-shadow: none;'}"></span>
               <span class="dsu-client-ip">${c.process || addr}</span>
             </div>
-            <span class="dsu-client-tag" style="${isAct ? '' : 'color: #FF9500; background: rgba(255, 149, 0, 0.15);'}">${tagLabel}</span>
+            <span class="dsu-client-tag" style="${isAct ? '' : 'color: var(--palette-orange); background: rgba(var(--palette-orange-rgb), 0.15);'}">${tagLabel}</span>
           </div>`;
         }).join('');
       } else {
