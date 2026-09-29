@@ -26,6 +26,7 @@ import (
 	"phonegyro-gui/internal/dsuclients"
 	"phonegyro-gui/internal/link"
 	"phonegyro-gui/internal/motion"
+	"phonegyro-gui/internal/profiles"
 	"phonegyro-gui/internal/resmon"
 	"phonegyro-gui/internal/settings"
 	"phonegyro-gui/internal/tray"
@@ -38,11 +39,6 @@ import (
 func init() {
 	_ = mime.AddExtensionType(".glb", "model/gltf-binary")
 }
-
-// CurrentProfileVersion is the calibration data generation SaveProfile stamps on every
-// save. Bump it whenever a new field becomes load-bearing for correct output (it was 3
-// when SensorFrame — the learned accelerometer axis mapping — became required).
-const CurrentProfileVersion = 3
 
 // motionBank holds one input source's fully isolated pipeline state: live
 // connection status, raw/AHRS telemetry, gyro bias, sensor alignment,
@@ -108,8 +104,8 @@ type motionBank struct {
 	gyroBias [3]float64
 	// Profile system
 	profilesMu sync.RWMutex
-	profiles   [6]Profile // exactly 6 slots, always
-	activeSlot int        // -1 = identity/none
+	profiles   [profiles.Slots]profiles.Profile // exactly 6 slots, always
+	activeSlot int                              // -1 = identity/none
 	// Active calibration matrix (applied to frames before DSU forwarding)
 	matrixMu     sync.RWMutex
 	activeMatrix [3][3]float64 // identity by default
@@ -171,16 +167,7 @@ func newMotionBank() *motionBank {
 		anchor:       motion.NewAttitudeAnchor(),
 		calStepLogs:  make(map[int]StepCaptureLog),
 	}
-	for i := range b.profiles {
-		b.profiles[i] = Profile{
-			Slot:   i,
-			Name:   "",
-			Device: "Unknown",
-			Icon:   "default",
-			Matrix: motion.DefaultMatrix3x3(),
-			Active: false,
-		}
-	}
+	b.profiles = profiles.EmptySlots()
 	b.deviceName.Store("Controller")
 	return b
 }
@@ -336,8 +323,6 @@ func NewApp() *App {
 
 	return app
 }
-
-const CurrentProfileSchemaVersion = 2
 
 // logEvent writes a timestamped line to %APPDATA%/phonegyro/logs/phonegyro.log
 func (a *App) logEvent(level, format string, args ...any) {

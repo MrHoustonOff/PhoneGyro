@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"phonegyro-gui/internal/motion"
 	"testing"
+
+	"phonegyro-gui/internal/motion"
+	"phonegyro-gui/internal/profiles"
 )
 
 // TestDeleteProfile: deleting frees the slot on disk, and deleting the active
@@ -18,8 +20,8 @@ func TestDeleteProfile(t *testing.T) {
 	up, pitch := simulateMount(rotAxis([3]float64{0, 0, 1}, 8), 0)
 	m := motion.ComputeMountCorrection(up, pitch)
 	bank.profilesMu.Lock()
-	bank.profiles[1] = Profile{Slot: 1, Name: "A", Device: "Nano", Icon: "gamepad", Matrix: motion.DefaultMatrix3x3(), Mount: &m, Active: true}
-	bank.profiles[4] = Profile{Slot: 4, Name: "B", Device: "Nano", Icon: "gamepad", Matrix: motion.DefaultMatrix3x3()}
+	bank.profiles[1] = profiles.Profile{Slot: 1, Name: "A", Device: "Nano", Icon: "gamepad", Matrix: motion.DefaultMatrix3x3(), Mount: &m, Active: true}
+	bank.profiles[4] = profiles.Profile{Slot: 4, Name: "B", Device: "Nano", Icon: "gamepad", Matrix: motion.DefaultMatrix3x3()}
 	bank.activeSlot = 1
 	bank.profilesMu.Unlock()
 	app.applyProfileMount(bank, 1)
@@ -36,7 +38,7 @@ func TestDeleteProfile(t *testing.T) {
 	if bank.activeMount(false).Active() {
 		t.Fatal("deleted profile's mount correction still live")
 	}
-	var saved struct{ Profiles []Profile }
+	var saved struct{ Profiles []profiles.Profile }
 	data, err := os.ReadFile(filepath.Join(root, "usb", "profiles.json"))
 	if err != nil {
 		t.Fatal(err)

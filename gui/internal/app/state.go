@@ -5,14 +5,15 @@ import (
 	"math"
 	"net"
 	"os"
-	"phonegyro/pkg/dsu"
 	"runtime"
 	"syscall"
 	"time"
 	"unsafe"
 
+	"phonegyro-gui/internal/profiles"
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/version"
+	"phonegyro/pkg/dsu"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -46,9 +47,9 @@ type AppState struct {
 	Qz float64 `json:"qz"`
 	Qw float64 `json:"qw"`
 	// Profile system
-	Profiles     []ProfileView `json:"profiles"`
-	ActiveSlot   int           `json:"activeSlot"`   // -1 = none (identity matrix)
-	ActiveMatrix [3][3]float64 `json:"activeMatrix"` // currently applied calibration matrix (or preview during wizard)
+	Profiles     []profiles.View `json:"profiles"`
+	ActiveSlot   int             `json:"activeSlot"`   // -1 = none (identity matrix)
+	ActiveMatrix [3][3]float64   `json:"activeMatrix"` // currently applied calibration matrix (or preview during wizard)
 	// Madgwick AHRS quaternion computed from calibrated gyro/accel (matching PadTest conventions).
 	// Use these (not raw Qx/Qy/Qz/Qw) for 3D rendering.
 	// Q0=w, Q1=x, Q2=y, Q3=z. Apply PadTest negate to get display: (-Q1, -Q2, Q3, Q0).
@@ -209,11 +210,11 @@ func (a *App) GetState() AppState {
 	activeSlot := bank.activeSlot
 	bank.profilesMu.RUnlock()
 
-	profilesList := make([]ProfileView, 6)
+	profilesList := make([]profiles.View, profiles.Slots)
 	for i := 0; i < 6; i++ {
 		p := profilesCopy[i]
 		p.Active = (i == activeSlot)
-		profilesList[i] = toProfileView(p)
+		profilesList[i] = profiles.NewView(p)
 	}
 
 	// Determine which matrix is currently effective: preview during wizard, or saved active matrix.

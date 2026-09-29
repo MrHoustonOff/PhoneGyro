@@ -1,53 +1,11 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
-	"math"
-	"os"
-	"path/filepath"
+
 	"phonegyro-gui/internal/motion"
+	"phonegyro-gui/internal/profiles"
 )
-
-// Profile represents a saved calibration profile with a 3x3 signed-permutation matrix.
-type Profile struct {
-	Slot   int           `json:"slot"`   // 0-5
-	Name   string        `json:"name"`   // user-visible name
-	Device string        `json:"device"` // device name e.g. "Unknown"
-	Icon   string        `json:"icon"`   // "default", "vertical", "horizontal"
-	Matrix [3][3]float64 `json:"matrix"` // signed permutation matrix
-	// Gravity at the calibration rest pose, in raw phone axes. Per profile because the
-	// gravity sign differs between platforms (iOS reads -1g flat, Android +1g).
-	CalGravity [3]float64 `json:"calGravity,omitempty"`
-	// Learned gyro↔accel axis relation of the device used with this profile.
-	SensorFrame *motion.SensorFrame `json:"sensorFrame,omitempty"`
-	// Поправка на наклон установки датчика (только USB, см. mount.go).
-	Mount  *motion.MountCorrection `json:"mount,omitempty"`
-	Active bool                    `json:"active"` // is this the currently applied profile?
-	// Version is the calibration data generation this profile was captured with,
-	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
-	// is behind CurrentProfileVersion is definitely missing data the current
-	// pipeline needs (e.g. SensorFrame) and must be recalibrated — see Outdated().
-	// A never-configured (empty Name) slot is not "outdated", just unused.
-	Version int `json:"version,omitempty"`
-}
-
-// Outdated reports whether this is a real (named) profile captured by an older build
-// that is missing data the current pipeline depends on. Never true for an empty slot.
-func (p Profile) Outdated() bool {
-	return p.Name != "" && p.Version < CurrentProfileVersion
-}
-
-// ProfileView is what the UI actually receives (GetProfiles, AppState.Profiles): the
-// stored profile plus display-only fields that are never written to profiles.json.
-type ProfileView struct {
-	Profile
-	Outdated bool `json:"outdated"`
-}
-
-func toProfileView(p Profile) ProfileView {
-	return ProfileView{Profile: p, Outdated: p.Outdated()}
-}
 
 // loadProfiles reads profiles.json from disk
 // loadProfiles (re)loads the currently active mode's profiles.json from its
@@ -57,94 +15,37 @@ func (a *App) loadProfiles() {
 	a.loadProfilesInto(a.activeBank(), a.bankDir(a.GetInputMode()))
 }
 
-// loadProfilesInto loads dir/profiles.json into the given bank. Both phone
-// and usb banks are loaded explicitly at startup (see NewApp) so switching
-// modes later never needs a lazy first-load.
+// loadProfilesInto loads dir/profiles.json into the given bank and makes its
+// active profile live. Both phone and usb banks are loaded explicitly at startup
+// (see NewApp) so switching modes later never needs a lazy first-load.
 func (a *App) loadProfilesInto(bank *motionBank, dir string) {
-	path := filepath.Join(dir, "profiles.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return // first run — default profiles are fine
-	}
-
-	var stored struct {
-		SchemaVersion int        `json:"schemaVersion"`
-		Profiles      []Profile  `json:"profiles"`
-		ActiveSlot    int        `json:"activeSlot"`
-		GyroBias      [3]float64 `json:"gyroBias"`
-		CalGravity    [3]float64 `json:"calGravity,omitempty"`
-	}
-	if err := json.Unmarshal(data, &stored); err != nil {
+	f, ok := profiles.Load(dir)
+	if !ok {
 		return
 	}
 
 	bank.profilesMu.Lock()
 	defer bank.profilesMu.Unlock()
 
-	// If schema version is outdated (< 2), reset all profiles to canonical defaults (§5 of spec)
-	if stored.SchemaVersion < CurrentProfileSchemaVersion {
-		for i := 0; i < 6; i++ {
-			bank.profiles[i] = Profile{
-				Slot:   i,
-				Name:   "",
-				Device: "Unknown",
-				Icon:   "default",
-				Matrix: motion.DefaultMatrix3x3(),
-				Active: false,
-			}
-		}
-		bank.activeSlot = -1
+	bank.profiles = f.Profiles
+	bank.activeSlot = f.ActiveSlot
+	if f.SchemaReset {
 		return
 	}
 
-	for i := 0; i < 6; i++ {
-		if i < len(stored.Profiles) {
-			bank.profiles[i] = stored.Profiles[i]
-		} else {
-			bank.profiles[i] = Profile{
-				Slot:   i,
-				Name:   "",
-				Device: "Unknown",
-				Icon:   "default",
-				Matrix: motion.DefaultMatrix3x3(),
-				Active: false,
-			}
-		}
-		bank.profiles[i].Slot = i // ensure slot index is canonical
-		if bank.profiles[i].Device == "" {
-			bank.profiles[i].Device = "Unknown"
-		}
-		if bank.profiles[i].Icon == "" {
-			bank.profiles[i].Icon = "default"
-		}
-		// Validate matrix: determinant must be |det| ≈ 1.0 (valid signed-permutation matrix)
-		if math.Abs(math.Abs(motion.Det3x3(bank.profiles[i].Matrix))-1.0) > 0.05 {
-			bank.profiles[i].Matrix = motion.DefaultMatrix3x3()
-		}
-		// Deliberately no "it already has a SensorFrame, so back-fill Version"
-		// shortcut here: a populated SensorFrame isn't proof it was actually earned
-		// under the current wizard for THIS profile (it may be a carry-over — see
-		// initProfileSensorFrame's legacy migration). The only thing that stamps
-		// Version is SaveProfile itself, so a pre-versioning profile simply stays
-		// Outdated() until it goes through the wizard once — explicit, not assumed.
-	}
-	bank.activeSlot = stored.ActiveSlot
-
 	// Restore active matrix
-	if bank.activeSlot >= 0 && bank.activeSlot < 6 {
-		p := bank.profiles[bank.activeSlot]
+	if bank.activeSlot >= 0 && bank.activeSlot < profiles.Slots {
 		bank.matrixMu.Lock()
-		bank.activeMatrix = p.Matrix
+		bank.activeMatrix = bank.profiles[bank.activeSlot].Matrix
 		bank.matrixMu.Unlock()
-		bank.profiles[bank.activeSlot].Active = true
 	}
 
 	bank.biasMu.Lock()
-	bank.gyroBias = stored.GyroBias
+	bank.gyroBias = f.GyroBias
 	bank.biasMu.Unlock()
 
-	if math.Sqrt(stored.CalGravity[0]*stored.CalGravity[0]+stored.CalGravity[1]*stored.CalGravity[1]+stored.CalGravity[2]*stored.CalGravity[2]) > 0.3 {
-		bank.calGravity = stored.CalGravity
+	if motion.Norm3(f.CalGravity) > 0.3 {
+		bank.calGravity = f.CalGravity
 	}
 	// profilesMu is held here: read the active profile's gravity directly.
 	if bank.activeSlot >= 0 && bank.activeSlot < len(bank.profiles) && motion.Norm3(bank.profiles[bank.activeSlot].CalGravity) > 0.3 {
@@ -155,9 +56,8 @@ func (a *App) loadProfilesInto(bank *motionBank, dir string) {
 	}
 }
 
-// saveProfiles writes the currently active mode's profiles.json with
-// schemaVersion 2. Kept as a no-arg method for backward compatibility; it
-// targets a.activeBank().
+// saveProfiles writes the currently active mode's profiles.json (and the
+// settings). It targets a.activeBank().
 func (a *App) saveProfiles() {
 	a.saveProfilesFrom(a.activeBank(), a.bankDir(a.GetInputMode()))
 	a.saveSettings()
@@ -165,34 +65,17 @@ func (a *App) saveProfiles() {
 
 // saveProfilesFrom writes the given bank's profiles to dir/profiles.json.
 func (a *App) saveProfilesFrom(bank *motionBank, dir string) {
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return
-	}
-	path := filepath.Join(dir, "profiles.json")
-
 	bank.profilesMu.RLock()
 	bank.biasMu.RLock()
-	stored := struct {
-		SchemaVersion int        `json:"schemaVersion"`
-		Profiles      [6]Profile `json:"profiles"`
-		ActiveSlot    int        `json:"activeSlot"`
-		GyroBias      [3]float64 `json:"gyroBias"`
-		CalGravity    [3]float64 `json:"calGravity,omitempty"`
-	}{
-		SchemaVersion: CurrentProfileSchemaVersion,
-		Profiles:      bank.profiles,
-		ActiveSlot:    bank.activeSlot,
-		GyroBias:      bank.gyroBias,
-		CalGravity:    bank.calGravity,
+	f := profiles.File{
+		Profiles:   bank.profiles,
+		ActiveSlot: bank.activeSlot,
+		GyroBias:   bank.gyroBias,
+		CalGravity: bank.calGravity,
 	}
 	bank.biasMu.RUnlock()
 	bank.profilesMu.RUnlock()
-
-	data, err := json.MarshalIndent(stored, "", "  ")
-	if err != nil {
-		return
-	}
-	_ = os.WriteFile(path, data, 0644)
+	_ = profiles.Save(dir, f)
 }
 
 // getActiveProfileName returns a human-readable label for the currently active profile.
@@ -214,16 +97,16 @@ func (a *App) getActiveProfileName() string {
 }
 
 // GetProfiles returns current 6 profile slots for the active input mode
-func (a *App) GetProfiles() []ProfileView {
+func (a *App) GetProfiles() []profiles.View {
 	bank := a.activeBank()
 	bank.profilesMu.RLock()
 	defer bank.profilesMu.RUnlock()
 
-	result := make([]ProfileView, 6)
-	for i := 0; i < 6; i++ {
+	result := make([]profiles.View, profiles.Slots)
+	for i := range result {
 		p := bank.profiles[i]
 		p.Active = (i == bank.activeSlot)
-		result[i] = toProfileView(p)
+		result[i] = profiles.NewView(p)
 	}
 	return result
 }
@@ -242,13 +125,8 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		icon = "default"
 	}
 
-	// Validate matrix: determinant must be -1 (Cemuhook DSU left-handed parity convention)
-	det := matrix[0][0]*(matrix[1][1]*matrix[2][2]-matrix[1][2]*matrix[2][1]) -
-		matrix[0][1]*(matrix[1][0]*matrix[2][2]-matrix[1][2]*matrix[2][0]) +
-		matrix[0][2]*(matrix[1][0]*matrix[2][1]-matrix[1][1]*matrix[2][0])
-
-	if math.Abs(det+1.0) > 0.05 {
-		return fmt.Sprintf("invalid matrix: determinant is %.4f, must be -1.0", det)
+	if err := profiles.CheckMatrix(matrix); err != nil {
+		return err.Error()
 	}
 
 	bank := a.activeBank()
@@ -281,7 +159,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 	bank.wizardAlignMu.Unlock()
 
 	bank.profilesMu.Lock()
-	bank.profiles[slot] = Profile{
+	bank.profiles[slot] = profiles.Profile{
 		Slot:        slot,
 		Name:        name,
 		Device:      device,
@@ -294,7 +172,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		// Reaching Save means the wizard's axis-align step already confirmed a
 		// mapping (its "next" button is disabled otherwise), so this profile
 		// definitely meets the current pipeline's requirements.
-		Version: CurrentProfileVersion,
+		Version: profiles.CurrentVersion,
 	}
 	bank.profilesMu.Unlock()
 
@@ -445,7 +323,7 @@ func (a *App) DeleteProfile(slot int) string {
 		bank.profilesMu.Unlock()
 		return "empty slot"
 	}
-	bank.profiles[slot] = Profile{Slot: slot, Name: "", Device: "Unknown", Icon: "default", Matrix: motion.DefaultMatrix3x3()}
+	bank.profiles[slot] = profiles.Empty(slot)
 	wasActive := bank.activeSlot == slot
 	next := -1
 	for i := range bank.profiles {

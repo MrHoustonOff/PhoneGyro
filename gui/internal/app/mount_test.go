@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"phonegyro-gui/internal/motion"
 	"testing"
+
+	"phonegyro-gui/internal/motion"
+	"phonegyro-gui/internal/profiles"
 )
 
 // TestSetProfileMountEnabled: the profile switch turns the live mount correction
@@ -21,7 +23,7 @@ func TestSetProfileMountEnabled(t *testing.T) {
 		t.Fatalf("precondition: mount correction should be ok, got %s", m.Status)
 	}
 	bank.profilesMu.Lock()
-	bank.profiles[0] = Profile{Slot: 0, Name: "USB", Mount: &m, Active: true}
+	bank.profiles[0] = profiles.Profile{Slot: 0, Name: "USB", Mount: &m, Active: true}
 	bank.activeSlot = 0
 	bank.profilesMu.Unlock()
 	app.applyProfileMount(bank, 0)
@@ -32,7 +34,7 @@ func TestSetProfileMountEnabled(t *testing.T) {
 	if bank.activeMount(false).Active() {
 		t.Fatal("live correction still active after switching it off")
 	}
-	var saved struct{ Profiles []Profile }
+	var saved struct{ Profiles []profiles.Profile }
 	data, err := os.ReadFile(filepath.Join(root, "usb", "profiles.json"))
 	if err != nil {
 		t.Fatal(err)
