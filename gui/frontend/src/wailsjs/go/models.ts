@@ -183,6 +183,7 @@ export namespace main {
 	    hideAuthor: boolean;
 	    dsuClients: number;
 	    dsuClientList: DSUClientView[];
+	    dsuKickedList: DSUClientView[];
 	    inputMode: string;
 	    usbConnected: boolean;
 	    usbPort: string;
@@ -228,6 +229,7 @@ export namespace main {
 	        this.hideAuthor = source["hideAuthor"];
 	        this.dsuClients = source["dsuClients"];
 	        this.dsuClientList = this.convertValues(source["dsuClientList"], DSUClientView);
+	        this.dsuKickedList = this.convertValues(source["dsuKickedList"], DSUClientView);
 	        this.inputMode = source["inputMode"];
 	        this.usbConnected = source["usbConnected"];
 	        this.usbPort = source["usbPort"];

@@ -105,12 +105,68 @@ func TestDSU_KickIgnoresUntilSilent(t *testing.T) {
 		t.Fatalf("kicked client came back while still asking: %d clients", n)
 	}
 	srv.clientsMu.Lock()
-	srv.kicked[conn.LocalAddr().String()] = time.Now().Add(-kickedUntilSilent - time.Second)
+	srv.kicked[conn.LocalAddr().String()].lastSeen = time.Now().Add(-kickedUntilSilent - time.Second)
 	srv.clientsMu.Unlock()
 	_, _ = conn.Write(padDataRequest(1))
 	time.Sleep(50 * time.Millisecond)
 	if srv.ActiveClientCount() != 1 {
 		t.Fatal("client could not return after staying silent")
+	}
+}
+
+// TestDSU_Readmit: a kicked client is listed until the user brings it back; then
+// it is subscribed again and gets a packet at once, without asking first (Cemu
+// asks only after it receives one).
+func TestDSU_Readmit(t *testing.T) {
+	srv := NewServer(0)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	conn, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	addr := conn.LocalAddr().String()
+	_, _ = conn.Write(padDataRequest(1))
+	time.Sleep(50 * time.Millisecond)
+	if !srv.Kick(addr) {
+		t.Fatal("Kick did not find the client")
+	}
+	if srv.Readmit("127.0.0.1:1") {
+		t.Fatal("Readmit accepted a client that was not kicked")
+	}
+	if k := srv.KickedClients(); len(k) != 1 || k[0].Address != addr {
+		t.Fatalf("kicked clients = %+v, want %s", k, addr)
+	}
+
+	// Drain what arrived before the kick, then stay silent like a Cemu whose
+	// stream stopped.
+	buf := make([]byte, 256)
+	for {
+		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		if _, err := conn.Read(buf); err != nil {
+			break
+		}
+	}
+	if !srv.Readmit(addr) {
+		t.Fatal("Readmit did not find the kicked client")
+	}
+	conn.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	if n, err := conn.Read(buf); err != nil || n != 100 {
+		t.Fatalf("readmitted client got no packet: n=%d err=%v", n, err)
+	}
+	if srv.ActiveClientCount() != 1 || len(srv.KickedClients()) != 0 {
+		t.Fatalf("after Readmit: %d clients, %d kicked", srv.ActiveClientCount(), len(srv.KickedClients()))
+	}
+
+	if !srv.Kick(addr) {
+		t.Fatal("second Kick did not find the client")
+	}
+	srv.ForgetKicked(addr)
+	if len(srv.KickedClients()) != 0 {
+		t.Fatal("ForgetKicked left the client listed")
 	}
 }
 

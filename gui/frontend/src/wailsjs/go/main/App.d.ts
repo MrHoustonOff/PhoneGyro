@@ -65,6 +65,8 @@ export function PreviewMatrix(arg1:any):Promise<void>;
 
 export function QuitApp():Promise<void>;
 
+export function ReconnectDSUClient(arg1:string):Promise<string>;
+
 export function RegenerateDSUMAC():Promise<string>;
 
 export function ResetAHRS():Promise<void>;

@@ -3,6 +3,8 @@
 // DSU clients on the main screen: the program behind a local client ("Cemu",
 // "PadTest") instead of its address (gui/dsu_clients.go). Hover shows the full
 // address, a click switches to that program, the cross disconnects the client.
+// A disconnected client stays in the list greyed out, with a button that brings
+// it back (App.ReconnectDSUClient).
 const DsuClientList = {
   tooltip: null,
   info: {},     // address -> latest client data (Cemu bias for the tooltip)
@@ -14,26 +16,34 @@ const DsuClientList = {
 
   // render rebuilds the list only when what it shows changes: the state arrives
   // 15 times a second, and a rebuilt row loses its hover and its click.
-  render(listEl, clients) {
+  render(listEl, clients, kicked = []) {
     this.info = {};
     clients.forEach(c => { this.info[c.address || (c.ip + ':' + c.port)] = c; });
-    const html = clients.map(c => {
+    const row = (c, isKicked) => {
       const addr = c.address || (c.ip + ':' + c.port);
       const isAct = c.active !== false;
       const name = c.process || addr;
-      return `<div class="dsu-home-client-tag${c.process ? ' has-process' : ''}" data-addr="${this.esc(addr)}" data-name="${this.esc(name)}" data-process="${this.esc(c.process || '')}">
+      const dot = isKicked ? 'off' : (isAct ? 'green' : 'amber');
+      const badge = isKicked ? 'OFF' : (isAct ? 'ACTIVE' : 'IDLE');
+      const button = isKicked
+        ? `<span class="dsu-client-readmit" role="button" aria-label="reconnect">
+            <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.8 5.2A4 4 0 1 0 10 7"></path><path d="M10 2.4v2.9H7.1"></path></svg>
+          </span>`
+        : `<span class="dsu-client-remove" role="button" aria-label="disconnect">
+            <svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg>
+          </span>`;
+      return `<div class="dsu-home-client-tag${c.process ? ' has-process' : ''}${isKicked ? ' is-kicked' : ''}" data-addr="${this.esc(addr)}" data-name="${this.esc(name)}" data-process="${this.esc(c.process || '')}">
         <div class="dsu-home-client-left">
-          <span class="dsu-client-pulse ${isAct ? 'green' : 'amber'}"></span>
+          <span class="dsu-client-pulse ${dot}"></span>
           <span class="dsu-client-addr${c.process ? ' is-name' : ''}">${this.esc(name)}</span>
         </div>
         <div class="dsu-home-client-right">
-          <span class="dsu-client-status-badge ${isAct ? 'green' : 'amber'}">${isAct ? 'ACTIVE' : 'IDLE'}</span>
-          <span class="dsu-client-remove" role="button" aria-label="disconnect">
-            <svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"></path></svg>
-          </span>
+          <span class="dsu-client-status-badge ${dot}">${badge}</span>
+          ${button}
         </div>
       </div>`;
-    }).join('');
+    };
+    const html = clients.map(c => row(c, false)).join('') + kicked.map(c => row(c, true)).join('');
     if (listEl._dsuHtml !== html) {
       listEl._dsuHtml = html;
       listEl.innerHTML = html;
@@ -48,6 +58,9 @@ const DsuClientList = {
   // filter holds (pkg/dsu/cemubias.go) -- what the game turns by at rest.
   rowTip(row) {
     const lines = [row.dataset.addr];
+    if (row.classList.contains('is-kicked')) {
+      lines.push(I18n.t('status.dsu_client_kicked') || 'Отключён от DSU');
+    }
     if (row.dataset.process) {
       lines.push((I18n.t('status.dsu_client_tip_switch') || 'Нажмите, чтобы переключиться на {name}').replace('{name}', row.dataset.process));
     }
@@ -71,6 +84,10 @@ const DsuClientList = {
         this.showTip(row, I18n.t('status.dsu_client_remove') || 'Отключить клиента');
         return;
       }
+      if (e.target.closest('.dsu-client-readmit')) {
+        this.showTip(row, I18n.t('status.dsu_client_readmit') || 'Подключить снова');
+        return;
+      }
       this.tipRow = row;
       this.showTip(row, this.rowTip(row));
     });
@@ -89,6 +106,14 @@ const DsuClientList = {
         const res = await window.go?.main?.App?.DisconnectDSUClient(addr);
         if (res === 'ok' && typeof showToast === 'function') {
           showToast((I18n.t('status.dsu_client_removed') || '{name} отключён от DSU').replace('{name}', row.dataset.name));
+        }
+        return;
+      }
+      if (e.target.closest('.dsu-client-readmit')) {
+        this.hideTip();
+        const res = await window.go?.main?.App?.ReconnectDSUClient(addr);
+        if (res === 'ok' && typeof showToast === 'function') {
+          showToast((I18n.t('status.dsu_client_readmitted') || '{name} снова подключён к DSU').replace('{name}', row.dataset.name));
         }
         return;
       }

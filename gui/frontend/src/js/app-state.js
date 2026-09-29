@@ -276,10 +276,13 @@
     _lastDsuCount: null,
     _lastDsuClientsJson: '',
 
-    updateDSU(count, clients) {
+    // kicked: clients the user disconnected, listed greyed out so they can be
+    // brought back (gui/dsu_clients.go dsuKickedViews).
+    updateDSU(count, clients, kicked) {
       count = typeof count === 'number' ? count : (Array.isArray(clients) ? clients.length : 0);
       clients = Array.isArray(clients) ? clients : [];
-      const clientsJson = JSON.stringify(clients);
+      kicked = Array.isArray(kicked) ? kicked : [];
+      const clientsJson = JSON.stringify([clients, kicked]);
 
       if (this._lastDsuCount === count && this._lastDsuClientsJson === clientsJson) {
         return;
@@ -317,18 +320,11 @@
           dot.className = `status-dot ${isOnline ? 'online' : ''}`;
         }
 
-        if (isOnline) {
-          if (idleRow) idleRow.style.display = 'none';
-          if (clientsList) {
-            clientsList.style.display = 'flex';
-            DsuClientList.render(clientsList, clients);
-          }
-        } else {
-          if (idleRow) idleRow.style.display = 'flex';
-          if (clientsList) {
-            clientsList.style.display = 'none';
-            DsuClientList.render(clientsList, []);
-          }
+        if (idleRow) idleRow.style.display = isOnline ? 'none' : 'flex';
+        if (clientsList) {
+          const shown = isOnline ? clients : [];
+          clientsList.style.display = (shown.length || kicked.length) ? 'flex' : 'none';
+          DsuClientList.render(clientsList, shown, kicked);
         }
       };
 
@@ -488,7 +484,7 @@
       }
 
       if (typeof state.dsuClients !== 'undefined' || typeof state.dsuClientList !== 'undefined') {
-        this.updateDSU(state.dsuClients, state.dsuClientList);
+        this.updateDSU(state.dsuClients, state.dsuClientList, state.dsuKickedList || []);
       }
 
       if (typeof state.usbConnected !== 'undefined') {
@@ -988,7 +984,7 @@
           try {
             const data = (typeof payload === 'string') ? JSON.parse(payload) : payload;
             if (data) {
-              AppState.updateDSU(data.count, data.clients);
+              AppState.updateDSU(data.count, data.clients, data.kicked || []);
             }
           } catch (e) {}
         });
@@ -1013,7 +1009,7 @@
         if (window.go.main.App.GetDSUStatus) {
           window.go.main.App.GetDSUStatus().then((dsu) => {
             if (dsu) {
-              AppState.updateDSU(dsu.count, dsu.clients);
+              AppState.updateDSU(dsu.count, dsu.clients, dsu.kicked || []);
             }
           }).catch(() => {});
         }

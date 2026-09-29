@@ -54,6 +54,12 @@ func (a *App) announceCemuClients(views []DSUClientView) {
 			fresh = true
 		}
 	}
+	// A Cemu the user disconnected has not left: no new notice when it is brought back.
+	for _, k := range a.dsuSrv.KickedClients() {
+		if n.announced[k.Address] {
+			present[k.Address] = true
+		}
+	}
 	n.announced = present // a Cemu that left is announced again when it comes back
 	show := fresh && !n.hidden.Load()
 	if show {

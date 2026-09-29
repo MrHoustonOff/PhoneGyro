@@ -783,7 +783,10 @@
 
 .dsu-home-body {
   display: flex;
-  align-items: center;
+  /* a column: with no emulator the idle row and the disconnected clients show together */
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
   min-height: 24px;
   padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -933,6 +936,44 @@
 .dsu-client-pulse.amber {
   background-color: #FF9F0A;
   box-shadow: 0 0 4px rgba(255, 149, 0, 0.5);
+}
+
+/* A client the user disconnected: greyed out, with a button that brings it back. */
+.dsu-client-pulse.off {
+  background-color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.dsu-client-status-badge.off {
+  color: var(--text-secondary);
+  background: rgba(142, 142, 147, 0.15);
+}
+
+.dsu-home-client-tag.is-kicked .dsu-client-addr {
+  color: var(--text-secondary);
+}
+
+.dsu-client-readmit {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.dsu-client-readmit:hover {
+  opacity: 1;
+  background: rgba(52, 199, 89, 0.16);
+  color: #34C759;
+}
+
+.dsu-client-readmit svg {
+  pointer-events: none;
 }
 
 /* Secondary Button (Setup & Navigation) */

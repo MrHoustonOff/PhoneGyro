@@ -43,6 +43,13 @@ type ClientSub struct {
 	cemu      cemuBiasModel // what Cemu's filter makes of the packets we sent
 }
 
+// kickedClient is a client the user disconnected (Server.Kick).
+type kickedClient struct {
+	addr     *net.UDPAddr
+	kickedAt time.Time // the list of kicked clients is ordered by it
+	lastSeen time.Time // its last request
+}
+
 var padPacketPool = sync.Pool{
 	New: func() interface{} {
 		b := make([]byte, 100)
@@ -60,10 +67,10 @@ type Server struct {
 
 	clientsMu sync.RWMutex
 	clients   map[string]*ClientSub
-	// kicked: clients the user disconnected, by address, with the time of their
-	// last request. Their requests are ignored until they stay silent for
-	// kickedUntilSilent (under clientsMu).
-	kicked map[string]time.Time
+	// kicked: clients the user disconnected, by address. Their requests are
+	// ignored until they stay silent for kickedUntilSilent or the user brings
+	// them back (Readmit) (under clientsMu).
+	kicked map[string]*kickedClient
 
 	lastFrameMu    sync.RWMutex
 	lastMotionTime time.Time
@@ -689,16 +696,18 @@ const kickedUntilSilent = 5 * time.Second
 
 // Kick disconnects a client (by the address in ClientInfo.Address): it gets no
 // more packets and its requests are ignored until it stays silent for
-// kickedUntilSilent. Returns false if no such client is subscribed.
+// kickedUntilSilent or Readmit brings it back. Returns false if no such client
+// is subscribed.
 func (s *Server) Kick(address string) bool {
 	s.clientsMu.Lock()
 	client, ok := s.clients[address]
 	if ok {
 		delete(s.clients, address)
 		if s.kicked == nil {
-			s.kicked = map[string]time.Time{}
+			s.kicked = map[string]*kickedClient{}
 		}
-		s.kicked[address] = time.Now()
+		now := time.Now()
+		s.kicked[address] = &kickedClient{addr: client.Addr, kickedAt: now, lastSeen: now}
 	}
 	s.clientsMu.Unlock()
 	if ok && s.OnClientDisconnect != nil {
@@ -707,21 +716,75 @@ func (s *Server) Kick(address string) bool {
 	return ok
 }
 
+// Readmit undoes Kick: the client is subscribed again and gets a packet at
+// once. A client that stopped asking because nothing came any more (Cemu asks
+// only after it receives a packet) starts again from that packet. Returns false
+// if the address is not a kicked client.
+func (s *Server) Readmit(address string) bool {
+	s.clientsMu.Lock()
+	k, ok := s.kicked[address]
+	delete(s.kicked, address)
+	s.clientsMu.Unlock()
+	if !ok {
+		return false
+	}
+	s.touchClient(k.addr)
+	s.sendRestPadDataTo(k.addr)
+	return true
+}
+
+// KickedClients returns the clients the user disconnected, in the order they
+// were kicked (ConnectedAtMs is the time of the kick). LastSeenMs is the time
+// since their last request.
+func (s *Server) KickedClients() []ClientInfo {
+	if s == nil {
+		return nil
+	}
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+	now := time.Now()
+	res := make([]ClientInfo, 0, len(s.kicked))
+	for _, k := range s.kicked {
+		res = append(res, ClientInfo{
+			Address:       k.addr.String(),
+			IP:            k.addr.IP.String(),
+			Port:          k.addr.Port,
+			LastSeenMs:    now.Sub(k.lastSeen).Milliseconds(),
+			ConnectedAtMs: k.kickedAt.UnixMilli(),
+		})
+	}
+	sort.SliceStable(res, func(i, j int) bool {
+		if res[i].ConnectedAtMs != res[j].ConnectedAtMs {
+			return res[i].ConnectedAtMs < res[j].ConnectedAtMs
+		}
+		return res[i].Address < res[j].Address
+	})
+	return res
+}
+
+// ForgetKicked drops a kicked client that is gone (its program has closed), so
+// it is no longer listed.
+func (s *Server) ForgetKicked(address string) {
+	s.clientsMu.Lock()
+	delete(s.kicked, address)
+	s.clientsMu.Unlock()
+}
+
 // stillKicked reports whether a request from addr must be ignored, and keeps
 // the kick alive while the client keeps asking.
 func (s *Server) stillKicked(addr *net.UDPAddr) bool {
 	key := addr.String()
 	s.clientsMu.Lock()
 	defer s.clientsMu.Unlock()
-	last, ok := s.kicked[key]
+	k, ok := s.kicked[key]
 	if !ok {
 		return false
 	}
-	if time.Since(last) > kickedUntilSilent {
+	if time.Since(k.lastSeen) > kickedUntilSilent {
 		delete(s.kicked, key)
 		return false
 	}
-	s.kicked[key] = time.Now()
+	k.lastSeen = time.Now()
 	return true
 }
 

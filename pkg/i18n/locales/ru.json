@@ -577,7 +577,10 @@
     "dsu_client_remove": "Отключить клиента",
     "dsu_client_removed": "{name} отключён от DSU",
     "dsu_client_cemu_bias": "Смещение гироскопа по версии Cemu: {bias} °/с",
-    "dsu_client_cemu_guard": "Защита от дрейфа включена"
+    "dsu_client_cemu_guard": "Защита от дрейфа включена",
+    "dsu_client_kicked": "Отключён от DSU",
+    "dsu_client_readmit": "Подключить снова",
+    "dsu_client_readmitted": "{name} снова подключён к DSU"
   },
   "recenter": {
     "btn_main": "Центрировать 3D-вид",

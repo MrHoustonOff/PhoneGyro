@@ -577,7 +577,10 @@
     "dsu_client_remove": "Disconnect this client",
     "dsu_client_removed": "{name} disconnected from DSU",
     "dsu_client_cemu_bias": "Gyro bias as Cemu sees it: {bias} °/s",
-    "dsu_client_cemu_guard": "Drift guard is on"
+    "dsu_client_cemu_guard": "Drift guard is on",
+    "dsu_client_kicked": "Disconnected from DSU",
+    "dsu_client_readmit": "Reconnect",
+    "dsu_client_readmitted": "{name} is connected to DSU again"
   },
   "recenter": {
     "btn_main": "Recenter 3D View",

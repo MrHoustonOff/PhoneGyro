@@ -57,6 +57,7 @@ type AppState struct {
 	HideAuthor    bool            `json:"hideAuthor"`
 	DsuClients    int             `json:"dsuClients"`
 	DsuClientList []DSUClientView `json:"dsuClientList"`
+	DsuKickedList []DSUClientView `json:"dsuKickedList"` // disconnected by the user, can be brought back
 	InputMode     string          `json:"inputMode"`
 	UsbConnected  bool            `json:"usbConnected"`
 	UsbPort       string          `json:"usbPort"`
@@ -112,6 +113,7 @@ func (a *App) bindDSUCallbacks(srv *dsu.Server) {
 			wailsRuntime.EventsEmit(a.ctx, "dsu:status", map[string]any{
 				"count":   count,
 				"clients": clients,
+				"kicked":  a.dsuKickedViews(),
 			})
 		}
 		a.broadcastLiveDebugJSON(map[string]any{
@@ -139,6 +141,7 @@ func (a *App) GetDSUStatus() map[string]any {
 	return map[string]any{
 		"count":   count,
 		"clients": clients,
+		"kicked":  a.dsuKickedViews(),
 	}
 }
 
@@ -252,7 +255,8 @@ func (a *App) GetState() AppState {
 			}
 			return nil
 		}(),
-		InputMode: a.GetInputMode(),
+		DsuKickedList: a.dsuKickedViews(),
+		InputMode:     a.GetInputMode(),
 		UsbConnected: func() bool {
 			if a.usbMgr != nil {
 				connected, _ := a.usbMgr.Status()

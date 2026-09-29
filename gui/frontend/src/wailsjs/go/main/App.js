@@ -126,6 +126,10 @@ export function QuitApp() {
   return window['go']['main']['App']['QuitApp']();
 }
 
+export function ReconnectDSUClient(arg1) {
+  return window['go']['main']['App']['ReconnectDSUClient'](arg1);
+}
+
 export function RegenerateDSUMAC() {
   return window['go']['main']['App']['RegenerateDSUMAC']();
 }
