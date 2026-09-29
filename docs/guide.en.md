@@ -50,6 +50,7 @@ No time to read everything? Here is the minimum without which nothing will work 
    - [The aim jitters slightly](#the-aim-jitters-slightly)
    - [In game everything drifted or turns by itself](#in-game-everything-drifted-or-turns-by-itself)
    - [The USB controller moves very slowly](#the-usb-controller-moves-very-slowly)
+8. [Where your data lives and how to remove PhoneGyro](#where-your-data-lives-and-how-to-remove-phonegyro)
 
 ---
 
@@ -200,6 +201,8 @@ Then — **the check**: move the device around, the 3D model should follow it ex
 * A red <span style="color: #ff3b30">**«Outdated»**</span> badge appears next to the profile — its data was recorded by an older app version.
 * The in-game aim moves along the wrong axis or backwards.
 
+A calibration does not wear out with time. The date under a profile ("Device: iPhone • 26 Sept") is only there to tell profiles apart.
+
 ### First connection: pick the profile and recenter
 
 The first time a device starts streaming after the app launches, PhoneGyro opens the **«First connection»** window by itself:
@@ -326,3 +329,25 @@ Turns in game and on the 3D model look like "slow motion" — about 8x slower th
 1. Look at the «USB Protocol» section in the stats window: the **L3** row shows a red «none».
 2. **Reflash the controller** with protocol 1.1 firmware or newer — it reports the range every second, and the problem is gone for good.
 3. A quick temporary fix — unplug the USB cable and plug it back in.
+
+---
+
+## Where your data lives and how to remove PhoneGyro
+
+Everything PhoneGyro saves is in one folder, `%APPDATA%\PhoneGyro`:
+
+* settings (`settings.json`) and calibration profiles (`profiles.json`; USB controller profiles are in the `usb` subfolder);
+* the iPhone certificate (`ca`);
+* logs (`logs`) — useful when reporting a problem;
+* the app window's own data (`WebView2_*`).
+
+The path and an "Open folder" button are in **Settings → Behavior & notifications → Data folder**. The folder cannot be changed.
+
+**To remove PhoneGyro completely** (there is no installer, the app is a single file):
+
+1. Close PhoneGyro (including from the tray).
+2. Delete `PhoneGyro.exe`.
+3. Delete the `%APPDATA%\PhoneGyro` folder.
+4. On iPhone/iPad: **Settings → General → VPN & Device Management**, remove the **PhoneGyro Root CA** profile.
+
+To only reset settings and profiles, close the app and delete the folder from step 3: PhoneGyro starts fresh next time (the iPhone certificate then has to be installed again).
