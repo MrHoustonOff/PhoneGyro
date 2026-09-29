@@ -1,6 +1,10 @@
 package version
 
-import "testing"
+import (
+	"os"
+	"os/exec"
+	"testing"
+)
 
 func TestComputeUsesLdflagsWhenSet(t *testing.T) {
 	oldR, oldB, oldC := releaseVersion, buildTag, buildChannel
@@ -46,5 +50,28 @@ func TestGitInDirMatchesRepoState(t *testing.T) {
 	}
 	if channel != "release" && channel != "dev" {
 		t.Fatalf("unexpected channel: %q", channel)
+	}
+}
+
+// TestGitInDirIgnoresNonReleaseTags: a bookmark tag newer than the last release
+// ("pre-gemini" after v2.0.0) is not a version.
+func TestGitInDirIgnoresNonReleaseTags(t *testing.T) {
+	dir := t.TempDir()
+	git := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Skipf("git %v: %v %s", args, err, out)
+		}
+	}
+	git("init", "-q")
+	git("commit", "-q", "--allow-empty", "-m", "a")
+	git("tag", "v1.2.0")
+	git("commit", "-q", "--allow-empty", "-m", "b")
+	git("tag", "pre-something")
+	release, build, channel := gitInDir(dir)
+	if release != "1.2.0" || build != "001" || channel != "dev" {
+		t.Fatalf("got %s %s %s, want 1.2.0 001 dev", release, build, channel)
 	}
 }

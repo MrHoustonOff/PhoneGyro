@@ -105,7 +105,8 @@ func gitInDir(dir string) (release, build, channel string) {
 		return strings.TrimSpace(string(out)), true
 	}
 
-	tag, ok := run("describe", "--tags", "--abbrev=0")
+	// Release tags only (v2.0.0): other tags (bookmarks like "pre-gemini") are not versions.
+	tag, ok := run("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
 	if !ok || tag == "" {
 		return "", "", ""
 	}
