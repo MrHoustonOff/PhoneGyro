@@ -53,7 +53,7 @@ func Run(frontend fs.FS) {
 			action := app.GetCloseAction()
 			switch action {
 			case "minimize":
-				wailsRuntime.WindowHide(ctx)
+				app.hideWindow()
 				return true
 			case "quit":
 				return false
@@ -65,12 +65,7 @@ func Run(frontend fs.FS) {
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "phonegyro-desktop-lock-uuid",
 			OnSecondInstanceLaunch: func(secondInstanceData options.SecondInstanceData) {
-				if app.ctx != nil {
-					wailsRuntime.WindowUnminimise(app.ctx)
-					wailsRuntime.WindowShow(app.ctx)
-					wailsRuntime.WindowSetAlwaysOnTop(app.ctx, true)
-					wailsRuntime.WindowSetAlwaysOnTop(app.ctx, false)
-				}
+				app.ShowWindow()
 			},
 		},
 		Bind: []interface{}{

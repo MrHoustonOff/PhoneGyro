@@ -99,7 +99,10 @@ type App struct {
 	closeActionMu sync.RWMutex
 	closeAction   string // "ask", "minimize", "quit"
 	quitting      atomic.Bool
-	trayMgr       *tray.Manager
+	// uiHidden: the main window is hidden in the tray (hideWindow/ShowWindow);
+	// the UI-only event streams pause meanwhile (emitStateChange, streamQuat).
+	uiHidden atomic.Bool
+	trayMgr  *tray.Manager
 	// Global Windows Hotkeys
 	hotkeyRecenterEnabled atomic.Bool
 	hotkeyRecenterKeyMu   sync.RWMutex

@@ -27,7 +27,7 @@ func (a *App) streamQuat(ctx context.Context) {
 			return
 		case <-ticker.C:
 			bank := a.activeBank()
-			if !bank.hasClient.Load() || a.ctx == nil {
+			if !bank.hasClient.Load() || a.ctx == nil || a.uiHidden.Load() {
 				continue
 			}
 			q := [4]uint64{bank.curAhrsQ0.Load(), bank.curAhrsQ1.Load(), bank.curAhrsQ2.Load(), bank.curAhrsQ3.Load()}

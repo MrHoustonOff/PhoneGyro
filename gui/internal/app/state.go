@@ -90,6 +90,20 @@ func (a *App) ShowWindow() {
 		wailsRuntime.WindowSetAlwaysOnTop(a.ctx, true)
 		wailsRuntime.WindowSetAlwaysOnTop(a.ctx, false)
 	}
+	if a.uiHidden.Swap(false) {
+		a.emitStateChange() // the UI missed the updates while hidden
+	}
+}
+
+// hideWindow hides the main window to the tray. Until ShowWindow the UI gets no
+// state updates or orientation stream: nobody sees them, and building the state
+// 15 times a second costs CPU. Everything else (DSU, the silence watchdog, the
+// tray, the loss alarm) keeps running.
+func (a *App) hideWindow() {
+	a.uiHidden.Store(true)
+	if a.ctx != nil {
+		wailsRuntime.WindowHide(a.ctx)
+	}
 }
 
 // QuitApp cleanly terminates the entire application.
@@ -173,7 +187,7 @@ func (a *App) GetDSUStatus() map[string]any {
 }
 
 func (a *App) emitStateChange() {
-	if a.ctx != nil {
+	if a.ctx != nil && !a.uiHidden.Load() {
 		wailsRuntime.EventsEmit(a.ctx, "state:change", a.GetState())
 	}
 }

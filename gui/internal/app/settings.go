@@ -211,9 +211,7 @@ func (a *App) ConfirmCloseChoice(action string, remember bool) {
 		a.saveSettings()
 	}
 	if action == "minimize" {
-		if a.ctx != nil {
-			wailsRuntime.WindowHide(a.ctx)
-		}
+		a.hideWindow()
 	} else {
 		a.QuitApp()
 	}
