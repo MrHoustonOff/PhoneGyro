@@ -32,6 +32,11 @@ func Run(frontend fs.FS) {
 	app := NewApp()
 	debugApp := NewLiveDebugApp()
 
+	bgR, bgG, bgB := uint8(0xf1), uint8(0xf1), uint8(0xf1)
+	if app.GetTheme() == "dark" {
+		bgR, bgG, bgB = 0x0b, 0x0b, 0x0b
+	}
+
 	err := wails.Run(&options.App{
 		Title:     "PhoneGyro",
 		Width:     880,
@@ -82,7 +87,7 @@ func Run(frontend fs.FS) {
 			OpenInspectorOnStartup: false,
 		},
 		// The page's own --bg: no white or black flash before the first frame.
-		BackgroundColour: &options.RGBA{R: 0xf1, G: 0xf1, B: 0xf1, A: 0xff},
+		BackgroundColour: &options.RGBA{R: bgR, G: bgG, B: bgB, A: 0xff},
 		Windows: &windows.Options{
 			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", "WebView2_Main"),
 			WebviewIsTransparent: false,

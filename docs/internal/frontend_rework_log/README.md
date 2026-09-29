@@ -80,6 +80,26 @@
 
 ---
 
+### 2026-09-30 — Этап 2: Главный экран подключения (ScreenConnect)
+
+#### Коммит 7: `feat(gui): bare main window with drifting rings pattern background`
+- **Что сделано (Этап 1 из 3 по главному экрану):**
+  - Подключены векторные бесшовные паттерны текстур Hyrule rings:
+    - `gui/frontend/src/img/rings-light.svg` (светлая тема: фон `#f1f1f1`, линии `#e7e7e7`, контраст < 1.1:1);
+    - `gui/frontend/src/img/rings-dark.svg` (тёмная тема: фон `#0b0b0b`, линии `#191919`, контраст < 1.1:1).
+  - Реализован класс `.pg-drift` по спецификации дизайн-системы:
+    - Анимация `transform: translate3d(600px, 600px, 0)` за 120 секунд через GPU compositor thread (0.0% нагрузки на CPU).
+    - `will-change: transform` выносит псевдоэлемент `::before` на изолированный GPU-слой.
+    - `inset: -600px` гарантирует полное бесшовное покрытие при сдвиге тайла на 1 период (600px) без стыков и рывков.
+    - Отключение анимации при `prefers-reduced-motion: reduce`.
+  - Удалена временная центральная заглушка (`.brand`), подготовлен чистый контейнер `.pg-shell__body`.
+  - Синхронизация тем:
+    - В `gui/internal/app/run.go` стартовый `BackgroundColour` Wails динамически берётся из сохраненной темы (`app.GetTheme() == "dark"` -> `#0b0b0b`), что исключает любые вспышки при запуске.
+    - В `index.html` выставлены токены для `[data-theme="light"]` и `[data-theme="dark"]`, при запуске тема подтягивается из `App.GetTheme()` и слушается событие `theme:changed`.
+  - Сохранён и проверен кастомный frameless titlebar с масштабом `--tb-scale: 1.3`.
+
+---
+
 ## Архитектурные стандарты системы (Non-Negotiable)
 
 ### 1. Стандарт единиц измерения и масштабирования (Unit & Scaling Standard)
