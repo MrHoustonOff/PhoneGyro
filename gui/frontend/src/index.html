@@ -256,6 +256,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-btn--info{background:var(--info);border-color:transparent;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.18)}
 .pg-btn--info:hover{filter:brightness(1.08);background:var(--info)}
 :root[data-theme="dark"] .pg-btn--info{color:#0b0b0b;text-shadow:none}
+.pg-btn.is-copied{background:var(--accent)!important;color:var(--on-accent)!important;border-color:transparent!important}
 .pg-btn--lg{min-height:46px;padding:0 var(--space-6);font-size:15px;letter-spacing:.06em;text-transform:uppercase}
 .pg-btn--sm{min-height:28px;padding:0 var(--space-3);font-size:12px;line-height:16px;border-radius:var(--radius-sm)}
 .pg-btn--block{display:flex;width:100%}
@@ -868,16 +869,17 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     });
   };
 
+  let copyResetTimer = null;
   if (btnCopyUrl) {
     btnCopyUrl.onclick = () => {
       const url = connUrlText ? connUrlText.textContent : '';
       if (!url || url === 'https://...') return;
       copyToClipboard(url).then(() => {
-        const dict = I18N[currentLang] || I18N.ru;
-        btnCopyUrl.textContent = dict['conn.copied'];
-        setTimeout(() => {
-          btnCopyUrl.textContent = dict['conn.copy'];
-        }, 1800);
+        btnCopyUrl.classList.add('is-copied');
+        if (copyResetTimer) clearTimeout(copyResetTimer);
+        copyResetTimer = setTimeout(() => {
+          btnCopyUrl.classList.remove('is-copied');
+        }, 1400);
       }).catch((e) => console.error('Copy failed:', e));
     };
   }

@@ -203,6 +203,11 @@
     - Из ветки `main` возвращён статический файл `gui/frontend/src/livedebug.html`, требуемый для работы автономного окна 3D-телеметрии (`--livedebug` / `runLiveDebug()`) и юнит-теста `TestLiveDebug_AssetsAndBroadcast`.
     - Все тесты проекта (`go test ./...` во всех 12 пакетах: `app`, `dsuclients`, `firewall`, `hwproto`, `link`, `motion`, `profiles`, `resmon`, `settings`, `tray`, `usbdev`, `version`) выполняются с результатом **100% PASS**.
 
+#### Коммит 16: `fix(gui): keep copy button text stable and highlight green with accent token on success`
+- **Что сделано:**
+  - Согласно указанию пользователя, при успешном копировании адреса в буфер обмена текст кнопки «Копировать» (или «Copy») больше не подменяется строкой «Скопировано!».
+  - Вместо смены текста кнопке на 1.4 секунды присваивается класс `.is-copied`, временно окрашивающий её в гармоничный зелёный цвет токена акцента (`var(--accent)` с текстом `var(--on-accent)`).
+
 ---
 
 ### Комплексный аудит и реестр потенциальных рисков (Final Review & Risk Audit)
