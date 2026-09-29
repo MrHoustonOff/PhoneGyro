@@ -104,6 +104,7 @@ export function backendStub({ fontScale } = {}) {
     GetAppVersion: () => ({ release: '2.0.0', build: '000', channel: 'dev', display: '2.0.0.000-dev' }),
     PendingCemuNotice: () => null, GetResourceStats: () => ({ cpuPercent: 1, ramMb: 50, totalRamMb: 16000, ramPercent: 0.3 }),
     GetCloseAction: () => 'ask', GetAxisAlignStatus: () => ({}), GetWizardMount: () => null,
+    GetDataDir: () => 'C:/Users/user/AppData/Roaming/phonegyro'.split('/').join(String.fromCharCode(92)),
   };
   const App = new Proxy({}, { get: (t, k) => (...a) => Promise.resolve(results[k] ? results[k](...a) : null) });
   window.go = { app: { App, LiveDebugApp: App } };

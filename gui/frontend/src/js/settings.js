@@ -230,6 +230,18 @@
       });
 
       // Regenerate DSU MAC Address
+      // Data folder: where settings, profiles, certificates and logs live.
+      const dataDirInput = document.getElementById('setting-data-dir');
+      window.go?.app?.App?.GetDataDir?.().then((dir) => {
+        if (dataDirInput && dir) {
+          dataDirInput.value = dir;
+          dataDirInput.title = dir;
+        }
+      }).catch(() => {});
+      document.getElementById('btn-open-data-dir')?.addEventListener('click', () => {
+        window.go?.app?.App?.OpenDataDir?.().catch(() => {});
+      });
+
       document.getElementById('btn-regen-dsu-mac')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-regen-dsu-mac');
         const title = I18n.t('settings_modal.dsu_mac_regen_title') || 'Сгенерировать новый MAC?';

@@ -277,6 +277,8 @@ export namespace profiles {
 	    mount?: motion.MountCorrection;
 	    active: boolean;
 	    version?: number;
+	    calibratedAt?: number;
+	    calibratedWith?: string;
 	    outdated: boolean;
 	
 	    static createFrom(source: any = {}) {
@@ -295,6 +297,8 @@ export namespace profiles {
 	        this.mount = this.convertValues(source["mount"], motion.MountCorrection);
 	        this.active = source["active"];
 	        this.version = source["version"];
+	        this.calibratedAt = source["calibratedAt"];
+	        this.calibratedWith = source["calibratedWith"];
 	        this.outdated = source["outdated"];
 	    }
 	

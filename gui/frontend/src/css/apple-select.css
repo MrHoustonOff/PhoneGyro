@@ -288,6 +288,18 @@
   box-sizing: border-box;
 }
 
+/* The data folder path: long, so it is shown from its end ("…\Roaming\phonegyro")
+   with the whole path in the tooltip; not uppercased like the MAC. */
+.setting-input-mac.setting-input-path {
+  width: 220px;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  direction: rtl;
+  text-overflow: ellipsis;
+}
+
 .setting-input-mac:focus {
   border-color: var(--accent);
   outline: none;

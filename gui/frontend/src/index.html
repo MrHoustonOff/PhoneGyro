@@ -1415,6 +1415,32 @@
                       </div>
 
                     </div>
+
+                    <!-- Data folder: where settings, profiles, certificates and logs live -->
+                    <div class="setting-row" data-setting-key="dataDir">
+                      <div class="setting-info">
+                        <div class="setting-label-row">
+                          <span class="setting-label" data-i18n="settings_modal.data_dir">Папка данных</span>
+                          <button type="button" class="setting-infotip" data-i18n-tip="settings_modal.data_dir_tip" aria-label="Info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="setting-control">
+                        <div class="setting-control-group">
+                          <input type="text" id="setting-data-dir" class="setting-input-mac setting-input-path" value="" readonly spellcheck="false">
+                          <button type="button" id="btn-open-data-dir" class="btn-setting-action" data-i18n-tip="settings_modal.data_dir_open" aria-label="Open folder">
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

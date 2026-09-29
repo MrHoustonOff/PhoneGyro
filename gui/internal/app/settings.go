@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"os"
+	"os/exec"
 
 	"phonegyro/pkg/dsu"
 	"phonegyro/pkg/pairing"
@@ -523,6 +525,27 @@ func (a *App) RegenerateDSUMAC() string {
 	}
 	a.saveSettings()
 	return macStr
+}
+
+// GetDataDir is the folder that holds everything PhoneGyro keeps: settings,
+// profiles (phone and usb\), the certificate authority (ca\), logs and the
+// WebView2 data. Shown in Settings; deleting it resets the app completely.
+func (a *App) GetDataDir() string {
+	return a.profilesDir
+}
+
+// OpenDataDir opens the data folder in Explorer.
+func (a *App) OpenDataDir() string {
+	if a.profilesDir == "" {
+		return "no folder"
+	}
+	if err := os.MkdirAll(a.profilesDir, 0755); err != nil {
+		return err.Error()
+	}
+	if err := exec.Command("explorer.exe", a.profilesDir).Start(); err != nil {
+		return err.Error()
+	}
+	return "ok"
 }
 
 // SetTuningActive toggles 60 Hz real-time telemetry streaming for the settings test bench
