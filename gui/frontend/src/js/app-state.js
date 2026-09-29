@@ -282,9 +282,10 @@
       count = typeof count === 'number' ? count : (Array.isArray(clients) ? clients.length : 0);
       clients = Array.isArray(clients) ? clients : [];
       kicked = Array.isArray(kicked) ? kicked : [];
-      const clientsJson = JSON.stringify([clients, kicked]);
+      const clientsJson = DsuClientList.uiKey(count, clients, kicked);
 
       if (this._lastDsuCount === count && this._lastDsuClientsJson === clientsJson) {
+        DsuClientList.refreshInfo(clients);
         return;
       }
       const prevDsuCount = this._lastDsuCount;

@@ -14,6 +14,27 @@ const DsuClientList = {
     return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   },
 
+  // uiKey is what the list shows. Other client fields (last seen, Cemu bias)
+  // change on every state update and only feed the tooltip.
+  uiKey(count, clients, kicked) {
+    const addr = c => c.address || (c.ip + ':' + c.port);
+    return JSON.stringify([
+      count,
+      clients.map(c => [addr(c), c.process || '', c.active !== false]),
+      kicked.map(c => [addr(c), c.process || '']),
+    ]);
+  },
+
+  // refreshInfo keeps the tooltip's live data (Cemu bias) current without
+  // touching the list.
+  refreshInfo(clients) {
+    this.info = {};
+    clients.forEach(c => { this.info[c.address || (c.ip + ':' + c.port)] = c; });
+    if (this.tipRow && this.tipRow.isConnected) {
+      this.tooltip.textContent = this.rowTip(this.tipRow);
+    }
+  },
+
   // render rebuilds the list only when what it shows changes: the state arrives
   // 15 times a second, and a rebuilt row loses its hover and its click.
   render(listEl, clients, kicked = []) {
