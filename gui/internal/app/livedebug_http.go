@@ -33,7 +33,6 @@ func (a *App) serveLiveDebug(srv *server.Server) {
 			mux.Handle("/assets/", files)
 			mux.Handle("/js/", files)
 			mux.Handle("/css/", files)
-			mux.Handle("/main.css", files)
 			mux.Handle("/livedebug/assets/", http.StripPrefix("/livedebug", files))
 			mux.HandleFunc("/livedebug", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
