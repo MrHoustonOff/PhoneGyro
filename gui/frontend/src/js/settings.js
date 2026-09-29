@@ -230,7 +230,6 @@
         });
       });
 
-      // Regenerate DSU MAC Address
       // Data folder: where settings, profiles, certificates and logs live.
       const dataDirInput = document.getElementById('setting-data-dir');
       window.go?.app?.App?.GetDataDir?.().then((dir) => {
@@ -243,6 +242,7 @@
         window.go?.app?.App?.OpenDataDir?.().catch(() => {});
       });
 
+      // Regenerate DSU MAC Address
       document.getElementById('btn-regen-dsu-mac')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-regen-dsu-mac');
         const title = I18n.t('settings_modal.dsu_mac_regen_title') || 'Сгенерировать новый MAC?';
@@ -700,6 +700,7 @@
 
     async open() {
       this.isOpen = true;
+      FirewallUI.refresh();
       this.initialFontScale = (this.currentSettings && typeof this.currentSettings.fontScale === 'number') ? this.currentSettings.fontScale : FontScaleManager.scale;
       if (typeof HelpManager !== 'undefined' && HelpManager.isOpen) HelpManager.close(false);
       if (typeof WelcomeManager !== 'undefined' && WelcomeManager.isOpen) WelcomeManager.close(false);

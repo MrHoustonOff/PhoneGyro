@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/dialogs.css">
   <link rel="stylesheet" href="css/cemu-notice.css">
   <link rel="stylesheet" href="css/update-notice.css">
+  <link rel="stylesheet" href="css/firewall.css">
   <link rel="stylesheet" href="css/profiles.css">
   <link rel="stylesheet" href="css/calibration.css">
   <link rel="stylesheet" href="css/navigation.css">
@@ -860,6 +861,29 @@
                 <div class="settings-section">
                   <div class="settings-section-header" data-i18n="settings_modal.group_network">Сетевые порты и серверы</div>
                   <div class="settings-grouped-card">
+                    <!-- Windows Firewall: lets the phone's connections through (js/firewall.js) -->
+                    <div class="setting-row setting-row-firewall" data-setting-key="firewall">
+                      <div class="setting-info">
+                        <div class="setting-label-row">
+                          <span class="setting-label" data-i18n="firewall.label">Брандмауэр Windows</span>
+                          <button type="button" class="setting-infotip" data-i18n-tip="firewall.tip" aria-label="Info">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="setting-control">
+                        <div class="setting-control-group">
+                          <span class="fw-status" id="firewall-status" data-state="checking"><span class="fw-dot"></span><span class="fw-text" id="firewall-status-text">…</span></span>
+                          <button hidden type="button" id="btn-firewall-allow" class="fw-allow-btn"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.6v5.2c0 4.3-3 8-7 9.4-4-1.4-7-5.1-7-9.4V5.6z"></path></svg><span data-i18n="firewall.allow">Разрешить</span></button>
+                        </div>
+                      </div>
+                      <p hidden class="fw-why" id="firewall-why"></p>
+                    </div>
+
                     <!-- DSU Port -->
                     <div class="setting-row" data-setting-key="dsuPort">
                       <div class="setting-info">
@@ -1975,6 +1999,28 @@
     </div>
   </div>
 
+  <!-- Firewall alert: phone mode, every launch until allowed (gui/internal/app/firewall.go) -->
+  <div hidden class="apple-dialog-overlay" id="firewall-modal" aria-modal="true" role="dialog">
+    <div class="apple-close-card firewall-card">
+      <div class="apple-close-icon-wrap apple-close-icon-danger">
+        <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <!-- Shield with a cross: blocked -->
+          <path d="M14 3.5l8.5 3.2v6.4c0 5.2-3.6 9.6-8.5 11.4-4.9-1.8-8.5-6.2-8.5-11.4V6.7z"></path>
+          <path d="M11 11l6 6M17 11l-6 6"></path>
+        </svg>
+      </div>
+      <div class="apple-close-title" data-i18n="firewall.alert_title">Брандмауэр не пропустит телефон</div>
+      <div class="update-body">
+        <p id="firewall-modal-why"></p>
+        <p data-i18n="firewall.alert_how">Нажмите «Разрешить» — Windows попросит подтвердить права администратора. Сделать это можно и позже: Настройки → «Брандмауэр Windows».</p>
+      </div>
+      <div class="apple-close-actions">
+        <button type="button" class="apple-close-btn apple-close-btn-cancel" id="firewall-later" data-i18n="firewall.later">Не сейчас</button>
+        <button type="button" class="apple-close-btn apple-close-btn-minimize" id="firewall-allow" data-i18n="firewall.allow">Разрешить</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Update notice (gui/internal/app/update_check.go) -->
   <div hidden class="apple-dialog-overlay" id="update-modal" aria-modal="true" role="dialog">
     <div class="apple-close-card update-card">
@@ -2592,6 +2638,7 @@
   <script src="js/close-dialog.js"></script>
   <script src="js/cemu-notice.js"></script>
   <script src="js/update-notice.js"></script>
+  <script src="js/firewall.js"></script>
   <script src="js/profile-delete-dialog.js"></script>
   <script src="js/apple-select.js"></script>
   <script src="js/copy-chip.js"></script>

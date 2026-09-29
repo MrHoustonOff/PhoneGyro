@@ -46,6 +46,7 @@ No time to read everything? Here is the minimum without which nothing will work 
    - [Aim tremor threshold](#aim-tremor-threshold)
 6. [Emulator Setup (Cemu Example)](#emulator-setup-cemu-example)
 7. [Known Issues & Solutions](#known-issues--solutions)
+   - [The phone cannot connect: Windows Firewall](#the-phone-cannot-connect-windows-firewall)
    - [Cemu Launch Order Quirk](#cemu-launch-order-quirk)
    - [The aim jitters slightly](#the-aim-jitters-slightly)
    - [In game everything drifted or turns by itself](#in-game-everything-drifted-or-turns-by-itself)
@@ -291,6 +292,14 @@ PhoneGyro runs on the industry-standard **Cemuhook DSU (UDP)** protocol. To any 
 ---
 
 ## Known Issues & Solutions
+
+### The phone cannot connect: Windows Firewall
+
+The phone connects to the PC over Wi‑Fi, and Windows Firewall has to let those connections through. On the first launch Windows asks for permission itself. If that window was closed or cancelled, the phone cannot connect and Windows never asks again.
+
+The state is shown in **Settings → Network & Server Ports → Windows Firewall**. If it says "Blocked" or "Not allowed", click **"Allow"** and confirm the administrator prompt. In phone mode PhoneGyro reminds you at every start until it is allowed.
+
+The permission belongs to the file: run a new `PhoneGyro.exe` from another folder and Windows asks again. The USB controller does not need it. If a third-party antivirus has its own firewall, allow PhoneGyro there too; PhoneGyro cannot see it.
 
 ### Cemu Launch Order Quirk
 

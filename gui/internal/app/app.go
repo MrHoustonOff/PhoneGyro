@@ -83,6 +83,7 @@ type App struct {
 	cemuDriftGuard    atomic.Bool // drift guard for Cemu clients (pkg/dsu/cemubias.go)
 	cemuNotice        cemuNoticeState
 	update            updateState
+	firewall          firewallState
 	dsuNames          dsuclients.Namer // program names of local DSU clients (dsu_clients.go)
 	soundMode         string
 	soundVolume       atomic.Int32
@@ -251,6 +252,7 @@ func (a *App) startup(ctx context.Context) {
 	a.startResourceMonitor()
 	go a.watchNetwork()
 	go a.checkForUpdate() // update_check.go; does nothing unless switched on
+	go a.watchFirewall()  // firewall.go
 }
 
 // shutdown is called when the Wails application terminates

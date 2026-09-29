@@ -1,0 +1,125 @@
+/* Windows Firewall (js/firewall.js): the Settings status chip and "Allow" button,
+   and the startup alert (the close dialog's sheet, body styled by update-notice.css). */
+/* The explanation takes a line of its own under the label and the status. */
+.setting-row-firewall {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.fw-why {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--palette-orange-dark);
+  background: rgba(var(--palette-orange-dark-rgb), 0.08);
+  border: 1px solid rgba(var(--palette-orange-dark-rgb), 0.25);
+}
+
+[data-theme="light"] .fw-why {
+  color: var(--palette-orange);
+}
+
+.fw-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  background: rgba(var(--palette-fill-rgb), 0.12);
+  border: 1px solid var(--border);
+  cursor: default;
+}
+
+.fw-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.fw-status[data-state="allowed"],
+.fw-status[data-state="off"] {
+  color: var(--palette-green-dark);
+  background: rgba(var(--palette-green-dark-rgb), 0.1);
+  border-color: rgba(var(--palette-green-dark-rgb), 0.3);
+}
+
+.fw-status[data-state="allowed"] .fw-dot {
+  box-shadow: 0 0 6px rgba(var(--palette-green-dark-rgb), 0.7);
+}
+
+.fw-status[data-state="blocked"],
+.fw-status[data-state="pending"] {
+  color: var(--palette-red-dark);
+  background: rgba(var(--palette-red-dark-rgb), 0.1);
+  border-color: rgba(var(--palette-red-dark-rgb), 0.32);
+}
+
+.fw-status[data-state="blocked"] .fw-dot,
+.fw-status[data-state="pending"] .fw-dot {
+  box-shadow: 0 0 6px rgba(var(--palette-red-dark-rgb), 0.7);
+}
+
+.fw-status[data-state="checking"] .fw-dot {
+  animation: fwPulse 1s ease-in-out infinite;
+}
+
+@keyframes fwPulse {
+  50% { opacity: 0.25; }
+}
+
+.fw-allow-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: var(--palette-white);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.15s;
+}
+
+.fw-allow-btn:hover {
+  filter: brightness(1.1);
+}
+
+.fw-allow-btn:active {
+  transform: scale(0.96);
+}
+
+.fw-allow-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#firewall-modal.apple-dialog-overlay {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(var(--palette-black-rgb), 0.45);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#firewall-modal .firewall-card {
+  width: min(420px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+#firewall-modal.visible .firewall-card {
+  transform: scale(1) translateY(0);
+}
