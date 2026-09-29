@@ -305,7 +305,7 @@
       });
 
       // Checkbox toggles
-      ['setting-stillness-hint', 'setting-disconnect-alert', 'setting-silence-disconnect'].forEach(id => {
+      ['setting-stillness-hint', 'setting-disconnect-alert', 'setting-silence-disconnect', 'setting-cemu-drift-guard'].forEach(id => {
         document.getElementById(id)?.addEventListener('change', () => {
           this.autoSave(true);
         });
@@ -1176,6 +1176,11 @@
       const silenceCheckbox = document.getElementById('setting-silence-disconnect');
       if (silenceCheckbox) {
         silenceCheckbox.checked = true;
+      }
+
+      const cemuGuardCheckbox = document.getElementById('setting-cemu-drift-guard');
+      if (cemuGuardCheckbox) {
+        cemuGuardCheckbox.checked = true;
       }
 
       const closeActionSelectReset = document.getElementById('setting-close-action');
