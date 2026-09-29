@@ -10,10 +10,11 @@ import (
 	"time"
 	"unsafe"
 
+	"phonegyro/pkg/dsu"
+
 	"phonegyro-gui/internal/profiles"
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/version"
-	"phonegyro/pkg/dsu"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
