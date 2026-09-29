@@ -106,6 +106,16 @@ func (a *App) hideWindow() {
 	}
 }
 
+// CloseWindow is the title bar's close button: the same "action on window close"
+// as the system close (OnBeforeClose in run.go).
+func (a *App) CloseWindow() {
+	if a.GetCloseAction() == "minimize" {
+		a.hideWindow()
+		return
+	}
+	a.QuitApp()
+}
+
 // QuitApp cleanly terminates the entire application.
 func (a *App) QuitApp() {
 	a.quitting.Store(true)

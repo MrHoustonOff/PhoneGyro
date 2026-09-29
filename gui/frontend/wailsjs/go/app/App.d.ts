@@ -17,6 +17,8 @@ export function CloseFirewallAlert():Promise<void>;
 
 export function CloseUpdateNotice(arg1:boolean):Promise<void>;
 
+export function CloseWindow():Promise<void>;
+
 export function ConfirmCloseChoice(arg1:string,arg2:boolean):Promise<void>;
 
 export function CopyCalibrationReport():Promise<string>;

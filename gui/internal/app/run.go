@@ -38,6 +38,9 @@ func Run(frontend fs.FS) {
 		Height:    620,
 		MinWidth:  620,
 		MinHeight: 480,
+		// The UI draws its own title bar (frontend: .titlebar); Windows keeps the
+		// shadow, rounded corners, snapping and edge resizing.
+		Frameless: true,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

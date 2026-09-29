@@ -22,6 +22,10 @@ export function CloseUpdateNotice(arg1) {
   return window['go']['app']['App']['CloseUpdateNotice'](arg1);
 }
 
+export function CloseWindow() {
+  return window['go']['app']['App']['CloseWindow']();
+}
+
 export function ConfirmCloseChoice(arg1, arg2) {
   return window['go']['app']['App']['ConfirmCloseChoice'](arg1, arg2);
 }
