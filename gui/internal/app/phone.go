@@ -27,7 +27,7 @@ func (a *App) bindPhoneCallbacks(srv *server.Server) {
 		disconnectMu.Unlock()
 
 		// This callback fires only for phone WebSocket connections -- USB has
-		// its own separate lifecycle handling in usb.go -- so it always
+		// its own separate lifecycle handling in internal/usbdev -- so it always
 		// targets phoneBank directly, never activeBank().
 		a.phoneBank.hasClient.Store(true)
 		a.phoneBank.resetAnchor.Store(true)

@@ -303,7 +303,7 @@
               // a single plane leaves the accelerometer's third axis mathematically
               // undetermined — d(gravity)/dt = h·(ω×g) can't observe it, so the
               // physics in gui/internal/motion/sensoralign.go ties forever between two candidate mappings
-              // and never locks (reproduced in gui/sensoralign_test.go-style
+              // and never locks (reproduced in gui/internal/motion/sensoralign_test.go-style
               // simulation: pure pitch/roll motion never converges; the same motion
               // with a twist mixed in locks almost immediately). So every hold below
               // combines pitch, yaw AND roll — never a pure single-axis tilt — and the

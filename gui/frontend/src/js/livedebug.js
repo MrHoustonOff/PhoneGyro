@@ -2305,7 +2305,7 @@
 
   setupTooltips();
 
-  // ── USB protocol status (gui/usb_status.go), once a second while a USB device streams ──
+  // ── USB protocol status (gui/internal/usbdev/status.go), once a second while a USB device streams ──
   let usbProto = null;       // last status with connected === true
   let usbProtoPrevCrc = 0;   // CRC rejects in the previous message
   let usbProtoCrcGrew = false;

@@ -1,4 +1,4 @@
-/* Cemu notice (temporary, see gui/cemu_notice.go): the close dialog's sheet
+/* Cemu notice (temporary, see gui/internal/app/cemu_notice.go): the close dialog's sheet
    (dialogs.css .apple-close-*) with a longer, left-aligned text. */
 #cemu-notice-modal.apple-dialog-overlay {
   backdrop-filter: blur(20px);

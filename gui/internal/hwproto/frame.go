@@ -1,7 +1,7 @@
 // Package hwproto is the wire format of the PhoneGyro Hardware Protocol
 // (https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol): the 24-byte
 // frame, its CRC-8/SMBUS and a streaming decoder that resynchronizes after
-// garbage. It knows nothing about serial ports or the app; gui/usb.go is
+// garbage. It knows nothing about serial ports or the app; internal/usbdev is
 // the host that finds the device and feeds its frames into the pipeline.
 package hwproto
 

@@ -277,7 +277,7 @@
     _lastDsuClientsJson: '',
 
     // kicked: clients the user disconnected, listed greyed out so they can be
-    // brought back (gui/dsu_clients.go dsuKickedViews).
+    // brought back (gui/internal/app/dsu_clients.go dsuKickedViews).
     updateDSU(count, clients, kicked) {
       count = typeof count === 'number' ? count : (Array.isArray(clients) ? clients.length : 0);
       clients = Array.isArray(clients) ? clients : [];

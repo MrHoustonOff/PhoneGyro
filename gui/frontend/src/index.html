@@ -374,7 +374,7 @@
               <span data-i18n="calibration.outdated_warning_banner">Профиль устарел — перекалибруйте его, чтобы всё работало правильно.</span>
             </div>
 
-            <!-- USB mount-tilt correction of the active profile (gui/mount.go):
+            <!-- USB mount-tilt correction of the active profile (gui/internal/app/mount.go):
                  shown only when calibration measured and verified one. -->
             <div class="profile-mount-row" id="profile-mount-row" style="display: none;">
               <span class="profile-mount-text" id="profile-mount-text" data-i18n-title="calibration.mount_profile_tip">Компенсация наклона датчика</span>
@@ -986,7 +986,7 @@
                       </div>
                     </div>
 
-                    <!-- Tremor Deadband, USB controller (own sensor noise: gui/deadband.go) -->
+                    <!-- Tremor Deadband, USB controller (own sensor noise: gui/internal/app/deadband.go) -->
                     <div class="setting-row" data-setting-key="gyroDeadbandUsb">
                       <div class="setting-info">
                         <div class="setting-label-row">
@@ -1883,7 +1883,7 @@
     </div>
   </div>
 
-  <!-- Cemu notice: temporary, goes away with the drift guard (gui/cemu_notice.go) -->
+  <!-- Cemu notice: temporary, goes away with the drift guard (gui/internal/app/cemu_notice.go) -->
   <div class="apple-dialog-overlay" id="cemu-notice-modal" style="display: none;" aria-modal="true" role="dialog">
     <div class="apple-close-card cemu-notice-card">
       <div class="apple-close-icon-wrap">
@@ -2141,7 +2141,7 @@
               <div class="matrix-det-status" id="confirm-det-status" data-i18n="calibration.matrix_det_ok">Определитель матрицы: det = -1 (Корректно)</div>
             </div>
 
-            <!-- Mount tilt correction (USB only, see gui/mount.go) -->
+            <!-- Mount tilt correction (USB only, see gui/internal/app/mount.go) -->
             <div class="cal-matrix-card" id="cal-mount-card" style="display:none;">
               <div class="matrix-card-title" data-i18n="calibration.mount_title">Наклон установки датчика</div>
               <div class="cal-mount-text" id="cal-mount-text"></div>

@@ -882,7 +882,7 @@ input:checked + .apple-slider:before {
   color: #30B0C7;
 }
 
-/* USB protocol status (gui/usbproto.go): one row per protocol level */
+/* USB protocol status (gui/internal/usbdev/status.go): one row per protocol level */
 .proto-card {
   gap: 0;
   padding: 4px 8px;

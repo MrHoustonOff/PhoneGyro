@@ -1,7 +1,7 @@
 'use strict';
 
   // ── Cemu notice ──────────────────────────────────────────────────────────────
-  // Temporary, see gui/cemu_notice.go: shown every time a Cemu instance
+  // Temporary, see gui/internal/app/cemu_notice.go: shown every time a Cemu instance
   // subscribes (until "don't show again"), explains Cemu's gyro bias bug and the
   // drift guard that works around it.
   const CemuNotice = {

@@ -1,120 +1,5 @@
 export namespace app {
 	
-	export class AppSettings {
-	    theme: string;
-	    lang: string;
-	    fontScale: number;
-	    activeSlot: number;
-	    firstLaunchDone: boolean;
-	    hideAuthor: boolean;
-	    dsuPort: number;
-	    dsuMac: string;
-	    httpPort: number;
-	    httpsPort: number;
-	    gyroDeadzone: number;
-	    stillnessHint: boolean;
-	    disconnectAlert: boolean;
-	    silenceDisconnect: boolean;
-	    cemuDriftGuard: boolean;
-	    cemuNoticeHidden?: boolean;
-	    soundMode: string;
-	    soundVolume: number;
-	    soundVolumes?: Record<string, number>;
-	    gyroDeadband: number;
-	    gyroDeadbandUsb: number;
-	    gyroSensitivity: number;
-	    minimizeToTray: boolean;
-	    closeAction: string;
-	    hotkeyRecenterEnabled: boolean;
-	    hotkeyRecenterKey: string;
-	    inputMode?: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new AppSettings(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.theme = source["theme"];
-	        this.lang = source["lang"];
-	        this.fontScale = source["fontScale"];
-	        this.activeSlot = source["activeSlot"];
-	        this.firstLaunchDone = source["firstLaunchDone"];
-	        this.hideAuthor = source["hideAuthor"];
-	        this.dsuPort = source["dsuPort"];
-	        this.dsuMac = source["dsuMac"];
-	        this.httpPort = source["httpPort"];
-	        this.httpsPort = source["httpsPort"];
-	        this.gyroDeadzone = source["gyroDeadzone"];
-	        this.stillnessHint = source["stillnessHint"];
-	        this.disconnectAlert = source["disconnectAlert"];
-	        this.silenceDisconnect = source["silenceDisconnect"];
-	        this.cemuDriftGuard = source["cemuDriftGuard"];
-	        this.cemuNoticeHidden = source["cemuNoticeHidden"];
-	        this.soundMode = source["soundMode"];
-	        this.soundVolume = source["soundVolume"];
-	        this.soundVolumes = source["soundVolumes"];
-	        this.gyroDeadband = source["gyroDeadband"];
-	        this.gyroDeadbandUsb = source["gyroDeadbandUsb"];
-	        this.gyroSensitivity = source["gyroSensitivity"];
-	        this.minimizeToTray = source["minimizeToTray"];
-	        this.closeAction = source["closeAction"];
-	        this.hotkeyRecenterEnabled = source["hotkeyRecenterEnabled"];
-	        this.hotkeyRecenterKey = source["hotkeyRecenterKey"];
-	        this.inputMode = source["inputMode"];
-	    }
-	}
-	export class ProfileView {
-	    slot: number;
-	    name: string;
-	    device: string;
-	    icon: string;
-	    matrix: number[][];
-	    calGravity?: number[];
-	    // Go type: motion
-	    sensorFrame?: any;
-	    mount?: motion.MountCorrection;
-	    active: boolean;
-	    version?: number;
-	    outdated: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new ProfileView(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.slot = source["slot"];
-	        this.name = source["name"];
-	        this.device = source["device"];
-	        this.icon = source["icon"];
-	        this.matrix = source["matrix"];
-	        this.calGravity = source["calGravity"];
-	        this.sensorFrame = this.convertValues(source["sensorFrame"], null);
-	        this.mount = this.convertValues(source["mount"], motion.MountCorrection);
-	        this.active = source["active"];
-	        this.version = source["version"];
-	        this.outdated = source["outdated"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
 	export class AppState {
 	    status: string;
 	    isPaused: boolean;
@@ -140,7 +25,7 @@ export namespace app {
 	    qy: number;
 	    qz: number;
 	    qw: number;
-	    profiles: ProfileView[];
+	    profiles: profiles.View[];
 	    activeSlot: number;
 	    activeMatrix: number[][];
 	    ahrsQ0: number;
@@ -186,7 +71,7 @@ export namespace app {
 	        this.qy = source["qy"];
 	        this.qz = source["qz"];
 	        this.qw = source["qw"];
-	        this.profiles = this.convertValues(source["profiles"], ProfileView);
+	        this.profiles = this.convertValues(source["profiles"], profiles.View);
 	        this.activeSlot = source["activeSlot"];
 	        this.activeMatrix = source["activeMatrix"];
 	        this.ahrsQ0 = source["ahrsQ0"];
@@ -283,7 +168,6 @@ export namespace app {
 	        this.prUrl = source["prUrl"];
 	    }
 	}
-	
 	export class ValidationResult {
 	    success: boolean;
 	    errorCode: string;
@@ -374,6 +258,131 @@ export namespace motion {
 	        this.forwardDeg = source["forwardDeg"];
 	        this.rightDeg = source["rightDeg"];
 	        this.checkDeg = source["checkDeg"];
+	    }
+	}
+
+}
+
+export namespace profiles {
+	
+	export class View {
+	    slot: number;
+	    name: string;
+	    device: string;
+	    icon: string;
+	    matrix: number[][];
+	    calGravity?: number[];
+	    // Go type: motion
+	    sensorFrame?: any;
+	    mount?: motion.MountCorrection;
+	    active: boolean;
+	    version?: number;
+	    outdated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new View(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.slot = source["slot"];
+	        this.name = source["name"];
+	        this.device = source["device"];
+	        this.icon = source["icon"];
+	        this.matrix = source["matrix"];
+	        this.calGravity = source["calGravity"];
+	        this.sensorFrame = this.convertValues(source["sensorFrame"], null);
+	        this.mount = this.convertValues(source["mount"], motion.MountCorrection);
+	        this.active = source["active"];
+	        this.version = source["version"];
+	        this.outdated = source["outdated"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace settings {
+	
+	export class Settings {
+	    theme: string;
+	    lang: string;
+	    fontScale: number;
+	    activeSlot: number;
+	    firstLaunchDone: boolean;
+	    hideAuthor: boolean;
+	    dsuPort: number;
+	    dsuMac: string;
+	    httpPort: number;
+	    httpsPort: number;
+	    gyroDeadzone: number;
+	    stillnessHint: boolean;
+	    disconnectAlert: boolean;
+	    silenceDisconnect: boolean;
+	    cemuDriftGuard: boolean;
+	    cemuNoticeHidden?: boolean;
+	    soundMode: string;
+	    soundVolume: number;
+	    soundVolumes?: Record<string, number>;
+	    gyroDeadband: number;
+	    gyroDeadbandUsb: number;
+	    gyroSensitivity: number;
+	    minimizeToTray: boolean;
+	    closeAction: string;
+	    hotkeyRecenterEnabled: boolean;
+	    hotkeyRecenterKey: string;
+	    inputMode?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.theme = source["theme"];
+	        this.lang = source["lang"];
+	        this.fontScale = source["fontScale"];
+	        this.activeSlot = source["activeSlot"];
+	        this.firstLaunchDone = source["firstLaunchDone"];
+	        this.hideAuthor = source["hideAuthor"];
+	        this.dsuPort = source["dsuPort"];
+	        this.dsuMac = source["dsuMac"];
+	        this.httpPort = source["httpPort"];
+	        this.httpsPort = source["httpsPort"];
+	        this.gyroDeadzone = source["gyroDeadzone"];
+	        this.stillnessHint = source["stillnessHint"];
+	        this.disconnectAlert = source["disconnectAlert"];
+	        this.silenceDisconnect = source["silenceDisconnect"];
+	        this.cemuDriftGuard = source["cemuDriftGuard"];
+	        this.cemuNoticeHidden = source["cemuNoticeHidden"];
+	        this.soundMode = source["soundMode"];
+	        this.soundVolume = source["soundVolume"];
+	        this.soundVolumes = source["soundVolumes"];
+	        this.gyroDeadband = source["gyroDeadband"];
+	        this.gyroDeadbandUsb = source["gyroDeadbandUsb"];
+	        this.gyroSensitivity = source["gyroSensitivity"];
+	        this.minimizeToTray = source["minimizeToTray"];
+	        this.closeAction = source["closeAction"];
+	        this.hotkeyRecenterEnabled = source["hotkeyRecenterEnabled"];
+	        this.hotkeyRecenterKey = source["hotkeyRecenterKey"];
+	        this.inputMode = source["inputMode"];
 	    }
 	}
 

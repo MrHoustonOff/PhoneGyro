@@ -107,15 +107,19 @@ The compiled binaries will be placed in `gui/build/bin/`.
 
 ```
 gui/                    Windows app (Wails); main.go only embeds the UI and starts it
-  internal/app/         the App API the UI calls, settings, profiles, calibration,
-                        the frame pipeline, USB host
+  internal/app/         the App API the UI calls: the frame pipeline (pipeline.go),
+                        motion banks, calibration wizard, phone and USB wiring,
+                        Live Debug, background loops
   internal/motion/      motion math: calibration matrices, axis alignment, AHRS,
                         iOS attitude anchor, gyro bias, deadband, mount tilt
+  internal/settings/    settings.json: defaults, older files, port/MAC checks
+  internal/profiles/    profiles.json: the six calibration slots of a source
+  internal/usbdev/      USB host: finds the device, reads and decodes its frames
   internal/hwproto/     USB hardware protocol wire format (frame, CRC, decoder)
   internal/link/        link-loss statistics and the data-loss alarm
-  internal/resmon/      CPU / RAM monitor
   internal/dsuclients/  names local DSU clients after their program, focuses its window
   internal/tray/        tray icon, its menu and the global recenter hotkey
+  internal/resmon/      CPU / RAM monitor
   internal/version/     build identity (release tag, build number, channel)
   frontend/src/         UI: index.html + js/ + css/, Live Debug window
 pkg/server/             phone HTTPS/WebSocket server, USB frame injection

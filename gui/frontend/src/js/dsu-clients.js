@@ -1,7 +1,7 @@
 'use strict';
 
 // DSU clients on the main screen: the program behind a local client ("Cemu",
-// "PadTest") instead of its address (gui/dsu_clients.go). Hover shows the full
+// "PadTest") instead of its address (gui/internal/app/dsu_clients.go). Hover shows the full
 // address, a click switches to that program, the cross disconnects the client.
 // A disconnected client stays in the list greyed out, with a button that brings
 // it back (App.ReconnectDSUClient).

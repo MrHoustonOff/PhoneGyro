@@ -76,7 +76,7 @@ func (m *AHRS) Reset() {
 
 // Update: rotX/Y/Z в °/с (DSU: Pitch/Yaw/Roll), accX/Y/Z в g, dt — реальный
 // измеренный интервал в секундах с прошлого пакета (считается у вызывающего
-// кода из таймстампа пакета, см. app.go).
+// кода из таймстампа пакета, см. app/pipeline.go).
 func (m *AHRS) Update(rotX, rotY, rotZ, accX, accY, accZ, dt float32) (float32, float32, float32, float32) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

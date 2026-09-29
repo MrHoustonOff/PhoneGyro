@@ -371,7 +371,7 @@
 
       // Listen to backend global Windows hotkey trigger
       if (window.runtime?.EventsOn) {
-        // 60 Hz orientation for the live calibration previews (app.go "ahrs:quat").
+        // 60 Hz orientation for the live calibration previews (gui/internal/app/loops.go "ahrs:quat").
         window.runtime.EventsOn('ahrs:quat', (q) => {
           if (!q || typeof Scene3D === 'undefined') return;
           for (const id of ['cal-3d-canvas-confirm', 'cal-3d-canvas-manual']) {
