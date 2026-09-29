@@ -22,10 +22,17 @@ const (
 	// SchemaVersion is the file layout. Files older than it are reset to empty
 	// slots on load (§5 of spec).
 	SchemaVersion = 2
-	// CurrentVersion is the calibration data generation SaveProfile stamps on every
-	// save. Bump it whenever a new field becomes load-bearing for correct output (it was 3
-	// when SensorFrame — the learned accelerometer axis mapping — became required).
+	// Calibration data generations, a supported range:
+	//   CurrentVersion is what SaveProfile stamps on every save. Bump it whenever the
+	//   calibration stores something new.
+	//   MinVersion is the oldest generation the current pipeline still handles
+	//   correctly. Profiles below it are Outdated() and must be recalibrated. Raise it
+	//   only when old calibration data really stops working (it became 3 when
+	//   SensorFrame, the learned accelerometer axis mapping, became required); an
+	//   addition older profiles can live without bumps CurrentVersion alone, so an
+	//   update does not ask anyone to recalibrate for nothing.
 	CurrentVersion = 3
+	MinVersion     = 3
 )
 
 // Profile represents a saved calibration profile with a 3x3 signed-permutation matrix.
@@ -45,10 +52,15 @@ type Profile struct {
 	Active bool                    `json:"active"` // is this the currently applied profile?
 	// Version is the calibration data generation this profile was captured with,
 	// stamped by SaveProfile. Explicit, not inferred: a named profile whose Version
-	// is behind CurrentVersion is definitely missing data the current
-	// pipeline needs (e.g. SensorFrame) and must be recalibrated — see Outdated().
+	// is below MinVersion is definitely missing data the current pipeline needs
+	// (e.g. SensorFrame) and must be recalibrated — see Outdated().
 	// A never-configured (empty Name) slot is not "outdated", just unused.
 	Version int `json:"version,omitempty"`
+	// When the calibration wizard saved this profile (Unix seconds) and with which
+	// app version; shown to tell profiles apart. Absent for profiles saved by
+	// older builds. Informational only: a calibration does not age.
+	CalibratedAt   int64  `json:"calibratedAt,omitempty"`
+	CalibratedWith string `json:"calibratedWith,omitempty"`
 }
 
 // Empty is an unused slot.
@@ -75,7 +87,7 @@ func EmptySlots() [Slots]Profile {
 // Outdated reports whether this is a real (named) profile captured by an older build
 // that is missing data the current pipeline depends on. Never true for an empty slot.
 func (p Profile) Outdated() bool {
-	return p.Name != "" && p.Version < CurrentVersion
+	return p.Name != "" && p.Version < MinVersion
 }
 
 // View is what the UI actually receives (GetProfiles, AppState.Profiles): the

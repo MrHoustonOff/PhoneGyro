@@ -45,7 +45,10 @@
       }
       if (triggerDevice) {
         const devName = activeProf.device || I18n.t('calibration.device_unknown') || 'Неизвестно';
-        triggerDevice.textContent = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', devName);
+        const cal = formatCalibrationDate(activeProf);
+        triggerDevice.textContent = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', devName)
+          + (cal ? ` • ${cal.short}` : '');
+        triggerDevice.title = cal ? cal.full : '';
       }
       if (triggerBadge) {
         triggerBadge.textContent = formatSlotName(activeIdx);
@@ -114,6 +117,8 @@
 
           const devName = p.device || I18n.t('calibration.device_unknown') || 'Неизвестно';
           const devText = (I18n.t('calibration.device_label') || 'Устройство: {device}').replace('{device}', devName);
+          const cal = formatCalibrationDate(p);
+          if (cal) item.title = cal.full;
           const outdatedBadge = p.outdated
             ? `<span class="profile-outdated-badge">${I18n.t('calibration.outdated_badge') || 'Устарел'}</span>`
             : '';
@@ -125,7 +130,7 @@
               </div>
               <div class="profile-item-meta">
                 <span class="profile-item-title">${p.name || formatSlotName(i)}${outdatedBadge}</span>
-                <span class="profile-item-sub">${formatSlotName(i)} • ${devText}</span>
+                <span class="profile-item-sub">${formatSlotName(i)} • ${devText}${cal ? ` • ${cal.short}` : ''}</span>
               </div>
             </div>
             <div class="profile-item-right">

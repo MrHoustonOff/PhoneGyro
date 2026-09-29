@@ -51,6 +51,8 @@
     "confirm_title": "Проверьте отклик",
     "confirm_yes": "Всё верно — Сохранить",
     "device_label": "Устройство: {device}",
+    "calibrated_on_full": "Откалиброван {date}",
+    "calibrated_with": "версия {version}",
     "device_label_preview": "Устройство при сохранении: {device}",
     "new_profile_marker": "новый профиль",
     "device_unknown": "Неизвестно",

@@ -6,6 +6,7 @@ import (
 	"phonegyro-gui/internal/motion"
 	"phonegyro-gui/internal/settings"
 	"testing"
+	"time"
 )
 
 func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
@@ -51,6 +52,9 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 	profs = app.GetProfiles()
 	if profs[5].Name != "Slot Six Custom" {
 		t.Fatalf("expected slot 5 name 'Slot Six Custom', got '%s'", profs[5].Name)
+	}
+	if age := time.Now().Unix() - profs[5].CalibratedAt; age < 0 || age > 60 || profs[5].CalibratedWith == "" {
+		t.Fatalf("saved profile's calibration stamp: at %d (%ds ago), with %q", profs[5].CalibratedAt, age, profs[5].CalibratedWith)
 	}
 
 	// Test SetActiveProfile to 5

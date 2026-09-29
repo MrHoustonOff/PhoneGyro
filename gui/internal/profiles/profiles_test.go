@@ -80,7 +80,8 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	mount := motion.MountCorrection{Enabled: true}
 	f.Profiles[3] = Profile{Slot: 3, Name: "USB", Device: "Nano", Icon: "gamepad",
 		Matrix: [3][3]float64{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}}, CalGravity: [3]float64{0, 0, 1},
-		SensorFrame: &frame, Mount: &mount, Active: true, Version: CurrentVersion}
+		SensorFrame: &frame, Mount: &mount, Active: true, Version: CurrentVersion,
+		CalibratedAt: 1759170000, CalibratedWith: "2.0.1.000-release"}
 	if err := Save(dir, f); err != nil {
 		t.Fatal(err)
 	}
@@ -97,5 +98,25 @@ func TestCheckMatrix(t *testing.T) {
 	}
 	if CheckMatrix(motion.Identity3()) == nil {
 		t.Fatal("det +1 accepted")
+	}
+}
+
+// TestOutdatedRange: a profile is outdated below MinVersion only; anything from
+// MinVersion to CurrentVersion is supported, and an empty slot never is outdated.
+func TestOutdatedRange(t *testing.T) {
+	named := func(v int) Profile { return Profile{Name: "P", Version: v} }
+	if !named(MinVersion - 1).Outdated() {
+		t.Fatal("below MinVersion is not outdated")
+	}
+	for v := MinVersion; v <= CurrentVersion; v++ {
+		if named(v).Outdated() {
+			t.Fatalf("version %d in the supported range is outdated", v)
+		}
+	}
+	if (Profile{Version: 0}).Outdated() {
+		t.Fatal("an empty slot is outdated")
+	}
+	if MinVersion > CurrentVersion {
+		t.Fatal("MinVersion above CurrentVersion: every new save would be outdated")
 	}
 }

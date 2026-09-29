@@ -51,6 +51,8 @@
     "confirm_title": "Verify Motion Response",
     "confirm_yes": "Looks Great — Save",
     "device_label": "Device: {device}",
+    "calibrated_on_full": "Calibrated {date}",
+    "calibrated_with": "version {version}",
     "device_label_preview": "Device on save: {device}",
     "new_profile_marker": "new profile",
     "device_unknown": "Unknown",

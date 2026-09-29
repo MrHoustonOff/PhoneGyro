@@ -2,9 +2,11 @@ package app
 
 import (
 	"fmt"
+	"time"
 
 	"phonegyro-gui/internal/motion"
 	"phonegyro-gui/internal/profiles"
+	"phonegyro-gui/internal/version"
 )
 
 // loadProfiles reads profiles.json from disk
@@ -172,7 +174,9 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		// Reaching Save means the wizard's axis-align step already confirmed a
 		// mapping (its "next" button is disabled otherwise), so this profile
 		// definitely meets the current pipeline's requirements.
-		Version: profiles.CurrentVersion,
+		Version:        profiles.CurrentVersion,
+		CalibratedAt:   time.Now().Unix(),
+		CalibratedWith: version.Get().Display,
 	}
 	bank.profilesMu.Unlock()
 
