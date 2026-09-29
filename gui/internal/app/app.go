@@ -30,6 +30,7 @@ import (
 	"phonegyro-gui/internal/resmon"
 	"phonegyro-gui/internal/settings"
 	"phonegyro-gui/internal/tray"
+	"phonegyro-gui/internal/usbdev"
 	"phonegyro-gui/internal/version"
 
 	"github.com/gorilla/websocket"
@@ -178,7 +179,7 @@ type App struct {
 	i18nMgr  *i18n.Manager
 	srv      *server.Server
 	dsuSrv   *dsu.Server
-	usbMgr   *usbDeviceManager
+	usbMgr   *usbdev.Manager
 	caMgr    *ca.CertificateManager
 	isPaused atomic.Bool
 	// bankMu guards lazy-initializing phoneBank/usbBank; the banks' own
@@ -1123,7 +1124,7 @@ func (a *App) startup(ctx context.Context) {
 	srv.SetInputMode(a.GetInputMode())
 	a.srv = srv
 
-	a.usbMgr = newUSBDeviceManager(a)
+	a.usbMgr = usbdev.New(a.usbHost())
 	if a.GetInputMode() == "usb" {
 		a.usbMgr.Start()
 	}

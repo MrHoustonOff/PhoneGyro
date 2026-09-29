@@ -1,16 +1,17 @@
-package app
+package usbdev
 
 import (
 	"fmt"
-	"phonegyro-gui/internal/hwproto"
 	"time"
+
+	"phonegyro-gui/internal/hwproto"
 )
 
-// usbProtoStatus is what the connected USB device actually shows on each level of
+// Status is what the connected USB device actually shows on each level of
 // the PhoneGyro hardware protocol, for the "USB protocol" section of Live Debug.
 // It is observed on the wire, never assumed: a field stays empty until the
 // device has sent what it describes.
-type usbProtoStatus struct {
+type Status struct {
 	Type      string `json:"type"` // always "usb_proto"
 	Connected bool   `json:"connected"`
 
@@ -41,7 +42,7 @@ type usbProtoStatus struct {
 	ResetPresses uint64 `json:"reset_presses"`
 }
 
-const usbProtoEvery = time.Second
+const statusEvery = time.Second
 
 // protocolVersionString unpacks the metadata TIMESTAMP_US field
 // (major << 16 | minor << 8 | patch).
@@ -51,8 +52,8 @@ func protocolVersionString(v uint32) string {
 
 // snapshot builds the status from the connection state and the decoder's
 // counters. rateHz is measured by the caller over its reporting interval.
-func (st *usbConnState) snapshot(now time.Time, port string, dec *hwproto.Decoder, rateHz float64) usbProtoStatus {
-	s := usbProtoStatus{
+func (st *connState) snapshot(now time.Time, port string, dec *hwproto.Decoder, rateHz float64) Status {
+	s := Status{
 		Type:         "usb_proto",
 		Connected:    true,
 		Port:         port,

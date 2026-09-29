@@ -1,33 +1,33 @@
-package app
+package usbdev
 
 import (
-	"phonegyro-gui/internal/hwproto"
 	"testing"
 	"time"
+
+	"phonegyro-gui/internal/hwproto"
 )
 
 // TestUSBProtoSnapshot: the Live Debug protocol status reports what the device
 // actually sent — version, ranges, repeat interval of the metadata, name, the
 // reset-button capability, and the decoder's garbage/CRC counters.
 func TestUSBProtoSnapshot(t *testing.T) {
-	app := &App{profilesDir: t.TempDir()}
-	app.bank("usb") // the name frame goes to the USB bank
-	st := newUSBConnState()
+	app := newTestHost(t)
+	st := newConnState()
 	var dec hwproto.Decoder
 
 	s := st.snapshot(time.Now(), "COM3", &dec, 0)
-	if s.MetaSeen || s.Protocol != "" || s.GyroRangeDps != usbDefaultGyroRangeDps {
+	if s.MetaSeen || s.Protocol != "" || s.GyroRangeDps != defaultGyroRangeDps {
 		t.Fatalf("before metadata: %+v", s)
 	}
 
 	meta := hwproto.Frame{Type: hwproto.TypeMeta, TimestampUs: 1<<16 | 1<<8, Buttons: 0x01}
 	meta.Accel = [3]int16{2, 2000, 200}
-	st.handle(meta, app)
-	st.handle(hwproto.Frame{Type: hwproto.TypeName, Name: "Nano MPU-6050"}, app)
-	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 0}, app)
-	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 1, Buttons: 0x01}, app)
+	st.handle(meta, &app.Host)
+	st.handle(hwproto.Frame{Type: hwproto.TypeName, Name: "Nano MPU-6050"}, &app.Host)
+	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 0}, &app.Host)
+	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 1, Buttons: 0x01}, &app.Host)
 	st.lastMetaAt = st.lastMetaAt.Add(-time.Second) // the repeat comes a second later
-	st.handle(meta, app)
+	st.handle(meta, &app.Host)
 
 	// A garbage byte, then a frame whose CRC fails.
 	bad := make([]byte, hwproto.FrameSize)

@@ -1,8 +1,6 @@
-package app
+package usbdev
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -42,13 +40,10 @@ func (p *deadPort) Break(time.Duration) error          { return nil }
 
 // runReadLoop runs readLoop on port as the manager's attached device and waits
 // for it to give up.
-func runReadLoop(t *testing.T, port *deadPort) (*App, *usbDeviceManager, string) {
+func runReadLoop(t *testing.T, port *deadPort) (*testHost, *Manager, string) {
 	t.Helper()
-	root := t.TempDir()
-	app := &App{profilesDir: root}
-	app.bank("usb")
-	app.usbBank.hasClient.Store(true)
-	m := newUSBDeviceManager(app)
+	app := newTestHost(t)
+	m := New(app.Host)
 	m.port, m.portName, m.connected = port, "COM9", true
 
 	done := make(chan struct{})
@@ -56,24 +51,23 @@ func runReadLoop(t *testing.T, port *deadPort) (*App, *usbDeviceManager, string)
 	go func() { m.readLoop(port, "COM9", nil, nil); close(done) }()
 	select {
 	case <-done:
-	case <-time.After(usbSilenceTimeout + 3*time.Second):
+	case <-time.After(silenceTimeout + 3*time.Second):
 		t.Fatal("read loop never gave up on a handle that delivers no fresh data")
 	}
-	if took := time.Since(start); took < usbSilenceTimeout {
-		t.Fatalf("gave up after %v, before the %v silence timeout", took, usbSilenceTimeout)
+	if took := time.Since(start); took < silenceTimeout {
+		t.Fatalf("gave up after %v, before the %v silence timeout", took, silenceTimeout)
 	}
-	log, _ := os.ReadFile(filepath.Join(root, "logs", "phonegyro.log"))
-	return app, m, string(log)
+	return app, m, app.logText()
 }
 
 // TestUSBReadLoopGivesUpOnDeadHandle: a handle that reads nothing forever. The
-// loop drops it after usbSilenceTimeout, logs why, clears the connection so
+// loop drops it after silenceTimeout, logs why, clears the connection so
 // scanning resumes, and does not spin a CPU core meanwhile.
 func TestUSBReadLoopGivesUpOnDeadHandle(t *testing.T) {
 	port := &deadPort{}
 	app, m, log := runReadLoop(t, port)
-	if !port.closed.Load() || m.isConnected() || app.usbBank.hasClient.Load() {
-		t.Fatalf("after giving up: closed=%v connected=%v hasClient=%v", port.closed.Load(), m.isConnected(), app.usbBank.hasClient.Load())
+	if !port.closed.Load() || m.isConnected() || len(app.detached) != 1 || !app.detached[0] {
+		t.Fatalf("after giving up: closed=%v connected=%v detached=%v", port.closed.Load(), m.isConnected(), app.detached)
 	}
 	if n := port.reads.Load(); n > 200 {
 		t.Fatalf("%d reads: the loop spun instead of pausing", n)
@@ -105,18 +99,18 @@ func TestUSBReadLoopDropsReplayedFrames(t *testing.T) {
 // TestUSBConnStateDropsReplay: a replay of the previous data frame is not fresh
 // and never reaches the counters or the pipeline; the next real frame is fresh.
 func TestUSBConnStateDropsReplay(t *testing.T) {
-	app := &App{}
-	st := newUSBConnState()
+	app := newTestHost(t)
+	st := newConnState()
 	f := hwproto.Frame{Type: hwproto.TypeData, Seq: 7, TimestampUs: 1000}
-	if !st.handle(f, app) {
+	if !st.handle(f, &app.Host) {
 		t.Fatal("first frame not fresh")
 	}
 	for i := 0; i < 5; i++ {
-		if st.handle(f, app) {
+		if st.handle(f, &app.Host) {
 			t.Fatal("replayed frame counted as fresh")
 		}
 	}
-	if !st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 8, TimestampUs: 6000}, app) {
+	if !st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 8, TimestampUs: 6000}, &app.Host) {
 		t.Fatal("next real frame not fresh")
 	}
 	if st.dataFrames != 2 || st.duplicates != 5 {
