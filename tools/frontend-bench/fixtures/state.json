@@ -1,0 +1,301 @@
+{
+ "status": "online",
+ "isPaused": false,
+ "deviceName": "iPhone",
+ "hz": 0,
+ "pingMs": -1,
+ "connectedTime": "00:01:00",
+ "pitch": 0,
+ "roll": 0,
+ "yaw": 0,
+ "ip": "192.168.0.10",
+ "gamepadUrl": "https://192.168.0.10:8443/",
+ "setupUrl": "http://192.168.0.10:8080/ca.mobileconfig",
+ "qrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
+ "setupQrCode": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=",
+ "rawRotX": 0,
+ "rawRotY": 0,
+ "rawRotZ": 0,
+ "rawAccX": 0,
+ "rawAccY": 0,
+ "rawAccZ": 0,
+ "qx": 0,
+ "qy": 0,
+ "qz": 0,
+ "qw": 0,
+ "profiles": [
+  {
+   "slot": 0,
+   "name": "Profile 1",
+   "device": "iPhone",
+   "icon": "vertical",
+   "matrix": [
+    [
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     -1
+    ]
+   ],
+   "calGravity": [
+    -0.027960350238246928,
+    -0.013342978450214212,
+    -0.999519976659112
+   ],
+   "sensorFrame": {
+    "q": [
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    "h": -1
+   },
+   "active": false,
+   "version": 3,
+   "outdated": false
+  },
+  {
+   "slot": 1,
+   "name": "Profile 2",
+   "device": "iPhone",
+   "icon": "vertical",
+   "matrix": [
+    [
+     0,
+     0,
+     1
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "calGravity": [
+    0.01140446337433413,
+    0.03102345449817056,
+    -0.9994535924624731
+   ],
+   "sensorFrame": {
+    "q": [
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    "h": -1
+   },
+   "active": false,
+   "version": 3,
+   "outdated": false
+  },
+  {
+   "slot": 2,
+   "name": "Profile 3",
+   "device": "iPhone",
+   "icon": "default",
+   "matrix": [
+    [
+     0,
+     0,
+     1
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     1,
+     0,
+     0
+    ]
+   ],
+   "calGravity": [
+    0.02006614807679357,
+    0.0388066602723742,
+    -0.9990452406272023
+   ],
+   "sensorFrame": {
+    "q": [
+     [
+      0,
+      1,
+      0
+     ],
+     [
+      0,
+      0,
+      1
+     ],
+     [
+      1,
+      0,
+      0
+     ]
+    ],
+    "h": -1
+   },
+   "active": true,
+   "version": 3,
+   "outdated": false
+  },
+  {
+   "slot": 3,
+   "name": "",
+   "device": "Unknown",
+   "icon": "default",
+   "matrix": [
+    [
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     -1
+    ]
+   ],
+   "calGravity": [
+    0,
+    0,
+    0
+   ],
+   "active": false,
+   "outdated": false
+  },
+  {
+   "slot": 4,
+   "name": "",
+   "device": "Unknown",
+   "icon": "default",
+   "matrix": [
+    [
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     -1
+    ]
+   ],
+   "calGravity": [
+    0,
+    0,
+    0
+   ],
+   "active": false,
+   "outdated": false
+  },
+  {
+   "slot": 5,
+   "name": "",
+   "device": "Unknown",
+   "icon": "default",
+   "matrix": [
+    [
+     1,
+     0,
+     0
+    ],
+    [
+     0,
+     1,
+     0
+    ],
+    [
+     0,
+     0,
+     -1
+    ]
+   ],
+   "calGravity": [
+    0,
+    0,
+    0
+   ],
+   "active": false,
+   "outdated": false
+  }
+ ],
+ "activeSlot": 2,
+ "activeMatrix": [
+  [
+   0,
+   0,
+   1
+  ],
+  [
+   0,
+   1,
+   0
+  ],
+  [
+   1,
+   0,
+   0
+  ]
+ ],
+ "ahrsQ0": 0,
+ "ahrsQ1": 0,
+ "ahrsQ2": 0,
+ "ahrsQ3": 0,
+ "firstLaunch": false,
+ "hideAuthor": false,
+ "dsuClients": 0,
+ "dsuClientList": null,
+ "dsuKickedList": null,
+ "inputMode": "phone",
+ "usbConnected": false,
+ "usbPort": ""
+}
