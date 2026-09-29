@@ -1,4 +1,5 @@
-package main
+// Package version is the app's build identity shown in the UI and on the phone page.
+package version
 
 import (
 	"fmt"
@@ -22,42 +23,42 @@ import (
 // and finally to hard defaults if neither source is available (e.g. a binary someone
 // copied out of the repo with no .git nearby).
 var (
-	releaseVersion = "" // -X main.releaseVersion=1.2.0
-	buildTag       = "" // -X main.buildTag=000
-	buildChannel   = "" // -X main.buildChannel=release
+	releaseVersion = "" // -X phonegyro-gui/internal/version.releaseVersion=1.2.0
+	buildTag       = "" // -X phonegyro-gui/internal/version.buildTag=000
+	buildChannel   = "" // -X phonegyro-gui/internal/version.buildChannel=release
 )
 
 // releaseVersionFallback is the last resort when neither -ldflags nor git are
 // available. Keep it in sync with gui/wails.json's "version" field.
 const releaseVersionFallback = "2.0.0"
 
-// AppVersion is what the UI displays; Display is the ready-to-show string so every
+// Info is what the UI displays; Display is the ready-to-show string so every
 // surface (desktop footer, phone web client) renders identically.
-type AppVersion struct {
+type Info struct {
 	Release string `json:"release"`
 	Build   string `json:"build"`
 	Channel string `json:"channel"` // "release" or "dev"
 	Display string `json:"display"`
 }
 
-var versionOnce struct {
+var once struct {
 	sync.Once
-	v AppVersion
+	v Info
 }
 
-// GetAppVersion returns the app's version identity (cached after first call — none of
-// its inputs change while the process is running).
-func (a *App) GetAppVersion() AppVersion {
-	versionOnce.Do(func() {
-		versionOnce.v = computeAppVersion()
+// Get returns the app's version identity (cached after first call — none of its
+// inputs change while the process is running).
+func Get() Info {
+	once.Do(func() {
+		once.v = compute()
 	})
-	return versionOnce.v
+	return once.v
 }
 
-func computeAppVersion() AppVersion {
+func compute() Info {
 	release, build, channel := releaseVersion, buildTag, buildChannel
 	if release == "" || build == "" || channel == "" {
-		release, build, channel = versionFromGit()
+		release, build, channel = fromGit()
 	}
 	if release == "" {
 		release = releaseVersionFallback
@@ -71,7 +72,7 @@ func computeAppVersion() AppVersion {
 	if n, err := strconv.Atoi(build); err == nil {
 		build = fmt.Sprintf("%03d", n)
 	}
-	return AppVersion{
+	return Info{
 		Release: release,
 		Build:   build,
 		Channel: channel,
@@ -79,21 +80,21 @@ func computeAppVersion() AppVersion {
 	}
 }
 
-// versionFromGit is a best-effort local-dev fallback: it asks git for the nearest
+// fromGit is a best-effort local-dev fallback: it asks git for the nearest
 // release tag and how many commits sit on top of it, run from the executable's own
 // directory (git finds the repo root by walking up, so this works whether PhoneGyro
 // runs from gui/build/bin or anywhere else inside the checkout). Any failure — no git,
 // no repo, no tags — returns all-empty and the caller uses its hard defaults instead.
-func versionFromGit() (release, build, channel string) {
+func fromGit() (release, build, channel string) {
 	dir := "."
 	if exe, err := os.Executable(); err == nil {
 		dir = filepath.Dir(exe)
 	}
-	return gitVersionInDir(dir)
+	return gitInDir(dir)
 }
 
-// gitVersionInDir is versionFromGit's testable core: same logic, explicit directory.
-func gitVersionInDir(dir string) (release, build, channel string) {
+// gitInDir is fromGit's testable core: same logic, explicit directory.
+func gitInDir(dir string) (release, build, channel string) {
 	run := func(args ...string) (string, bool) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = dir

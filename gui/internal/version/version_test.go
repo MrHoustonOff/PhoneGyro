@@ -1,13 +1,13 @@
-package main
+package version
 
 import "testing"
 
-func TestComputeAppVersionUsesLdflagsWhenSet(t *testing.T) {
+func TestComputeUsesLdflagsWhenSet(t *testing.T) {
 	oldR, oldB, oldC := releaseVersion, buildTag, buildChannel
 	defer func() { releaseVersion, buildTag, buildChannel = oldR, oldB, oldC }()
 
 	releaseVersion, buildTag, buildChannel = "1.2.0", "7", "dev"
-	v := computeAppVersion()
+	v := compute()
 	if v.Release != "1.2.0" || v.Build != "007" || v.Channel != "dev" {
 		t.Fatalf("got %+v", v)
 	}
@@ -16,12 +16,12 @@ func TestComputeAppVersionUsesLdflagsWhenSet(t *testing.T) {
 	}
 }
 
-func TestComputeAppVersionFallsBackWithoutLdflagsOrGit(t *testing.T) {
+func TestComputeFallsBackWithoutLdflagsOrGit(t *testing.T) {
 	oldR, oldB, oldC := releaseVersion, buildTag, buildChannel
 	defer func() { releaseVersion, buildTag, buildChannel = oldR, oldB, oldC }()
 
 	releaseVersion, buildTag, buildChannel = "", "", ""
-	v := computeAppVersion()
+	v := compute()
 	// Whatever the source (git in this checkout, or the hard fallback), the shape
 	// must always be well-formed: non-empty release, 3-digit build, a real channel.
 	if v.Release == "" {
@@ -35,8 +35,8 @@ func TestComputeAppVersionFallsBackWithoutLdflagsOrGit(t *testing.T) {
 	}
 }
 
-func TestGitVersionInDirMatchesRepoState(t *testing.T) {
-	release, build, channel := gitVersionInDir(".")
+func TestGitInDirMatchesRepoState(t *testing.T) {
+	release, build, channel := gitInDir(".")
 	if release == "" {
 		t.Skip("no git tags reachable from this checkout")
 	}

@@ -45,10 +45,11 @@ jobs:
           # release build (channel=release, build=000): the checkout is exactly that
           # tag, so there are zero commits on top of it by definition. A manual
           # workflow_dispatch run (no tag) is a dev build; leave -ldflags empty and
-          # let the app's own git-based fallback (gui/version.go) figure it out.
+          # let the app's own git-based fallback (gui/internal/version) figure it out.
           if ("${{ github.ref_type }}" -eq "tag") {
             $ver = "${{ github.ref_name }}" -replace '^v',''
-            $ldflags = "-X main.releaseVersion=$ver -X main.buildTag=000 -X main.buildChannel=release"
+            $pkg = "phonegyro-gui/internal/version"
+            $ldflags = "-X $pkg.releaseVersion=$ver -X $pkg.buildTag=000 -X $pkg.buildChannel=release"
 
             # Stamp the tag into the exe's file properties (wails.json -> version
             # resource and manifest), so "Properties > Details" always matches the

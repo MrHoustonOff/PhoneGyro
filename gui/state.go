@@ -11,6 +11,9 @@ import (
 	"time"
 	"unsafe"
 
+	"phonegyro-gui/internal/tray"
+	"phonegyro-gui/internal/version"
+
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -96,6 +99,28 @@ func (a *App) QuitApp() {
 	if a.ctx != nil {
 		wailsRuntime.Quit(a.ctx)
 	}
+}
+
+// GetAppVersion returns the app's version identity (internal/version).
+func (a *App) GetAppVersion() version.Info {
+	return version.Get()
+}
+
+// trayStatus is what the tray icon and its menu show (internal/tray).
+func (a *App) trayStatus() tray.Status {
+	bank := a.activeBank()
+	st := tray.Status{
+		Lang:    a.GetLang(),
+		Online:  bank.hasClient.Load(),
+		Profile: a.getActiveProfileName(),
+	}
+	if s, ok := bank.deviceName.Load().(string); ok {
+		st.Device = s
+	}
+	if a.dsuSrv != nil {
+		st.Emulators = a.dsuSrv.ActiveClientCount()
+	}
+	return st
 }
 
 // bindDSUCallbacks hooks connection lifecycle events from the DSU UDP server.

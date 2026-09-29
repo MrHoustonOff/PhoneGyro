@@ -113,6 +113,9 @@ gui/                    Windows app (Wails): the App API the UI calls, settings,
   internal/hwproto/     USB hardware protocol wire format (frame, CRC, decoder)
   internal/link/        link-loss statistics and the data-loss alarm
   internal/resmon/      CPU / RAM monitor
+  internal/dsuclients/  names local DSU clients after their program, focuses its window
+  internal/tray/        tray icon, its menu and the global recenter hotkey
+  internal/version/     build identity (release tag, build number, channel)
   frontend/src/         UI: index.html + js/ + css/, Live Debug window
 pkg/server/             phone HTTPS/WebSocket server, USB frame injection
 pkg/dsu/                Cemuhook DSU server

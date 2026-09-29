@@ -5,43 +5,15 @@ import (
 	"hash/crc32"
 	"net"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
 	"phonegyro/pkg/dsu"
 )
 
-// TestNameDSUClients: a loopback client is named after the process that owns its
-// UDP port (here: this test binary); a client on another PC keeps just its address.
-func TestNameDSUClients(t *testing.T) {
-	conn, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-	a := conn.LocalAddr().(*net.UDPAddr)
-
-	views := nameDSUClients([]dsu.ClientInfo{
-		{Address: a.String(), IP: "127.0.0.1", Port: a.Port},
-		{Address: "192.168.1.50:50000", IP: "192.168.1.50", Port: 50000},
-	})
-	if views[0].PID != uint32(os.Getpid()) {
-		t.Fatalf("PID %d, want this process %d", views[0].PID, os.Getpid())
-	}
-	if views[0].Process == "" || strings.HasSuffix(strings.ToLower(views[0].Process), ".exe") {
-		t.Fatalf("process name %q", views[0].Process)
-	}
-	if views[1].Process != "" || views[1].PID != 0 {
-		t.Fatalf("remote client got a local name: %+v", views[1])
-	}
-	t.Logf("loopback client -> %q (pid %d)", views[0].Process, views[0].PID)
-}
-
 // TestDSUKickedClients: a disconnected local client stays listed (named) while
 // its program keeps the port open, comes back with ReconnectDSUClient, and is
-// dropped from the list once its port is closed (seen at the next read of the
-// port table).
+// dropped from the list once its port is closed.
 func TestDSUKickedClients(t *testing.T) {
 	free, err := net.ListenUDP("udp4", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
 	if err != nil {
@@ -52,6 +24,7 @@ func TestDSUKickedClients(t *testing.T) {
 
 	app := NewApp()
 	app.profilesDir = t.TempDir()
+	app.dsuNames.TTL = -1 // no caching: see a closed port at once
 	app.dsuSrv = dsu.NewServer(port)
 	if err := app.dsuSrv.Start(); err != nil {
 		t.Fatal(err)
@@ -84,10 +57,7 @@ func TestDSUKickedClients(t *testing.T) {
 	if res := app.DisconnectDSUClient(addr); res != "ok" {
 		t.Fatalf("second DisconnectDSUClient = %q", res)
 	}
-	conn.Close() // the program is gone; the port table is re-read within dsuClientNamesTTL
-	dsuPortsMu.Lock()
-	dsuPortsAt = time.Now().Add(-2 * dsuClientNamesTTL)
-	dsuPortsMu.Unlock()
+	conn.Close() // the program is gone
 	if k := app.dsuKickedViews(); len(k) != 0 {
 		t.Fatalf("a client whose port is closed is still listed: %+v", k)
 	}

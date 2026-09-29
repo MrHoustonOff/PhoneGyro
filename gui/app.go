@@ -24,9 +24,12 @@ import (
 	"phonegyro/pkg/server"
 	"phonegyro/web"
 
+	"phonegyro-gui/internal/dsuclients"
 	"phonegyro-gui/internal/link"
 	"phonegyro-gui/internal/motion"
 	"phonegyro-gui/internal/resmon"
+	"phonegyro-gui/internal/tray"
+	"phonegyro-gui/internal/version"
 
 	"github.com/gorilla/websocket"
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -237,6 +240,7 @@ type App struct {
 	silenceDisconnect atomic.Bool
 	cemuDriftGuard    atomic.Bool // drift guard for Cemu clients (pkg/dsu/cemubias.go)
 	cemuNotice        cemuNoticeState
+	dsuNames          dsuclients.Namer // program names of local DSU clients (dsu_clients.go)
 	soundMode         string
 	soundVolume       atomic.Int32
 	soundVolumesMu    sync.RWMutex
@@ -254,7 +258,7 @@ type App struct {
 	closeActionMu  sync.RWMutex
 	closeAction    string // "ask", "minimize", "quit"
 	quitting       atomic.Bool
-	trayMgr        *TrayManager
+	trayMgr        *tray.Manager
 	// Global Windows Hotkeys
 	hotkeyRecenterEnabled atomic.Bool
 	hotkeyRecenterKeyMu   sync.RWMutex
@@ -407,7 +411,12 @@ func (a *App) startup(ctx context.Context) {
 	a.routeStdLog()
 	a.ctx = ctx
 
-	a.trayMgr = NewTrayManager(a)
+	a.trayMgr = tray.New(tray.Callbacks{
+		Status:   a.trayStatus,
+		Show:     a.ShowWindow,
+		Quit:     a.QuitApp,
+		Recenter: a.TriggerRecenterFromHotkey,
+	})
 	a.trayMgr.Start()
 	a.trayMgr.UpdateHotkey(a.hotkeyRecenterEnabled.Load(), a.getHotkeyRecenterKey())
 
@@ -1169,7 +1178,7 @@ func (a *App) startup(ctx context.Context) {
 		registerLiveDebug(srv.HTTPSMux)
 	}
 
-	srv.SetAppVersion(a.GetAppVersion().Display)
+	srv.SetAppVersion(version.Get().Display)
 	if err := srv.Start(); err != nil {
 		fmt.Printf("[-] Server start error: %v\n", err)
 	}

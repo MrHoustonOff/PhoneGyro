@@ -1,3 +1,40 @@
+export namespace dsuclients {
+	
+	export class View {
+	    address: string;
+	    ip: string;
+	    port: number;
+	    lastSeenMs: number;
+	    active: boolean;
+	    connectedAtMs: number;
+	    cemuBias: number[];
+	    cemuSamples: number;
+	    cemuGuard: boolean;
+	    process?: string;
+	    pid?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new View(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.ip = source["ip"];
+	        this.port = source["port"];
+	        this.lastSeenMs = source["lastSeenMs"];
+	        this.active = source["active"];
+	        this.connectedAtMs = source["connectedAtMs"];
+	        this.cemuBias = source["cemuBias"];
+	        this.cemuSamples = source["cemuSamples"];
+	        this.cemuGuard = source["cemuGuard"];
+	        this.process = source["process"];
+	        this.pid = source["pid"];
+	    }
+	}
+
+}
+
 export namespace main {
 	
 	export class AppSettings {
@@ -62,38 +99,6 @@ export namespace main {
 	        this.hotkeyRecenterEnabled = source["hotkeyRecenterEnabled"];
 	        this.hotkeyRecenterKey = source["hotkeyRecenterKey"];
 	        this.inputMode = source["inputMode"];
-	    }
-	}
-	export class DSUClientView {
-	    address: string;
-	    ip: string;
-	    port: number;
-	    lastSeenMs: number;
-	    active: boolean;
-	    connectedAtMs: number;
-	    cemuBias: number[];
-	    cemuSamples: number;
-	    cemuGuard: boolean;
-	    process?: string;
-	    pid?: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new DSUClientView(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.address = source["address"];
-	        this.ip = source["ip"];
-	        this.port = source["port"];
-	        this.lastSeenMs = source["lastSeenMs"];
-	        this.active = source["active"];
-	        this.connectedAtMs = source["connectedAtMs"];
-	        this.cemuBias = source["cemuBias"];
-	        this.cemuSamples = source["cemuSamples"];
-	        this.cemuGuard = source["cemuGuard"];
-	        this.process = source["process"];
-	        this.pid = source["pid"];
 	    }
 	}
 	export class ProfileView {
@@ -182,8 +187,8 @@ export namespace main {
 	    firstLaunch: boolean;
 	    hideAuthor: boolean;
 	    dsuClients: number;
-	    dsuClientList: DSUClientView[];
-	    dsuKickedList: DSUClientView[];
+	    dsuClientList: dsuclients.View[];
+	    dsuKickedList: dsuclients.View[];
 	    inputMode: string;
 	    usbConnected: boolean;
 	    usbPort: string;
@@ -228,8 +233,8 @@ export namespace main {
 	        this.firstLaunch = source["firstLaunch"];
 	        this.hideAuthor = source["hideAuthor"];
 	        this.dsuClients = source["dsuClients"];
-	        this.dsuClientList = this.convertValues(source["dsuClientList"], DSUClientView);
-	        this.dsuKickedList = this.convertValues(source["dsuKickedList"], DSUClientView);
+	        this.dsuClientList = this.convertValues(source["dsuClientList"], dsuclients.View);
+	        this.dsuKickedList = this.convertValues(source["dsuKickedList"], dsuclients.View);
 	        this.inputMode = source["inputMode"];
 	        this.usbConnected = source["usbConnected"];
 	        this.usbPort = source["usbPort"];
@@ -252,24 +257,6 @@ export namespace main {
 		    }
 		    return a;
 		}
-	}
-	export class AppVersion {
-	    release: string;
-	    build: string;
-	    channel: string;
-	    display: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new AppVersion(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.release = source["release"];
-	        this.build = source["build"];
-	        this.channel = source["channel"];
-	        this.display = source["display"];
-	    }
 	}
 	export class AxisAlignStatus {
 	    known: boolean;
@@ -334,7 +321,6 @@ export namespace main {
 	    }
 	}
 	
-	
 	export class ValidationResult {
 	    success: boolean;
 	    errorCode: string;
@@ -388,6 +374,29 @@ export namespace motion {
 	        this.forwardDeg = source["forwardDeg"];
 	        this.rightDeg = source["rightDeg"];
 	        this.checkDeg = source["checkDeg"];
+	    }
+	}
+
+}
+
+export namespace version {
+	
+	export class Info {
+	    release: string;
+	    build: string;
+	    channel: string;
+	    display: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.release = source["release"];
+	        this.build = source["build"];
+	        this.channel = source["channel"];
+	        this.display = source["display"];
 	    }
 	}
 

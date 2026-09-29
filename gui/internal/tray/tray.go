@@ -1,4 +1,6 @@
-package main
+// Package tray is the Windows notification-area icon with its menu, and the
+// global recenter hotkey (registered on the tray's hidden window).
+package tray
 
 import (
 	_ "embed"
@@ -19,115 +21,26 @@ var trayIconOfflineBytes []byte
 //go:embed icons/tray_online.ico
 var trayIconOnlineBytes []byte
 
-var (
-	user32   = syscall.NewLazyDLL("user32.dll")
-	shell32  = syscall.NewLazyDLL("shell32.dll")
-	kernel32 = syscall.NewLazyDLL("kernel32.dll")
-
-	pRegisterClassExW    = user32.NewProc("RegisterClassExW")
-	pCreateWindowExW     = user32.NewProc("CreateWindowExW")
-	pDefWindowProcW      = user32.NewProc("DefWindowProcW")
-	pDestroyWindow       = user32.NewProc("DestroyWindow")
-	pPostQuitMessage     = user32.NewProc("PostQuitMessage")
-	pPostMessageW        = user32.NewProc("PostMessageW")
-	pGetMessageW         = user32.NewProc("GetMessageW")
-	pTranslateMessage    = user32.NewProc("TranslateMessage")
-	pDispatchMessageW    = user32.NewProc("DispatchMessageW")
-	pSetForegroundWindow = user32.NewProc("SetForegroundWindow")
-	pGetCursorPos        = user32.NewProc("GetCursorPos")
-	pCreatePopupMenu     = user32.NewProc("CreatePopupMenu")
-	pAppendMenuW         = user32.NewProc("AppendMenuW")
-	pTrackPopupMenu      = user32.NewProc("TrackPopupMenu")
-	pDestroyMenu         = user32.NewProc("DestroyMenu")
-	pLoadImageW          = user32.NewProc("LoadImageW")
-
-	pShellNotifyIconW = shell32.NewProc("Shell_NotifyIconW")
-	pGetModuleHandleW = kernel32.NewProc("GetModuleHandleW")
-)
-
-type WNDCLASSEXW struct {
-	CbSize        uint32
-	Style         uint32
-	LpfnWndProc   uintptr
-	CbClsExtra    int32
-	CbWndExtra    int32
-	HInstance     uintptr
-	HIcon         uintptr
-	HCursor       uintptr
-	HbrBackground uintptr
-	LpszMenuName  *uint16
-	LpszClassName *uint16
-	HIconSm       uintptr
+// Status is what the icon, its tooltip and the menu show.
+type Status struct {
+	Lang      string
+	Online    bool   // the active source is connected
+	Device    string // its name; "" is shown as "iPhone"
+	Emulators int    // subscribed DSU clients
+	Profile   string // active profile name
 }
 
-type POINT struct {
-	X, Y int32
+// Callbacks connect the tray to the app. All are required.
+type Callbacks struct {
+	Status   func() Status
+	Show     func() // open the main window
+	Quit     func()
+	Recenter func() // the global hotkey was pressed
 }
 
-type NOTIFYICONDATAW struct {
-	CbSize           uint32
-	HWnd             uintptr
-	UID              uint32
-	UFlags           uint32
-	UCallbackMessage uint32
-	HIcon            uintptr
-	SzTip            [128]uint16
-	DwState          uint32
-	DwStateMask      uint32
-	SzInfo           [256]uint16
-	TimeoutOrVersion uint32
-	SzInfoTitle      [64]uint16
-	DwInfoFlags      uint32
-	GuidItem         [16]byte
-	HBalloonIcon     uintptr
-}
-
-type MSG struct {
-	HWnd    uintptr
-	Message uint32
-	WParam  uintptr
-	LParam  uintptr
-	Time    uint32
-	Pt      POINT
-}
-
-const (
-	NIM_ADD          = 0x00000000
-	NIM_MODIFY       = 0x00000001
-	NIM_DELETE       = 0x00000002
-	NIF_MESSAGE      = 0x00000001
-	NIF_ICON         = 0x00000002
-	NIF_TIP          = 0x00000004
-	WM_USER          = 0x0400
-	WM_TRAYICON      = WM_USER + 1
-	WM_LBUTTONUP     = 0x0202
-	WM_LBUTTONDBLCLK = 0x0203
-	WM_RBUTTONUP     = 0x0205
-	WM_CLOSE         = 0x0010
-	WM_DESTROY       = 0x0002
-
-	IMAGE_ICON      = 1
-	LR_LOADFROMFILE = 0x00000010
-	LR_DEFAULTSIZE  = 0x00000040
-
-	MF_STRING       = 0x00000000
-	MF_GRAYED       = 0x00000001
-	MF_DISABLED     = 0x00000002
-	MF_SEPARATOR    = 0x00000800
-	TPM_BOTTOMALIGN = 0x0020
-	TPM_RIGHTALIGN  = 0x0008
-	TPM_RETURNCMD   = 0x0100
-
-	ID_TRAY_OPEN    = 1001
-	ID_TRAY_PHONE   = 1002
-	ID_TRAY_EMU     = 1003
-	ID_TRAY_PROFILE = 1004
-	ID_TRAY_QUIT    = 1005
-)
-
-// TrayManager manages the Windows notification area system tray icon and context menu.
-type TrayManager struct {
-	app          *App
+// Manager manages the Windows notification area system tray icon and context menu.
+type Manager struct {
+	cb           Callbacks
 	hwnd         uintptr
 	nid          NOTIFYICONDATAW
 	nidMu        sync.Mutex
@@ -152,17 +65,16 @@ type TrayManager struct {
 	hotkeyStr     string
 }
 
-// NewTrayManager initializes a pure Win32 tray manager.
-func NewTrayManager(app *App) *TrayManager {
-	tm := &TrayManager{
-		app:      app,
+// New initializes a pure Win32 tray manager.
+func New(cb Callbacks) *Manager {
+	return &Manager{
+		cb:       cb,
 		stopChan: make(chan struct{}),
 	}
-	return tm
 }
 
 // Start launches the dedicated Win32 thread and tray message loop.
-func (tm *TrayManager) Start() {
+func (tm *Manager) Start() {
 	readyChan := make(chan struct{})
 	go tm.trayLoop(readyChan)
 	<-readyChan
@@ -170,7 +82,7 @@ func (tm *TrayManager) Start() {
 }
 
 // Stop terminates the tray icon and exits the Win32 message loop.
-func (tm *TrayManager) Stop() {
+func (tm *Manager) Stop() {
 	tm.stopOnce.Do(func() {
 		close(tm.stopChan)
 		if tm.hwnd != 0 {
@@ -183,7 +95,7 @@ func (tm *TrayManager) Stop() {
 	})
 }
 
-func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
+func (tm *Manager) trayLoop(readyChan chan struct{}) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -215,7 +127,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 		case WM_TRAYICON:
 			switch lParam {
 			case WM_LBUTTONUP, WM_LBUTTONDBLCLK:
-				tm.app.ShowWindow()
+				tm.cb.Show()
 				return 0
 
 			case WM_RBUTTONUP:
@@ -229,7 +141,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 
 		case WM_HOTKEY:
 			if wParam == uintptr(ID_HOTKEY_RECENTER) {
-				tm.app.TriggerRecenterFromHotkey()
+				tm.cb.Recenter()
 				return 0
 			}
 
@@ -302,7 +214,7 @@ func (tm *TrayManager) trayLoop(readyChan chan struct{}) {
 }
 
 // UpdateHotkey parses and updates the global recenter hotkey registration.
-func (tm *TrayManager) UpdateHotkey(enabled bool, keyStr string) {
+func (tm *Manager) UpdateHotkey(enabled bool, keyStr string) {
 	var mods, vk uint32
 	var err error
 	if enabled && keyStr != "" {
@@ -328,7 +240,7 @@ func (tm *TrayManager) UpdateHotkey(enabled bool, keyStr string) {
 	}
 }
 
-func (tm *TrayManager) applyHotkey(hwnd uintptr) {
+func (tm *Manager) applyHotkey(hwnd uintptr) {
 	if hwnd == 0 {
 		return
 	}
@@ -351,7 +263,7 @@ func (tm *TrayManager) applyHotkey(hwnd uintptr) {
 	}
 }
 
-func (tm *TrayManager) showContextMenu(hwnd uintptr) {
+func (tm *Manager) showContextMenu(hwnd uintptr) {
 	var pt POINT
 	pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 	pSetForegroundWindow.Call(hwnd)
@@ -362,23 +274,9 @@ func (tm *TrayManager) showContextMenu(hwnd uintptr) {
 	}
 	defer pDestroyMenu.Call(hMenu)
 
-	isRu := tm.app.GetLang() == "ru"
-	hasPhone := tm.app.activeBank().hasClient.Load()
-	phoneName := ""
-	if v := tm.app.activeBank().deviceName.Load(); v != nil {
-		if s, ok := v.(string); ok && s != "" {
-			phoneName = s
-		}
-	}
-	if phoneName == "" {
-		phoneName = "iPhone"
-	}
-
-	emuCount := 0
-	if tm.app.dsuSrv != nil {
-		emuCount = tm.app.dsuSrv.ActiveClientCount()
-	}
-	profileName := tm.app.getActiveProfileName()
+	st := tm.status()
+	isRu := st.Lang == "ru"
+	hasPhone, phoneName, emuCount, profileName := st.Online, st.Device, st.Emulators, st.Profile
 
 	var openStr, phoneStr, emuStr, profStr, quitStr string
 
@@ -433,10 +331,19 @@ func (tm *TrayManager) showContextMenu(hwnd uintptr) {
 
 	switch cmd {
 	case ID_TRAY_OPEN:
-		tm.app.ShowWindow()
+		tm.cb.Show()
 	case ID_TRAY_QUIT:
-		tm.app.QuitApp()
+		tm.cb.Quit()
 	}
+}
+
+// status is Callbacks.Status with the device name defaulted.
+func (tm *Manager) status() Status {
+	st := tm.cb.Status()
+	if st.Device == "" {
+		st.Device = "iPhone"
+	}
+	return st
 }
 
 func appendMenuItem(hMenu uintptr, flags uint32, id uint32, text string) {
@@ -448,7 +355,7 @@ func appendMenuItem(hMenu uintptr, flags uint32, id uint32, text string) {
 	pAppendMenuW.Call(hMenu, uintptr(flags), uintptr(id), uintptr(unsafe.Pointer(textPtr)))
 }
 
-func (tm *TrayManager) updateLoop() {
+func (tm *Manager) updateLoop() {
 	ticker := time.NewTicker(800 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -465,33 +372,17 @@ func (tm *TrayManager) updateLoop() {
 }
 
 // UpdateState immediately refreshes the tray icon and menu state.
-func (tm *TrayManager) UpdateState() {
+func (tm *Manager) UpdateState() {
 	tm.refresh()
 }
 
-func (tm *TrayManager) refresh() {
+func (tm *Manager) refresh() {
 	if !tm.ready.Load() || tm.hwnd == 0 {
 		return
 	}
 
-	hasPhone := tm.app.activeBank().hasClient.Load()
-	phoneName := ""
-	if v := tm.app.activeBank().deviceName.Load(); v != nil {
-		if s, ok := v.(string); ok && s != "" {
-			phoneName = s
-		}
-	}
-	if phoneName == "" {
-		phoneName = "iPhone"
-	}
-
-	emuCount := 0
-	if tm.app.dsuSrv != nil {
-		emuCount = tm.app.dsuSrv.ActiveClientCount()
-	}
-
-	profileName := tm.app.getActiveProfileName()
-	lang := tm.app.GetLang()
+	st := tm.status()
+	hasPhone, phoneName, emuCount, profileName, lang := st.Online, st.Device, st.Emulators, st.Profile, st.Lang
 
 	stateChanged := tm.lastOnline != hasPhone ||
 		tm.lastPhone != phoneName ||
