@@ -67,6 +67,17 @@
     - Текст и логотип: шрифт `calc(12px * var(--tb-scale))`, логотип `calc(16px * var(--tb-scale))`
   - Границы (`1px solid var(--line)`) строго сохранены как `1px` во избежание субпиксельного размытия.
 
+#### Коммит 6: `fix(gui): suppress console window flash when querying git version`
+- **Проблема:**
+  - При запуске `PhoneGyro.exe` на долю секунды («наносекунду») мелькало чёрное окно консоли `cmd.exe`/`conhost`.
+  - Причина: `PhoneGyro.exe` скомпилирован как GUI-приложение Windows (`IMAGE_SUBSYSTEM_WINDOWS_GUI`) без прикрепленной консоли. При старте функция `version.Get()` в локальных dev-сборках вызывает `gitInDir()` (`exec.Command("git", ...)`). Запуск консольного процесса (`IMAGE_SUBSYSTEM_WINDOWS_CUI`) из GUI-процесса без флага `CREATE_NO_WINDOW` заставляет Windows создать новое окно консоли для `git.exe`, которое закрывалось сразу по завершении git.
+- **Что сделано:**
+  - Создан хелпер `prepareCmd(cmd)`:
+    - Для Windows (`cmd_windows.go`): выставлены атрибуты процесса `cmd.SysProcAttr = &syscall.SysProcAttr{ HideWindow: true, CreationFlags: 0x08000000 }` (`CREATE_NO_WINDOW`).
+    - Для остальных ОС (`cmd_other.go`): пустая заглушка-no-op.
+  - В `version.go` и `version_test.go` добавлен вызов `prepareCmd(cmd)` перед выполнением команды.
+  - Окно консоли теперь гарантированно не появляется при запуске и в тестах.
+
 ---
 
 ## Архитектурные стандарты системы (Non-Negotiable)
