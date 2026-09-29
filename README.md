@@ -85,7 +85,7 @@ We regularly scan release binaries against VirusTotal (69+ engines clean). If yo
 ## Building from Source
 
 Prerequisites:
-- [Go](https://go.dev/) 1.21+
+- [Go](https://go.dev/) 1.25+
 - [Node.js](https://nodejs.org/) 18+
 - [Wails CLI v2](https://wails.io) (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
 

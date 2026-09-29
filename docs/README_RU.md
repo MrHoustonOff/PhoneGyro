@@ -85,7 +85,7 @@ PhoneGyro — это полностью бесплатный проект с о�
 ## Сборка из исходников
 
 Требования:
-- [Go](https://go.dev/) 1.21+
+- [Go](https://go.dev/) 1.25+
 - [Node.js](https://nodejs.org/) 18+
 - [Wails CLI v2](https://wails.io) (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
 
