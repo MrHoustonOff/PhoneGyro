@@ -116,8 +116,8 @@
 }
 
 .bench-hud-score {
-  color: var(--palette-yellow-dark) !important;
-  font-weight: 700 !important;
+  color: var(--palette-yellow-dark);
+  font-weight: 700;
 }
 
 /* Subtle Network Telemetry Sparkline */
@@ -377,34 +377,34 @@
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  right: 0;
+  bottom: 0;
   width: 100% !important;
   height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
   margin: 0 !important;
-  padding: 0 !important;
-  z-index: var(--z-sheet) !important;
-  border-radius: 0 !important;
-  border: none !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+  padding: 0;
+  z-index: var(--z-sheet);
+  border-radius: 0;
+  border: none;
+  box-sizing: border-box;
+  overflow: hidden;
   background-color: var(--palette-navy-925) !important;
   background: radial-gradient(circle at 50% 35%, var(--palette-navy-800) 0%, var(--palette-navy-950) 100%) !important;
 }
 
 .bench-platform-viewport.fullscreen .bench-viewport-action-btn {
   top: 18px !important;
-  right: 18px !important;
+  right: 18px;
   width: 38px !important;
   height: 38px !important;
-  border-radius: 10px !important;
+  border-radius: 10px;
 }
 
 .bench-platform-viewport.fullscreen .bench-platform-hud {
-  bottom: 18px !important;
-  right: 18px !important;
+  bottom: 18px;
+  right: 18px;
 }
 
 [data-theme="light"] .bench-platform-viewport.fullscreen {
@@ -505,8 +505,8 @@
 }
 
 .bench-hud-record {
-  color: var(--palette-green-dark) !important;
-  font-weight: 700 !important;
+  color: var(--palette-green-dark);
+  font-weight: 700;
 }
 
 /* Zelda Aim Target Reticle Display */
@@ -777,19 +777,19 @@
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  right: 0;
+  bottom: 0;
   width: 100% !important;
   height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
   margin: 0 !important;
-  padding: 0 !important;
-  z-index: var(--z-sheet) !important;
-  border-radius: 0 !important;
-  border: none !important;
-  box-sizing: border-box !important;
-  overflow: hidden !important;
+  padding: 0;
+  z-index: var(--z-sheet);
+  border-radius: 0;
+  border: none;
+  box-sizing: border-box;
+  overflow: hidden;
   background-color: var(--palette-navy-940) !important;
   background: radial-gradient(circle at 50% 50%, var(--palette-navy-875) 0%, var(--palette-navy-975) 100%) !important;
 }
@@ -801,17 +801,17 @@
 
 .bench-target-viewport.fullscreen .bench-viewport-action-btn {
   top: 18px !important;
-  right: 18px !important;
+  right: 18px;
   width: 38px !important;
   height: 38px !important;
-  border-radius: 10px !important;
+  border-radius: 10px;
 }
 
 .bench-target-viewport.fullscreen .bench-target-hud {
-  bottom: 18px !important;
-  right: 18px !important;
+  bottom: 18px;
+  right: 18px;
   font-size: 12px !important;
-  padding: 4px 10px !important;
+  padding: 4px 10px;
 }
 
 .bench-target-viewport.fullscreen #bench-aim-fs-hud {
@@ -821,11 +821,11 @@
 /* Urgent pulsating timer pill */
 #bench-aim-time-pill.urgent {
   background: rgba(var(--palette-red-rgb), 0.25) !important;
-  border-color: rgba(var(--palette-red-rgb), 0.6) !important;
+  border-color: rgba(var(--palette-red-rgb), 0.6);
   animation: urgentTimerPulse 0.5s infinite alternate ease-in-out;
 }
 #bench-aim-time-pill.urgent .bench-fs-val {
-  color: var(--palette-red) !important;
+  color: var(--palette-red);
 }
 
 @keyframes urgentTimerPulse {
@@ -835,7 +835,7 @@
 
 /* Reticle Shot Flash Effect */
 .bench-reticle-dot.shot-flash .bench-reticle-circle {
-  border-color: var(--palette-cyan-pure) !important;
+  border-color: var(--palette-cyan-pure);
   box-shadow: 0 0 24px var(--palette-cyan-pure), inset 0 0 12px var(--palette-cyan-pure) !important;
   transform: scale(1.35);
   transition: transform 0.08s ease, border-color 0.08s ease;
@@ -926,7 +926,7 @@
 
 /* Hit Explosion Animation */
 .bench-aim-target.hit {
-  animation: targetExplode 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: targetExplode 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes targetExplode {

@@ -521,18 +521,18 @@
 
 .btn-capture-action.counting-down {
   background: linear-gradient(135deg, var(--palette-orange), var(--palette-orange-deep)) !important;
-  color: var(--palette-white) !important;
+  color: var(--palette-white);
   box-shadow: 0 0 24px rgba(var(--palette-orange-rgb), 0.5) !important;
-  border-color: var(--palette-orange-soft) !important;
-  animation: pulseOrangeBtn 0.75s infinite alternate !important;
+  border-color: var(--palette-orange-soft);
+  animation: pulseOrangeBtn 0.75s infinite alternate;
 }
 
 /* Axis-align step: a live status, not a button to press. */
 .btn-capture-action.listening,
 .btn-capture-action.listening:disabled {
   background: rgba(var(--palette-green-muted-rgb), 0.10) !important;
-  color: var(--dot-online) !important;
-  border: 1px solid rgba(var(--palette-green-muted-rgb), 0.35) !important;
+  color: var(--dot-online);
+  border: 1px solid rgba(var(--palette-green-muted-rgb), 0.35);
   box-shadow: none !important;
   cursor: default !important;
   opacity: 1 !important;
@@ -546,9 +546,9 @@
 
 .btn-capture-action.recording {
   background: linear-gradient(135deg, var(--palette-green-muted), var(--palette-green-muted-dark)) !important;
-  color: var(--palette-white) !important;
+  color: var(--palette-white);
   box-shadow: 0 2px 8px rgba(var(--palette-black-rgb), 0.15) !important;
-  border-color: var(--palette-green-muted) !important;
+  border-color: var(--palette-green-muted);
 }
 
 @keyframes pulseOrangeBtn {
@@ -631,7 +631,7 @@
   padding: 0 18px;
   border-radius: var(--radius-pill);
   background: var(--palette-blue-web) !important;
-  color: var(--palette-white) !important;
+  color: var(--palette-white);
   border: none;
   font-family: var(--font-sans);
   font-size: 14px;
@@ -1178,7 +1178,7 @@
   padding: 0 18px;
   border-radius: var(--radius-pill);
   background: var(--apple-blue, var(--palette-blue-web));
-  color: var(--palette-white) !important;
+  color: var(--palette-white);
   border: none;
   font-family: var(--font-sans);
   font-size: 13px;
@@ -1202,8 +1202,8 @@
 
 .btn-wizard-forward:disabled {
   background: var(--surface-card, rgba(var(--palette-white-rgb), 0.05)) !important;
-  color: var(--text-tertiary, var(--palette-gray-neutral)) !important;
-  border: 1px solid var(--border, rgba(var(--palette-white-rgb), 0.1)) !important;
+  color: var(--text-tertiary, var(--palette-gray-neutral));
+  border: 1px solid var(--border, rgba(var(--palette-white-rgb), 0.1));
   box-shadow: none !important;
   cursor: not-allowed;
   opacity: 0.5;
@@ -1238,7 +1238,7 @@
 /* ── First-Time Device Calibration Radiant Red Aura (20s Apple HIG Animation) ── */
 .apple-card.first-device-alert-active {
   position: relative;
-  border-color: rgba(var(--palette-red-rgb), 0.85) !important;
+  border-color: rgba(var(--palette-red-rgb), 0.85);
   animation: cardAuraPulseRed 2.4s infinite ease-in-out;
 }
 
@@ -1421,8 +1421,8 @@
 /* Bottom "Калибровать" Button Highlight Glow (Brand Red) */
 .btn-calibrate-trigger.highlight-pulse {
   background: linear-gradient(135deg, var(--palette-red), var(--palette-red-dark)) !important;
-  color: var(--palette-white) !important;
-  border-color: transparent !important;
+  color: var(--palette-white);
+  border-color: transparent;
   box-shadow: 0 0 0 2px rgba(var(--palette-red-rgb), 0.6), 0 0 20px rgba(var(--palette-red-rgb), 0.5) !important;
   animation: calibrateBtnPulse 1.8s infinite ease-in-out;
   transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;

@@ -84,10 +84,10 @@
 }
 
 .help-action-btn {
-  min-height: 34px !important;
-  padding: 6px 16px !important;
+  min-height: 34px;
+  padding: 6px 16px;
   font-size: 13px !important;
-  border-radius: 6px !important;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 
@@ -319,7 +319,7 @@
 }
 
 .setting-input-num.error {
-  border-color: var(--palette-red) !important;
+  border-color: var(--palette-red);
   box-shadow: 0 0 0 3px rgba(var(--palette-red-rgb), 0.25) !important;
 }
 

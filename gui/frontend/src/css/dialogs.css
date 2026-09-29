@@ -316,7 +316,7 @@
   font-size: 13px;
   font-weight: 550;
   letter-spacing: -0.01em;
-  text-transform: none !important;
+  text-transform: none;
   border-radius: 11px;
   display: flex;
   align-items: center;

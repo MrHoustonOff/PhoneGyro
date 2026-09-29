@@ -81,7 +81,7 @@
 }
 
 .apple-card.morphing {
-  overflow: hidden !important;
+  overflow: hidden;
 }
 
 @keyframes viewFadeIn {
