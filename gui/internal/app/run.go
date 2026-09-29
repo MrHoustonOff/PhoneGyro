@@ -39,10 +39,10 @@ func Run(frontend fs.FS) {
 
 	err := wails.Run(&options.App{
 		Title:     "PhoneGyro",
-		Width:     880,
-		Height:    620,
-		MinWidth:  620,
-		MinHeight: 480,
+		Width:     1280,
+		Height:    720,
+		MinWidth:  960,
+		MinHeight: 540,
 		// The UI draws its own title bar (frontend: .titlebar); Windows keeps the
 		// shadow, rounded corners, snapping and edge resizing.
 		Frameless: true,
