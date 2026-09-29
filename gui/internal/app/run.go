@@ -58,8 +58,10 @@ func Run(frontend fs.FS) {
 			case "quit":
 				return false
 			default: // "ask"
-				wailsRuntime.EventsEmit(ctx, "app:confirm-close")
-				return true
+				// The close dialog belongs to the UI, which is being rewritten
+				// (LEGACY/frontend holds the old one). Until the new UI has it,
+				// "ask" closes like "quit" so the window can always be closed.
+				return false
 			}
 		},
 		SingleInstanceLock: &options.SingleInstanceLock{
@@ -76,10 +78,16 @@ func Run(frontend fs.FS) {
 		Debug: options.Debug{
 			OpenInspectorOnStartup: false,
 		},
+		// The page's own --bg: no white or black flash before the first frame.
+		BackgroundColour: &options.RGBA{R: 0xf1, G: 0xf1, B: 0xf1, A: 0xff},
 		Windows: &windows.Options{
 			WebviewUserDataPath:  filepath.Join(os.Getenv("APPDATA"), "PhoneGyro", "WebView2_Main"),
 			WebviewIsTransparent: false,
 			WindowIsTranslucent:  false,
+			// The UI scales itself (design system: 50-300 %, Ctrl +/-/0);
+			// WebView2's own Ctrl+wheel zoom would fight it.
+			IsZoomControlEnabled: false,
+			ZoomFactor:           1.0,
 		},
 	})
 
