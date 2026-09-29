@@ -217,10 +217,18 @@
         metalness: 0.0,         // Pure dielectric matte polycarbonate
       });
 
+      // A live scene redraws only when something visible changed (orientation,
+      // camera glide, size, theme, model arrival); the demo animates every frame.
+      let destroyed = false;
+      let needsRender = true;
+      const lastRenderedQuat = new THREE.Quaternion(0, 0, 0, 0);
+      let lastRenderedCamAngle = NaN;
+      const demoEuler = new THREE.Euler();
+
       // Load or instantiate the 3D gamepad model
       let isModelLoaded = false;
       Scene3D.loadGamepadModel().then((template) => {
-        if (!renderer) return; // Scene already destroyed
+        if (destroyed) return;
         const clone = template.clone(true);
         clone.traverse((child) => {
           if (child.isMesh) {
@@ -231,7 +239,10 @@
         });
         gamepadGroup.add(clone);
         isModelLoaded = true;
+        needsRender = true;
       }).catch((err) => {
+        if (destroyed) return;
+        needsRender = true;
         console.warn('Fallback: Gamepad model load error, creating fallback mesh:', err);
         const fallbackMesh = new THREE.Mesh(
           new THREE.BoxGeometry(1.6, 0.4, 1.0),
@@ -264,6 +275,7 @@
         renderer.setSize(w, h, false);
         camera.aspect = w / h;
         camera.updateProjectionMatrix();
+        needsRender = true;
       }
 
       const resizeObs = new ResizeObserver(resize);
@@ -290,10 +302,10 @@
 
             if (demoStep === 1) {
               // Step 1: Tilt forward (Pitch / "Кивни")
-              gamepadGroup.quaternion.setFromEuler(new THREE.Euler(-0.45 * ease, 0, 0, 'XYZ'));
+              gamepadGroup.quaternion.setFromEuler(demoEuler.set(-0.45 * ease, 0, 0, 'XYZ'));
             } else if (demoStep === 2) {
               // Step 2: Bank sideways (Roll / "Самолётик")
-              gamepadGroup.quaternion.setFromEuler(new THREE.Euler(0, 0, -0.45 * ease, 'XYZ'));
+              gamepadGroup.quaternion.setFromEuler(demoEuler.set(0, 0, -0.45 * ease, 'XYZ'));
             } else if (demoStep === 3) {
               // Step 3: Axis alignment — smooth hold-to-hold tumble through combined
               // pitch+yaw+roll, pausing briefly at each hold, looping forever.
@@ -330,7 +342,7 @@
               const px = from[0] + (to[0] - from[0]) * ease;
               const py = from[1] + (to[1] - from[1]) * ease;
               const rz = from[2] + (to[2] - from[2]) * ease;
-              gamepadGroup.quaternion.setFromEuler(new THREE.Euler(px, py, rz, 'XYZ'));
+              gamepadGroup.quaternion.setFromEuler(demoEuler.set(px, py, rz, 'XYZ'));
             }
           }
         } else {
@@ -341,6 +353,15 @@
           currentQuat.copy(liveQuat);
           gamepadGroup.quaternion.copy(currentQuat);
         }
+
+        if (mode !== 'demo' && !needsRender &&
+            gamepadGroup.quaternion.equals(lastRenderedQuat) &&
+            Math.abs(currentCamAngle - lastRenderedCamAngle) < 1e-5) {
+          return; // nothing visible changed since the last frame
+        }
+        needsRender = false;
+        lastRenderedQuat.copy(gamepadGroup.quaternion);
+        lastRenderedCamAngle = currentCamAngle;
 
         // Apply orbit camera position
         const camX = camTarget.x + Math.sin(currentCamAngle) * orbitHRadius;
@@ -366,6 +387,7 @@
         gridMat.map = gridTex;
         gridMat.opacity = (theme === 'dark') ? 0.75 : 0.65;
         gridMat.needsUpdate = true;
+        needsRender = true;
       }
 
       const instance = {
@@ -376,6 +398,7 @@
           mode = newMode;
           demoStep = step;
           animTime = 0;
+          needsRender = true;
         },
         setMatrix(mat) {
           activeMatrix = mat;
@@ -415,13 +438,19 @@
           }
         },
         destroy() {
+          destroyed = true;
           if (animId) {
             cancelAnimationFrame(animId);
             animId = null;
           }
           if (gridTex) gridTex.dispose();
           if (gridMat) gridMat.dispose();
+          gridFloor.geometry.dispose();
+          appleGamepadMaterial.dispose();
           resizeObs.disconnect();
+          // No forceContextLoss(): the wizard mounts again on the same canvas, and
+          // a lost context stays lost for that canvas. Remounting reuses the
+          // canvas's context, so contexts do not pile up.
           renderer.dispose();
         }
       };

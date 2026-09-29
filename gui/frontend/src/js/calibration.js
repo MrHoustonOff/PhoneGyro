@@ -201,6 +201,9 @@
         const el = document.getElementById(id);
         if (el) el.style.display = (id === `cal-screen-${screen}`) ? 'block' : 'none';
       });
+      // A hidden screen's 3D preview would keep its WebGL context and keep drawing.
+      const sceneOf = { capture: 'cal-3d-canvas', confirm: 'cal-3d-canvas-confirm', manual: 'cal-3d-canvas-manual' };
+      Object.entries(sceneOf).forEach(([s, id]) => { if (s !== screen) Scene3D.destroy(id); });
 
       if (screen === 'capture') {
         this._updateStepUI();
