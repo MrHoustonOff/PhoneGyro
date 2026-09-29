@@ -746,7 +746,7 @@
 .dsu-home-title {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text);
   letter-spacing: -0.01em;
 }
 
@@ -899,7 +899,7 @@
 .dsu-client-addr {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .dsu-client-status-badge {

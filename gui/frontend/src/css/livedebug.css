@@ -1220,7 +1220,7 @@ input:checked + .apple-slider:before {
   border: 1px solid rgba(52, 199, 89, 0.22);
   font-size: 10px;
   font-family: var(--font-mono);
-  color: var(--text-primary);
+  color: var(--text);
   transition: all 0.2s ease;
 }
 
