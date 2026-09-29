@@ -28,6 +28,9 @@
     currentYaw: 0,
     _inclinometerLoopRunning: false,
 
+    // The level bubble and yaw needle ease towards the latest angles (targetPitch/
+    // Roll/Yaw, set by render at 15 Hz). The loop runs only while they are still
+    // moving: once they reach the target it stops, and render wakes it again.
     startInclinometerLoop() {
       if (this._inclinometerLoopRunning) return;
       this._inclinometerLoopRunning = true;
@@ -36,24 +39,35 @@
       const yawGroup = document.getElementById('gyro-yaw-group');
       const hudStatus = document.getElementById('hud-level-status');
       const maxR = 40.0;
+      const settled = 0.005; // degrees: closer than this to the target counts as there
+      let lastCx = '', lastCy = '', lastTransform = '', lastLevel = null;
 
       const step = () => {
-        // Pause SVG DOM updates when Settings is open or when device is offline (inclinometer hidden)
+        this._inclinometerRaf = null;
+        // Inclinometer hidden: Settings open, or the device is offline. render wakes it.
         if ((typeof SettingsManager !== 'undefined' && SettingsManager.isOpen) || (this.lastState && this.lastState.status === 'offline')) {
-          requestAnimationFrame(step);
           return;
         }
 
         // Exponential lerp smoothing for 60/120/144Hz buttery smooth fluid movement
         const factor = 0.22;
-        this.currentPitch += (this.targetPitch - this.currentPitch) * factor;
-        this.currentRoll += (this.targetRoll - this.currentRoll) * factor;
-
+        const dP = this.targetPitch - this.currentPitch;
+        const dR = this.targetRoll - this.currentRoll;
         // Wrap-around shortest angle distance for yaw needle
         let diffYaw = (this.targetYaw - this.currentYaw) % 360;
         if (diffYaw > 180) diffYaw -= 360;
         if (diffYaw < -180) diffYaw += 360;
-        this.currentYaw += diffYaw * factor;
+
+        const done = Math.abs(dP) < settled && Math.abs(dR) < settled && Math.abs(diffYaw) < settled;
+        if (done) {
+          this.currentPitch = this.targetPitch;
+          this.currentRoll = this.targetRoll;
+          this.currentYaw += diffYaw;
+        } else {
+          this.currentPitch += dP * factor;
+          this.currentRoll += dR * factor;
+          this.currentYaw += diffYaw * factor;
+        }
 
         if (bubble && yawGroup) {
           // Pitch: tilt forward (p > 0) -> bubble forward (up, -Y in SVG); tilt backward (p < 0) -> bubble backward (down, +Y)
@@ -61,24 +75,31 @@
           // Roll: tilt right (r > 0) -> bubble right (+X in SVG); tilt left (r < 0) -> bubble left (-X)
           const offsetX = Math.max(-maxR, Math.min(maxR, this.currentRoll * 0.9));
 
-          bubble.setAttribute('cx', (60 + offsetX).toFixed(2));
-          bubble.setAttribute('cy', (60 + offsetY).toFixed(2));
+          const cx = (60 + offsetX).toFixed(2);
+          const cy = (60 + offsetY).toFixed(2);
+          if (cx !== lastCx) { bubble.setAttribute('cx', cx); lastCx = cx; }
+          if (cy !== lastCy) { bubble.setAttribute('cy', cy); lastCy = cy; }
 
           // Snap to glowing green level state if within 3.0 degrees
           const isLevel = Math.abs(this.currentPitch) <= 3.0 && Math.abs(this.currentRoll) <= 3.0;
-          bubble.classList.toggle('level', isLevel);
-          if (hudStatus) {
-            hudStatus.classList.toggle('level', isLevel);
+          if (isLevel !== lastLevel) {
+            bubble.classList.toggle('level', isLevel);
+            if (hudStatus) hudStatus.classList.toggle('level', isLevel);
+            lastLevel = isLevel;
           }
 
           // Rotate compass pointer around center (60, 60) with Yaw
-          yawGroup.setAttribute('transform', `rotate(${this.currentYaw.toFixed(2)} 60 60)`);
+          const transform = `rotate(${this.currentYaw.toFixed(2)} 60 60)`;
+          if (transform !== lastTransform) { yawGroup.setAttribute('transform', transform); lastTransform = transform; }
         }
 
-        requestAnimationFrame(step);
+        if (!done) this._inclinometerRaf = requestAnimationFrame(step);
       };
 
-      requestAnimationFrame(step);
+      this._wakeInclinometer = () => {
+        if (!this._inclinometerRaf) this._inclinometerRaf = requestAnimationFrame(step);
+      };
+      this._wakeInclinometer();
     },
 
     findEmptyOrActiveSlot() {
@@ -770,6 +791,7 @@
         const p = this.targetPitch;
         const r = this.targetRoll;
         const y = this.targetYaw;
+        if (this._wakeInclinometer) this._wakeInclinometer();
 
         const isWaiting = (state.hz === 0 && Math.abs(p) < 0.001 && Math.abs(r) < 0.001 && Math.abs(y) < 0.001);
         const badgeKey = state.isPaused ? 'paused' : (isWaiting ? 'waiting' : 'online');
