@@ -128,6 +128,9 @@
       }
 
       if (screen === 'ios') {
+        // The step screenshots are lazy so startup does not decode them; once
+        // the iOS guide is open, fetch all six so "Next" shows them at once.
+        document.querySelectorAll('#setup-screen-ios img[loading="lazy"]').forEach(img => { img.loading = 'eager'; });
         this.setIosStep(this.iosStep || 1);
       }
     },
