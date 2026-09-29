@@ -50,17 +50,6 @@
   stroke: currentColor;
 }
 
-/* Make HUD bezel have pointer cursor and hover hint */
-.gyro-hud-bezel {
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.gyro-hud-bezel:hover {
-  transform: scale(1.02);
-  box-shadow: 0 0 16px rgba(var(--accent-rgb, 0, 122, 255), 0.25);
-}
-
 /* ── Recenter Centered Modal Dialog ───────────────────────────────────────── */
 .recenter-overlay {
   position: fixed;
