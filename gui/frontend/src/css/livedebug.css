@@ -1268,7 +1268,7 @@ input:checked + .apple-slider:before {
 #stats-floating-tooltip {
   position: fixed;
   z-index: var(--z-ld-tooltip);
-  display: none;
+  display: block; /* hidden until shown: the hidden attribute */
   max-width: 280px;
   padding: 9px 13px;
   background: rgba(var(--palette-gray-6-dark-rgb), 0.94);
@@ -1412,7 +1412,7 @@ input:checked + .apple-slider:before {
   border-radius: var(--radius-md);
   font-size: 11.5px;
   font-weight: 600;
-  display: none;
+  display: block; /* hidden until shown: the hidden attribute */
   word-break: break-all;
 }
 

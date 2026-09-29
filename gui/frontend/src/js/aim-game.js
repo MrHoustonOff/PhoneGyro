@@ -151,7 +151,7 @@
         if (!this._placeholder) {
           this._placeholder = document.createElement('div');
           this._placeholder.id = 'bench-aim-placeholder';
-          this._placeholder.style.display = 'none';
+          setShown(this._placeholder, false);
         }
         if (vp.parentNode && vp.parentNode !== document.body) {
           vp.parentNode.insertBefore(this._placeholder, vp);
@@ -174,8 +174,8 @@
       if (btn) {
         const iconExpand = btn.querySelector('.icon-expand');
         const iconCollapse = btn.querySelector('.icon-collapse');
-        if (iconExpand) iconExpand.style.display = this.isFullscreen ? 'none' : 'block';
-        if (iconCollapse) iconCollapse.style.display = this.isFullscreen ? 'block' : 'none';
+        if (iconExpand) setShown(iconExpand, !(this.isFullscreen));
+        if (iconCollapse) setShown(iconCollapse, this.isFullscreen);
         btn.title = this.isFullscreen ? (I18n.t('settings_modal.bench_exit_fullscreen') || 'Свернуть') : (I18n.t('settings_modal.bench_fullscreen') || 'На весь экран');
       }
 
@@ -209,7 +209,7 @@
       this.timeLeft = 30.0;
       this.timerStartTs = 0;
 
-      if (this.gameoverEl) this.gameoverEl.style.display = 'none';
+      if (this.gameoverEl) setShown(this.gameoverEl, false);
       if (this.timePillEl) this.timePillEl.classList.remove('urgent');
       if (this.timerEl) this.timerEl.textContent = '30.0';
       if (this.scoreEl) this.scoreEl.textContent = '0';
@@ -236,7 +236,7 @@
     cleanupGame() {
       this.cleanupTargets();
       this.gameState = 'idle';
-      if (this.gameoverEl) this.gameoverEl.style.display = 'none';
+      if (this.gameoverEl) setShown(this.gameoverEl, false);
       if (this.timePillEl) this.timePillEl.classList.remove('urgent');
     },
 
@@ -401,7 +401,7 @@
       const isNewRecord = (this.score >= this.record && this.score > 0);
 
       if (this.recordBadgeEl) {
-        this.recordBadgeEl.style.display = isNewRecord ? 'inline-block' : 'none';
+        setShown(this.recordBadgeEl, isNewRecord);
       }
       if (this.finalScoreEl) {
         this.finalScoreEl.textContent = this.score.toString();
@@ -410,7 +410,7 @@
         this.finalRecordEl.textContent = this.record.toString();
       }
       if (this.gameoverEl) {
-        this.gameoverEl.style.display = 'flex';
+        setShown(this.gameoverEl, true);
       }
     },
 

@@ -102,13 +102,10 @@
       this._wakeInclinometer();
     },
 
-    // render runs 15 times a second: writing an unchanged text or display still
-    // invalidates style and layout, so these write only on change.
+    // render runs 15 times a second: writing an unchanged text still invalidates
+    // style and layout, so this writes only on change (setShown never rewrites).
     _setText(el, v) {
       if (el && el.textContent !== v) el.textContent = v;
-    },
-    _setDisplay(el, v) {
-      if (el && el.style.display !== v) el.style.display = v;
     },
     _lastHideAuthor: null,
     _applyAuthorSignature(hide) {
@@ -117,7 +114,7 @@
       this._lastHideAuthor = hide;
       ['author-signature', 'help-author-sig', 'setup-author-sig'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = hide ? 'none' : '';
+        if (el) setShown(el, !(hide));
       });
     },
 
@@ -273,7 +270,7 @@
       const el = document.getElementById('level-recal-hint');
       const calBtn = document.getElementById('btn-open-calibration');
       if (el) {
-        el.style.display = 'block';
+        setShown(el, true);
         void el.offsetHeight;
         el.classList.add('visible');
       }
@@ -302,11 +299,11 @@
       if (el) {
         el.classList.remove('visible');
         if (immediate) {
-          el.style.display = 'none';
+          setShown(el, false);
         } else {
           setTimeout(() => {
             if (!this._recalHintShown) {
-              el.style.display = 'none';
+              setShown(el, false);
             }
           }, 350);
         }
@@ -361,10 +358,10 @@
           dot.className = `status-dot ${isOnline ? 'online' : ''}`;
         }
 
-        if (idleRow) idleRow.style.display = isOnline ? 'none' : 'flex';
+        if (idleRow) setShown(idleRow, !(isOnline));
         if (clientsList) {
           const shown = isOnline ? clients : [];
-          clientsList.style.display = (shown.length || kicked.length) ? 'flex' : 'none';
+          setShown(clientsList, shown.length || kicked.length);
           DsuClientList.render(clientsList, shown, kicked);
         }
       };
@@ -556,7 +553,7 @@
       if (state.setupUrl) this._setText(linkUrlSetupText, state.setupUrl);
 
       const isWizardOpen = !!(SetupWizard?.isOpen || HelpManager?.isOpen || SettingsManager?.isOpen || WelcomeManager?.isOpen || CalibrationWizard?.isOpen);
-      this._setDisplay(cardModeHeader, isWizardOpen ? 'none' : 'flex');
+      setShown(cardModeHeader, !(isWizardOpen));
 
       // Mode Branch: Stationary USB Controller Mode, before a device is found.
       // Once state.usbConnected flips true we deliberately fall through to the
@@ -566,12 +563,12 @@
       // on their own, so reusing that view is both correct and free.
       if (this.inputMode === 'usb' && !state.usbConnected) {
         const enteringWaiting = this._lastStatus !== 'waiting_usb';
-        this._setDisplay(viewOffline, 'none');
+        setShown(viewOffline, false);
         if (!isWizardOpen) {
           if (enteringWaiting) {
             this.morphToView(() => {
-              if (viewOnline) viewOnline.style.display = 'none';
-              if (viewUsb) viewUsb.style.display = 'flex';
+              if (viewOnline) setShown(viewOnline, false);
+              if (viewUsb) setShown(viewUsb, true);
             });
             if (viewUsb) {
               viewUsb.classList.remove('view-fade-in');
@@ -579,8 +576,8 @@
               viewUsb.classList.add('view-fade-in');
             }
           } else {
-            this._setDisplay(viewOnline, 'none');
-            this._setDisplay(viewUsb, 'flex');
+            setShown(viewOnline, false);
+            setShown(viewUsb, true);
           }
         }
         this.hideRecalHint(true);
@@ -603,12 +600,12 @@
       // (state.status flips to "online"). Keep showing the USB waiting view
       // through that gap instead of ever flashing the phone QR screen below.
       if (this.inputMode === 'usb' && state.status === 'offline') {
-        this._setDisplay(viewOnline, 'none');
-        this._setDisplay(viewOffline, 'none');
-        if (!isWizardOpen) this._setDisplay(viewUsb, 'flex');
+        setShown(viewOnline, false);
+        setShown(viewOffline, false);
+        if (!isWizardOpen) setShown(viewUsb, true);
         return;
       }
-      this._setDisplay(viewUsb, 'none');
+      setShown(viewUsb, false);
 
       // Status capsule: only mutate DOM when status actually changes
       if (this._lastStatus !== state.status) {
@@ -642,8 +639,8 @@
         if (isOffline) {
           if (!wizardBlocksView) {
             this.morphToView(() => {
-              viewOffline.style.display = 'flex';
-              viewOnline.style.display = 'none';
+              setShown(viewOffline, true);
+              setShown(viewOnline, false);
             });
             viewOffline.classList.remove('view-fade-in');
             void viewOffline.offsetWidth;
@@ -652,8 +649,8 @@
         } else {
           if (!wizardBlocksView) {
             this.morphToView(() => {
-              viewOffline.style.display = 'none';
-              viewOnline.style.display = 'flex';
+              setShown(viewOffline, false);
+              setShown(viewOnline, true);
             });
             viewOnline.classList.remove('view-fade-in');
             void viewOnline.offsetWidth;
@@ -694,8 +691,8 @@
       } else {
         // State 2 & 3: Online or Paused
         if (!SetupWizard?.isOpen && !HelpManager?.isOpen && !SettingsManager?.isOpen && !WelcomeManager?.isOpen) {
-          this._setDisplay(viewOffline, 'none');
-          this._setDisplay(viewOnline, 'flex');
+          setShown(viewOffline, false);
+          setShown(viewOnline, true);
         }
 
         const deviceIconWrap = document.getElementById('device-icon-wrap');
@@ -727,7 +724,7 @@
         const networkHealthEl = document.getElementById('network-health');
         if (isUsbSource) {
           this._setText(pingTxt || document.getElementById('device-ping'), state.usbPort || 'USB');
-          this._setDisplay(netSpark, 'none');
+          setShown(netSpark, false);
           if (networkHealthEl) {
             if (networkHealthEl.hasAttribute('data-i18n')) networkHealthEl.removeAttribute('data-i18n');
             this._setText(networkHealthEl, I18n.t('usb_mode.direct_connection') || 'Прямое USB-подключение');
@@ -738,7 +735,7 @@
           const pingVal = (typeof state.pingMs === 'number') ? state.pingMs : -1;
           const pingLabel = pingVal >= 0 ? `${pingVal} ms` : '—';
           this._setText(pingTxt || document.getElementById('device-ping'), pingLabel);
-          this._setDisplay(netSpark, '');
+          setShown(netSpark, true);
           const qualityKey = pingVal < 0 ? 'calibration.network_quality_measuring'
             : pingVal < 40 ? 'calibration.network_quality_optimal'
             : pingVal < 100 ? 'calibration.network_quality_fair'

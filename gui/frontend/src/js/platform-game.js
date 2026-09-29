@@ -497,7 +497,7 @@
         if (!this._placeholder) {
           this._placeholder = document.createElement('div');
           this._placeholder.id = 'bench-platform-placeholder';
-          this._placeholder.style.display = 'none';
+          setShown(this._placeholder, false);
         }
         if (vp.parentNode && vp.parentNode !== document.body) {
           vp.parentNode.insertBefore(this._placeholder, vp);
@@ -516,8 +516,8 @@
       if (btn) {
         const iconExpand = btn.querySelector('.icon-expand');
         const iconCollapse = btn.querySelector('.icon-collapse');
-        if (iconExpand) iconExpand.style.display = this.isFullscreen ? 'none' : 'block';
-        if (iconCollapse) iconCollapse.style.display = this.isFullscreen ? 'block' : 'none';
+        if (iconExpand) setShown(iconExpand, !(this.isFullscreen));
+        if (iconCollapse) setShown(iconCollapse, this.isFullscreen);
         btn.title = this.isFullscreen ? (I18n.t('settings_modal.bench_exit_fullscreen') || 'Свернуть') : (I18n.t('settings_modal.bench_fullscreen') || 'На весь экран');
       }
 

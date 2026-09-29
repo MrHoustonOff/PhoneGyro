@@ -506,7 +506,7 @@
 .apple-floating-tooltip {
   position: fixed;
   z-index: var(--z-tooltip);
-  display: none;
+  display: block; /* hidden until shown: the hidden attribute */
   width: max-content;
   max-width: 290px;
   padding: 8px 12px;

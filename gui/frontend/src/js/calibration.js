@@ -109,7 +109,7 @@
 
       const alertOverlay = document.getElementById('cal-disconnect-overlay');
       if (alertOverlay) {
-        alertOverlay.style.display = 'flex';
+        setShown(alertOverlay, true);
       }
 
       if (typeof SoundManager !== 'undefined') {
@@ -129,7 +129,7 @@
 
       const alertOverlay = document.getElementById('cal-disconnect-overlay');
       if (alertOverlay) {
-        alertOverlay.style.display = 'none';
+        setShown(alertOverlay, false);
       }
 
       if (typeof SoundManager !== 'undefined') {
@@ -154,7 +154,7 @@
       this.isOpen = true;
       this.hideDisconnectAlert();
       const overlay = document.getElementById('cal-overlay');
-      if (overlay) overlay.style.display = 'flex';
+      if (overlay) setShown(overlay, true);
       this.updateSubtitleWithDevice();
       this.showScreen('slots');
       this.renderSlotList();
@@ -172,7 +172,7 @@
       this.hideDisconnectAlert();
       this.targetSlot = slot;
       const overlay = document.getElementById('cal-overlay');
-      if (overlay) overlay.style.display = 'flex';
+      if (overlay) setShown(overlay, true);
       this.updateSubtitleWithDevice();
       this.startCaptureFlow(slot);
       if (AppState?.lastState?.status === 'offline') {
@@ -184,7 +184,7 @@
       this.isOpen = false;
       this.hideDisconnectAlert();
       const overlay = document.getElementById('cal-overlay');
-      if (overlay) overlay.style.display = 'none';
+      if (overlay) setShown(overlay, false);
       this._resetCaptureTimer();
       this._stopAxisAlignPoll();
       ['cal-3d-canvas', 'cal-3d-canvas-confirm', 'cal-3d-canvas-manual'].forEach(id => Scene3D.destroy(id));
@@ -199,7 +199,7 @@
       const screens = ['cal-screen-slots', 'cal-screen-capture', 'cal-screen-confirm', 'cal-screen-manual', 'cal-screen-save'];
       screens.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.style.display = (id === `cal-screen-${screen}`) ? 'block' : 'none';
+        if (el) setShown(el, id === `cal-screen-${screen}`);
       });
       // A hidden screen's 3D preview would keep its WebGL context and keep drawing.
       const sceneOf = { capture: 'cal-3d-canvas', confirm: 'cal-3d-canvas-confirm', manual: 'cal-3d-canvas-manual' };
@@ -345,7 +345,7 @@
       // 4. Update global forward button in footer: always visible, disabled if step not passed yet
       const btnForward = document.getElementById('cal-capture-forward');
       if (btnForward) {
-        btnForward.style.display = 'inline-flex';
+        setShown(btnForward, true);
         if (this.captureStep === 0) {
           btnForward.textContent = I18n.t('calibration.btn_next') || 'Далее →';
           btnForward.disabled = !this.capturedVectors[0];
@@ -377,16 +377,16 @@
       const pResult = document.getElementById('cal-phase-result');
       if (phase === 'capture') {
         if (pCapture) {
-          pCapture.style.display = 'flex';
+          setShown(pCapture, true);
           pCapture.classList.remove('fade-in');
           void pCapture.offsetWidth;
           pCapture.classList.add('fade-in');
         }
-        if (pResult) pResult.style.display = 'none';
+        if (pResult) setShown(pResult, false);
       } else {
-        if (pCapture) pCapture.style.display = 'none';
+        if (pCapture) setShown(pCapture, false);
         if (pResult) {
-          pResult.style.display = 'flex';
+          setShown(pResult, true);
           pResult.classList.remove('fade-in');
           void pResult.offsetWidth;
           pResult.classList.add('fade-in');
@@ -445,8 +445,8 @@
       const statusDot = document.getElementById('cal-status-dot');
       const speedBadge = document.getElementById('cal-speed-badge');
 
-      if (timerContainer) timerContainer.style.display = 'none';
-      if (speedBadge) speedBadge.style.display = 'none';
+      if (timerContainer) setShown(timerContainer, false);
+      if (speedBadge) setShown(speedBadge, false);
 
       if (statusText) statusText.textContent = I18n.t('calibration.ready') || 'Готов к записи';
       if (statusDot) statusDot.className = 'status-pulse-dot';
@@ -514,8 +514,8 @@
           : (I18n.t('calibration.status_recording') || 'Наклоняйте телефон сейчас!');
       }
       if (statusDot) statusDot.className = 'status-pulse-dot active';
-      if (timerContainer) timerContainer.style.display = 'block';
-      if (speedBadge) speedBadge.style.display = 'inline-block';
+      if (timerContainer) setShown(timerContainer, true);
+      if (speedBadge) setShown(speedBadge, true);
 
       if (window.go?.app?.App) {
         await window.go.app.App.StartCapture();
@@ -576,11 +576,11 @@
             resultSubtext.innerHTML = '';
           }
           if (btnNext) {
-            btnNext.style.display = 'inline-flex';
+            setShown(btnNext, true);
             btnNext.textContent = I18n.t('calibration.btn_next_step') || 'Следующий шаг →';
           }
           if (btnForward) {
-            btnForward.style.display = 'inline-flex';
+            setShown(btnForward, true);
             btnForward.textContent = I18n.t('calibration.btn_next') || 'Далее →';
             btnForward.disabled = false;
           }
@@ -615,11 +615,11 @@
             resultSubtext.innerHTML = renderMarkdown(tmpl.replace('{axis}', result.axisName).replace('{pct}', pct).replace('{spd}', spd));
           }
           if (btnNext) {
-            btnNext.style.display = 'inline-flex';
+            setShown(btnNext, true);
             btnNext.textContent = I18n.t('calibration.btn_next_step') || 'Следующий шаг →';
           }
           if (btnForward) {
-            btnForward.style.display = 'inline-flex';
+            setShown(btnForward, true);
             btnForward.textContent = I18n.t('calibration.btn_next') || 'Далее →';
             btnForward.disabled = false;
           }
@@ -683,11 +683,11 @@
               );
             }
             if (btnNext) {
-              btnNext.style.display = 'inline-flex';
+              setShown(btnNext, true);
               btnNext.textContent = I18n.t('calibration.btn_to_confirm') || 'Перейти к проверке →';
             }
             if (btnForward) {
-              btnForward.style.display = 'inline-flex';
+              setShown(btnForward, true);
               btnForward.textContent = I18n.t('calibration.btn_to_confirm') || 'Перейти к проверке →';
               btnForward.disabled = false;
             }
@@ -709,7 +709,7 @@
               const locErr = errKey ? I18n.t(errKey) : '';
               resultSubtext.innerHTML = renderMarkdown((locErr && locErr !== errKey) ? locErr : (valRes.errorMsg || I18n.t('calibration.err_axes_inconsistent') || 'Оси не согласуются друг с другом.'));
             }
-            if (btnNext) btnNext.style.display = 'none';
+            if (btnNext) setShown(btnNext, false);
             if (btnRetry) btnRetry.textContent = I18n.t('calibration.btn_retry') || 'Повторить';
             this._showPhase('result');
             return;
@@ -728,7 +728,7 @@
           const locErr = errKey ? I18n.t(errKey) : '';
           resultSubtext.innerHTML = renderMarkdown((locErr && locErr !== errKey) ? locErr : (result.errorMsg || I18n.t('calibration.err_motion_record') || 'Ошибка записи движения'));
         }
-        if (btnNext) btnNext.style.display = 'none';
+        if (btnNext) setShown(btnNext, false);
         if (btnRetry) btnRetry.textContent = I18n.t('calibration.btn_retry') || 'Повторить';
         this._showPhase('result');
       }
@@ -781,8 +781,8 @@
       if (btnText) btnText.textContent = I18n.t('calibration.align_recording_btn') || 'СЛУШАЕМ ДВИЖЕНИЯ…';
       if (statusText) statusText.textContent = I18n.t('calibration.align_status_recording') || 'Наклоняйте телефон в разные стороны и замирайте между наклонами';
       if (statusDot) statusDot.className = 'status-pulse-dot active';
-      if (timerContainer) timerContainer.style.display = 'block';
-      if (speedBadge) speedBadge.style.display = 'inline-block';
+      if (timerContainer) setShown(timerContainer, true);
+      if (speedBadge) setShown(speedBadge, true);
       if (progressBar) progressBar.style.width = '0%';
 
       // Forget any prior, possibly-wrong mapping only on an explicit redo (Retry);
@@ -873,11 +873,11 @@
           resultSubtext.innerHTML = renderMarkdown(tmpl.replace('{mapping}', mapping));
         }
         if (btnNext) {
-          btnNext.style.display = 'inline-flex';
+          setShown(btnNext, true);
           btnNext.textContent = I18n.t('calibration.btn_to_confirm') || 'Перейти к проверке →';
         }
         if (btnForward) {
-          btnForward.style.display = 'inline-flex';
+          setShown(btnForward, true);
           btnForward.textContent = I18n.t('calibration.btn_to_confirm') || 'Перейти к проверке →';
           btnForward.disabled = false;
         }
@@ -896,7 +896,7 @@
           resultSubtext.innerHTML = renderMarkdown(I18n.t('calibration.align_fail_desc') ||
             'Слишком мало уверенных наклонов. Наклоняйте телефон более резко в разные стороны (вперёд, вбок, по диагонали) и на секунду замирайте между наклонами.');
         }
-        if (btnNext) btnNext.style.display = 'none';
+        if (btnNext) setShown(btnNext, false);
         if (btnRetry) btnRetry.textContent = I18n.t('calibration.btn_retry') || 'Повторить';
       }
       this._showPhase('result');
@@ -1049,7 +1049,7 @@
       // 4. Overwrite Warning Block (Always visible inline warning notice)
       const warnEl = document.getElementById('cal-save-warning');
       const warnText = document.getElementById('cal-save-warning-text');
-      if (warnEl) warnEl.style.display = 'flex';
+      if (warnEl) setShown(warnEl, true);
       if (warnText) {
         warnText.textContent = I18n.t('calibration.save_overwrite_note') || 'Внимание: если выбранный слот уже содержит профиль, он будет перезаписан.';
       }
@@ -1203,7 +1203,7 @@
       let m = null;
       try { m = await window.go?.app?.App?.GetWizardMount(); } catch (e) {}
       if (!m) {
-        card.style.display = 'none';
+        setShown(card, false);
         return;
       }
       const signed = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
@@ -1214,10 +1214,10 @@
         .replace('{check}', m.checkDeg.toFixed(1));
       document.getElementById('cal-mount-text').textContent = text;
       const row = document.getElementById('cal-mount-toggle-row');
-      if (row) row.style.display = (m.status === 'ok') ? '' : 'none';
+      if (row) setShown(row, m.status === 'ok');
       const toggle = document.getElementById('cal-mount-toggle');
       if (toggle) toggle.checked = !!m.enabled;
-      card.style.display = '';
+      setShown(card, true);
     },
 
     async save() {

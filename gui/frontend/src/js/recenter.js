@@ -46,7 +46,7 @@
         this.rafId = null;
       }
 
-      overlay.style.display = 'flex';
+      setShown(overlay, true);
 
       const prof = this.getActiveProfile();
       const profName = prof.name || formatSlotName(prof.slot || 0);
@@ -61,7 +61,7 @@
 
       // Hide moved warning alert
       const alertEl = document.getElementById('recenter-moved-alert');
-      if (alertEl) alertEl.style.display = 'none';
+      if (alertEl) setShown(alertEl, false);
 
       // Reset action button state
       const btn = document.getElementById('btn-recenter-start');
@@ -95,7 +95,7 @@
       this.isMeasuring = false;
       const overlay = document.getElementById('recenter-overlay');
       if (overlay) {
-        overlay.style.display = 'none';
+        setShown(overlay, false);
         overlay.classList.remove('recenter-forced');
       }
       if (this.forced) {
@@ -135,8 +135,8 @@
       const hero = document.querySelector('#recenter-overlay .recenter-hero-card');
       if (!picker) return;
       if (!this.forced) {
-        picker.style.display = 'none';
-        if (hero) hero.style.display = '';
+        setShown(picker, false);
+        if (hero) setShown(hero, true);
         return;
       }
       const profs = (typeof ProfileManager !== 'undefined' && ProfileManager.profiles) ? ProfileManager.profiles : [];
@@ -147,8 +147,8 @@
       if (sig === this._pickerSig) return;
       this._pickerSig = sig;
 
-      if (hero) hero.style.display = 'none';
-      picker.style.display = 'flex';
+      if (hero) setShown(hero, false);
+      setShown(picker, true);
       picker.innerHTML = '';
       const label = document.createElement('span');
       label.className = 'recenter-profile-tag';
@@ -193,7 +193,7 @@
       const progress = document.getElementById('recenter-btn-progress');
       const alertEl = document.getElementById('recenter-moved-alert');
 
-      if (alertEl) alertEl.style.display = 'none';
+      if (alertEl) setShown(alertEl, false);
       if (btn) {
         btn.className = 'btn-apple-primary btn-recenter-start holding';
         btn.disabled = true;
@@ -259,7 +259,7 @@
         btnText.textContent = I18n.t('recenter.btn_retry') || 'Повторить';
       }
       if (alertEl) {
-        alertEl.style.display = 'flex';
+        setShown(alertEl, true);
       }
 
       if (typeof SoundManager !== 'undefined' && SoundManager.play) {
@@ -280,7 +280,7 @@
       const alertEl = document.getElementById('recenter-moved-alert');
       const iconEl = document.querySelector('.recenter-btn-action-icon');
 
-      if (alertEl) alertEl.style.display = 'none';
+      if (alertEl) setShown(alertEl, false);
       if (progress) progress.style.width = '100%';
       if (btn) {
         btn.className = 'btn-apple-primary btn-recenter-start success';

@@ -62,7 +62,7 @@
       }
       const outdatedWarning = document.getElementById('profile-outdated-warning');
       if (outdatedWarning) {
-        outdatedWarning.style.display = activeProf.outdated ? 'flex' : 'none';
+        setShown(outdatedWarning, activeProf.outdated);
       }
       const calibrateBtn = document.getElementById('btn-open-calibration');
       if (calibrateBtn) {
@@ -74,7 +74,7 @@
       const mountToggle = document.getElementById('profile-mount-toggle');
       const mount = activeProf.mount;
       const hasMount = !!(mount && mount.status === 'ok');
-      if (mountRow) mountRow.style.display = hasMount ? 'flex' : 'none';
+      if (mountRow) setShown(mountRow, hasMount);
       if (hasMount) {
         const mountText = document.getElementById('profile-mount-text');
         if (mountText) {

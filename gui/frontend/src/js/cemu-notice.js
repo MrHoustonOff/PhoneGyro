@@ -52,14 +52,14 @@
       const closeBtn = document.getElementById('cemu-notice-close');
       if (hide) hide.checked = false;
 
-      overlay.style.display = 'flex';
+      setShown(overlay, true);
       overlay.offsetHeight; // reflow for the scale transition
       overlay.classList.add('visible');
 
       const close = () => {
         this.isOpen = false;
         overlay.classList.remove('visible');
-        setTimeout(() => { overlay.style.display = 'none'; }, 180);
+        setTimeout(() => { setShown(overlay, false); }, 180);
         window.removeEventListener('keydown', onKey);
         closeBtn?.removeEventListener('click', close);
         window.go?.app?.App?.CloseCemuNotice(!!hide?.checked);

@@ -19,7 +19,7 @@
         title.textContent = (I18n.t('calibration.delete_profile_title') || 'Удалить профиль «{name}»?').replace('{name}', name);
       }
 
-      overlay.style.display = 'flex';
+      setShown(overlay, true);
       overlay.offsetHeight; // reflow for the scale-in transition
       overlay.classList.add('visible');
 
@@ -27,7 +27,7 @@
         this.isOpen = false;
         overlay.classList.remove('visible');
         setTimeout(() => {
-          overlay.style.display = 'none';
+          setShown(overlay, false);
         }, 180);
         window.removeEventListener('keydown', onKey);
         confirmBtn?.removeEventListener('click', onConfirm);

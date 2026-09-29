@@ -60,20 +60,20 @@
       const vSettings = document.getElementById('view-settings');
       const vWelcome = document.getElementById('view-welcome');
 
-      if (vOff) vOff.style.display = 'none';
-      if (vOn) vOn.style.display = 'none';
-      if (vUsb) vUsb.style.display = 'none';
-      if (vModeHeader) vModeHeader.style.display = 'none';
-      if (vSet) vSet.style.display = 'none';
-      if (vHelp) vHelp.style.display = 'none';
-      if (vSettings) vSettings.style.display = 'none';
-      if (vWelcome) vWelcome.style.display = 'flex';
+      if (vOff) setShown(vOff, false);
+      if (vOn) setShown(vOn, false);
+      if (vUsb) setShown(vUsb, false);
+      if (vModeHeader) setShown(vModeHeader, false);
+      if (vSet) setShown(vSet, false);
+      if (vHelp) setShown(vHelp, false);
+      if (vSettings) setShown(vSettings, false);
+      if (vWelcome) setShown(vWelcome, true);
     },
 
     close(renderState = true) {
       this.isOpen = false;
       const vWelcome = document.getElementById('view-welcome');
-      if (vWelcome) vWelcome.style.display = 'none';
+      if (vWelcome) setShown(vWelcome, false);
 
       const container = document.querySelector('.modular-container');
       if (container && (!HelpManager?.isOpen && !SettingsManager?.isOpen && !SetupWizard?.isOpen)) {

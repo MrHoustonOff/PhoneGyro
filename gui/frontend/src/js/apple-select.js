@@ -71,7 +71,7 @@
       const dropdown = document.createElement('div');
       dropdown.className = 'apple-select-dropdown';
       dropdown.setAttribute('role', 'listbox');
-      dropdown.style.display = 'none';
+      setShown(dropdown, false);
       document.body.appendChild(dropdown);
 
       const syncUI = () => {
@@ -199,7 +199,7 @@
     open(trigger, dropdown) {
       this.closeAll();
 
-      dropdown.style.display = 'block';
+      setShown(dropdown, true);
       dropdown.style.visibility = 'hidden';
       const zoom = parseFloat(document.documentElement.style.zoom) || (window.FontScaleManager && FontScaleManager.scale) || 1.0;
       const ddRect = dropdown.getBoundingClientRect();
@@ -244,7 +244,7 @@
         const d = this.activeDropdown;
         setTimeout(() => {
           if (!d.classList.contains('visible')) {
-            d.style.display = 'none';
+            setShown(d, false);
           }
         }, 140);
         this.activeDropdown = null;

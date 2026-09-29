@@ -138,8 +138,8 @@
 
       const viewAim = document.getElementById('bench-game-aim');
       const viewPlatform = document.getElementById('bench-game-platform');
-      if (viewAim) viewAim.style.display = (target === 'aim') ? 'flex' : 'none';
-      if (viewPlatform) viewPlatform.style.display = (target === 'platform') ? 'flex' : 'none';
+      if (viewAim) setShown(viewAim, target === 'aim');
+      if (viewPlatform) setShown(viewPlatform, target === 'platform');
 
       this.syncDimensions(true);
 

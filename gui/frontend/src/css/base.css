@@ -4,6 +4,13 @@
    spacious two-column iOS setup wizard with large legible screenshots.
    ───────────────────────────────────────────────────────────────────────────── */
 
+/* ── Visibility ─────────────────────────────────────────────────────────────────
+   Shown / hidden is the hidden attribute (JS: setShown in js/visibility.js);
+   how a shown element lays out (flex, block, …) is up to the component CSS. */
+[hidden] {
+  display: none !important;
+}
+
 /* ── Global Reset & Native Scrollbar Removal ───────────────────────────────── */
 *, *::before, *::after {
   margin: 0;

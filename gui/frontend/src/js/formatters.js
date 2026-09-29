@@ -10,7 +10,7 @@
       el.innerHTML = `<span>${v.release}.${v.build}</span><span class="footer-version-channel ${v.channel}">${v.channel}</span>`;
       el.title = `PhoneGyro ${v.release} • build ${v.build} • ${v.channel}`;
     } catch (e) {
-      el.style.display = 'none';
+      setShown(el, false);
     }
   }
 

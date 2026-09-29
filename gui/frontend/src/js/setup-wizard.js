@@ -82,11 +82,11 @@
       const cardModeHeader = document.getElementById('card-mode-header');
       const viewSetup = document.getElementById('view-setup');
 
-      if (viewOffline) viewOffline.style.display = 'none';
-      if (viewOnline) viewOnline.style.display = 'none';
-      if (viewUsb) viewUsb.style.display = 'none';
-      if (cardModeHeader) cardModeHeader.style.display = 'none';
-      if (viewSetup) viewSetup.style.display = 'flex';
+      if (viewOffline) setShown(viewOffline, false);
+      if (viewOnline) setShown(viewOnline, false);
+      if (viewUsb) setShown(viewUsb, false);
+      if (cardModeHeader) setShown(cardModeHeader, false);
+      if (viewSetup) setShown(viewSetup, true);
 
       this.showScreen('select');
     },
@@ -99,7 +99,7 @@
         container.classList.remove('setup-mode-wide');
       }
       const viewSetup = document.getElementById('view-setup');
-      if (viewSetup) viewSetup.style.display = 'none';
+      if (viewSetup) setShown(viewSetup, false);
 
       if (AppState.lastState) {
         AppState._lastIsOffline = null;
@@ -113,9 +113,9 @@
       const androidScreen = document.getElementById('setup-screen-android');
       const iosScreen = document.getElementById('setup-screen-ios');
 
-      if (selectScreen) selectScreen.style.display = (screen === 'select') ? 'flex' : 'none';
-      if (androidScreen) androidScreen.style.display = (screen === 'android') ? 'flex' : 'none';
-      if (iosScreen) iosScreen.style.display = (screen === 'ios') ? 'flex' : 'none';
+      if (selectScreen) setShown(selectScreen, screen === 'select');
+      if (androidScreen) setShown(androidScreen, screen === 'android');
+      if (iosScreen) setShown(iosScreen, screen === 'ios');
 
       const container = document.querySelector('.modular-container');
       if (container) {
@@ -155,7 +155,7 @@
       for (let i = 1; i <= 6; i++) {
         const pane = document.getElementById(`ios-step-pane-${i}`);
         if (pane) {
-          pane.style.display = (i === this.iosStep) ? 'flex' : 'none';
+          setShown(pane, i === this.iosStep);
         }
       }
 

@@ -43,7 +43,7 @@
           <path d="m6.34 17.66-1.41 1.41"></path>
           <path d="m19.07 4.93-1.41 1.41"></path>
         </svg>
-        <svg id="icon-theme-moon" viewBox="0 0 24 24" style="display: none;">
+        <svg hidden id="icon-theme-moon" viewBox="0 0 24 24">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
       </button>
@@ -139,7 +139,7 @@
         </section>
 
         <!-- USB PROTOCOL SECTION: shown only while a USB device streams (gui/internal/usbdev/status.go) -->
-        <div class="stats-stream-section" id="usb-proto-section" style="display: none;">
+        <div hidden class="stats-stream-section" id="usb-proto-section">
           <div class="stream-section-badge proto-badge">
             <svg class="stream-badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 2v14"></path>
@@ -373,7 +373,7 @@
                   <span class="dsu-pulse-dot" id="dsu-pulse-dot"></span>
                   <span class="dsu-badge-title">Cemuhook DSU</span>
                 </div>
-                <div class="dsu-clients-list" id="dsu-clients-list" style="display: none;"></div>
+                <div hidden class="dsu-clients-list" id="dsu-clients-list"></div>
               </div>
             </div>
 
@@ -462,10 +462,10 @@
   </main>
 
   <!-- Floating Tooltip for Stats Metrics -->
-  <div id="stats-floating-tooltip"></div>
+  <div hidden id="stats-floating-tooltip"></div>
 
   <!-- CSV Save Confirmation Modal Dialog -->
-  <div class="stats-modal-backdrop" id="stats-save-modal" style="display: none;">
+  <div hidden class="stats-modal-backdrop" id="stats-save-modal">
     <div class="stats-modal-card">
       <div class="stats-modal-header">
         <span class="stats-modal-title" data-i18n="live_debug.stats_modal_title">Сохранение записи телеметрии</span>
@@ -491,12 +491,12 @@
           <span class="meta-val" id="modal-size">0 KB</span>
         </div>
       </div>
-      <div id="modal-status-msg" class="modal-status-banner"></div>
+      <div hidden id="modal-status-msg" class="modal-status-banner"></div>
       <div class="stats-modal-actions">
         <button type="button" class="btn-action secondary" id="btn-modal-cancel" data-i18n="live_debug.stats_modal_btn_cancel">Не сохранять</button>
         <button type="button" class="btn-action secondary" id="btn-modal-copy" data-i18n="live_debug.stats_modal_btn_copy">Копировать в буфер</button>
         <button type="button" class="btn-action primary" id="btn-modal-save" data-i18n="live_debug.stats_modal_btn_save">Сохранить файл...</button>
-        <button type="button" class="btn-action primary" id="btn-modal-open-folder" data-i18n="live_debug.stats_modal_open_folder" style="display: none;">Показать в папке</button>
+        <button hidden type="button" class="btn-action primary" id="btn-modal-open-folder" data-i18n="live_debug.stats_modal_open_folder">Показать в папке</button>
       </div>
     </div>
   </div>
@@ -510,6 +510,7 @@
 
   <!-- Fallback WebSocket endpoint: /livedebug/ws -->
   <script src="js/css-vars.js"></script>
+  <script src="js/visibility.js"></script>
   <script src="js/livedebug.js" data-ws-endpoint="/livedebug/ws"></script>
 </body>
 </html>

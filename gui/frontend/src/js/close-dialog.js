@@ -20,7 +20,7 @@
 
       if (rememberCheckbox) rememberCheckbox.checked = false;
 
-      overlay.style.display = 'flex';
+      setShown(overlay, true);
       overlay.offsetHeight; // reflow for smooth Apple scale transition
       overlay.classList.add('visible');
 
@@ -28,7 +28,7 @@
         this.isOpen = false;
         overlay.classList.remove('visible');
         setTimeout(() => {
-          overlay.style.display = 'none';
+          setShown(overlay, false);
         }, 180);
         window.removeEventListener('keydown', onKey);
         minBtn?.removeEventListener('click', onMin);

@@ -83,7 +83,7 @@
           <path d="m19.07 4.93-1.41 1.41"></path>
         </svg>
         <!-- Moon icon (visible in light mode) -->
-        <svg id="icon-theme-moon" viewBox="0 0 24 24" style="display: none;">
+        <svg hidden id="icon-theme-moon" viewBox="0 0 24 24">
           <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
         </svg>
       </button>
@@ -162,7 +162,7 @@
                 <span class="dsu-home-idle-dot"></span>
                 <span class="dsu-home-idle-msg" data-i18n="status.dsu_idle_notice">Ни один клиент (эмулятор) не принимает данные</span>
               </div>
-              <div class="dsu-home-clients-list" id="offline-dsu-clients-list" style="display: none;"></div>
+              <div hidden class="dsu-home-clients-list" id="offline-dsu-clients-list"></div>
             </div>
           </div>
 
@@ -170,7 +170,7 @@
         </div>
 
         <!-- State 2 & 3: Online / Paused Module (Phone connected) -->
-        <div class="online-module" id="view-online" style="display: none;">
+        <div hidden class="online-module" id="view-online">
           <!-- First-Time Device Calibration Notice Banner (20s Apple Red HIG) -->
           <div class="first-connect-banner" id="first-connect-banner">
             <div class="banner-top-row">
@@ -266,7 +266,7 @@
             </div>
 
             <!-- Subtle Stillness Recalibration Hint Dropdown Banner -->
-            <div class="level-recal-hint" id="level-recal-hint" style="display: none;">
+            <div hidden class="level-recal-hint" id="level-recal-hint">
               <div class="level-recal-inner">
                 <svg class="level-recal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -326,7 +326,7 @@
                 <span class="dsu-home-idle-dot"></span>
                 <span class="dsu-home-idle-msg" data-i18n="status.dsu_idle_notice">Ни один клиент (эмулятор) не принимает данные</span>
               </div>
-              <div class="dsu-home-clients-list" id="online-dsu-clients-list" style="display: none;"></div>
+              <div hidden class="dsu-home-clients-list" id="online-dsu-clients-list"></div>
             </div>
           </div>
 
@@ -368,7 +368,7 @@
             </div>
 
             <!-- Outdated-profile warning: hidden unless the active profile needs it -->
-            <div class="profile-outdated-warning" id="profile-outdated-warning" style="display: none;">
+            <div hidden class="profile-outdated-warning" id="profile-outdated-warning">
               <svg class="cal-save-warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 9v4m0 4h.01M10.29 3.86l-8.18 14.18A2 2 0 0 0 3.82 21h16.36a2 2 0 0 0 1.71-3l-8.18-14.14a2 2 0 0 0-3.42 0z"></path>
               </svg>
@@ -377,7 +377,7 @@
 
             <!-- USB mount-tilt correction of the active profile (gui/internal/app/mount.go):
                  shown only when calibration measured and verified one. -->
-            <div class="profile-mount-row" id="profile-mount-row" style="display: none;">
+            <div hidden class="profile-mount-row" id="profile-mount-row">
               <span class="profile-mount-text" id="profile-mount-text" data-i18n-title="calibration.mount_profile_tip">Компенсация наклона датчика</span>
               <label class="apple-toggle">
                 <input type="checkbox" id="profile-mount-toggle">
@@ -406,7 +406,7 @@
         </div>
 
         <!-- State: USB Controller Hardware Waiting Module (Pure Apple Functional Minimalism) -->
-        <div class="usb-mode-module" id="view-usb-mode" style="display: none;">
+        <div hidden class="usb-mode-module" id="view-usb-mode">
           <!-- Apple Hardware Chain Visual Frame (USB Cable -> MCU Controller -> Wires -> IMU Sensor) -->
           <div class="apple-hw-hero">
             <div class="hw-radar-ring ring-1"></div>
@@ -528,13 +528,13 @@
                 <span class="dsu-home-idle-dot"></span>
                 <span class="dsu-home-idle-msg" data-i18n="status.dsu_idle_notice">Ни один клиент (эмулятор) не принимает данные</span>
               </div>
-              <div class="dsu-home-clients-list" id="usb-dsu-clients-list" style="display: none;"></div>
+              <div hidden class="dsu-home-clients-list" id="usb-dsu-clients-list"></div>
             </div>
           </div>
         </div>
 
         <!-- State 4: Initial Setup Wizard Module -->
-        <div class="setup-module" id="view-setup" style="display: none;">
+        <div hidden class="setup-module" id="view-setup">
           
           <!-- Screen 0: Platform Selection -->
           <div class="setup-screen" id="setup-screen-select">
@@ -587,7 +587,7 @@
           </div>
 
           <!-- Screen 1: Android Guide -->
-          <div class="setup-screen" id="setup-screen-android" style="display: none;">
+          <div hidden class="setup-screen" id="setup-screen-android">
             <h2 class="setup-headline" data-i18n="setup.android_title">Android</h2>
 
             <div class="android-split">
@@ -620,7 +620,7 @@
           </div>
 
           <!-- Screen 2: iOS Step-by-Step Wizard -->
-          <div class="setup-screen" id="setup-screen-ios" style="display: none;">
+          <div hidden class="setup-screen" id="setup-screen-ios">
             <div class="wizard-header">
               <span class="wizard-badge" id="ios-step-counter">Шаг 1 из 6</span>
               <h2 class="setup-headline" id="ios-step-title">Шаг 1. Загрузка профиля</h2>
@@ -675,7 +675,7 @@
               </div>
 
               <!-- Step 2 Content -->
-              <div class="ios-step-pane" id="ios-step-pane-2" style="display: none;">
+              <div hidden class="ios-step-pane" id="ios-step-pane-2">
                 <div class="ios-step-split">
                   <div class="ios-step-info-col">
                     <p class="ios-step-lead" data-i18n="setup.ios_step2_text"></p>
@@ -693,7 +693,7 @@
               </div>
 
               <!-- Step 3 Content -->
-              <div class="ios-step-pane" id="ios-step-pane-3" style="display: none;">
+              <div hidden class="ios-step-pane" id="ios-step-pane-3">
                 <div class="ios-step-split">
                   <div class="ios-step-info-col">
                     <p class="ios-step-lead" data-i18n="setup.ios_step3_text"></p>
@@ -711,7 +711,7 @@
               </div>
 
               <!-- Step 4 Content -->
-              <div class="ios-step-pane" id="ios-step-pane-4" style="display: none;">
+              <div hidden class="ios-step-pane" id="ios-step-pane-4">
                 <div class="ios-step-split">
                   <div class="ios-step-info-col">
                     <p class="ios-step-lead" data-i18n="setup.ios_step4_text"></p>
@@ -729,7 +729,7 @@
               </div>
 
               <!-- Step 5 Content -->
-              <div class="ios-step-pane" id="ios-step-pane-5" style="display: none;">
+              <div hidden class="ios-step-pane" id="ios-step-pane-5">
                 <div class="ios-step-split">
                   <div class="ios-step-info-col">
                     <p class="ios-step-lead" data-i18n="setup.ios_step5_text"></p>
@@ -747,7 +747,7 @@
               </div>
 
               <!-- Step 6 Content -->
-              <div class="ios-step-pane" id="ios-step-pane-6" style="display: none;">
+              <div hidden class="ios-step-pane" id="ios-step-pane-6">
                 <div class="ios-step-split">
                   <div class="ios-step-info-col">
                     <p class="ios-step-lead" data-i18n="setup.ios_step6_text"></p>
@@ -785,7 +785,7 @@
         </div>
 
         <!-- Help & Reference Module -->
-        <div class="help-module" id="view-help" style="display: none;">
+        <div hidden class="help-module" id="view-help">
           <div class="help-card-inner">
             <h2 class="setup-headline" data-i18n="help.title">Помощь и руководство</h2>
             <p class="setup-subhead" data-i18n="help.subtitle">Информация о работе и настройке PhoneGyro</p>
@@ -847,7 +847,7 @@
         </div>
 
         <!-- Settings Module -->
-        <div class="settings-module" id="view-settings" style="display: none;">
+        <div hidden class="settings-module" id="view-settings">
           <div class="settings-card-inner">
             <h2 class="setup-headline" data-i18n="settings_modal.title">Настройки</h2>
             <p class="setup-subhead" data-i18n="settings_modal.subtitle">Конфигурация серверов, портов и фильтрации для опытных пользователей</p>
@@ -1034,7 +1034,7 @@
                           <input type="number" id="setting-gyro-sens-input" class="setting-range-num-input" min="0.10" max="10.00" step="0.05" value="1.00">
                           <span class="setting-range-num-unit">x</span>
                         </div>
-                        <span class="setting-range-badge" id="setting-gyro-sens-badge" style="display:none;">1.00x</span>
+                        <span hidden class="setting-range-badge" id="setting-gyro-sens-badge">1.00x</span>
                       </div>
                     </div>
 
@@ -1230,7 +1230,7 @@
                     </div>
 
                     <!-- Expandable Sound Details Drawer -->
-                    <div class="sound-details-drawer" id="sound-details-drawer" style="display: none;">
+                    <div hidden class="sound-details-drawer" id="sound-details-drawer">
                       
                       <!-- Item 1: Phone Connect -->
                       <div class="sound-detail-row" data-setting-key="soundVol_connect">
@@ -1447,7 +1447,7 @@
                               <span class="apple-key-sep">+</span>
                               <kbd class="apple-key">R</kbd>
                             </span>
-                            <span class="apple-hotkey-recording-label" id="setting-hotkey-recording-label" style="display: none;" data-i18n="settings_modal.hotkey_record_prompt">Нажмите сочетание клавиш...</span>
+                            <span hidden class="apple-hotkey-recording-label" id="setting-hotkey-recording-label" data-i18n="settings_modal.hotkey_record_prompt">Нажмите сочетание клавиш...</span>
                           </button>
                           <button type="button" class="btn-hotkey-clear" id="btn-hotkey-clear" data-i18n-tip="settings_modal.hotkey_clear_tip" aria-label="Clear Hotkey">
                             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1588,7 +1588,7 @@
                               <line x1="21" y1="3" x2="14" y2="10"></line>
                               <line x1="3" y1="21" x2="10" y2="14"></line>
                             </svg>
-                            <svg class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <svg hidden class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                               <polyline points="4 14 10 14 10 20"></polyline>
                               <polyline points="20 10 14 10 14 4"></polyline>
                               <line x1="14" y1="10" x2="21" y2="3"></line>
@@ -1597,7 +1597,7 @@
                           </button>
 
                           <!-- Fullscreen Aim Game Top HUD -->
-                          <div class="bench-fullscreen-hud" id="bench-aim-fs-hud" style="display: none;">
+                          <div hidden class="bench-fullscreen-hud" id="bench-aim-fs-hud">
                             <div class="bench-fs-score-wrap">
                               <span class="bench-fs-score-pill" id="bench-aim-time-pill">
                                 <span class="bench-fs-label" data-i18n="settings_modal.bench_aim_time">Время</span>
@@ -1643,9 +1643,9 @@
                           </div>
 
                           <!-- Game Over Overlay (Fullscreen) -->
-                          <div class="bench-aim-gameover-overlay" id="bench-aim-gameover" style="display: none;">
+                          <div hidden class="bench-aim-gameover-overlay" id="bench-aim-gameover">
                             <div class="bench-aim-gameover-card">
-                              <div class="bench-aim-gameover-badge" id="bench-aim-record-badge" style="display: none;" data-i18n="settings_modal.bench_aim_new_record">Новый рекорд!</div>
+                              <div hidden class="bench-aim-gameover-badge" id="bench-aim-record-badge" data-i18n="settings_modal.bench_aim_new_record">Новый рекорд!</div>
                               <h3 class="bench-aim-gameover-title" data-i18n="settings_modal.bench_aim_gameover">Время вышло!</h3>
                               <div class="bench-aim-gameover-stats">
                                 <div class="stat-item">
@@ -1669,7 +1669,7 @@
                     </div>
 
                     <!-- Mini-Game 2: Zelda Shrine Apparatus 3D Platform Display -->
-                    <div class="bench-game-view" id="bench-game-platform" style="display: none;">
+                    <div hidden class="bench-game-view" id="bench-game-platform">
                       <div class="bench-aim-wrap">
                         <div class="bench-aim-header">
                           <span class="bench-aim-title" data-i18n="settings_modal.bench_platform_title">Платформа святилища (Zelda)</span>
@@ -1687,7 +1687,7 @@
                               <line x1="21" y1="3" x2="14" y2="10"></line>
                               <line x1="3" y1="21" x2="10" y2="14"></line>
                             </svg>
-                            <svg class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                            <svg hidden class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                               <polyline points="4 14 10 14 10 20"></polyline>
                               <polyline points="20 10 14 10 14 4"></polyline>
                               <line x1="14" y1="10" x2="21" y2="3"></line>
@@ -1766,7 +1766,7 @@
         </div>
 
         <!-- Welcome Screen (First Launch) Module -->
-        <div class="welcome-module" id="view-welcome" style="display: none;">
+        <div hidden class="welcome-module" id="view-welcome">
           <div class="welcome-card-inner">
             <div class="welcome-badge-wrap">
               <span class="welcome-badge" data-i18n="welcome.badge">Первый запуск</span>
@@ -1823,7 +1823,7 @@
   <div id="toast" class="toast-msg"></div>
 
   <!-- Authentic Apple HIG Confirmation Modal Overlay -->
-  <div class="apple-dialog-overlay" id="apple-confirm-modal" style="display: none;" aria-modal="true" role="dialog">
+  <div hidden class="apple-dialog-overlay" id="apple-confirm-modal" aria-modal="true" role="dialog">
     <div class="apple-dialog-card">
       <div class="apple-dialog-icon-wrap">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1842,7 +1842,7 @@
   </div>
 
   <!-- Authentic Apple HIG Close / Minimize Confirmation Sheet Modal Overlay -->
-  <div class="apple-dialog-overlay" id="apple-close-modal" style="display: none;" aria-modal="true" role="dialog">
+  <div hidden class="apple-dialog-overlay" id="apple-close-modal" aria-modal="true" role="dialog">
     <div class="apple-close-card">
       <div class="apple-close-icon-wrap">
         <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1885,7 +1885,7 @@
   </div>
 
   <!-- Cemu notice: temporary, goes away with the drift guard (gui/internal/app/cemu_notice.go) -->
-  <div class="apple-dialog-overlay" id="cemu-notice-modal" style="display: none;" aria-modal="true" role="dialog">
+  <div hidden class="apple-dialog-overlay" id="cemu-notice-modal" aria-modal="true" role="dialog">
     <div class="apple-close-card cemu-notice-card">
       <div class="apple-close-icon-wrap">
         <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1922,7 +1922,7 @@
   </div>
 
   <!-- Delete profile confirmation (same sheet style as the close dialog) -->
-  <div class="apple-dialog-overlay" id="profile-delete-modal" style="display: none;" aria-modal="true" role="dialog">
+  <div hidden class="apple-dialog-overlay" id="profile-delete-modal" aria-modal="true" role="dialog">
     <div class="apple-close-card">
       <div class="apple-close-icon-wrap apple-close-icon-danger">
         <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1944,7 +1944,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- Calibration Wizard Modal Overlay                                       -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div id="cal-overlay" class="cal-overlay" style="display:none;" aria-modal="true" role="dialog">
+  <div hidden id="cal-overlay" class="cal-overlay" aria-modal="true" role="dialog">
     <div class="cal-modal">
 
       <!-- Modal Header -->
@@ -1969,7 +1969,7 @@
       </div>
 
       <!-- ── Screen B: Step-by-Step Gesture Capture ────────────────────── -->
-      <div class="cal-screen" id="cal-screen-capture" style="display:none;">
+      <div hidden class="cal-screen" id="cal-screen-capture">
         <!-- Step Progress Indicator Bar (4 pills: Покой, Кивок, Крен, Проверка) -->
         <div class="cal-wizard-steps">
           <div class="cal-step-pill active" id="step-pill-0">
@@ -2062,11 +2062,11 @@
                 <div class="cal-motion-status-bar" id="cal-motion-status-bar">
                   <span class="status-pulse-dot" id="cal-status-dot"></span>
                   <span class="status-text-main" id="cal-status-text">Готов к записи</span>
-                  <span class="speed-badge" id="cal-speed-badge" style="display:none;">0°/с</span>
+                  <span hidden class="speed-badge" id="cal-speed-badge">0°/с</span>
                 </div>
 
                 <!-- Animated Progress Bar (Active during recording) -->
-                <div class="cal-timer-container" id="cal-timer-container" style="display:none;">
+                <div hidden class="cal-timer-container" id="cal-timer-container">
                   <div class="cal-timer-countdown" id="cal-timer-countdown">2.0с</div>
                   <div class="cal-progress-track">
                     <div class="cal-progress-bar" id="cal-progress-bar"></div>
@@ -2085,7 +2085,7 @@
               </div>
 
               <!-- Phase 2: Result Feedback (Fades in without container shift) -->
-              <div class="cal-action-phase" id="cal-phase-result" style="display:none;">
+              <div hidden class="cal-action-phase" id="cal-phase-result">
                 <div class="result-header-row">
                   <div class="result-badge-icon" id="result-icon">✓</div>
                   <div class="result-headline">
@@ -2121,7 +2121,7 @@
       </div>
 
       <!-- ── Screen C: 3D Confirmation ─────────────────────────────────── -->
-      <div class="cal-screen" id="cal-screen-confirm" style="display:none;">
+      <div hidden class="cal-screen" id="cal-screen-confirm">
         <div class="cal-capture-layout">
           <div class="cal-capture-left">
             <div class="cal-step-info-card">
@@ -2143,10 +2143,10 @@
             </div>
 
             <!-- Mount tilt correction (USB only, see gui/internal/app/mount.go) -->
-            <div class="cal-matrix-card" id="cal-mount-card" style="display:none;">
+            <div hidden class="cal-matrix-card" id="cal-mount-card">
               <div class="matrix-card-title" data-i18n="calibration.mount_title">Наклон установки датчика</div>
               <div class="cal-mount-text" id="cal-mount-text"></div>
-              <div class="cal-mount-toggle-row" id="cal-mount-toggle-row" style="display:none;">
+              <div hidden class="cal-mount-toggle-row" id="cal-mount-toggle-row">
                 <span data-i18n="calibration.mount_toggle">Компенсировать наклон</span>
                 <label class="apple-toggle">
                   <input type="checkbox" id="cal-mount-toggle" checked>
@@ -2184,7 +2184,7 @@
       </div>
 
       <!-- ── Screen D: Manual Axis Mapping ────────────────────────────── -->
-      <div class="cal-screen" id="cal-screen-manual" style="display:none;">
+      <div hidden class="cal-screen" id="cal-screen-manual">
         <div class="cal-capture-layout">
           <div class="cal-capture-left">
             <div class="cal-step-info-card">
@@ -2261,7 +2261,7 @@
       </div>
 
       <!-- ── Screen E: Save Profile ────────────────────────────────────── -->
-      <div class="cal-screen" id="cal-screen-save" style="display:none;">
+      <div hidden class="cal-screen" id="cal-screen-save">
         <div class="cal-save-form">
           <div class="cal-save-header">
             <h3 class="cal-step-headline" data-i18n="calibration.save_slot_title">Слот сохранения</h3>
@@ -2376,7 +2376,7 @@
       </div>
 
       <!-- Calibration Disconnect Modal Card Blur Overlay (Scoped strictly inside .cal-modal) -->
-      <div id="cal-disconnect-overlay" class="cal-disconnect-overlay" style="display: none;" role="alertdialog" aria-modal="true">
+      <div hidden id="cal-disconnect-overlay" class="cal-disconnect-overlay" role="alertdialog" aria-modal="true">
         <div class="cal-disconnect-card">
           <div class="cal-disconnect-icon-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2403,7 +2403,7 @@
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!-- Recenter 3D View Modal Dialog                                          -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div id="recenter-overlay" class="recenter-overlay" style="display:none;" aria-modal="true" role="dialog">
+  <div hidden id="recenter-overlay" class="recenter-overlay" aria-modal="true" role="dialog">
     <div class="recenter-modal">
 
       <!-- Modal Header -->
@@ -2432,7 +2432,7 @@
         </div>
 
         <!-- First connection: pick the profile right here (FirstCenterGate) -->
-        <div class="recenter-profile-picker" id="recenter-profile-picker" style="display: none;"></div>
+        <div hidden class="recenter-profile-picker" id="recenter-profile-picker"></div>
 
         <!-- Instructional prompt -->
         <p class="recenter-prompt-text" id="recenter-modal-prompt" data-i18n="recenter.modal_hold_prompt">
@@ -2440,7 +2440,7 @@
         </p>
 
         <!-- Moved alert warning banner (if device moved during measurement) -->
-        <div class="recenter-moved-alert" id="recenter-moved-alert" style="display: none;">
+        <div hidden class="recenter-moved-alert" id="recenter-moved-alert">
           <svg class="recenter-alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -2483,9 +2483,10 @@
   </div><!-- #recenter-overlay -->
 
   <!-- Floating Tooltip for Settings Infotips -->
-  <div id="settings-floating-tooltip" class="apple-floating-tooltip"></div>
+  <div hidden id="settings-floating-tooltip" class="apple-floating-tooltip"></div>
 
   <script src="js/css-vars.js"></script>
+  <script src="js/visibility.js"></script>
   <script src="js/markdown.js"></script>
   <script src="js/theme.js"></script>
   <script src="js/font-scale.js"></script>

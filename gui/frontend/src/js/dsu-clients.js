@@ -153,7 +153,7 @@ const DsuClientList = {
     }
     const tip = this.tooltip;
     tip.textContent = text;
-    tip.style.display = 'block';
+    setShown(tip, true);
     tip.style.visibility = 'hidden';
     const zoom = parseFloat(document.documentElement.style.zoom) || 1;
     const r = target.getBoundingClientRect();
@@ -173,6 +173,6 @@ const DsuClientList = {
     this.tipRow = null;
     if (!this.tooltip) return;
     this.tooltip.classList.remove('show');
-    this.tooltip.style.display = 'none';
+    setShown(this.tooltip, false);
   },
 };

@@ -19,14 +19,14 @@
       if (okText) okBtn.textContent = okText;
       if (cancelText) cancelBtn.textContent = cancelText;
 
-      overlay.style.display = 'flex';
+      setShown(overlay, true);
       overlay.offsetHeight; // force reflow for smooth scale & opacity
       overlay.classList.add('visible');
 
       const cleanup = (result) => {
         overlay.classList.remove('visible');
         setTimeout(() => {
-          overlay.style.display = 'none';
+          setShown(overlay, false);
         }, 180);
         window.removeEventListener('keydown', onKey);
         okBtn.removeEventListener('click', onOk);

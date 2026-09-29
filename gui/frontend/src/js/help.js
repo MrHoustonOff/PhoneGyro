@@ -55,14 +55,14 @@
       const vWelcome = document.getElementById('view-welcome');
       const vHelp = document.getElementById('view-help');
 
-      if (vOff) vOff.style.display = 'none';
-      if (vOn) vOn.style.display = 'none';
-      if (vUsb) vUsb.style.display = 'none';
-      if (vModeHeader) vModeHeader.style.display = 'none';
-      if (vSet) vSet.style.display = 'none';
-      if (vSettings) vSettings.style.display = 'none';
-      if (vWelcome) vWelcome.style.display = 'none';
-      if (vHelp) vHelp.style.display = 'flex';
+      if (vOff) setShown(vOff, false);
+      if (vOn) setShown(vOn, false);
+      if (vUsb) setShown(vUsb, false);
+      if (vModeHeader) setShown(vModeHeader, false);
+      if (vSet) setShown(vSet, false);
+      if (vSettings) setShown(vSettings, false);
+      if (vWelcome) setShown(vWelcome, false);
+      if (vHelp) setShown(vHelp, true);
 
       document.getElementById('btn-header-help')?.classList.add('active');
     },
@@ -70,7 +70,7 @@
     close(renderState = true) {
       this.isOpen = false;
       const vHelp = document.getElementById('view-help');
-      if (vHelp) vHelp.style.display = 'none';
+      if (vHelp) setShown(vHelp, false);
 
       document.getElementById('btn-header-help')?.classList.remove('active');
 

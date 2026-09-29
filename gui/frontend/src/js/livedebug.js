@@ -316,7 +316,7 @@
     }
 
     const modal = document.getElementById('stats-save-modal');
-    if (modal && modal.style.display !== 'none' && lastRecordedElapsedMs && typeof openSaveModal === 'function') {
+    if (modal && !modal.hidden && lastRecordedElapsedMs && typeof openSaveModal === 'function') {
       try { openSaveModal(lastRecordedElapsedMs); } catch (e) {}
     }
   }
@@ -338,11 +338,11 @@
     const sunIcon = document.getElementById('icon-theme-sun');
     const moonIcon = document.getElementById('icon-theme-moon');
     if (theme === 'dark') {
-      if (sunIcon) sunIcon.style.display = 'block';
-      if (moonIcon) moonIcon.style.display = 'none';
+      if (sunIcon) setShown(sunIcon, true);
+      if (moonIcon) setShown(moonIcon, false);
     } else {
-      if (sunIcon) sunIcon.style.display = 'none';
-      if (moonIcon) moonIcon.style.display = 'block';
+      if (sunIcon) setShown(sunIcon, false);
+      if (moonIcon) setShown(moonIcon, true);
     }
 
     if (window.go?.app?.LiveDebugApp?.SetWindowTheme) {
@@ -1203,7 +1203,7 @@
     if (!text) return;
 
     tooltipEl.textContent = text;
-    tooltipEl.style.display = 'block';
+    setShown(tooltipEl, true);
     tooltipEl.style.visibility = 'hidden';
 
     const rect = card.getBoundingClientRect();
@@ -1234,7 +1234,7 @@
     }
     if (tooltipEl) {
       tooltipEl.classList.remove('show');
-      tooltipEl.style.display = 'none';
+      setShown(tooltipEl, false);
     }
   }
 
@@ -1897,8 +1897,8 @@
 
     if (clientsListEl && defaultBoxEl) {
       if (count > 0 && Array.isArray(dsuClientList) && dsuClientList.length > 0) {
-        defaultBoxEl.style.display = 'none';
-        clientsListEl.style.display = 'flex';
+        setShown(defaultBoxEl, false);
+        setShown(clientsListEl, true);
         clientsListEl.innerHTML = dsuClientList.map(c => {
           const addr = c.address || (c.ip + ':' + c.port);
           const isAct = c.active !== false;
@@ -1912,8 +1912,8 @@
           </div>`;
         }).join('');
       } else {
-        defaultBoxEl.style.display = 'inline-flex';
-        clientsListEl.style.display = 'none';
+        setShown(defaultBoxEl, true);
+        setShown(clientsListEl, false);
         clientsListEl.innerHTML = '';
       }
     }
@@ -2208,15 +2208,15 @@
     if (durationEl) durationEl.textContent = `${durationSec} ${secUnit}`;
     if (rowsEl) rowsEl.textContent = `${lineCount.toLocaleString()} ${rowsUnit}`;
     if (sizeEl) sizeEl.textContent = `${sizeKb} KB`;
-    if (statusMsgEl) statusMsgEl.style.display = 'none';
-    if (btnOpenFolder) btnOpenFolder.style.display = 'none';
+    if (statusMsgEl) setShown(statusMsgEl, false);
+    if (btnOpenFolder) setShown(btnOpenFolder, false);
 
-    modal.style.display = 'flex';
+    setShown(modal, true);
   }
 
   function closeSaveModal() {
     const modal = document.getElementById('stats-save-modal');
-    if (modal) modal.style.display = 'none';
+    if (modal) setShown(modal, false);
   }
 
   function saveRecordedCSV() {
@@ -2234,9 +2234,9 @@
               const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
               statusMsgEl.className = 'modal-status-banner success';
               statusMsgEl.textContent = (dict["live_debug.stats_modal_saved"] || "Файл сохранен: ") + filePath;
-              statusMsgEl.style.display = 'block';
+              setShown(statusMsgEl, true);
             }
-            if (btnOpenFolder) btnOpenFolder.style.display = 'inline-flex';
+            if (btnOpenFolder) setShown(btnOpenFolder, true);
           }
         })
         .catch(err => {
@@ -2244,7 +2244,7 @@
             const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
             statusMsgEl.className = 'modal-status-banner error';
             statusMsgEl.textContent = (dict["live_debug.stats_modal_save_err"] || "Ошибка сохранения: ") + err;
-            statusMsgEl.style.display = 'block';
+            setShown(statusMsgEl, true);
           }
         });
     } else {
@@ -2260,7 +2260,7 @@
         const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
         statusMsgEl.className = 'modal-status-banner success';
         statusMsgEl.textContent = (dict["live_debug.stats_modal_saved"] || "Файл сохранен: ") + defaultName;
-        statusMsgEl.style.display = 'block';
+        setShown(statusMsgEl, true);
       }
     }
   }
@@ -2273,14 +2273,14 @@
         const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
         statusMsgEl.className = 'modal-status-banner success';
         statusMsgEl.textContent = dict["live_debug.stats_modal_copied"] || "Скопировано в буфер обмена";
-        statusMsgEl.style.display = 'block';
+        setShown(statusMsgEl, true);
       }
     }).catch(err => {
       if (statusMsgEl) {
         const dict = DICTIONARY[currentLang] || DICTIONARY.ru;
         statusMsgEl.className = 'modal-status-banner error';
         statusMsgEl.textContent = (dict["live_debug.stats_modal_copy_err"] || "Не удалось скопировать: ") + err;
-        statusMsgEl.style.display = 'block';
+        setShown(statusMsgEl, true);
       }
     });
   }
@@ -2338,7 +2338,7 @@
       inputHeader.setAttribute('data-i18n', headerKey);
       inputHeader.textContent = tr(headerKey, p ? 'Input (USB)' : 'Input (Телефон)');
     }
-    if (section) section.style.display = p ? 'flex' : 'none';
+    if (section) setShown(section, p);
     if (!p) return;
 
     const ok = tr('live_debug.proto_ok', 'OK');

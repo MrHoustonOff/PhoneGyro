@@ -475,7 +475,7 @@
 
 /* Timer & Progress Bar */
 .cal-timer-container {
-  display: flex;
+  display: block; /* was flex, but JS always showed it as block: flex-direction/gap below do not apply */
   flex-direction: column;
   gap: 8px;
 }

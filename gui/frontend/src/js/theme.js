@@ -33,11 +33,11 @@
       const moonIcon = document.getElementById('icon-theme-moon');
 
       if (theme === 'dark') {
-        if (sunIcon) sunIcon.style.display = 'block';
-        if (moonIcon) moonIcon.style.display = 'none';
+        if (sunIcon) setShown(sunIcon, true);
+        if (moonIcon) setShown(moonIcon, false);
       } else {
-        if (sunIcon) sunIcon.style.display = 'none';
-        if (moonIcon) moonIcon.style.display = 'block';
+        if (sunIcon) setShown(sunIcon, false);
+        if (moonIcon) setShown(moonIcon, true);
       }
 
       if (typeof Scene3D !== 'undefined' && Scene3D.updateTheme) {

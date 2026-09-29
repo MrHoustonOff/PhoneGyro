@@ -117,10 +117,10 @@
       const toggleDrawer = () => {
         if (!soundDrawer) return;
         const tt = document.getElementById('settings-floating-tooltip');
-        if (tt) { tt.classList.remove('show'); tt.style.display = 'none'; }
-        const isHidden = (soundDrawer.style.display === 'none' || !soundDrawer.classList.contains('open'));
+        if (tt) { tt.classList.remove('show'); setShown(tt, false); }
+        const isHidden = (soundDrawer.hidden || !soundDrawer.classList.contains('open'));
         if (isHidden) {
-          soundDrawer.style.display = 'flex';
+          setShown(soundDrawer, true);
           void soundDrawer.offsetHeight;
           soundDrawer.classList.add('open');
           drawerToggleBtn?.classList.add('open');
@@ -131,7 +131,7 @@
           drawerToggleBtn?.setAttribute('aria-expanded', 'false');
           setTimeout(() => {
             if (!soundDrawer.classList.contains('open')) {
-              soundDrawer.style.display = 'none';
+              setShown(soundDrawer, false);
             }
           }, 240);
         }
@@ -389,9 +389,9 @@
       const labelEl = document.getElementById('setting-hotkey-recording-label');
 
       recorder?.classList.add('recording');
-      if (keysEl) keysEl.style.display = 'none';
+      if (keysEl) setShown(keysEl, false);
       if (labelEl) {
-        labelEl.style.display = 'inline';
+        setShown(labelEl, true);
         labelEl.textContent = I18n.t('settings_modal.hotkey_record_prompt') || 'Нажмите сочетание клавиш...';
       }
 
@@ -524,8 +524,8 @@
       const labelEl = document.getElementById('setting-hotkey-recording-label');
 
       recorder?.classList.remove('recording');
-      if (keysEl) keysEl.style.display = 'inline-flex';
-      if (labelEl) labelEl.style.display = 'none';
+      if (keysEl) setShown(keysEl, true);
+      if (labelEl) setShown(labelEl, false);
 
       this.renderHotkeyBadge(this.hotkeyRecenterKey);
       if (!cancelled) {
@@ -554,7 +554,7 @@
       const hideTooltip = () => {
         currentTarget = null;
         tooltipEl.classList.remove('show');
-        tooltipEl.style.display = 'none';
+        setShown(tooltipEl, false);
       };
 
       const updateTooltipPosition = (targetEl) => {
@@ -616,7 +616,7 @@
 
         currentTarget = targetEl;
         tooltipEl.textContent = text;
-        tooltipEl.style.display = 'block';
+        setShown(tooltipEl, true);
         tooltipEl.style.visibility = 'hidden';
 
         updateTooltipPosition(targetEl);
@@ -708,14 +708,14 @@
       const vWelcome = document.getElementById('view-welcome');
       const vSettings = document.getElementById('view-settings');
 
-      if (vOff) vOff.style.display = 'none';
-      if (vOn) vOn.style.display = 'none';
-      if (vUsb) vUsb.style.display = 'none';
-      if (vModeHeader) vModeHeader.style.display = 'none';
-      if (vSet) vSet.style.display = 'none';
-      if (vHelp) vHelp.style.display = 'none';
-      if (vWelcome) vWelcome.style.display = 'none';
-      if (vSettings) vSettings.style.display = 'flex';
+      if (vOff) setShown(vOff, false);
+      if (vOn) setShown(vOn, false);
+      if (vUsb) setShown(vUsb, false);
+      if (vModeHeader) setShown(vModeHeader, false);
+      if (vSet) setShown(vSet, false);
+      if (vHelp) setShown(vHelp, false);
+      if (vWelcome) setShown(vWelcome, false);
+      if (vSettings) setShown(vSettings, true);
 
       document.getElementById('btn-header-settings')?.classList.add('active');
 
@@ -1262,7 +1262,7 @@
       }
 
       const vSettings = document.getElementById('view-settings');
-      if (vSettings) vSettings.style.display = 'none';
+      if (vSettings) setShown(vSettings, false);
 
       document.getElementById('btn-header-settings')?.classList.remove('active');
 
