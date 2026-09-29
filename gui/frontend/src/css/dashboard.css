@@ -1343,6 +1343,26 @@
   font-weight: 700;
 }
 
+/* Changing numbers must not move the row: widths fit the longest value
+   ("100 Hz", "999 ms", the longest quality label; the pills are monospace). */
+#device-hz {
+  min-width: 6ch;
+  box-sizing: content-box;
+  text-align: center;
+}
+
+#device-ping-txt {
+  display: inline-block;
+  min-width: 6ch;
+  text-align: right;
+}
+
+.metric-pill.network-health {
+  min-width: 21ch;
+  box-sizing: content-box;
+  text-align: center;
+}
+
 .device-duration-wrap {
   display: flex;
   align-items: center;

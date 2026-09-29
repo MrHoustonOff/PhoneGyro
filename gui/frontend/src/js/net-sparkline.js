@@ -3,11 +3,18 @@
   // ── Network Telemetry Mini-Sparkline (Ping & Jitter) ──────────────────────
   const NetSparkline = {
     history: [], // only real RTT samples (state.pingMs), never seeded
-    maxLen: 32,
+    maxLen: 32,  // one sample a second: the last half minute
     lastRenderTs: 0,
+    lastSampleTs: 0,
 
+    // push takes the ping from every state update (15 Hz), but the server
+    // measures it once a second: keep one sample a second, or 32 samples would
+    // cover two seconds of repeated values and draw as jagged steps.
     push(pingMs) {
       if (typeof pingMs !== 'number' || pingMs < 0) return; // not measured: draw nothing
+      const nowTs = performance.now();
+      if (this.history.length && nowTs - this.lastSampleTs < 1000) return;
+      this.lastSampleTs = nowTs;
       this.history.push(pingMs);
       if (this.history.length > this.maxLen) {
         this.history.shift();
@@ -45,8 +52,11 @@
         return;
       }
 
+      // At least 0..60 ms: a few ms of jitter on a good link stays a low, calm
+      // line (the orange threshold, 35 ms, sits at ~60% of the height) instead
+      // of filling the chart. Real spikes above 60 still stretch it.
       let minVal = 0;
-      let maxVal = 16;
+      let maxVal = 60;
       for (let i = 0; i < n; i++) {
         if (this.history[i] > maxVal) maxVal = this.history[i];
       }
