@@ -385,7 +385,7 @@
   max-height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
-  z-index: 99999 !important;
+  z-index: var(--z-sheet) !important;
   border-radius: 0 !important;
   border: none !important;
   box-sizing: border-box !important;
@@ -785,7 +785,7 @@
   max-height: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
-  z-index: 99999 !important;
+  z-index: var(--z-sheet) !important;
   border-radius: 0 !important;
   border: none !important;
   box-sizing: border-box !important;

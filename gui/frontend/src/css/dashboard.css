@@ -2006,7 +2006,7 @@
   opacity: 0;
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 999;
+  z-index: var(--z-toast);
 }
 
 .toast-msg.visible {

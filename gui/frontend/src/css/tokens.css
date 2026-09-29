@@ -172,6 +172,26 @@
   --transition-theme: 0.25s ease;
 }
 
+/* ── Layers (z-index) ─────────────────────────────────────────────────────────
+   App-level stacking, bottom to top. Values below 100 inside a component
+   (decor under content, overlays inside a viewport) stay local numbers. */
+:root {
+  /* main window */
+  --z-header: 10;
+  --z-dropdown: 1000;      /* profile menu */
+  --z-tooltip: 3000;
+  --z-wizard: 9000;        /* calibration wizard */
+  --z-dialog: 10000;       /* confirm / close / delete dialogs */
+  --z-sheet: 99999;        /* recenter sheet, fullscreen bench games */
+  --z-select: 100000;      /* select dropdowns, above every sheet */
+  --z-toast: 100001;       /* toasts, above everything: they report actions taken in wizards and sheets */
+  /* Live Debug window */
+  --z-ld-header: 100;
+  --z-ld-modal: 500;
+  --z-ld-tooltip: 1000;
+  --z-ld-toast: 9999;
+}
+
 /* ── 3D scenes (calibration previews, Live Debug, bench) ───────────────────────
    Read by JS through CssVars (js/css-vars.js); *-dark / *-light per theme. */
 :root {

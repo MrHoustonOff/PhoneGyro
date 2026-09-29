@@ -26,7 +26,7 @@ body {
   justify-content: space-between;
   background-color: var(--surface);
   border-bottom: 1px solid var(--border);
-  z-index: 100;
+  z-index: var(--z-ld-header);
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
@@ -78,7 +78,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9999;
+  z-index: var(--z-ld-toast);
 }
 
 .toast-msg.visible {
@@ -1267,7 +1267,7 @@ input:checked + .apple-slider:before {
 /* Floating Apple HIG Tooltip */
 #stats-floating-tooltip {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-ld-tooltip);
   display: none;
   max-width: 280px;
   padding: 9px 13px;
@@ -1302,7 +1302,7 @@ input:checked + .apple-slider:before {
 .stats-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 500;
+  z-index: var(--z-ld-modal);
   background: rgba(var(--palette-black-rgb), 0.58);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);

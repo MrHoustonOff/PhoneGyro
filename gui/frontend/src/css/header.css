@@ -11,7 +11,7 @@
   justify-content: space-between;
   gap: 12px;
   transition: border-color var(--transition-theme), background-color var(--transition-theme);
-  z-index: 10;
+  z-index: var(--z-header);
   flex-shrink: 0;
   min-width: 0;
 }
