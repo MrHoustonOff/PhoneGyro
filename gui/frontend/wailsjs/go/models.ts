@@ -38,6 +38,7 @@ export namespace app {
 	    dsuClientList: dsuclients.View[];
 	    dsuKickedList: dsuclients.View[];
 	    inputMode: string;
+	    dsuPort: number;
 	    usbConnected: boolean;
 	    usbPort: string;
 	
@@ -84,6 +85,7 @@ export namespace app {
 	        this.dsuClientList = this.convertValues(source["dsuClientList"], dsuclients.View);
 	        this.dsuKickedList = this.convertValues(source["dsuKickedList"], dsuclients.View);
 	        this.inputMode = source["inputMode"];
+	        this.dsuPort = source["dsuPort"];
 	        this.usbConnected = source["usbConnected"];
 	        this.usbPort = source["usbPort"];
 	    }

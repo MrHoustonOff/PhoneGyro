@@ -227,7 +227,104 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 .pg-dim{color:var(--ink-3)}
 
 /* Window body under title bar and header */
-.pg-shell__body{position:absolute;inset:0;padding:calc(var(--pg-tb) + var(--pg-hh)) 0 var(--pg-fh);box-sizing:border-box;overflow:hidden}
+.pg-shell__body{position:absolute;inset:0;padding:calc(var(--pg-tb) + var(--pg-hh)) 0 var(--pg-fh);box-sizing:border-box;overflow-y:auto;overflow-x:hidden}
+
+/* ---- Central connection view and cards ---- */
+.display-lg{font-family:var(--font-display);font-size:26px;line-height:30px;font-weight:800;letter-spacing:-0.005em}
+.pg-card{background:var(--surface) var(--tex-grain);border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-4);position:relative}
+.pg-card--hero{border-radius:var(--radius-xl);padding:var(--space-6);overflow:hidden}
+.pg-rings-corner::after{content:"";position:absolute;right:-70px;top:-70px;width:220px;height:220px;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(circle at center,transparent 0 14px,var(--accent-soft) 14px 18px);-webkit-mask:radial-gradient(circle at center,#000 0,transparent 70%);mask:radial-gradient(circle at center,#000 0,transparent 70%)}
+.pg-overline{display:flex;align-items:center;gap:var(--space-2);font-size:12px;line-height:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.pg-ring{display:inline-block;flex:none;width:12px;height:12px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0 1.5px,transparent 2px 3.2px,var(--accent) 3.6px 4.6px,transparent 5px 6px)}
+
+/* ---- Buttons ---- */
+.pg-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:36px;padding:0 var(--space-4);border-radius:var(--radius-md);border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:14px;line-height:20px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-key);transition:background .15s,border-color .15s,transform .1s;white-space:nowrap}
+.pg-btn:hover{background:var(--surface-hover)}
+.pg-btn:active{transform:translateY(1px);box-shadow:none}
+.pg-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pg-btn--primary{background:var(--ink);border-color:transparent;color:var(--on-ink)}
+.pg-btn--primary:hover{background:var(--ink-hover)}
+.pg-btn--danger{background:var(--danger);border-color:transparent;color:var(--on-danger)}
+.pg-btn--danger:hover{filter:brightness(1.08)}
+.pg-btn--info{background:var(--info);border-color:transparent;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.18)}
+.pg-btn--info:hover{filter:brightness(1.08);background:var(--info)}
+:root[data-theme="dark"] .pg-btn--info{color:#0b0b0b;text-shadow:none}
+.pg-btn--lg{min-height:44px;padding:0 var(--space-6);font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+.pg-btn--sm{min-height:28px;padding:0 var(--space-3);font-size:12px;line-height:16px;border-radius:var(--radius-sm)}
+.pg-btn--block{display:flex;width:100%}
+
+/* ---- Page container ---- */
+.pg-page{min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:6px 16px 20px;gap:12px}
+.pg-page--center{align-items:center}
+.pg-conn{width:100%;max-width:560px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;gap:14px;padding:22px 32px;margin:0 auto}
+.pg-conn>*{max-width:100%;min-width:0}
+
+/* ---- QR Code & URL ---- */
+.pg-qr{display:inline-flex;padding:var(--space-4);border-radius:var(--radius-xl);background:#ffffff;border:1px solid var(--line);box-shadow:var(--shadow-card)}
+.pg-qr img,.pg-qr svg{display:block;image-rendering:pixelated}
+.pg-url{display:inline-flex;align-items:center;gap:var(--space-3);height:44px;padding:0 6px 0 var(--space-4);border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-inset);box-shadow:var(--shadow-inset);max-width:100%}
+.pg-url__text{font:600 14px/1 var(--font-mono);letter-spacing:.01em;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg-url svg{width:16px;height:16px;stroke:var(--ink-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---- Notice ---- */
+.pg-notice{--nb:var(--info-soft);display:flex;align-items:flex-start;gap:var(--space-3);padding:10px var(--space-3);border-radius:var(--radius-lg);border:1px solid var(--info-line);background:linear-gradient(var(--nb),var(--nb)),var(--surface);color:var(--ink);font-size:13px;line-height:19px;width:100%}
+.pg-notice::before{content:"";flex:none;width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--info);box-shadow:0 0 0 3px var(--info-soft)}
+.pg-notice--warn{--nb:var(--warn-soft);border-color:var(--warn-line)}.pg-notice--warn::before{background:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
+.pg-notice--danger{--nb:var(--danger-soft);border-color:var(--danger-line)}.pg-notice--danger::before{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+.pg-notice--ok{--nb:var(--accent-soft);border-color:var(--accent-line)}.pg-notice--ok::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pg-notice b{font-weight:600}
+.pg-notice__sub{display:block;color:var(--ink-2);font-size:12px;margin-top:1px}
+.pg-notice__row{display:flex;flex:1;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.pg-code{display:inline-block;font:600 .88em/1.35 var(--font-mono);padding:1px 6px;border-radius:var(--radius-sm);background:var(--surface-inset);border:1px solid var(--line);color:var(--ink)}
+
+/* ---- USB controller layout ---- */
+.pg-usb{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;width:100%;max-width:1000px;margin:0 auto;padding:4px 0 24px}
+.pg-usb__col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.pg-dev{display:flex;align-items:center;gap:14px}
+.pg-dev__chip{position:relative;flex:none;width:48px;height:48px;border-radius:var(--radius-md);display:grid;place-items:center;background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface-inset);border:1px solid var(--accent-line);box-shadow:var(--shadow-inset);color:var(--accent-text)}
+.pg-dev__chip svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pg-dev__name{font:800 19px/22px var(--font-display);letter-spacing:.005em}
+.pg-dev__meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.pg-timer{display:inline-flex;align-items:baseline;gap:8px;font:400 12px var(--font-mono);color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase}
+.pg-timer b{font:600 20px/1 var(--font-mono);color:var(--ink);letter-spacing:-.01em;text-transform:none}
+.pg-usbstage{position:relative;display:flex;align-items:center;justify-content:center;padding:10px 0 4px}
+.pg-usbstage::before{content:"";position:absolute;left:50%;top:50%;width:320px;height:320px;margin:-160px 0 0 -160px;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(circle,transparent 0 16px,var(--accent-line) 16px 17.5px);-webkit-mask:radial-gradient(circle,#000 30%,transparent 70%);mask:radial-gradient(circle,#000 30%,transparent 70%)}
+.pg-usbstage .pg-dial{width:210px;height:210px;box-shadow:0 1px 0 var(--line),0 6px 14px -8px rgba(0,0,0,.35)}
+
+.pg-dial{--bx:0px;--by:0px;position:relative;width:240px;height:240px;border-radius:50%;background:var(--surface) var(--tex-grain);border:1px solid var(--line);box-shadow:var(--shadow-card)}
+.pg-dial svg{position:absolute;inset:0;width:100%;height:100%}
+.pg-dial .tick{stroke:var(--ink-3);stroke-width:2;stroke-linecap:round}
+.pg-dial .tick--major{stroke:var(--ink);stroke-width:2.5}
+.pg-dial .guide{fill:none;stroke:var(--line);stroke-width:1}
+.pg-dial .guide--dash{stroke-dasharray:2 5;stroke:var(--line-control);opacity:.5}
+.pg-dial .cross{stroke:var(--line-subtle);stroke-width:1}
+.pg-dial .level{fill:var(--accent)}
+.pg-dial__well{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:var(--surface-inset);box-shadow:var(--shadow-inset);border:1px solid var(--line)}
+.pg-dial__bubble{position:absolute;left:calc(50% + var(--bx) - 13px);top:calc(50% + var(--by) - 13px);width:26px;height:26px;border-radius:50%;background:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:left .12s linear,top .12s linear}
+.pg-dial__bubble.is-level{background:var(--accent)}
+.pg-dial__label{display:inline-flex;align-items:center;height:28px;padding:0 16px;border-radius:var(--radius-pill);background:var(--surface-inset);box-shadow:var(--shadow-inset);border:1px solid var(--line);font:600 12px/1 var(--font-mono);letter-spacing:.2em;color:var(--ink-2)}
+
+.pg-profile{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-md);background:var(--surface-inset);box-shadow:var(--shadow-inset);border:1px solid var(--line)}
+.pg-profile__t{font:600 14px/18px var(--font-sans)}.pg-profile__s{font:400 12px/16px var(--font-sans);color:var(--ink-2)}
+.pg-profile svg.chev{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.pg-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);min-height:40px;padding:6px var(--space-4);border-bottom:1px solid var(--line-subtle)}
+.pg-row:last-child{border-bottom:0}
+.pg-row__label{display:flex;align-items:center;gap:var(--space-2);font-size:13px;line-height:18px;font-weight:600;letter-spacing:-.005em;min-width:0}
+.pg-row__control{display:flex;align-items:center;gap:var(--space-2);flex:none}
+.pg-info{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--line-control);background:transparent;color:var(--ink-2);font:700 10px/1 var(--font-sans);cursor:help;padding:0}
+.pg-info:hover{color:var(--ink);border-color:var(--ink-2)}
+
+.pg-toggle{position:relative;display:inline-block;width:44px;height:26px;flex:none;cursor:pointer}
+.pg-toggle input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.pg-toggle__track{position:absolute;inset:0;border-radius:var(--radius-pill);background:var(--surface-inset);border:1px solid var(--line-control);box-shadow:var(--shadow-inset);transition:background .2s,border-color .2s}
+.pg-toggle__track::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--ink-3);transition:transform .2s,background .2s}
+.pg-toggle input:checked+.pg-toggle__track{background:var(--accent);border-color:var(--accent)}
+.pg-toggle input:checked+.pg-toggle__track::after{transform:translateX(18px);background:var(--on-accent)}
+.pg-toggle input:focus-visible+.pg-toggle__track{outline:2px solid var(--accent);outline-offset:2px}
+
+.pg-mono-note{font:400 11.5px/17px var(--font-mono);color:var(--ink-2);padding:8px 10px;border-radius:var(--radius-sm);border:1px dashed var(--line-control)}
+.pg-mono-note b{color:var(--ink);font-weight:600}
 
 /* Temporary stub view for unreleased pages */
 .pg-stub{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:2;background:var(--overlay);backdrop-filter:blur(3px);padding:var(--space-4)}
@@ -314,6 +411,150 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
 
   <!-- Central workspace container -->
   <main class="pg-shell__body">
+    <div class="pg-page pg-page--center">
+      <!-- Mode segmented switcher -->
+      <div class="pg-seg" id="seg-mode" role="radiogroup" aria-label="Input Mode" style="margin-top:2px;margin-bottom:2px">
+        <button class="pg-seg__btn is-active" id="seg-mode-phone" type="button" role="radio" aria-checked="true">
+          <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
+          <span data-i18n="conn.mode.phone">Смартфон</span>
+        </button>
+        <button class="pg-seg__btn" id="seg-mode-usb" type="button" role="radio" aria-checked="false">
+          <svg viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="10" rx="5"/><path d="M8 10.5v4M6 12.5h4M16 11.5h.01M18 13.5h.01"/></svg>
+          <span data-i18n="conn.mode.usb">USB-контроллер</span>
+        </button>
+      </div>
+
+      <!-- VIEW 1: SMARTPHONE CONNECTION CARD -->
+      <section class="pg-card pg-card--hero pg-rings-corner pg-conn" id="view-smartphone">
+        <div class="display-lg" data-i18n="conn.scan">Отсканируйте камерой телефона</div>
+        <div class="pg-qr" id="conn-qr-wrap">
+          <img id="conn-qr-img" width="176" height="176" alt="QR Code" src="" style="display:block; image-rendering:pixelated;" />
+        </div>
+        <div class="pg-url">
+          <svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+          <span class="pg-url__text" id="conn-url-text">https://...</span>
+          <button class="pg-btn pg-btn--sm" id="btn-copy-url" type="button" data-i18n="conn.copy">Копировать</button>
+        </div>
+        <div class="pg-notice pg-notice--warn" id="conn-dsu-notice" style="width:100%">
+          <div class="pg-notice__row">
+            <span>
+              <b>Cemuhook DSU Server</b> <span class="pg-code" id="conn-dsu-port">:26760</span>
+              <span class="pg-notice__sub" id="conn-dsu-sub">Нет активных эмуляторов, ожидающих движение</span>
+            </span>
+            <span class="pg-badge pg-badge--warn" id="conn-dsu-badge">Ожидание эмуляторов</span>
+          </div>
+        </div>
+        <button class="pg-btn pg-btn--primary pg-btn--lg" id="btn-initial-setup" style="min-width:220px" type="button" data-i18n="conn.initial_setup">Начальная настройка</button>
+      </section>
+
+      <!-- VIEW 2: USB CONTROLLER DASHBOARD -->
+      <div class="pg-usb" id="view-usb" style="display:none;">
+        <div class="pg-usb__col">
+          <section class="pg-card pg-card--hero pg-rings-corner" style="display:flex;flex-direction:column;gap:6px;padding:18px 22px">
+            <div class="pg-dev">
+              <div class="pg-dev__chip">
+                <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx=".8"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></svg>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div class="pg-dev__name" id="usb-dev-name">USB Controller</div>
+                <div class="pg-dev__meta">
+                  <span class="pg-badge pg-badge--warn pg-badge--dot" id="usb-status-badge">offline</span>
+                  <span class="pg-badge" id="usb-hz-badge">0 Hz</span>
+                  <span class="pg-badge" id="usb-port-badge">USB</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="pg-usbstage">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+                <div class="pg-dial" id="usb-dial" style="--bx:0px;--by:0px">
+                  <svg viewBox="0 0 264 264">
+                    <circle class="guide" cx="132" cy="132" r="92"/>
+                    <circle class="guide guide--dash" cx="132" cy="132" r="62"/>
+                    <circle class="guide" cx="132" cy="132" r="34"/>
+                    <line class="cross" x1="132" y1="40" x2="132" y2="224"/>
+                    <line class="cross" x1="40" y1="132" x2="224" y2="132"/>
+                    <line class="tick" x1="187.0" y1="36.7" x2="193.0" y2="26.3"/>
+                    <line class="tick" x1="227.3" y1="77.0" x2="237.7" y2="71.0"/>
+                    <line class="tick tick--major" x1="235.0" y1="132.0" x2="254.0" y2="132.0"/>
+                    <line class="tick" x1="227.3" y1="187.0" x2="237.7" y2="193.0"/>
+                    <line class="tick" x1="187.0" y1="227.3" x2="193.0" y2="237.7"/>
+                    <line class="tick tick--major" x1="132.0" y1="235.0" x2="132.0" y2="254.0"/>
+                    <line class="tick" x1="77.0" y1="227.3" x2="71.0" y2="237.7"/>
+                    <line class="tick" x1="36.7" y1="187.0" x2="26.3" y2="193.0"/>
+                    <line class="tick tick--major" x1="29.0" y1="132.0" x2="10.0" y2="132.0"/>
+                    <line class="tick" x1="36.7" y1="77.0" x2="26.3" y2="71.0"/>
+                    <line class="tick" x1="77.0" y1="36.7" x2="71.0" y2="26.3"/>
+                    <path class="level" d="M132 9l7 15h-14z"/>
+                  </svg>
+                  <div class="pg-dial__well"></div>
+                  <div class="pg-dial__bubble" id="usb-dial-bubble"></div>
+                </div>
+                <span class="pg-dial__label">LEVEL</span>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:4px;flex-wrap:wrap">
+              <span class="pg-badge pg-badge--ok" id="usb-conn-desc" style="height:28px" data-i18n="usb.direct">Прямое USB-подключение</span>
+              <span class="pg-timer"><span data-i18n="usb.connected">Подключено</span> <b id="usb-timer">00:00:00</b></span>
+            </div>
+
+            <button class="pg-btn pg-btn--info pg-btn--block" id="btn-recenter" style="margin-top:8px" type="button">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round">
+                <circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+              </svg>
+              <span data-i18n="usb.recenter">Центрировать 3D-вид</span>
+            </button>
+          </section>
+        </div>
+
+        <div class="pg-usb__col">
+          <div class="pg-notice pg-notice--warn" id="usb-dsu-notice">
+            <div class="pg-notice__row">
+              <span>
+                <b>Cemuhook DSU Server</b> <span class="pg-code" id="usb-dsu-port">:26760</span>
+                <span class="pg-notice__sub" id="usb-dsu-sub">Нет активных эмуляторов, ожидающих движение</span>
+              </span>
+              <span class="pg-badge pg-badge--warn" id="usb-dsu-badge">Ожидание эмуляторов</span>
+            </div>
+          </div>
+
+          <button class="pg-btn pg-btn--block pg-btn--lg" id="btn-pause-toggle" style="text-transform:uppercase;letter-spacing:.14em" type="button" data-i18n="usb.pause">Пауза</button>
+
+          <section class="pg-card" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div class="pg-overline"><span class="pg-ring"></span><span data-i18n="usb.profiles">Профили управления</span></div>
+              <span class="pg-badge pg-badge--ok" id="usb-slot-badge" data-i18n="usb.slot_active">Слот 1 · Активен</span>
+            </div>
+            <div class="pg-profile">
+              <div style="flex:1;min-width:0">
+                <div class="pg-profile__t" id="usb-profile-name">Slot 1 (Default)</div>
+                <div class="pg-profile__s" id="usb-profile-device"><span data-i18n="usb.device_label">Устройство: </span><span id="usb-profile-dev-text">Controller</span></div>
+              </div>
+              <span class="pg-badge pg-badge--info" id="usb-profile-slot">SLOT 1</span>
+              <svg class="chev" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"/></svg>
+            </div>
+            <div class="pg-row" style="padding:0;min-height:0;border:0">
+              <div class="pg-row__label">
+                <span data-i18n="usb.tilt">Компенсация наклона крепления датчика (11.7°)</span>
+                <button class="pg-info" aria-label="Info" type="button">i</button>
+              </div>
+              <div class="pg-row__control">
+                <label class="pg-toggle"><input type="checkbox" id="usb-tilt-toggle" checked aria-label="tilt"><span class="pg-toggle__track"></span></label>
+              </div>
+            </div>
+            <div class="pg-mono-note" id="usb-axes-note"><b>Оси:</b> Pitch +X · Yaw −Z · Roll −Y<br><b>Акселерометр:</b> Pitch +X · Yaw +Y · Roll +Z</div>
+            <button class="pg-btn pg-btn--block" id="btn-calibrate" type="button">
+              <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round">
+                <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+              </svg>
+              <span data-i18n="usb.calibrate">Калибровка</span>
+            </button>
+          </section>
+        </div>
+      </div>
+    </div>
+
     <!-- Stub view for tabs -->
     <div id="pg-stub" hidden class="pg-stub">
       <div class="pg-stub__card">
@@ -401,6 +642,28 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
       'stub.title': 'Раздел в разработке',
       'stub.desc': 'Этот экран будет подключен на следующем этапе разработки.',
       'stub.close': 'Закрыть',
+      'conn.mode.phone': 'Смартфон',
+      'conn.mode.usb': 'USB-контроллер',
+      'conn.scan': 'Отсканируйте камерой телефона',
+      'conn.copy': 'Копировать',
+      'conn.copied': 'Скопировано!',
+      'conn.initial_setup': 'Начальная настройка',
+      'conn.setup_desc': 'Мастер настройки защищённого подключения iOS и сертификата.',
+      'conn.dsu.waiting': 'Ожидание эмуляторов',
+      'conn.dsu.waiting_sub': 'Нет активных эмуляторов, ожидающих движение',
+      'conn.dsu.online': 'Эмуляторы: {n}',
+      'conn.dsu.online_sub': 'Активных клиентов DSU: {n}',
+      'usb.direct': 'Прямое USB-подключение',
+      'usb.connected': 'Подключено',
+      'usb.recenter': 'Центрировать 3D-вид',
+      'usb.pause': 'ПАУЗА',
+      'usb.resume': 'ВОЗОБНОВИТЬ',
+      'usb.profiles': 'Профили управления',
+      'usb.slot_active': 'Слот 1 · Активен',
+      'usb.device_label': 'Устройство: ',
+      'usb.tilt': 'Компенсация наклона крепления датчика (11.7°)',
+      'usb.calibrate': 'Калибровка',
+      'usb.calibrate_desc': 'Мастер калибровки гироскопа и акселерометра.',
     },
     en: {
       'nav.settings': 'Settings',
@@ -412,11 +675,34 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
       'stub.title': 'Under Development',
       'stub.desc': 'This screen will be connected in the next development stage.',
       'stub.close': 'Close',
+      'conn.mode.phone': 'Smartphone',
+      'conn.mode.usb': 'USB Controller',
+      'conn.scan': 'Scan with phone camera',
+      'conn.copy': 'Copy',
+      'conn.copied': 'Copied!',
+      'conn.initial_setup': 'Initial Setup',
+      'conn.setup_desc': 'Setup wizard for secure iOS connection and certificate.',
+      'conn.dsu.waiting': 'Waiting for emulators',
+      'conn.dsu.waiting_sub': 'No clients or emulators listening for motion',
+      'conn.dsu.online': 'Emulators: {n}',
+      'conn.dsu.online_sub': 'Active DSU clients: {n}',
+      'usb.direct': 'Direct USB connection',
+      'usb.connected': 'Connected',
+      'usb.recenter': 'Recenter 3D View',
+      'usb.pause': 'PAUSE',
+      'usb.resume': 'RESUME',
+      'usb.profiles': 'Control profiles',
+      'usb.slot_active': 'Slot 1 · Active',
+      'usb.device_label': 'Device: ',
+      'usb.tilt': 'Sensor mount-tilt compensation (11.7°)',
+      'usb.calibrate': 'Calibrate',
+      'usb.calibrate_desc': 'Gyroscope and accelerometer calibration wizard.',
     }
   };
 
   let currentLang = 'ru';
   let currentStatus = 'offline';
+  let lastState = null;
 
   const applyLang = (lang) => {
     currentLang = lang === 'en' ? 'en' : 'ru';
@@ -442,6 +728,10 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     const stubClose = document.getElementById('pg-stub-close');
     if (stubDesc) stubDesc.textContent = dict['stub.desc'];
     if (stubClose) stubClose.textContent = dict['stub.close'];
+
+    if (typeof renderState === 'function' && lastState) {
+      renderState(lastState);
+    }
   };
 
   const setLang = (lang) => {
@@ -478,16 +768,7 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
     text.textContent = dict['status.' + currentStatus] || currentStatus;
   };
 
-  if (app.GetState) {
-    app.GetState().then(st => {
-      if (st && st.status) setStatus(st.status);
-    }).catch(() => {});
-  }
-  if (rt.EventsOn) {
-    rt.EventsOn('state:change', st => {
-      if (st && st.status) setStatus(st.status);
-    });
-  }
+
 
   // ── 5. Navigation tabs & stub view ───────────────────────
   const stub = document.getElementById('pg-stub');
@@ -541,8 +822,198 @@ a.pg-island:hover,button.pg-island:hover{background:var(--surface-hover) var(--t
         const ch = (v.channel || 'dev').toUpperCase();
         badge.textContent = ch;
         badge.className = 'pg-badge ' + (ch === 'RELEASE' ? 'pg-badge--ok' : 'pg-badge--warn');
+  // ── 7. Central Connection Workspace & USB Controller ─────
+  const segModePhone = document.getElementById('seg-mode-phone');
+  const segModeUsb = document.getElementById('seg-mode-usb');
+  const viewSmartphone = document.getElementById('view-smartphone');
+  const viewUsb = document.getElementById('view-usb');
+
+  const connQrImg = document.getElementById('conn-qr-img');
+  const connUrlText = document.getElementById('conn-url-text');
+  const btnCopyUrl = document.getElementById('btn-copy-url');
+  const btnInitialSetup = document.getElementById('btn-initial-setup');
+
+  const usbDevName = document.getElementById('usb-dev-name');
+  const usbStatusBadge = document.getElementById('usb-status-badge');
+  const usbHzBadge = document.getElementById('usb-hz-badge');
+  const usbPortBadge = document.getElementById('usb-port-badge');
+  const usbDial = document.getElementById('usb-dial');
+  const usbDialBubble = document.getElementById('usb-dial-bubble');
+  const usbTimer = document.getElementById('usb-timer');
+  const btnRecenter = document.getElementById('btn-recenter');
+  const btnPauseToggle = document.getElementById('btn-pause-toggle');
+  const btnCalibrate = document.getElementById('btn-calibrate');
+
+  let currentMode = 'phone';
+
+  const setInputMode = (mode) => {
+    currentMode = mode === 'usb' ? 'usb' : 'phone';
+    if (segModePhone) {
+      segModePhone.classList.toggle('is-active', currentMode === 'phone');
+      segModePhone.setAttribute('aria-checked', String(currentMode === 'phone'));
+    }
+    if (segModeUsb) {
+      segModeUsb.classList.toggle('is-active', currentMode === 'usb');
+      segModeUsb.setAttribute('aria-checked', String(currentMode === 'usb'));
+    }
+    if (viewSmartphone) viewSmartphone.style.display = currentMode === 'phone' ? 'flex' : 'none';
+    if (viewUsb) viewUsb.style.display = currentMode === 'usb' ? 'grid' : 'none';
+
+    if (app.SetInputMode) app.SetInputMode(currentMode);
+  };
+
+  if (segModePhone) segModePhone.onclick = () => setInputMode('phone');
+  if (segModeUsb) segModeUsb.onclick = () => setInputMode('usb');
+
+  if (btnCopyUrl) {
+    btnCopyUrl.onclick = () => {
+      const url = connUrlText ? connUrlText.textContent : '';
+      if (!url || url === 'https://...') return;
+      navigator.clipboard.writeText(url).then(() => {
+        const dict = I18N[currentLang] || I18N.ru;
+        btnCopyUrl.textContent = dict['conn.copied'];
+        setTimeout(() => {
+          btnCopyUrl.textContent = dict['conn.copy'];
+        }, 1800);
+      }).catch(() => {});
+    };
+  }
+
+  if (btnInitialSetup) {
+    btnInitialSetup.onclick = () => {
+      const dict = I18N[currentLang] || I18N.ru;
+      stubTitle.textContent = dict['conn.initial_setup'];
+      stubDesc.textContent = dict['conn.setup_desc'];
+      stub.hidden = false;
+    };
+  }
+
+  if (btnRecenter) {
+    btnRecenter.onclick = () => {
+      if (app.ResetAHRS) app.ResetAHRS();
+    };
+  }
+
+  if (btnPauseToggle) {
+    btnPauseToggle.onclick = () => {
+      if (app.TogglePause) {
+        app.TogglePause().then(renderState).catch(() => {});
       }
-    }).catch(() => {});
+    };
+  }
+
+  if (btnCalibrate) {
+    btnCalibrate.onclick = () => {
+      const dict = I18N[currentLang] || I18N.ru;
+      stubTitle.textContent = dict['usb.calibrate'];
+      stubDesc.textContent = dict['usb.calibrate_desc'];
+      stub.hidden = false;
+    };
+  }
+
+  const updateDsuNotice = (prefix, st) => {
+    const noticeEl = document.getElementById(`${prefix}-dsu-notice`);
+    const portEl = document.getElementById(`${prefix}-dsu-port`);
+    const subEl = document.getElementById(`${prefix}-dsu-sub`);
+    const badgeEl = document.getElementById(`${prefix}-dsu-badge`);
+    if (!noticeEl) return;
+
+    const port = st.dsuPort || 26760;
+    if (portEl) portEl.textContent = `:${port}`;
+
+    const dict = I18N[currentLang] || I18N.ru;
+    const count = st.dsuClients || 0;
+    if (count > 0) {
+      noticeEl.className = 'pg-notice pg-notice--ok';
+      if (subEl) subEl.textContent = dict['conn.dsu.online_sub'].replace('{n}', count);
+      if (badgeEl) {
+        badgeEl.className = 'pg-badge pg-badge--ok';
+        badgeEl.textContent = dict['conn.dsu.online'].replace('{n}', count);
+      }
+    } else {
+      noticeEl.className = 'pg-notice pg-notice--warn';
+      if (subEl) subEl.textContent = dict['conn.dsu.waiting_sub'];
+      if (badgeEl) {
+        badgeEl.className = 'pg-badge pg-badge--warn';
+        badgeEl.textContent = dict['conn.dsu.waiting'];
+      }
+    }
+  };
+
+  const renderState = (st) => {
+    if (!st) return;
+    lastState = st;
+    if (st.status) setStatus(st.status);
+
+    // 1. QR Code & Gamepad URL
+    if (st.qrCode && connQrImg && connQrImg.src !== st.qrCode) {
+      connQrImg.src = st.qrCode;
+    }
+    if (st.gamepadUrl && connUrlText) {
+      connUrlText.textContent = st.gamepadUrl;
+    }
+
+    // 2. DSU Notice in both views
+    updateDsuNotice('conn', st);
+    updateDsuNotice('usb', st);
+
+    // 3. Input Mode sync
+    if (st.inputMode && st.inputMode !== currentMode) {
+      currentMode = st.inputMode;
+      if (segModePhone) {
+        segModePhone.classList.toggle('is-active', currentMode === 'phone');
+        segModePhone.setAttribute('aria-checked', String(currentMode === 'phone'));
+      }
+      if (segModeUsb) {
+        segModeUsb.classList.toggle('is-active', currentMode === 'usb');
+        segModeUsb.setAttribute('aria-checked', String(currentMode === 'usb'));
+      }
+      if (viewSmartphone) viewSmartphone.style.display = currentMode === 'phone' ? 'flex' : 'none';
+      if (viewUsb) viewUsb.style.display = currentMode === 'usb' ? 'grid' : 'none';
+    }
+
+    // 4. USB Controller details
+    if (usbDevName) {
+      usbDevName.textContent = st.deviceName || (st.usbConnected ? 'USB Controller' : 'USB Controller (offline)');
+    }
+    if (usbPortBadge) {
+      usbPortBadge.textContent = st.usbPort || (st.usbConnected ? 'USB' : 'COM');
+    }
+    if (usbHzBadge) {
+      usbHzBadge.textContent = `${Math.round(st.hz || 0)} Hz`;
+    }
+    if (usbStatusBadge) {
+      const isOnline = st.status === 'online';
+      usbStatusBadge.className = `pg-badge ${isOnline ? 'pg-badge--ok' : 'pg-badge--warn'} pg-badge--dot`;
+      usbStatusBadge.textContent = st.status || 'offline';
+    }
+    if (usbTimer) {
+      usbTimer.textContent = st.connectedTime || '00:00:00';
+    }
+
+    // 5. Level dial orientation bubble
+    if (usbDial && usbDialBubble) {
+      const maxOffset = 50;
+      const bx = Math.max(-maxOffset, Math.min(maxOffset, (st.roll || 0) * 1.5));
+      const by = Math.max(-maxOffset, Math.min(maxOffset, -(st.pitch || 0) * 1.5));
+      usbDial.style.setProperty('--bx', `${bx.toFixed(1)}px`);
+      usbDial.style.setProperty('--by', `${by.toFixed(1)}px`);
+      usbDialBubble.classList.toggle('is-level', Math.abs(bx) < 2.5 && Math.abs(by) < 2.5);
+    }
+
+    // 6. Pause button
+    if (btnPauseToggle) {
+      const dict = I18N[currentLang] || I18N.ru;
+      btnPauseToggle.textContent = st.isPaused ? dict['usb.resume'] : dict['usb.pause'];
+      btnPauseToggle.classList.toggle('pg-btn--danger', st.isPaused);
+    }
+  };
+
+  if (app.GetState) {
+    app.GetState().then(renderState).catch(() => {});
+  }
+  if (rt.EventsOn) {
+    rt.EventsOn('state:change', renderState);
   }
 })();
 </script>

@@ -64,6 +64,7 @@ type AppState struct {
 	DsuClientList []DSUClientView `json:"dsuClientList"`
 	DsuKickedList []DSUClientView `json:"dsuKickedList"` // disconnected by the user, can be brought back
 	InputMode     string          `json:"inputMode"`
+	DSUPort       int             `json:"dsuPort"`
 	UsbConnected  bool            `json:"usbConnected"`
 	UsbPort       string          `json:"usbPort"`
 }
@@ -308,6 +309,12 @@ func (a *App) GetState() AppState {
 		}(),
 		DsuKickedList: a.dsuKickedViews(),
 		InputMode:     a.GetInputMode(),
+		DSUPort: func() int {
+			if a.dsuPort != 0 {
+				return a.dsuPort
+			}
+			return 26760
+		}(),
 		UsbConnected: func() bool {
 			if a.usbMgr != nil {
 				connected, _ := a.usbMgr.Status()
