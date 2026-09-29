@@ -114,6 +114,24 @@
     - В CSS сохранены fallback-ссылки на статические файлы `img/rings-light.svg` и `img/rings-dark.svg`.
     - Анимация `.pg-drift` продолжает выполняться полностью на GPU compositor thread без участия CPU (0.0% CPU runtime).
 
+#### Коммит 10: `feat(gui): stage 2 floating header with left navigation and bottom-right repo footer`
+- **Что сделано (Этап 2 из 3 по главному экрану):**
+  - **Шрифтовая подсистема (Offline Typography):**
+    - В `gui/frontend/src/fonts/` скопированы 8 оптимизированных сабсетов WOFF2 (Alegreya Sans Bold/ExtraBold, Onest Regular/Medium/SemiBold/Bold, JetBrains Mono Regular/SemiBold, ~210 КБ суммарно).
+    - Подключены локальные `@font-face` без сторонних CDN.
+  - **Хэдер (Floating Islands Header):**
+    - Исключён блок-дубликат бренда PhoneGyro согласно директиве пользователя.
+    - Островок навигации (`.pg-island`) с вкладками «Настройки», «Статистика & 3D», «Документация» смещён в левую часть хэдера.
+    - Правый островок содержит:
+      - Кнопку переключения темы (`#btn-theme`, день/ночь) с двусторонней синхронизацией Go backend (`App.SetTheme` / `App.GetTheme` / `theme-sync`);
+      - Сегментный переключатель языка RU/EN (`#seg-lang`) с реактивным обновлением словаря и языка в Go backend (`App.SetLang` / `App.GetLang` / `lang-sync`);
+      - Индикатор статуса соединения (`#conn-status`, офлайн/онлайн/пауза) с реактивной подпиской на события `state:change`.
+    - Нажатие на вкладки открывает аккуратную карточку-заглушку (`#pg-stub`), подготавливая переключение на следующие экраны.
+  - **Футер (Bottom-Right Repo Badge):**
+    - В правом нижнем углу окна отрисован интерактивный островок с версией приложения, бейджем канала сборки (DEV / RELEASE) и ссылкой на GitHub `MrHoustonOff/PhoneGyro`.
+    - Клик по ссылке вызывает нативное открытие в системном браузере через `window.runtime.BrowserOpenURL`.
+    - Версия динамически синхронизируется с `App.GetAppVersion()`.
+
 ---
 
 ## Архитектурные стандарты системы (Non-Negotiable)
