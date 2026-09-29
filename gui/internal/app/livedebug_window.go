@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"phonegyro-gui/internal/settings"
+
 	"github.com/gorilla/websocket"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -39,7 +41,7 @@ func (a *LiveDebugApp) startup(ctx context.Context) {
 		defer ticker.Stop()
 		consecutiveFails := 0
 		for range ticker.C {
-			resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/ping", HTTPPort))
+			resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/ping", settings.DefaultHTTPPort))
 			if err != nil {
 				consecutiveFails++
 				if consecutiveFails >= 2 {
@@ -57,7 +59,7 @@ func (a *LiveDebugApp) startup(ctx context.Context) {
 
 	// Native Go telemetry bridge: dials core server WS directly bypassing WebView2 loopback limits
 	go func() {
-		wsURL := fmt.Sprintf("ws://127.0.0.1:%d/livedebug/ws", HTTPPort)
+		wsURL := fmt.Sprintf("ws://127.0.0.1:%d/livedebug/ws", settings.DefaultHTTPPort)
 		for {
 			if a.ctx != nil && a.ctx.Err() != nil {
 				return
@@ -86,7 +88,7 @@ func (a *LiveDebugApp) startup(ctx context.Context) {
 // GetDeviceStatus checks device connection status directly from core server via Go HTTP.
 func (a *LiveDebugApp) GetDeviceStatus() bool {
 	client := &http.Client{Timeout: 500 * time.Millisecond}
-	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/status", HTTPPort))
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/status", settings.DefaultHTTPPort))
 	if err != nil || resp == nil {
 		return false
 	}
@@ -103,7 +105,7 @@ func (a *LiveDebugApp) GetDeviceStatus() bool {
 // GetFullStatus checks full connection and DSU status directly from core server via Go HTTP.
 func (a *LiveDebugApp) GetFullStatus() map[string]any {
 	client := &http.Client{Timeout: 500 * time.Millisecond}
-	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/status", HTTPPort))
+	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/livedebug/status", settings.DefaultHTTPPort))
 	if err != nil || resp == nil {
 		return nil
 	}
@@ -121,7 +123,7 @@ func (a *LiveDebugApp) shutdown(ctx context.Context) {
 // ResetAHRS triggers AHRS calibration recenter via the running core server.
 func (a *LiveDebugApp) ResetAHRS() {
 	go func() {
-		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/livedebug/recenter", HTTPPort), "application/json", nil)
+		resp, err := http.Post(fmt.Sprintf("http://127.0.0.1:%d/livedebug/recenter", settings.DefaultHTTPPort), "application/json", nil)
 		if err == nil && resp != nil {
 			resp.Body.Close()
 		}

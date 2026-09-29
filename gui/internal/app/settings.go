@@ -2,66 +2,19 @@ package app
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"math"
-	"net"
-	"os"
-	"path/filepath"
+
 	"phonegyro/pkg/dsu"
 	"phonegyro/pkg/pairing"
-	"strings"
+
+	"phonegyro-gui/internal/settings"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// AppSettings holds configurable parameters exposed in the settings window
-type AppSettings struct {
-	Theme                 string         `json:"theme"`
-	Lang                  string         `json:"lang"`
-	FontScale             float64        `json:"fontScale"`
-	ActiveSlot            int            `json:"activeSlot"`
-	FirstLaunchDone       bool           `json:"firstLaunchDone"`
-	HideAuthor            bool           `json:"hideAuthor"`
-	DSUPort               int            `json:"dsuPort"`
-	DSUMAC                string         `json:"dsuMac"`
-	HTTPPort              int            `json:"httpPort"`
-	HTTPSPort             int            `json:"httpsPort"`
-	GyroDeadzone          float64        `json:"gyroDeadzone"`
-	StillnessHint         bool           `json:"stillnessHint"`
-	DisconnectAlert       bool           `json:"disconnectAlert"`
-	SilenceDisconnect     bool           `json:"silenceDisconnect"`
-	CemuDriftGuard        bool           `json:"cemuDriftGuard"`
-	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
-	SoundMode             string         `json:"soundMode"`
-	SoundVolume           int            `json:"soundVolume"`
-	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
-	GyroDeadband          float64        `json:"gyroDeadband"`
-	GyroDeadbandUsb       float64        `json:"gyroDeadbandUsb"`
-	GyroSensitivity       float64        `json:"gyroSensitivity"`
-	MinimizeToTray        bool           `json:"minimizeToTray"`
-	CloseAction           string         `json:"closeAction"`
-	HotkeyRecenterEnabled bool           `json:"hotkeyRecenterEnabled"`
-	HotkeyRecenterKey     string         `json:"hotkeyRecenterKey"`
-	InputMode             string         `json:"inputMode,omitempty"`
-}
-
-func formatMAC(b [6]byte) string {
-	return fmt.Sprintf("%02X:%02X:%02X:%02X:%02X:%02X", b[0], b[1], b[2], b[3], b[4], b[5])
-}
-
-func parseMAC(s string) ([6]byte, error) {
-	var b [6]byte
-	hw, err := net.ParseMAC(strings.TrimSpace(s))
-	if err != nil {
-		return b, err
-	}
-	if len(hw) != 6 {
-		return b, fmt.Errorf("MAC address must be 6 bytes")
-	}
-	copy(b[:], hw[:6])
-	return b, nil
-}
+// AppSettings is what the settings window shows and edits (internal/settings).
+type AppSettings = settings.Settings
 
 func (a *App) getDSUMAC() string {
 	a.dsuMACMu.RLock()
@@ -75,23 +28,11 @@ func (a *App) setDSUMAC(mac string) {
 	a.dsuMACMu.Unlock()
 }
 
-func defaultSoundVolumes() map[string]int {
-	return map[string]int{
-		"connect":    1,
-		"disconnect": 1,
-		"dsu":        1,
-		"recenter":   1,
-		"goal":       1,
-		"defeat":     1,
-		"loss":       1, // тихий сигнал сильной потери данных (link/alarm.go)
-	}
-}
-
 func (a *App) getSoundVolumes() map[string]int {
 	a.soundVolumesMu.RLock()
 	defer a.soundVolumesMu.RUnlock()
 	if a.soundVolumes == nil {
-		return defaultSoundVolumes()
+		return settings.DefaultSoundVolumes()
 	}
 	cp := make(map[string]int, len(a.soundVolumes))
 	for k, v := range a.soundVolumes {
@@ -103,300 +44,144 @@ func (a *App) getSoundVolumes() map[string]int {
 func (a *App) setSoundVolumes(m map[string]int) {
 	a.soundVolumesMu.Lock()
 	defer a.soundVolumesMu.Unlock()
-	defs := defaultSoundVolumes()
-	for k := range defs {
-		if v, ok := m[k]; ok {
-			if v < 0 {
-				defs[k] = 0
-			} else if v > 3 {
-				defs[k] = 3
-			} else {
-				defs[k] = v
-			}
-		}
-	}
-	a.soundVolumes = defs
+	a.soundVolumes = settings.SoundVolumes(m)
 }
 
-// loadSettings loads theme, language, and slot preferences from settings.json
+// loadSettings reads settings.json from profilesDir and makes it live.
 func (a *App) loadSettings() {
 	if a.profilesDir == "" {
 		return
 	}
-	path := filepath.Join(a.profilesDir, "settings.json")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		// First launch!
-		a.themeMu.Lock()
-		a.firstLaunchDone = false
-		if a.currentLang == "" {
-			a.currentLang = "ru"
-		}
-		a.themeMu.Unlock()
-		if a.getDSUMAC() == "" {
-			mac := dsu.GenerateRandomMAC()
-			a.setDSUMAC(formatMAC(mac))
-		}
-		return
-	}
-	var s struct {
-		Theme                 string         `json:"theme"`
-		Lang                  string         `json:"lang"`
-		ActiveSlot            int            `json:"activeSlot"`
-		FirstLaunchDone       bool           `json:"firstLaunchDone"`
-		HideAuthor            bool           `json:"hideAuthor"`
-		DSUPort               int            `json:"dsuPort"`
-		DSUMAC                string         `json:"dsuMac"`
-		HTTPPort              int            `json:"httpPort"`
-		HTTPSPort             int            `json:"httpsPort"`
-		GyroDeadzone          float64        `json:"gyroDeadzone"`
-		StillnessHint         *bool          `json:"stillnessHint"`
-		DisconnectAlert       *bool          `json:"disconnectAlert"`
-		SilenceDisconnect     *bool          `json:"silenceDisconnect"`
-		CemuDriftGuard        *bool          `json:"cemuDriftGuard"`
-		CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
-		SoundMode             string         `json:"soundMode"`
-		SoundVolume           *int           `json:"soundVolume"`
-		SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
-		GyroDeadband          *float64       `json:"gyroDeadband,omitempty"`
-		GyroDeadbandUsb       *float64       `json:"gyroDeadbandUsb,omitempty"`
-		GyroSensitivity       *float64       `json:"gyroSensitivity,omitempty"`
-		FontScale             *float64       `json:"fontScale,omitempty"`
-		MinimizeToTray        *bool          `json:"minimizeToTray,omitempty"`
-		CloseAction           string         `json:"closeAction,omitempty"`
-		HotkeyRecenterEnabled *bool          `json:"hotkeyRecenterEnabled,omitempty"`
-		HotkeyRecenterKey     string         `json:"hotkeyRecenterKey,omitempty"`
-		InputMode             string         `json:"inputMode,omitempty"`
-	}
-	if err := json.Unmarshal(data, &s); err != nil {
-		return
-	}
+	s, _ := settings.Load(a.profilesDir)
+	a.applySettings(s)
+}
+
+// applySettings makes s the live settings (s is valid: settings.Load/Defaults).
+func (a *App) applySettings(s AppSettings) {
 	a.themeMu.Lock()
-	if s.Theme == "dark" || s.Theme == "light" {
-		a.currentTheme = s.Theme
-	}
-	if s.Lang == "ru" || s.Lang == "en" {
-		a.currentLang = s.Lang
-	} else if a.currentLang == "" {
-		a.currentLang = "ru"
-	}
+	a.currentTheme = s.Theme
+	a.currentLang = s.Lang
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
 	a.themeMu.Unlock()
 
-	a.phoneBank.profilesMu.Lock()
-	if s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
+	if a.phoneBank != nil && s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
+		a.phoneBank.profilesMu.Lock()
 		a.phoneBank.activeSlot = s.ActiveSlot
-	}
-	a.phoneBank.profilesMu.Unlock()
-
-	if parsed, err := parseMAC(s.DSUMAC); err == nil {
-		a.setDSUMAC(formatMAC(parsed))
-	} else {
-		mac := dsu.GenerateRandomMAC()
-		a.setDSUMAC(formatMAC(mac))
+		a.phoneBank.profilesMu.Unlock()
 	}
 
-	if s.DSUPort >= 1024 && s.DSUPort <= 65535 {
-		a.dsuPort = s.DSUPort
-	}
-	if s.HTTPPort >= 1024 && s.HTTPPort <= 65535 {
-		a.httpPort = s.HTTPPort
-	}
-	if s.HTTPSPort >= 1024 && s.HTTPSPort <= 65535 {
-		a.httpsPort = s.HTTPSPort
-	}
-	if s.GyroDeadzone > 0 {
-		a.gyroDeadzoneBits.Store(math.Float64bits(s.GyroDeadzone))
-	}
-	if s.StillnessHint != nil {
-		a.stillnessHint.Store(*s.StillnessHint)
-	}
-	if s.DisconnectAlert != nil {
-		a.disconnectAlert.Store(*s.DisconnectAlert)
-	}
-	if s.SilenceDisconnect != nil {
-		a.silenceDisconnect.Store(*s.SilenceDisconnect)
-	} else {
-		a.silenceDisconnect.Store(true)
-	}
-	if s.CemuDriftGuard != nil {
-		a.cemuDriftGuard.Store(*s.CemuDriftGuard)
-	} else {
-		a.cemuDriftGuard.Store(true)
-	}
+	a.setDSUMAC(s.DSUMAC)
+	a.dsuPort = s.DSUPort
+	a.httpPort = s.HTTPPort
+	a.httpsPort = s.HTTPSPort
+	a.gyroDeadzoneBits.Store(math.Float64bits(s.GyroDeadzone))
+	a.stillnessHint.Store(s.StillnessHint)
+	a.disconnectAlert.Store(s.DisconnectAlert)
+	a.silenceDisconnect.Store(s.SilenceDisconnect)
+	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	a.cemuNotice.hidden.Store(s.CemuNoticeHidden)
-	if s.SoundMode != "" {
-		a.soundMode = s.SoundMode
-	} else {
-		a.soundMode = "cute"
-	}
-	if s.SoundVolume != nil && *s.SoundVolume >= 0 && *s.SoundVolume <= 3 {
-		a.soundVolume.Store(int32(*s.SoundVolume))
-	} else {
-		a.soundVolume.Store(1)
-	}
-	if s.SoundVolumes != nil {
-		a.setSoundVolumes(s.SoundVolumes)
-	} else {
-		a.setSoundVolumes(defaultSoundVolumes())
-	}
-	if s.GyroDeadband != nil {
-		a.gyroDeadbandBits.Store(math.Float64bits(*s.GyroDeadband))
-	} else if s.GyroDeadzone > 0 {
-		a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadzone))
-	} else {
-		a.gyroDeadbandBits.Store(math.Float64bits(defaultDeadbandPhone))
-	}
-	// Settings from before the split had one threshold, tuned for phones: USB then
-	// starts from its own default rather than inheriting it.
-	if s.GyroDeadbandUsb != nil {
-		a.gyroDeadbandUsbBits.Store(math.Float64bits(*s.GyroDeadbandUsb))
-	} else {
-		a.gyroDeadbandUsbBits.Store(math.Float64bits(defaultDeadbandUSB))
-	}
-	if s.GyroSensitivity != nil && *s.GyroSensitivity > 0 {
-		a.gyroSensitivityBits.Store(math.Float64bits(*s.GyroSensitivity))
-	} else {
-		a.gyroSensitivityBits.Store(math.Float64bits(1.00))
-	}
-	if s.FontScale != nil && *s.FontScale >= 0.70 && *s.FontScale <= 1.60 {
-		a.fontScaleBits.Store(math.Float64bits(*s.FontScale))
-	} else {
-		a.fontScaleBits.Store(math.Float64bits(1.00))
-	}
-	if s.CloseAction == "minimize" || s.CloseAction == "quit" || s.CloseAction == "ask" {
-		a.closeActionMu.Lock()
-		a.closeAction = s.CloseAction
-		a.closeActionMu.Unlock()
-		a.minimizeToTray.Store(s.CloseAction == "minimize")
-	} else {
-		a.closeActionMu.Lock()
-		a.closeAction = "ask"
-		a.closeActionMu.Unlock()
-		a.minimizeToTray.Store(true)
-	}
-	if s.HotkeyRecenterEnabled != nil {
-		a.hotkeyRecenterEnabled.Store(*s.HotkeyRecenterEnabled)
-	} else {
-		a.hotkeyRecenterEnabled.Store(true)
-	}
-	if s.HotkeyRecenterKey != "" {
-		a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
-	} else {
-		a.setHotkeyRecenterKey("Ctrl+Shift+R")
-	}
+	a.soundMode = s.SoundMode
+	a.soundVolume.Store(int32(s.SoundVolume))
+	a.setSoundVolumes(s.SoundVolumes)
+	a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadband))
+	a.gyroDeadbandUsbBits.Store(math.Float64bits(s.GyroDeadbandUsb))
+	a.gyroSensitivityBits.Store(math.Float64bits(s.GyroSensitivity))
+	a.fontScaleBits.Store(math.Float64bits(s.FontScale))
+	a.closeActionMu.Lock()
+	a.closeAction = s.CloseAction
+	a.closeActionMu.Unlock()
+	a.hotkeyRecenterEnabled.Store(s.HotkeyRecenterEnabled)
+	a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
 	a.inputModeMu.Lock()
-	if s.InputMode == "usb" {
-		a.inputMode = "usb"
-	} else {
-		a.inputMode = "phone"
-	}
+	a.inputMode = s.InputMode
 	a.inputModeMu.Unlock()
 }
 
-// saveSettings persists theme, language, activeSlot, and preferences to settings.json
-func (a *App) saveSettings() {
-	if a.profilesDir == "" {
-		return
-	}
-	if err := os.MkdirAll(a.profilesDir, 0755); err != nil {
-		return
-	}
-	path := filepath.Join(a.profilesDir, "settings.json")
+// settingsSnapshot is the live settings; unset values (an App not built by
+// NewApp) read as their defaults.
+func (a *App) settingsSnapshot() AppSettings {
+	def := settings.Defaults()
 
 	a.themeMu.RLock()
 	theme := a.currentTheme
 	lang := a.currentLang
-	firstLaunchDone := a.firstLaunchDone
+	firstLaunch := a.firstLaunchDone
 	hideAuthor := a.hideAuthor
 	a.themeMu.RUnlock()
 
-	a.phoneBank.profilesMu.RLock()
-	slot := a.phoneBank.activeSlot
-	a.phoneBank.profilesMu.RUnlock()
+	slot := def.ActiveSlot
+	if a.phoneBank != nil {
+		a.phoneBank.profilesMu.RLock()
+		slot = a.phoneBank.activeSlot
+		a.phoneBank.profilesMu.RUnlock()
+	}
 
-	dsuP := a.dsuPort
-	if dsuP == 0 {
-		dsuP = 26760
-	}
-	httpP := a.httpPort
-	if httpP == 0 {
-		httpP = HTTPPort
-	}
-	httpsP := a.httpsPort
-	if httpsP == 0 {
-		httpsP = HTTPSPort
+	orDefault := func(v, d int) int {
+		if v == 0 {
+			return d
+		}
+		return v
 	}
 
 	deadzone := math.Float64frombits(a.gyroDeadzoneBits.Load())
-	if deadzone == 0 && a.gyroDeadzoneBits.Load() == 0 {
-		deadzone = 0.20
+	if a.gyroDeadzoneBits.Load() == 0 {
+		deadzone = def.GyroDeadzone
 	}
-
-	soundM := a.soundMode
-	if soundM == "" {
-		soundM = "cute"
+	soundMode := a.soundMode
+	if soundMode == "" {
+		soundMode = def.SoundMode
 	}
-
-	deadband := math.Float64frombits(a.gyroDeadbandBits.Load())
 	sensitivity := math.Float64frombits(a.gyroSensitivityBits.Load())
 	if sensitivity <= 0 {
-		sensitivity = 1.00
+		sensitivity = def.GyroSensitivity
 	}
-
 	vol := int(a.soundVolume.Load())
-	if vol < 0 || vol > 3 {
-		vol = 1
+	if vol < 0 || vol > settings.MaxVolume {
+		vol = def.SoundVolume
 	}
+	closeAction := a.GetCloseAction()
 
-	fontScale := math.Float64frombits(a.fontScaleBits.Load())
-	if fontScale < 0.70 || fontScale > 1.60 {
-		fontScale = 1.00
-	}
-
-	dsuMacStr := a.getDSUMAC()
-	if dsuMacStr == "" {
-		mac := dsu.GenerateRandomMAC()
-		dsuMacStr = formatMAC(mac)
-		a.setDSUMAC(dsuMacStr)
-	}
-
-	s := AppSettings{
+	return AppSettings{
 		Theme:                 theme,
 		Lang:                  lang,
-		FontScale:             fontScale,
+		FontScale:             a.GetFontScale(),
 		ActiveSlot:            slot,
-		FirstLaunchDone:       firstLaunchDone,
+		FirstLaunchDone:       firstLaunch,
 		HideAuthor:            hideAuthor,
-		DSUPort:               dsuP,
-		DSUMAC:                dsuMacStr,
-		HTTPPort:              httpP,
-		HTTPSPort:             httpsP,
+		DSUPort:               orDefault(a.dsuPort, def.DSUPort),
+		DSUMAC:                a.getDSUMAC(),
+		HTTPPort:              orDefault(a.httpPort, def.HTTPPort),
+		HTTPSPort:             orDefault(a.httpsPort, def.HTTPSPort),
 		GyroDeadzone:          deadzone,
 		StillnessHint:         a.stillnessHint.Load(),
 		DisconnectAlert:       a.disconnectAlert.Load(),
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
 		CemuDriftGuard:        a.cemuDriftGuard.Load(),
 		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
-		SoundMode:             soundM,
+		SoundMode:             soundMode,
 		SoundVolume:           vol,
 		SoundVolumes:          a.getSoundVolumes(),
-		GyroDeadband:          deadband,
+		GyroDeadband:          math.Float64frombits(a.gyroDeadbandBits.Load()),
 		GyroDeadbandUsb:       math.Float64frombits(a.gyroDeadbandUsbBits.Load()),
 		GyroSensitivity:       sensitivity,
-		MinimizeToTray:        a.GetCloseAction() == "minimize",
-		CloseAction:           a.GetCloseAction(),
+		MinimizeToTray:        closeAction == "minimize",
+		CloseAction:           closeAction,
 		HotkeyRecenterEnabled: a.hotkeyRecenterEnabled.Load(),
 		HotkeyRecenterKey:     a.getHotkeyRecenterKey(),
 		InputMode:             a.GetInputMode(),
 	}
+}
 
-	data, err := json.MarshalIndent(s, "", "  ")
-	if err != nil {
+// saveSettings writes the live settings to settings.json.
+func (a *App) saveSettings() {
+	if a.profilesDir == "" {
 		return
 	}
-	_ = os.WriteFile(path, data, 0644)
+	if a.getDSUMAC() == "" {
+		a.setDSUMAC(settings.RandomMAC())
+	}
+	_ = settings.Save(a.profilesDir, a.settingsSnapshot())
 }
 
 // GetCloseAction returns the current action on window close ("ask", "minimize", "quit").
@@ -411,13 +196,12 @@ func (a *App) GetCloseAction() string {
 
 // SetCloseAction configures the action on window close.
 func (a *App) SetCloseAction(action string) {
-	if action != "ask" && action != "minimize" && action != "quit" {
+	if !settings.ValidCloseAction(action) {
 		action = "ask"
 	}
 	a.closeActionMu.Lock()
 	a.closeAction = action
 	a.closeActionMu.Unlock()
-	a.minimizeToTray.Store(action == "minimize")
 }
 
 // ConfirmCloseChoice handles user's decision from the Apple confirmation modal.
@@ -435,16 +219,11 @@ func (a *App) ConfirmCloseChoice(action string, remember bool) {
 	}
 }
 
-// shouldMinimizeToTray reports whether closing the window should hide it to the system tray.
-func (a *App) shouldMinimizeToTray() bool {
-	return a.GetCloseAction() == "minimize"
-}
-
 func (a *App) getHotkeyRecenterKey() string {
 	a.hotkeyRecenterKeyMu.RLock()
 	defer a.hotkeyRecenterKeyMu.RUnlock()
 	if a.hotkeyRecenterKey == "" {
-		return "Ctrl+Shift+R"
+		return settings.DefaultHotkey
 	}
 	return a.hotkeyRecenterKey
 }
@@ -522,7 +301,7 @@ func (a *App) GetLang() string {
 
 // SetFontScale updates UI font scale on backend, broadcasts to Live Debug window, and emits event to main window.
 func (a *App) SetFontScale(scale float64) {
-	if scale < 0.70 || scale > 1.60 {
+	if scale < settings.MinFontScale || scale > settings.MaxFontScale {
 		scale = 1.00
 	}
 	a.fontScaleBits.Store(math.Float64bits(scale))
@@ -541,7 +320,7 @@ func (a *App) SetFontScale(scale float64) {
 // GetFontScale returns the current synchronized UI font scale.
 func (a *App) GetFontScale() float64 {
 	scale := math.Float64frombits(a.fontScaleBits.Load())
-	if scale < 0.70 || scale > 1.60 {
+	if scale < settings.MinFontScale || scale > settings.MaxFontScale {
 		return 1.00
 	}
 	return scale
@@ -595,11 +374,11 @@ func (a *App) rebuildURLsAndQRCodes() {
 	}
 	hPort := a.httpPort
 	if hPort == 0 {
-		hPort = HTTPPort
+		hPort = settings.DefaultHTTPPort
 	}
 	hsPort := a.httpsPort
 	if hsPort == 0 {
-		hsPort = HTTPSPort
+		hsPort = settings.DefaultHTTPSPort
 	}
 
 	setupURL := fmt.Sprintf("http://%s:%d/ca.mobileconfig", a.primaryIP, hPort)
@@ -621,102 +400,18 @@ func (a *App) rebuildURLsAndQRCodes() {
 
 // GetAppSettings returns all current application settings
 func (a *App) GetAppSettings() AppSettings {
-	a.themeMu.RLock()
-	theme := a.currentTheme
-	lang := a.currentLang
-	firstLaunch := a.firstLaunchDone
-	hideAuthor := a.hideAuthor
-	a.themeMu.RUnlock()
-
-	a.phoneBank.profilesMu.RLock()
-	slot := a.phoneBank.activeSlot
-	a.phoneBank.profilesMu.RUnlock()
-
-	dsuP := a.dsuPort
-	if dsuP == 0 {
-		dsuP = 26760
-	}
-	httpP := a.httpPort
-	if httpP == 0 {
-		httpP = HTTPPort
-	}
-	httpsP := a.httpsPort
-	if httpsP == 0 {
-		httpsP = HTTPSPort
-	}
-
-	deadzone := math.Float64frombits(a.gyroDeadzoneBits.Load())
-
-	soundM := a.soundMode
-	if soundM == "" {
-		soundM = "cute"
-	}
-
-	deadband := math.Float64frombits(a.gyroDeadbandBits.Load())
-	sensitivity := math.Float64frombits(a.gyroSensitivityBits.Load())
-	if sensitivity <= 0 {
-		sensitivity = 1.00
-	}
-
-	vol := int(a.soundVolume.Load())
-	if vol < 0 || vol > 3 {
-		vol = 1
-	}
-
-	fontScale := math.Float64frombits(a.fontScaleBits.Load())
-	if fontScale < 0.70 || fontScale > 1.60 {
-		fontScale = 1.00
-	}
-
-	return AppSettings{
-		Theme:                 theme,
-		Lang:                  lang,
-		FontScale:             fontScale,
-		ActiveSlot:            slot,
-		FirstLaunchDone:       firstLaunch,
-		HideAuthor:            hideAuthor,
-		DSUPort:               dsuP,
-		DSUMAC:                a.getDSUMAC(),
-		HTTPPort:              httpP,
-		HTTPSPort:             httpsP,
-		GyroDeadzone:          deadzone,
-		StillnessHint:         a.stillnessHint.Load(),
-		DisconnectAlert:       a.disconnectAlert.Load(),
-		SilenceDisconnect:     a.silenceDisconnect.Load(),
-		CemuDriftGuard:        a.cemuDriftGuard.Load(),
-		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
-		SoundMode:             soundM,
-		SoundVolume:           vol,
-		SoundVolumes:          a.getSoundVolumes(),
-		GyroDeadband:          deadband,
-		GyroDeadbandUsb:       math.Float64frombits(a.gyroDeadbandUsbBits.Load()),
-		GyroSensitivity:       sensitivity,
-		MinimizeToTray:        a.GetCloseAction() == "minimize",
-		CloseAction:           a.GetCloseAction(),
-		HotkeyRecenterEnabled: a.hotkeyRecenterEnabled.Load(),
-		HotkeyRecenterKey:     a.getHotkeyRecenterKey(),
-		InputMode:             a.GetInputMode(),
-	}
+	return a.settingsSnapshot()
 }
 
 // SaveAppSettings validates, applies and persists settings
 func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
-	if s.DSUPort < 1024 || s.DSUPort > 65535 {
-		return nil, fmt.Errorf("DSU port must be between 1024 and 65535")
-	}
-	if s.HTTPPort < 1024 || s.HTTPPort > 65535 {
-		return nil, fmt.Errorf("HTTP port must be between 1024 and 65535")
-	}
-	if s.HTTPSPort < 1024 || s.HTTPSPort > 65535 {
-		return nil, fmt.Errorf("HTTPS port must be between 1024 and 65535")
-	}
-	if s.HTTPPort == s.HTTPSPort || s.HTTPPort == s.DSUPort || s.HTTPSPort == s.DSUPort {
-		return nil, fmt.Errorf("DSU, HTTP and HTTPS ports must be different")
+	if err := settings.CheckPorts(s.DSUPort, s.HTTPPort, s.HTTPSPort); err != nil {
+		return nil, err
 	}
 
 	if s.DSUMAC != "" {
-		if parsed, err := parseMAC(s.DSUMAC); err == nil {
-			formatted := formatMAC(parsed)
+		if parsed, err := settings.ParseMAC(s.DSUMAC); err == nil {
+			formatted := settings.FormatMAC(parsed)
 			a.setDSUMAC(formatted)
 			if a.dsuSrv != nil {
 				a.dsuSrv.SetMACAddress(parsed)
@@ -727,7 +422,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	dsuRestarted := false
 	if s.DSUPort != a.dsuPort && a.dsuSrv != nil {
 		a.dsuSrv.Stop()
-		macBytes, _ := parseMAC(a.getDSUMAC())
+		macBytes, _ := settings.ParseMAC(a.getDSUMAC())
 		newDsu := dsu.NewServer(s.DSUPort, macBytes)
 		a.bindDSUCallbacks(newDsu)
 		if err := newDsu.Start(); err != nil {
@@ -772,10 +467,8 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
 		a.SetCloseAction(s.CloseAction)
-	} else {
-		a.minimizeToTray.Store(s.MinimizeToTray)
 	}
-	if s.SoundVolume >= 0 && s.SoundVolume <= 3 {
+	if s.SoundVolume >= 0 && s.SoundVolume <= settings.MaxVolume {
 		a.soundVolume.Store(int32(s.SoundVolume))
 	}
 	if s.SoundVolumes != nil {
@@ -784,7 +477,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	if s.SoundMode != "" {
 		a.soundMode = s.SoundMode
 	}
-	if s.FontScale >= 0.70 && s.FontScale <= 1.60 {
+	if s.FontScale >= settings.MinFontScale && s.FontScale <= settings.MaxFontScale {
 		a.fontScaleBits.Store(math.Float64bits(s.FontScale))
 	} else if s.FontScale == 0 {
 		a.fontScaleBits.Store(math.Float64bits(1.00))
@@ -825,7 +518,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 // RegenerateDSUMAC generates a fresh MAC address, updates the server, and persists to settings
 func (a *App) RegenerateDSUMAC() string {
 	newMAC := dsu.GenerateRandomMAC()
-	macStr := formatMAC(newMAC)
+	macStr := settings.FormatMAC(newMAC)
 	a.setDSUMAC(macStr)
 	if a.dsuSrv != nil {
 		a.dsuSrv.SetMACAddress(newMAC)

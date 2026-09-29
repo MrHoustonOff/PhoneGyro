@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -28,6 +27,7 @@ import (
 	"phonegyro-gui/internal/link"
 	"phonegyro-gui/internal/motion"
 	"phonegyro-gui/internal/resmon"
+	"phonegyro-gui/internal/settings"
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/version"
 
@@ -38,11 +38,6 @@ import (
 func init() {
 	_ = mime.AddExtensionType(".glb", "model/gltf-binary")
 }
-
-const (
-	HTTPPort  = 8080
-	HTTPSPort = 8443
-)
 
 // CurrentProfileVersion is the calibration data generation SaveProfile stamps on every
 // save. Bump it whenever a new field becomes load-bearing for correct output (it was 3
@@ -254,11 +249,10 @@ type App struct {
 	lastLiveDebugNs     atomic.Int64 // last telemetry message to Live Debug (rate cap)
 	fontScaleBits       atomic.Uint64
 	// System Tray & Window Lifecycle
-	minimizeToTray atomic.Bool
-	closeActionMu  sync.RWMutex
-	closeAction    string // "ask", "minimize", "quit"
-	quitting       atomic.Bool
-	trayMgr        *tray.Manager
+	closeActionMu sync.RWMutex
+	closeAction   string // "ask", "minimize", "quit"
+	quitting      atomic.Bool
+	trayMgr       *tray.Manager
 	// Global Windows Hotkeys
 	hotkeyRecenterEnabled atomic.Bool
 	hotkeyRecenterKeyMu   sync.RWMutex
@@ -310,25 +304,7 @@ func NewApp() *App {
 		fmt.Printf("[-] Failed to init i18n manager: %v\n", err)
 	}
 
-	lanIPs := pairing.GetLocalIPv4s()
-	primaryIP := pairing.GetPrimaryIP(lanIPs)
-
-	setupURL := fmt.Sprintf("http://%s:%d/ca.mobileconfig", primaryIP, HTTPPort)
-	appURL := fmt.Sprintf("https://%s:%d/", primaryIP, HTTPSPort)
-
-	// Pre-generate Gamepad QR code PNG for instant display on start
-	qrBytes, err := pairing.GenerateQRPNG(appURL, 240)
-	qrBase64 := ""
-	if err == nil {
-		qrBase64 = "data:image/png;base64," + base64.StdEncoding.EncodeToString(qrBytes)
-	}
-
-	// Pre-generate Setup CA profile QR code PNG for iOS setup guide
-	setupQRBytes, err := pairing.GenerateQRPNG(setupURL, 240)
-	setupQRBase64 := ""
-	if err == nil {
-		setupQRBase64 = "data:image/png;base64," + base64.StdEncoding.EncodeToString(setupQRBytes)
-	}
+	primaryIP := pairing.GetPrimaryIP(pairing.GetLocalIPv4s())
 
 	// Determine profiles dir
 	appData := os.Getenv("APPDATA")
@@ -338,36 +314,13 @@ func NewApp() *App {
 	profilesDir := filepath.Join(appData, "phonegyro")
 
 	app := &App{
-		i18nMgr:      mgr,
-		primaryIP:    primaryIP,
-		dsuPort:      26760,
-		httpPort:     HTTPPort,
-		httpsPort:    HTTPSPort,
-		setupURL:     setupURL,
-		gamepadURL:   appURL,
-		qrCodePNG:    qrBase64,
-		setupQRPNG:   setupQRBase64,
-		profilesDir:  profilesDir,
-		currentTheme: "dark",
-		currentLang:  "ru",
+		i18nMgr:     mgr,
+		primaryIP:   primaryIP,
+		profilesDir: profilesDir,
 	}
 	app.phoneBank = newMotionBank()
 	app.usbBank = newMotionBank()
-	app.gyroDeadzoneBits.Store(math.Float64bits(0.20))
-	app.gyroDeadbandBits.Store(math.Float64bits(defaultDeadbandPhone))
-	app.gyroDeadbandUsbBits.Store(math.Float64bits(defaultDeadbandUSB))
-	app.gyroSensitivityBits.Store(math.Float64bits(1.00))
-	app.fontScaleBits.Store(math.Float64bits(1.00))
-	app.stillnessHint.Store(true)
-	app.disconnectAlert.Store(true)
-	app.silenceDisconnect.Store(true)
-	app.cemuDriftGuard.Store(true)
-	app.soundMode = "cute"
-	app.soundVolume.Store(1)
-	app.soundVolumes = defaultSoundVolumes()
-	app.minimizeToTray.Store(true)
-	app.hotkeyRecenterEnabled.Store(true)
-	app.hotkeyRecenterKey = "Ctrl+Shift+R"
+	app.applySettings(settings.Defaults())
 
 	// Ensure logs directory exists
 	_ = os.MkdirAll(filepath.Join(profilesDir, "logs"), 0755)
@@ -376,7 +329,7 @@ func NewApp() *App {
 	// switching input mode later immediately reflects whatever was saved for
 	// that mode last time, without needing a lazy first-load.
 	app.loadSettings()
-	app.rebuildURLsAndQRCodes()
+	app.rebuildURLsAndQRCodes() // gamepad/setup URLs and their QR codes (ports come from settings)
 	app.loadProfilesInto(app.phoneBank, app.bankDir("phone"))
 	app.loadProfilesInto(app.usbBank, app.bankDir("usb"))
 	app.logEvent("INFO", "PhoneGyro initialized: IP=%s, Theme=%s, Lang=%s, DSU=%d, HTTP=%d, HTTPS=%d", primaryIP, app.currentTheme, app.currentLang, app.dsuPort, app.httpPort, app.httpsPort)
@@ -435,10 +388,10 @@ func (a *App) startup(ctx context.Context) {
 	a.caMgr = caMgr
 
 	// 2. Cemuhook DSU Server (UDP)
-	macBytes, err := parseMAC(a.getDSUMAC())
+	macBytes, err := settings.ParseMAC(a.getDSUMAC())
 	if err != nil {
 		macBytes = dsu.GenerateRandomMAC()
-		a.setDSUMAC(formatMAC(macBytes))
+		a.setDSUMAC(settings.FormatMAC(macBytes))
 	}
 	dsuSrv := dsu.NewServer(a.dsuPort, macBytes)
 	a.bindDSUCallbacks(dsuSrv)

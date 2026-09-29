@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"phonegyro-gui/internal/motion"
+	"phonegyro-gui/internal/settings"
 	"testing"
 )
 
@@ -103,7 +104,7 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 	}
 
 	// Test sound volumes persistence
-	defs := defaultSoundVolumes()
+	defs := settings.DefaultSoundVolumes()
 	if defs["connect"] != 1 || defs["dsu"] != 1 || defs["recenter"] != 1 {
 		t.Fatalf("expected default sound volumes of 1, got %+v", defs)
 	}

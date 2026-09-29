@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"phonegyro-gui/internal/settings"
+
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/gorilla/websocket"
@@ -197,7 +199,7 @@ func (a *App) OpenLiveDebugWindow() {
 		}
 	}
 	// Fallback to browser if process execution fails
-	url := fmt.Sprintf("http://127.0.0.1:%d/livedebug", HTTPPort)
+	url := fmt.Sprintf("http://127.0.0.1:%d/livedebug", settings.DefaultHTTPPort)
 	if a.ctx != nil {
 		wailsRuntime.BrowserOpenURL(a.ctx, url)
 	}

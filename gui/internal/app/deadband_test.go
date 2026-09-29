@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"phonegyro-gui/internal/settings"
 )
 
 // TestDeadbandPerSource: the phone and the USB controller have their own tremor
@@ -21,8 +23,8 @@ func TestDeadbandPerSource(t *testing.T) {
 	if got := app.deadbandFor(app.phoneBank); got != 0.2 {
 		t.Fatalf("phone threshold %g, want the saved 0.2", got)
 	}
-	if got := app.deadbandFor(app.usbBank); got != defaultDeadbandUSB {
-		t.Fatalf("USB threshold %g, want its default %g", got, defaultDeadbandUSB)
+	if got := app.deadbandFor(app.usbBank); got != settings.DefaultDeadbandUSB {
+		t.Fatalf("USB threshold %g, want its default %g", got, settings.DefaultDeadbandUSB)
 	}
 	app.SetTuningFilterParams(0, 0.75, 1)
 	if app.deadbandFor(app.phoneBank) != 0 || app.deadbandFor(app.usbBank) != 0.75 {
