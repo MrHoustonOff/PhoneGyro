@@ -540,7 +540,7 @@
       const sensInput = document.getElementById('setting-gyro-sens-input');
       const sensSlider = document.getElementById('setting-gyro-sensitivity');
       const sens = parseFloat(sensInput?.value || sensSlider?.value || '1.00');
-      if (window.go?.main?.App?.SetTuningFilterParams) {
+      if (window.go?.app?.App?.SetTuningFilterParams) {
         window.go.app.App.SetTuningFilterParams(deadband, deadbandUsb, sens);
       }
     },
@@ -663,7 +663,7 @@
 
     async fetchSettings() {
       try {
-        if (window.go?.main?.App?.GetAppSettings) {
+        if (window.go?.app?.App?.GetAppSettings) {
           const s = await window.go.app.App.GetAppSettings();
           if (s) {
             this.currentSettings = s;
@@ -722,7 +722,7 @@
       await this.populateUI();
 
       // Start live test bench telemetry
-      if (window.go?.main?.App?.SetTuningActive) {
+      if (window.go?.app?.App?.SetTuningActive) {
         window.go.app.App.SetTuningActive(true);
       }
       this.syncLiveFilter();
@@ -1103,7 +1103,7 @@
 
         this.setSaveStatus('saving');
         try {
-          if (window.go?.main?.App?.SaveAppSettings) {
+          if (window.go?.app?.App?.SaveAppSettings) {
             await window.go.app.App.SaveAppSettings(payload);
           }
           this.currentSettings = payload;
@@ -1242,7 +1242,7 @@
         clearTimeout(this.autoSaveTimer);
         this.autoSaveTimer = null;
         const payload = this.collectPayload();
-        if (payload && window.go?.main?.App?.SaveAppSettings) {
+        if (payload && window.go?.app?.App?.SaveAppSettings) {
           window.go.app.App.SaveAppSettings(payload);
           this.currentSettings = payload;
         }
@@ -1257,7 +1257,7 @@
       }
 
       TuningBench.stop();
-      if (window.go?.main?.App?.SetTuningActive) {
+      if (window.go?.app?.App?.SetTuningActive) {
         window.go.app.App.SetTuningActive(false);
       }
 

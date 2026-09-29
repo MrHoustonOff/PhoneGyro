@@ -101,7 +101,7 @@
       }
       if (type === 'loss') {
         if (mode === 'windows') {
-          if (window.go?.main?.App?.PlaySystemSound) {
+          if (window.go?.app?.App?.PlaySystemSound) {
             try { window.go.app.App.PlaySystemSound('loss'); } catch (e) {}
           }
         } else {
@@ -111,7 +111,7 @@
       }
       if (type === 'defeat') {
         if (mode === 'windows') {
-          if (window.go?.main?.App?.PlaySystemSound) {
+          if (window.go?.app?.App?.PlaySystemSound) {
             try { window.go.app.App.PlaySystemSound('defeat'); } catch (e) {}
           }
         } else {
@@ -121,7 +121,7 @@
       }
       if (type === 'recenter') {
         if (mode === 'windows') {
-          if (window.go?.main?.App?.PlaySystemSound) {
+          if (window.go?.app?.App?.PlaySystemSound) {
             try { window.go.app.App.PlaySystemSound('recenter'); } catch (e) {}
           }
         } else {
@@ -131,7 +131,7 @@
       }
       if (type === 'dsu') {
         if (mode === 'windows') {
-          if (window.go?.main?.App?.PlaySystemSound) {
+          if (window.go?.app?.App?.PlaySystemSound) {
             try { window.go.app.App.PlaySystemSound('dsu'); } catch (e) {}
           }
         } else {
@@ -141,7 +141,7 @@
       }
 
       if (mode === 'windows') {
-        if (window.go?.main?.App?.PlaySystemSound) {
+        if (window.go?.app?.App?.PlaySystemSound) {
           try {
             window.go.app.App.PlaySystemSound(type);
           } catch (e) {
@@ -392,7 +392,7 @@
       const mode = sel ? sel.value : this.getMode();
       if (mode === 'off') return;
       if (mode === 'windows') {
-        if (window.go?.main?.App?.PlaySystemSound) {
+        if (window.go?.app?.App?.PlaySystemSound) {
           try { window.go.app.App.PlaySystemSound('connect'); } catch (e) {}
         }
       } else {

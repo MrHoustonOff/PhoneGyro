@@ -89,7 +89,7 @@
         mountToggle.addEventListener('change', async () => {
           const want = mountToggle.checked;
           try {
-            const res = await window.go?.main?.App?.SetProfileMountEnabled(this.activeSlot, want);
+            const res = await window.go?.app?.App?.SetProfileMountEnabled(this.activeSlot, want);
             if (res && res !== 'ok') mountToggle.checked = !want; // not applicable: undo
           } catch (e) {
             mountToggle.checked = !want;
@@ -177,7 +177,7 @@
 
       try {
         let result = 'ok';
-        if (window.go?.main?.App?.SetActiveProfile) {
+        if (window.go?.app?.App?.SetActiveProfile) {
           result = await window.go.app.App.SetActiveProfile(slot);
         }
         // Outdated profiles switch normally — the warning banner and highlighted

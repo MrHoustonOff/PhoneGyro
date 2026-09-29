@@ -44,7 +44,7 @@
           const sel = document.getElementById('setting-close-action');
           if (sel) sel.value = 'minimize';
         }
-        if (window.go?.main?.App?.ConfirmCloseChoice) {
+        if (window.go?.app?.App?.ConfirmCloseChoice) {
           await window.go.app.App.ConfirmCloseChoice('minimize', remember);
         }
       };
@@ -56,7 +56,7 @@
           const sel = document.getElementById('setting-close-action');
           if (sel) sel.value = 'quit';
         }
-        if (window.go?.main?.App?.ConfirmCloseChoice) {
+        if (window.go?.app?.App?.ConfirmCloseChoice) {
           await window.go.app.App.ConfirmCloseChoice('quit', remember);
         }
       };

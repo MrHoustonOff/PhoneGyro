@@ -62,7 +62,7 @@
         setTimeout(() => { overlay.style.display = 'none'; }, 180);
         window.removeEventListener('keydown', onKey);
         closeBtn?.removeEventListener('click', close);
-        window.go?.main?.App?.CloseCemuNotice(!!hide?.checked);
+        window.go?.app?.App?.CloseCemuNotice(!!hide?.checked);
       };
       const onKey = (e) => {
         if (e.key === 'Escape' || e.key === 'Enter') {
@@ -82,7 +82,7 @@
         if (!(window.runtime && typeof window.runtime.EventsOn === 'function')) return false;
         window.runtime.EventsOn('cemu:notice', (notice) => CemuNotice.show(notice));
         // Cemu usually subscribes before the window has loaded.
-        window.go?.main?.App?.PendingCemuNotice?.().then(notice => {
+        window.go?.app?.App?.PendingCemuNotice?.().then(notice => {
           if (notice) CemuNotice.show(notice);
         });
         return true;

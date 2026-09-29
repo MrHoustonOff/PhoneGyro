@@ -103,7 +103,7 @@ const DsuClientList = {
       const addr = row.dataset.addr;
       if (e.target.closest('.dsu-client-remove')) {
         this.hideTip();
-        const res = await window.go?.main?.App?.DisconnectDSUClient(addr);
+        const res = await window.go?.app?.App?.DisconnectDSUClient(addr);
         if (res === 'ok' && typeof showToast === 'function') {
           showToast((I18n.t('status.dsu_client_removed') || '{name} отключён от DSU').replace('{name}', row.dataset.name));
         }
@@ -111,7 +111,7 @@ const DsuClientList = {
       }
       if (e.target.closest('.dsu-client-readmit')) {
         this.hideTip();
-        const res = await window.go?.main?.App?.ReconnectDSUClient(addr);
+        const res = await window.go?.app?.App?.ReconnectDSUClient(addr);
         if (res === 'ok' && typeof showToast === 'function') {
           showToast((I18n.t('status.dsu_client_readmitted') || '{name} снова подключён к DSU').replace('{name}', row.dataset.name));
         }
@@ -119,7 +119,7 @@ const DsuClientList = {
       }
       if (row.dataset.process) {
         this.hideTip();
-        await window.go?.main?.App?.FocusDSUClient(addr);
+        await window.go?.app?.App?.FocusDSUClient(addr);
       }
     });
   },

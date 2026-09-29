@@ -38,7 +38,7 @@
       const onConfirm = async () => {
         cleanup();
         try {
-          const res = await window.go?.main?.App?.DeleteProfile(slot);
+          const res = await window.go?.app?.App?.DeleteProfile(slot);
           if (res !== 'ok') {
             console.error('Failed to delete profile:', res);
             return;

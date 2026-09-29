@@ -379,7 +379,7 @@
       this._lastStatus = null;
       this._lastIsOffline = null;
 
-      if (!fromBackend && window.go?.main?.App?.SetInputMode) {
+      if (!fromBackend && window.go?.app?.App?.SetInputMode) {
         window.go.app.App.SetInputMode(mode).catch(console.error);
       }
 
@@ -933,7 +933,7 @@
       // Open separate 3D LiveDebug window from stats header button
       const onOpenStats = (e) => {
         if (e) e.preventDefault();
-        if (window.go?.main?.App?.OpenLiveDebugWindow) {
+        if (window.go?.app?.App?.OpenLiveDebugWindow) {
           window.go.app.App.OpenLiveDebugWindow();
         } else {
           window.open('http://127.0.0.1:8080/livedebug', '_blank');

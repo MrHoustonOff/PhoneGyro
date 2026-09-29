@@ -718,7 +718,7 @@
       this.confettiParticles = [];
       this.spawnHole();
       this.updateHud();
-      if (window.go?.main?.App?.ResetAHRS) {
+      if (window.go?.app?.App?.ResetAHRS) {
         window.go.app.App.ResetAHRS().catch(() => {});
       }
     },

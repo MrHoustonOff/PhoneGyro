@@ -345,7 +345,7 @@
       if (moonIcon) moonIcon.style.display = 'block';
     }
 
-    if (window.go?.main?.LiveDebugApp?.SetWindowTheme) {
+    if (window.go?.app?.LiveDebugApp?.SetWindowTheme) {
       try { window.go.app.LiveDebugApp.SetWindowTheme(theme); } catch (e) {}
     }
 
@@ -1089,7 +1089,7 @@
     .catch(() => {});
 
   async function checkDeviceStatus() {
-    if (window.go?.main?.LiveDebugApp?.GetFullStatus) {
+    if (window.go?.app?.LiveDebugApp?.GetFullStatus) {
       try {
         const st = await window.go.app.LiveDebugApp.GetFullStatus();
         if (st) {
@@ -1107,7 +1107,7 @@
           return;
         }
       } catch (e) {}
-    } else if (window.go?.main?.LiveDebugApp?.GetDeviceStatus) {
+    } else if (window.go?.app?.LiveDebugApp?.GetDeviceStatus) {
       try {
         const connected = await window.go.app.LiveDebugApp.GetDeviceStatus();
         if (typeof connected === 'boolean') {
@@ -1167,7 +1167,7 @@
     }
     fetch(`${coreBaseUrl}/livedebug/recenter`, { method: 'POST' }).catch(() => {});
 
-    if (window.go?.main?.LiveDebugApp?.ResetAHRS) {
+    if (window.go?.app?.LiveDebugApp?.ResetAHRS) {
       try { window.go.app.LiveDebugApp.ResetAHRS(); } catch (e) {}
     }
   }
@@ -2220,7 +2220,7 @@
     const statusMsgEl = document.getElementById('modal-status-msg');
     const btnOpenFolder = document.getElementById('btn-modal-open-folder');
 
-    if (window.go?.main?.LiveDebugApp?.SaveCSVFile) {
+    if (window.go?.app?.LiveDebugApp?.SaveCSVFile) {
       window.go.app.LiveDebugApp.SaveCSVFile(defaultName, csvContent)
         .then(filePath => {
           if (filePath) {
@@ -2282,7 +2282,7 @@
 
   function openSavedFolder() {
     if (!savedFilePath) return;
-    if (window.go?.main?.LiveDebugApp?.OpenInFolder) {
+    if (window.go?.app?.LiveDebugApp?.OpenInFolder) {
       window.go.app.LiveDebugApp.OpenInFolder(savedFilePath);
     } else {
       fetch(`${coreBaseUrl}/livedebug/show-in-folder?path=${encodeURIComponent(savedFilePath)}`).catch(() => {});

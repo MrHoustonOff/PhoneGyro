@@ -4,7 +4,7 @@
   // Fetched once: the version is fixed for the life of the running process.
   async function initFooterVersion() {
     const el = document.getElementById('footer-version');
-    if (!el || !window.go?.main?.App?.GetAppVersion) return;
+    if (!el || !window.go?.app?.App?.GetAppVersion) return;
     try {
       const v = await window.go.app.App.GetAppVersion();
       el.innerHTML = `<span>${v.release}.${v.build}</span><span class="footer-version-channel ${v.channel}">${v.channel}</span>`;

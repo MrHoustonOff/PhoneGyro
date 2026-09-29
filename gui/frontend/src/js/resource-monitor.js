@@ -13,7 +13,7 @@
       }
 
       // Initial query if available
-      if (window.go?.main?.App?.GetResourceStats) {
+      if (window.go?.app?.App?.GetResourceStats) {
         window.go.app.App.GetResourceStats().then((stats) => {
           if (stats && stats.ramMb > 0) {
             this.update(stats);
