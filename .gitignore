@@ -36,4 +36,5 @@ tmp/
 Thumbs.db
 
 # Internal architecture specs
-docs/internal/
+docs/internal/*
+!docs/internal/frontend_rework_log/
