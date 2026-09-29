@@ -50,7 +50,7 @@
   --shadow-inset:inset 0 1px 2px rgba(0,0,0,0.10);
   --shadow-key:0 1px 0 rgba(0,0,0,0.14);
   --tex-grain:url(img/grain-light.webp);
-  --tex-rings:url(img/rings-light.svg);
+  --tex-rings:var(--tex-rings-light, url(img/rings-light.svg));
   --tb-scale:1.3;
   --pg-tb:calc(32px * var(--tb-scale));
 }
@@ -93,7 +93,7 @@
   --shadow-inset:inset 0 1px 3px rgba(0,0,0,0.75);
   --shadow-key:0 1px 0 rgba(0,0,0,0.9);
   --tex-grain:url(img/grain-light.webp);
-  --tex-rings:url(img/rings-dark.svg);
+  --tex-rings:var(--tex-rings-dark, url(img/rings-dark.svg));
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -149,6 +149,26 @@ html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;background-c
 /* Window body under title bar (empty for Step 1) */
 .pg-shell__body{position:absolute;inset:0;padding-top:var(--pg-tb);box-sizing:border-box;overflow:hidden}
 </style>
+<script src="js/zelda-rings.js"></script>
+<script>
+(() => {
+  if (typeof ZeldaRings === 'undefined') return;
+  const base = {
+    circleCount: 30, minRadius: 50, maxRadius: 220, ringGap: 16, strokeWidth: 6,
+    lineGap: 16, amplitude: 5, halfWave: 60, padding: 8, precision: 0, sortBySize: true, center: 'dot'
+  };
+  const seed = (Math.random() * 2147483647) >>> 0;
+  try {
+    const lightSvg = ZeldaRings.generate({ ...base, seed, background: '#F1F1F1', stroke: '#E7E7E7' });
+    const darkSvg = ZeldaRings.generate({ ...base, seed, background: '#0B0B0B', stroke: '#191919' });
+    const root = document.documentElement;
+    root.style.setProperty('--tex-rings-light', `url("${ZeldaRings.toBlobURL(lightSvg)}")`);
+    root.style.setProperty('--tex-rings-dark', `url("${ZeldaRings.toBlobURL(darkSvg)}")`);
+  } catch (e) {
+    console.error('Failed to generate procedural pattern:', e);
+  }
+})();
+</script>
 </head>
 <body>
 <div class="pg-app pg-shell pg-window has-titlebar pg-drift" id="pg-root">
