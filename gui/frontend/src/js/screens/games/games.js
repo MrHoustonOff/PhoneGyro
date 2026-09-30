@@ -1,225 +1,375 @@
-// Games Screen Coordinator (Aim Reticle & 3D Marble Platform)
-// Seamless full-screen mode without header/footer, smooth transitions, real-time gyro motion.
+// ── Games Screen Coordinator (Aim Reticle & 3D Marble Platform) ─────────────
+// Direct transfer of the interactive gaming logic from LEGACY/frontend/js/tuning-bench.js.
 
-import { $, setText, toggleClass } from '../../core/dom.js';
 import { call, on, off } from '../../core/bridge.js';
+import { go, onScreen, getCurrentScreen } from '../../shell/router.js';
 import { onState } from '../../core/state.js';
-import { t } from '../../core/i18n.js';
-import { go, onScreen } from '../../shell/router.js';
+import { t, onLang } from '../../core/i18n.js';
 import { AimGame } from './aim-game.js';
 import { PlatformGame } from './platform-game.js';
 
-let isActive = false;
-let activeGameName = 'aim';
-let aimGame = null;
-let platformGame = null;
-let initialized = false;
+export const TuningBench = {
+  active: false,
+  initialized: false,
+  activeGame: localStorage.getItem('gb_bench_active_game') || 'aim', // 'aim' | 'platform'
+  dataFeed: localStorage.getItem('gb_bench_data_feed') || 'dsu',     // 'dsu' | 'raw'
+  invertX: localStorage.getItem('gb_bench_inv_x') === 'true',
+  invertY: localStorage.getItem('gb_bench_inv_y') === 'true',
+  reticleX: 0,
+  reticleY: 0,
+  lastFrameTs: 0,
+  rafId: null,
+  lastDomUpdateTs: 0,
+  reticleDotEl: null,
+  hudAimXEl: null,
+  hudAimYEl: null,
 
-function initControllers() {
-  if (initialized) return;
-  initialized = true;
+  init() {
+    if (this.initialized) return;
+    this.initialized = true;
 
-  aimGame = new AimGame({
-    onScoreUpdate: (score, record) => {
-      if (activeGameName === 'aim') {
-        setText($('game-score'), String(score));
-        setText($('game-record'), String(record));
-      }
-    },
-    onTimerUpdate: (timeStr) => {
-      if (activeGameName === 'aim') {
-        setText($('game-label-timer'), t('ui.games_aim_time') || 'Время:');
-        setText($('game-val-timer'), timeStr);
-      }
-    },
-    onGameOver: () => {
-      if (activeGameName === 'aim') {
-        setText($('game-start-label'), t('ui.game_again') || 'Играть снова');
-      }
-    },
-  });
+    this.reticleDotEl = document.getElementById('bench-reticle-dot');
+    this.hudAimXEl = document.getElementById('bench-hud-aim-x');
+    this.hudAimYEl = document.getElementById('bench-hud-aim-y');
 
-  platformGame = new PlatformGame({
-    onScoreUpdate: (score, record) => {
-      if (activeGameName === 'platform') {
-        setText($('game-score'), String(score));
-        setText($('game-record'), String(record));
-      }
-    },
-    onTiltUpdate: (tiltStr) => {
-      if (activeGameName === 'platform') {
-        setText($('game-label-timer'), t('ui.games_plat_tilt') || 'Наклон:');
-        setText($('game-val-timer'), tiltStr);
-      }
-    },
-  });
+    // Back button
+    const btnBack = document.getElementById('btn-games-back');
+    if (btnBack) {
+      btnBack.onclick = () => go('settings');
+    }
 
-  // Back button
-  const btnBack = $('btn-games-back');
-  if (btnBack) {
-    btnBack.onclick = () => go('settings');
-  }
-
-  // Segment picker
-  const pickerSeg = $('game-picker-seg');
-  if (pickerSeg) {
-    pickerSeg.querySelectorAll('.pg-seg__btn').forEach((b) => {
-      b.onclick = () => switchGame(b.dataset.game);
+    // Mini-Game tabs switching ('aim' vs 'platform')
+    const gameTabs = document.querySelectorAll('#bench-game-tabs .bench-game-tab');
+    gameTabs.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-game') || 'aim';
+        this.switchGame(target);
+      });
     });
-  }
 
-  // Start / Reset button
-  const btnStart = $('btn-game-start');
-  if (btnStart) {
-    btnStart.onclick = () => {
-      if (activeGameName === 'aim') {
-        aimGame.start();
-        setText($('game-start-label'), t('ui.game_reset') || 'Сброс');
-      } else {
-        platformGame.start();
+    // Data feed toggle button ('dsu' vs 'raw')
+    const btnFeed = document.getElementById('btn-bench-feed');
+    if (btnFeed) {
+      btnFeed.addEventListener('click', () => {
+        this.dataFeed = (this.dataFeed === 'dsu') ? 'raw' : 'dsu';
+        try {
+          localStorage.setItem('gb_bench_data_feed', this.dataFeed);
+        } catch (_) {}
+        this.syncFeedButton();
+      });
+      this.syncFeedButton();
+    }
+
+    // Invert X toggle button
+    const btnInvX = document.getElementById('btn-bench-inv-x');
+    if (btnInvX) {
+      btnInvX.addEventListener('click', () => {
+        this.invertX = !this.invertX;
+        try {
+          localStorage.setItem('gb_bench_inv_x', String(this.invertX));
+        } catch (_) {}
+        btnInvX.classList.toggle('active', this.invertX);
+      });
+      btnInvX.classList.toggle('active', this.invertX);
+    }
+
+    // Invert Y toggle button
+    const btnInvY = document.getElementById('btn-bench-inv-y');
+    if (btnInvY) {
+      btnInvY.addEventListener('click', () => {
+        this.invertY = !this.invertY;
+        try {
+          localStorage.setItem('gb_bench_inv_y', String(this.invertY));
+        } catch (_) {}
+        btnInvY.classList.toggle('active', this.invertY);
+      });
+      btnInvY.classList.toggle('active', this.invertY);
+    }
+
+    // Recenter buttons
+    document.getElementById('btn-game-recenter')?.addEventListener('click', () => {
+      this.recenter();
+    });
+
+    // Start / Reset button
+    const btnStart = document.getElementById('btn-game-start');
+    if (btnStart) {
+      btnStart.addEventListener('click', () => {
+        if (this.activeGame === 'aim') {
+          AimGame.resetGame();
+        } else {
+          PlatformGame.recenter();
+        }
+      });
+    }
+
+    // Theme observer for platform materials
+    const observer = new MutationObserver(() => {
+      const theme = document.documentElement.dataset.theme || 'dark';
+      PlatformGame.updateTheme(theme);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    onLang(() => {
+      this.syncFeedButton();
+      this.switchGame(this.activeGame);
+    });
+  },
+
+  syncFeedButton() {
+    const btnFeed = document.getElementById('btn-bench-feed');
+    if (!btnFeed) return;
+    const isRaw = (this.dataFeed === 'raw');
+    btnFeed.textContent = isRaw ? (t('settings_modal.bench_feed_raw') || 'Сырой') : (t('settings_modal.bench_feed_dsu') || 'DSU');
+    btnFeed.classList.toggle('raw', isRaw);
+  },
+
+  switchGame(target) {
+    if (target !== 'aim' && target !== 'platform') target = 'aim';
+    this.activeGame = target;
+    try {
+      localStorage.setItem('gb_bench_active_game', target);
+    } catch (_) {}
+
+    const gameTabs = document.querySelectorAll('#bench-game-tabs .bench-game-tab');
+    gameTabs.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-game') === target));
+
+    const viewAim = document.getElementById('bench-game-aim');
+    const viewPlatform = document.getElementById('bench-game-platform');
+    if (viewAim) viewAim.hidden = (target !== 'aim');
+    if (viewPlatform) viewPlatform.hidden = (target !== 'platform');
+
+    const metricLabel = document.getElementById('game-label-timer');
+    const startBtn = document.getElementById('bench-start-label');
+
+    if (target === 'platform') {
+      if (AimGame.isFullscreen) {
+        AimGame.setFullscreen(false);
       }
+      PlatformGame.init();
+      PlatformGame.syncDimensions(true);
+      PlatformGame.updateHud(true);
+      if (metricLabel) metricLabel.textContent = t('ui.games_plat_tilt') || 'Наклон:';
+      if (startBtn) startBtn.textContent = t('ui.game_reset') || 'Сброс';
+    } else if (target === 'aim') {
+      if (PlatformGame.isFullscreen && document.querySelector('.app-games-card')?.classList.contains('is-fs')) {
+        PlatformGame.setFullscreen(false);
+      }
+      AimGame.init();
+      AimGame.syncState();
+      if (metricLabel) metricLabel.textContent = t('ui.games_aim_time') || 'Время:';
+      if (startBtn) startBtn.textContent = (AimGame.gameState === 'playing' ? (t('ui.game_reset') || 'Сброс') : (t('ui.game_start') || 'Старт'));
+    }
+  },
+
+  recenter() {
+    this.reticleX = 0;
+    this.reticleY = 0;
+    this.renderReticle();
+    if (this.activeGame === 'platform') {
+      PlatformGame.recenter();
+    }
+    call('ResetAHRS').catch(() => {});
+  },
+
+  onFrame(frame) {
+    if (!this.active || !frame) return;
+
+    const rawX = (frame.rawX !== undefined) ? frame.rawX : (frame.RawX || 0);
+    const rawY = (frame.rawY !== undefined) ? frame.rawY : (frame.RawY || 0);
+    const rawZ = (frame.rawZ !== undefined) ? frame.rawZ : (frame.RawZ || 0);
+    const outX = (frame.outX !== undefined) ? frame.outX : (frame.OutX || 0);
+    const outY = (frame.outY !== undefined) ? frame.outY : (frame.OutY || 0);
+    const outZ = (frame.outZ !== undefined) ? frame.outZ : (frame.OutZ || 0);
+
+    const now = performance.now();
+    const dt = this.lastFrameTs ? Math.min(0.05, Math.max(0.001, (now - this.lastFrameTs) / 1000)) : 0.016;
+    this.lastFrameTs = now;
+
+    // Active feed selection ('dsu' or 'raw')
+    const curX = (this.dataFeed === 'raw') ? rawX : outX;
+    const curY = (this.dataFeed === 'raw') ? rawY : outY;
+
+    // 1. Numerical Aim Reticle Integration (Zelda mechanics: angular velocity integration)
+    const vp = document.getElementById('bench-aim-viewport');
+    const aimSpeed = Math.max(4.2, ((vp ? vp.clientWidth : (window.innerWidth || 800)) / 340) * 2.4); // px per degree
+    const multX = this.invertX ? -1 : 1;
+    const multY = this.invertY ? -1 : 1;
+
+    this.reticleX += curY * dt * aimSpeed * multX;
+    this.reticleY -= curX * dt * aimSpeed * multY;
+
+    // Dynamic viewport bounds from AimGame
+    const bounds = AimGame.getBounds();
+    const maxW = bounds.maxReticleX;
+    const maxH = bounds.maxReticleY;
+    if (this.reticleX > maxW) this.reticleX = maxW;
+    if (this.reticleX < -maxW) this.reticleX = -maxW;
+    if (this.reticleY > maxH) this.reticleY = maxH;
+    if (this.reticleY < -maxH) this.reticleY = -maxH;
+
+    if (this.activeGame === 'aim') {
+      AimGame.checkHit(this.reticleX, this.reticleY);
+    }
+
+    // 2. Absolute Drift-Free Platform Game Motion Tracking
+    PlatformGame.onFrame(frame);
+
+    // 3. Throttled DOM updates (~10 Hz, 100ms)
+    if (now - this.lastDomUpdateTs >= 100) {
+      this.lastDomUpdateTs = now;
+      if (this.activeGame === 'platform') {
+        PlatformGame.updateHud();
+      }
+    }
+  },
+
+  renderReticle() {
+    if (!this.reticleDotEl || !this.reticleDotEl.isConnected) {
+      this.reticleDotEl = document.getElementById('bench-reticle-dot');
+    }
+    if (!this.hudAimXEl || !this.hudAimXEl.isConnected) {
+      this.hudAimXEl = document.getElementById('bench-hud-aim-x');
+    }
+    if (!this.hudAimYEl || !this.hudAimYEl.isConnected) {
+      this.hudAimYEl = document.getElementById('bench-hud-aim-y');
+    }
+
+    if (this.reticleDotEl) {
+      this.reticleDotEl.style.transform = `translate(${Math.round(this.reticleX)}px, ${Math.round(this.reticleY)}px)`;
+    }
+
+    const vp = document.getElementById('bench-aim-viewport');
+    const aimSpeed = Math.max(4.2, ((vp ? vp.clientWidth : (window.innerWidth || 800)) / 340) * 2.4);
+
+    if (this.hudAimXEl) {
+      const degX = (this.reticleX / aimSpeed);
+      this.hudAimXEl.textContent = `X: ${(degX >= 0 ? '+' : '')}${degX.toFixed(1)}°`;
+    }
+    if (this.hudAimYEl) {
+      const degY = (-this.reticleY / aimSpeed);
+      this.hudAimYEl.textContent = `Y: ${(degY >= 0 ? '+' : '')}${degY.toFixed(1)}°`;
+    }
+  },
+
+  startLoop() {
+    if (this.rafId) return;
+    const loop = (now) => {
+      if (!this.active) {
+        this.rafId = null;
+        return;
+      }
+      if (this.activeGame === 'aim') {
+        this.renderReticle();
+        AimGame.update(now);
+      } else if (this.activeGame === 'platform') {
+        PlatformGame.updateAndRender();
+      }
+      this.rafId = requestAnimationFrame(loop);
     };
-  }
+    this.rafId = requestAnimationFrame(loop);
+  },
 
-  // Recenter button
-  const btnRecenter = $('btn-game-recenter');
-  if (btnRecenter) {
-    btnRecenter.onclick = recenterGames;
-  }
-}
-
-function switchGame(gameName) {
-  if (gameName !== 'aim' && gameName !== 'platform') gameName = 'aim';
-  activeGameName = gameName;
-
-  try {
-    localStorage.setItem('pg_active_game', gameName);
-  } catch (_) {}
-
-  // Update seg buttons
-  document.querySelectorAll('#game-picker-seg .pg-seg__btn').forEach((b) => {
-    toggleClass(b, 'is-active', b.dataset.game === gameName);
-  });
-
-  const aimView = $('game-aim-view');
-  const platView = $('game-platform-view');
-
-  if (gameName === 'aim') {
-    if (aimView) aimView.style.display = 'block';
-    if (platView) platView.style.display = 'none';
-    if (platformGame) platformGame.deactivate();
-    if (isActive && aimGame) aimGame.activate();
-    if (aimGame) {
-      aimGame.updateHUD();
-      setText($('game-label-timer'), t('ui.games_aim_time') || 'Время:');
-      setText($('game-val-timer'), `${aimGame.timeLeft.toFixed(1)} с`);
-      setText($('game-start-label'), t('ui.game_start') || 'Старт');
+  stopLoop() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
-  } else {
-    if (aimView) aimView.style.display = 'none';
-    if (platView) platView.style.display = 'block';
-    if (aimGame) aimGame.deactivate();
-    if (isActive && platformGame) platformGame.activate();
-    if (platformGame) {
-      platformGame.updateHUD();
-      setText($('game-label-timer'), t('ui.games_plat_tilt') || 'Наклон:');
-      setText($('game-val-timer'), 'P: +0.0° R: +0.0°');
-      setText($('game-start-label'), t('ui.game_reset') || 'Сброс');
+  },
+
+  onKeyDown(e) {
+    if (!this.active) return;
+    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (AimGame.isFullscreen) {
+        AimGame.setFullscreen(false);
+      } else if (PlatformGame.isFullscreen && document.querySelector('.app-games-card')?.classList.contains('is-fs')) {
+        PlatformGame.setFullscreen(false);
+      } else {
+        go('settings');
+      }
+    } else if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      if (this.activeGame === 'aim' && AimGame.gameState === 'gameover') {
+        AimGame.resetGame();
+      } else {
+        this.recenter();
+      }
+    } else if (e.key === 'Enter' && this.activeGame === 'aim' && AimGame.gameState === 'gameover') {
+      e.preventDefault();
+      AimGame.resetGame();
+    } else if (e.key === 'f' || e.key === 'F') {
+      if (this.activeGame === 'aim') {
+        AimGame.toggleFullscreen();
+      } else if (this.activeGame === 'platform') {
+        PlatformGame.toggleFullscreen();
+      }
     }
   }
-}
+};
 
-function recenterGames() {
-  if (activeGameName === 'aim' && aimGame) {
-    aimGame.recenter();
-  } else if (platformGame) {
-    platformGame.recenter();
-  }
-  call('ResetAHRS').catch(() => {});
-}
-
-// Hotkeys: Space (recenter), Escape (back to settings)
-function onKeyDown(e) {
-  if (!isActive) return;
-  const activeTag = document.activeElement ? document.activeElement.tagName : '';
-  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
-
-  if (e.code === 'Space' && !e.repeat) {
-    e.preventDefault();
-    recenterGames();
-  } else if (e.code === 'Escape') {
-    e.preventDefault();
-    go('settings');
-  }
-}
-
-// Handle motion from 60Hz tuning frames
-function handleTuningFrame(tf) {
-  if (!isActive || !tf) return;
-  if (activeGameName === 'aim') {
-    const rx = tf.OutY ?? tf.out_gy ?? tf.raw_gy ?? tf.RawY ?? 0;
-    const ry = tf.OutX ?? tf.out_gx ?? tf.raw_gx ?? tf.RawX ?? 0;
-    const rawX = tf.RawY ?? tf.raw_gy ?? 0;
-    const rawY = tf.RawX ?? tf.raw_gx ?? 0;
-    aimGame?.updateMotion(rx, ry, rawX, rawY);
-  } else {
-    const pitch = tf.Pitch ?? tf.pitch ?? 0;
-    const roll = tf.Roll ?? tf.roll ?? 0;
-    platformGame?.updateOrientation(pitch, roll);
-  }
-}
-
-// Handle 15Hz state change fallback
-function handleState(state) {
-  if (!isActive || !state) return;
-  if (activeGameName === 'platform') {
-    platformGame?.updateOrientation(state.pitch || 0, state.roll || 0);
-  } else if (activeGameName === 'aim') {
-    if (state.rawRotX != null || state.rawRotY != null) {
-      aimGame?.updateMotion(state.rawRotY || 0, state.rawRotX || 0, state.rawRotY || 0, state.rawRotX || 0);
-    }
-  }
-}
+const boundOnFrame = (frame) => TuningBench.onFrame(frame);
+const boundOnKeyDown = (e) => TuningBench.onKeyDown(e);
 
 function activate() {
-  if (isActive) return;
-  isActive = true;
-  initControllers();
+  if (TuningBench.active) return;
+  TuningBench.active = true;
+  TuningBench.init();
 
-  window.addEventListener('keydown', onKeyDown);
-  on('tuning:frame', handleTuningFrame);
+  window.addEventListener('keydown', boundOnKeyDown);
+  on('tuning:frame', boundOnFrame);
   call('SetTuningActive', true).catch(() => {});
 
+  let saved = 'aim';
   try {
-    const saved = localStorage.getItem('pg_active_game');
-    if (saved === 'aim' || saved === 'platform') {
-      activeGameName = saved;
-    }
+    saved = localStorage.getItem('gb_bench_active_game') || 'aim';
   } catch (_) {}
-
-  switchGame(activeGameName);
+  TuningBench.switchGame(saved);
+  TuningBench.recenter();
+  TuningBench.startLoop();
 }
 
 function deactivate() {
-  if (!isActive) return;
-  isActive = false;
+  if (!TuningBench.active) return;
+  TuningBench.active = false;
 
-  window.removeEventListener('keydown', onKeyDown);
-  off('tuning:frame', handleTuningFrame);
+  TuningBench.stopLoop();
+  window.removeEventListener('keydown', boundOnKeyDown);
+  off('tuning:frame', boundOnFrame);
   call('SetTuningActive', false).catch(() => {});
 
-  if (aimGame) aimGame.deactivate();
-  if (platformGame) platformGame.deactivate();
+  AimGame.dispose();
+  PlatformGame.dispose();
+}
+
+function syncActive() {
+  const isGames = (getCurrentScreen() === 'games');
+  const shouldBeActive = (isGames && !document.hidden);
+  if (shouldBeActive && !TuningBench.active) {
+    activate();
+  } else if (!shouldBeActive && TuningBench.active) {
+    deactivate();
+  }
 }
 
 export function startGames() {
-  initControllers();
-  onState(handleState);
-  onScreen((screen) => {
-    if (screen === 'games') {
-      activate();
-    } else {
-      deactivate();
+  TuningBench.init();
+  onScreen(() => syncActive());
+  document.addEventListener('visibilitychange', () => syncActive());
+  window.addEventListener('beforeunload', () => deactivate());
+
+  // 15Hz state change fallback (if tuning:frame is delayed)
+  onState((state) => {
+    if (!TuningBench.active || !state) return;
+    if (TuningBench.activeGame === 'platform') {
+      PlatformGame.onFrame({
+        pitch: state.pitch || 0,
+        roll: state.roll || 0,
+        yaw: state.yaw || 0
+      });
     }
   });
 }
