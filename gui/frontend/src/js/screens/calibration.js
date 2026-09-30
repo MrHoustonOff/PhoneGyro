@@ -12,6 +12,8 @@ import { getState, onState } from '../core/state.js';
 import { toast } from '../ui/toast.js';
 import { createGyroScene } from '../ui/scene.js';
 import { profileIconSvg, ICON_KEYS } from '../ui/profile-icons.js';
+import { go, onScreen } from '../shell/router.js';
+import { openModal } from '../ui/modal.js';
 
 const STEPS = [
   { key: 'rest', pill: 'step_pill_rest', ms: 1600, rest: true },
@@ -40,6 +42,7 @@ const S = {
   wasInterruptedByDisconnect: false,
   selectedIcon: 'default',
   slotDropdownOpen: false,
+  hasRecorded: false,
 };
 
 let quatListenerActive = false;
@@ -179,7 +182,7 @@ export function hideDisconnectAlert(opts = {}) {
 export const isDisconnectAlertActive = () => S.isDisconnectAlertActive;
 
 const c = (k, vars) => t('calibration.' + k, vars);
-const el = () => $('cal');
+const el = () => $('screen-calibration');
 const body = () => $('cal-body');
 const foot = () => $('cal-foot');
 
@@ -603,6 +606,7 @@ function updateLiveRates(st) {
 async function capture() {
   const cfg = STEPS[S.step];
   if (cfg.axes) return listenAxes();
+  S.hasRecorded = true;
   S.phase = 'run';
   render();
   const txt = $('cal-run-text');
@@ -657,6 +661,7 @@ async function capture() {
 
 // Axes: the aligner learns from free movement; poll until it locks.
 async function listenAxes() {
+  S.hasRecorded = true;
   S.phase = 'run';
   render();
   const txt = $('cal-run-text');
@@ -735,8 +740,57 @@ function startFlow(slot) {
   render();
 }
 
+function hasProgress() {
+  return S.step > 0 || S.hasRecorded || S.phase === 'verify' || S.phase === 'save';
+}
+
+let confirmModalOpen = false;
+
+export async function requestClose(opts = {}) {
+  if (!S.open) return;
+  if (confirmModalOpen) return;
+
+  if (opts.force || !hasProgress()) {
+    return close(opts);
+  }
+
+  confirmModalOpen = true;
+  try {
+    const choice = await openModal({
+      title: t('calibration.exit_confirm_title', 'Выйти из калибровки?'),
+      text: t('calibration.exit_confirm_desc', 'Пройденные шаги будут сброшены.'),
+      actions: [
+        { label: t('calibration.stay', 'Остаться'), kind: '' },
+        { label: t('calibration.exit', 'Выйти'), kind: 'danger' },
+      ],
+    });
+
+    if (choice === 1) {
+      await close(opts);
+    }
+  } finally {
+    confirmModalOpen = false;
+  }
+}
+
+export async function close(opts = {}) {
+  if (!S.open) return;
+  S.wasInterruptedByDisconnect = false;
+  hideDisconnectAlert({ silent: true });
+  if (S.phase === 'run') call('StopCapture', S.step).catch(() => {});
+  if (S.timer) { clearInterval(S.timer); S.timer = 0; }
+  stopPoll();
+  stopQuatListener();
+  disposeScene();
+  S.open = false;
+  S.slotDropdownOpen = false;
+  S.hasRecorded = false;
+  call('ClearPreview').catch(() => {});
+  await go('connect', { instant: opts.instant ?? false });
+}
+
 async function act(a, target) {
-  if (a === 'close') return close();
+  if (a === 'close') return requestClose();
   if (a === 'capture') return capture();
   if (a === 'back') {
     if (S.timer) { clearInterval(S.timer); S.timer = 0; }
@@ -746,7 +800,7 @@ async function act(a, target) {
       S.phase = 'ready';
       render();
     } else {
-      close();
+      requestClose();
     }
     return;
   }
@@ -819,7 +873,7 @@ async function act(a, target) {
     S.busy = false;
     if (res !== 'ok') { toast(res || 'error'); return; }
     await call('SetActiveProfile', S.slot);
-    close();
+    await close();
     toast(c('profile_saved', { name }));
   }
 }
@@ -827,9 +881,10 @@ async function act(a, target) {
 /** Opens the wizard: straight into step 1 for the target (or active) slot. */
 export function openCalibration(slot = null) {
   S.open = true;
-  el().hidden = false;
+  S.hasRecorded = false;
   const targetSlot = slot == null ? (getState()?.activeSlot ?? 0) : slot;
   startFlow(targetSlot);
+  go('calibration');
   const st = getState();
   if (st && st.status === 'offline') {
     showDisconnectAlert();
@@ -846,30 +901,18 @@ export function openCalibration(slot = null) {
   });
 }
 
-function close() {
-  if (!S.open) return;
-  S.wasInterruptedByDisconnect = false;
-  hideDisconnectAlert({ silent: true });
-  if (S.phase === 'run') call('StopCapture', S.step).catch(() => {});
-  if (S.timer) { clearInterval(S.timer); S.timer = 0; }
-  stopPoll();
-  stopQuatListener();
-  disposeScene();
-  S.open = false;
-  S.slotDropdownOpen = false;
-  el().hidden = true;
-  call('ClearPreview').catch(() => {});
-}
-
 export function startCalibration() {
-  el().addEventListener('click', (e) => {
-    const b = e.target.closest('[data-act]');
-    if (b && !b.disabled) act(b.dataset.act, b);
-    else if (e.target === el()) close();
-  });
-  $('cal-x').onclick = close;
+  const rootEl = el();
+  if (rootEl) {
+    rootEl.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-act]');
+      if (b && !b.disabled) act(b.dataset.act, b);
+      // NOTE: clicks on root background do nothing
+    });
+  }
+  $('cal-x').onclick = () => requestClose();
   const cancelBtn = $('btn-cancel-cal-disconnect');
-  if (cancelBtn) cancelBtn.onclick = close;
+  if (cancelBtn) cancelBtn.onclick = () => close({ force: true });
 
   document.addEventListener('click', (e) => {
     if (!S.open || S.phase !== 'save' || !S.slotDropdownOpen) return;
@@ -882,13 +925,14 @@ export function startCalibration() {
   addEventListener('keydown', (e) => {
     if (!S.open) return;
     if (e.key === 'Escape') {
+      if (confirmModalOpen) return;
       if (S.phase === 'save' && S.slotDropdownOpen) {
         e.preventDefault();
         e.stopPropagation();
         toggleSlotDropdown(false);
         return;
       }
-      close();
+      requestClose();
     }
     else if (e.key === 'Enter' && S.phase === 'save') {
       if (S.slotDropdownOpen) {
@@ -903,6 +947,14 @@ export function startCalibration() {
         e.preventDefault();
         recenter();
       }
+    }
+  });
+
+  onScreen((screen) => {
+    if (screen === 'calibration') {
+      if (!S.open) openCalibration();
+    } else {
+      if (S.open) close({ instant: true });
     }
   });
 

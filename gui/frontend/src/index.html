@@ -221,6 +221,41 @@
         <div class="body app-sub" data-i18n="ui.soon_desc"></div>
       </section>
     </main>
+
+    <!-- Calibration screen (design: Modal card inside #body), js/screens/calibration.js -->
+    <main class="pg-page pg-page--center app-screen app-calpage" id="screen-calibration" hidden>
+      <div class="pg-modal app-cal-modal" id="cal-card" role="region" aria-labelledby="cal-title">
+        <div class="pg-modal__head">
+          <div><div class="pg-modal__title" id="cal-title" data-i18n="calibration.title">Калибровка осей</div><div class="pg-modal__sub" id="cal-sub"></div></div>
+          <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+        <div class="pg-modal__body">
+          <div id="cal-body"></div>
+        </div>
+        <div class="pg-modal__foot" id="cal-foot"></div>
+
+        <!-- Calibration Disconnect Modal Card Alert & Blur -->
+        <div id="cal-disconnect-overlay" class="app-cal-disconnect" role="alertdialog" aria-modal="true" hidden>
+          <div class="app-cal-disconnect-card">
+            <div class="app-cal-disconnect-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                <line x1="2" y1="2" x2="22" y2="22" stroke="var(--danger)" stroke-width="2.5"></line>
+              </svg>
+            </div>
+            <div class="display-sm app-cal-disconnect-title" data-i18n="calibration.disconnect_alert_title">Телефон отключен</div>
+            <p class="app-cal-disconnect-desc" data-i18n="calibration.disconnect_alert_desc">Экран телефона выключился или заблокирован. Разблокируйте смартфон и держите экран включенным во время калибровки.</p>
+            <div class="pg-badge pg-badge--danger pg-badge--dot app-cal-disconnect-badge">
+              <span data-i18n="calibration.disconnect_waiting">Ожидание переподключения...</span>
+            </div>
+            <div class="app-cal-disconnect-actions">
+              <button type="button" class="pg-btn" id="btn-cancel-cal-disconnect" data-act="close" data-i18n="calibration.disconnect_btn_cancel">Отменить калибровку</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 
   <!-- ───────── Floating header: navigation · controls ───────── -->
@@ -265,41 +300,6 @@
       <img class="pg-splash__mark" src="img/logo.webp" alt="" width="76" height="76">
       <div class="pg-splash__word"><span style="--k:0">P</span><span style="--k:1">h</span><span style="--k:2">o</span><span style="--k:3">n</span><span style="--k:4">e</span><span style="--k:5">G</span><span style="--k:6">y</span><span style="--k:7">r</span><i class="pg-wordmark__o is-live"></i></div>
       <div class="pg-splash__status"><div class="pg-splash__bar"><i></i></div><span id="splash-status"></span></div>
-    </div>
-  </div>
-</div>
-
-<!-- Calibration wizard (design: Modal + stepper), js/screens/calibration.js -->
-<div class="pg-overlay app-overlay app-cal" id="cal" hidden>
-  <div class="pg-modal app-cal-modal" role="dialog" aria-modal="true" aria-labelledby="cal-title">
-    <div class="pg-modal__head">
-      <div><div class="pg-modal__title" id="cal-title" data-i18n="calibration.title">Калибровка осей</div><div class="pg-modal__sub" id="cal-sub"></div></div>
-      <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>
-    <div class="pg-modal__body">
-      <div id="cal-body"></div>
-    </div>
-    <div class="pg-modal__foot" id="cal-foot"></div>
-
-    <!-- Calibration Disconnect Modal Blur Overlay -->
-    <div id="cal-disconnect-overlay" class="app-cal-disconnect" role="alertdialog" aria-modal="true" hidden>
-      <div class="app-cal-disconnect-card">
-        <div class="app-cal-disconnect-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="5" y="2" width="14" height="20" rx="3"></rect>
-            <line x1="12" y1="18" x2="12.01" y2="18"></line>
-            <line x1="2" y1="2" x2="22" y2="22" stroke="var(--danger)" stroke-width="2.5"></line>
-          </svg>
-        </div>
-        <div class="display-sm app-cal-disconnect-title" data-i18n="calibration.disconnect_alert_title">Телефон отключен</div>
-        <p class="app-cal-disconnect-desc" data-i18n="calibration.disconnect_alert_desc">Экран телефона выключился или заблокирован. Разблокируйте смартфон и держите экран включенным во время калибровки.</p>
-        <div class="pg-badge pg-badge--danger pg-badge--dot app-cal-disconnect-badge">
-          <span data-i18n="calibration.disconnect_waiting">Ожидание переподключения...</span>
-        </div>
-        <div class="app-cal-disconnect-actions">
-          <button type="button" class="pg-btn" id="btn-cancel-cal-disconnect" data-act="close" data-i18n="calibration.disconnect_btn_cancel">Отменить калибровку</button>
-        </div>
-      </div>
     </div>
   </div>
 </div>

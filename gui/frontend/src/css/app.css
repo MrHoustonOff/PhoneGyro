@@ -369,12 +369,37 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   padding-block: 0;
 }
 
-/* ── Calibration wizard (design: Modal) ─────────────────────────────────── */
-.app-cal { container: pgwin / inline-size; }
-.app-cal .pg-modal { max-width: 53rem; display: flex; flex-direction: column; max-height: calc(100% - 1.5rem); }
+/* ── Calibration screen & card (design: Modal as full page card) ───────── */
+.app-calpage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 1.5rem var(--space-4);
+  box-sizing: border-box;
+}
+.app-cal-modal {
+  width: 100%;
+  max-width: 65rem;
+  box-shadow: var(--shadow-pop);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
 .app-cal-modal .pg-modal__body { overflow-y: auto; flex: 1; min-height: 0; }
 .app-cal-modal .pg-modal__foot { flex: none; justify-content: space-between; }
-.app-cal .pg-modal__foot .pg-btn[data-act="next"] { min-width: 11rem; }
+.app-cal-modal .pg-modal__foot .pg-btn[data-act="next"] { min-width: 11rem; }
+
+@container pgwin (max-width: 859px) {
+  .app-calpage {
+    padding: 0.5rem;
+    justify-content: flex-start;
+  }
+  .app-cal-modal {
+    max-width: 100%;
+  }
+}
 .app-cal-stepper { margin-bottom: 1.25rem; }
 .app-cal-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: start; }
 .app-cal-left { display: flex; flex-direction: column; gap: 0.875rem; }
@@ -585,7 +610,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 
 /* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
 .app-cal-modal.is-disconnected {
-  border-color: var(--danger);
+  border: 2px solid var(--danger);
   box-shadow: var(--shadow-pop), 0 0 1.75rem var(--danger-soft);
 }
 .app-cal-disconnect {
@@ -600,11 +625,12 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   backdrop-filter: blur(1.25rem);
   -webkit-backdrop-filter: blur(1.25rem);
   border-radius: inherit;
+  overflow: hidden;
 }
 .app-cal-disconnect-card {
   max-width: 23.75rem;
   width: 100%;
-  background: var(--surface-raised);
+  background: var(--surface-raised) var(--tex-grain);
   border: 1px solid var(--danger-line);
   border-radius: var(--radius-xl);
   padding: 1.75rem 1.5rem;
