@@ -1,11 +1,13 @@
 // Telemetry & 3D Viewport controller
-// Handles metrics cards, SVG sparklines, CSV recording, USB protocol status, and 3D mode controls.
+// Handles metrics cards, SVG sparklines, CSV recording, USB protocol status,
+// and Three.js GyroScene orientation viewport with multi-camera modes.
 
 import { $, setText, setVar, show, toggleClass } from '../../core/dom.js';
 import { call, on, off } from '../../core/bridge.js';
 import { onState, getState } from '../../core/state.js';
 import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
+import { createGyroScene } from '../../ui/scene.js';
 
 const MAX_HISTORY = 30;
 
@@ -35,6 +37,15 @@ export function initTelemetry(paneEl) {
   let isActive = false;
   let lastLatency = 0;
   let lastTuning = null;
+  let sceneInstance = null;
+  let selectedModel = 'gamepad';
+  let selectedCamMode = 'static';
+  let latestQuat = null;
+  let orbitYaw = 0;
+  let orbitPitch = 0;
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
 
   const history = {
     hz: [],
@@ -43,6 +54,65 @@ export function initTelemetry(paneEl) {
     loss: [],
     pipe: [],
   };
+
+  // 3D Scene loader and manager
+  async function mountScene() {
+    const host = $('stats-3d-canvas-host');
+    if (!host || sceneInstance) return;
+
+    try {
+      const sc = await createGyroScene(host, {
+        model: selectedModel,
+        axes: true,
+        still: true,
+      });
+      if (!isActive) {
+        sc.dispose();
+        return;
+      }
+      sceneInstance = sc;
+      const fallback = $('stats-3d-fallback');
+      if (fallback) fallback.style.display = 'none';
+
+      if (latestQuat) {
+        update3DOrientation(latestQuat);
+      }
+    } catch (err) {
+      console.warn('Failed to load GyroScene, keeping CSS fallback:', err);
+    }
+  }
+
+  function unmountScene() {
+    if (sceneInstance) {
+      try {
+        sceneInstance.dispose();
+      } catch (_) {}
+      sceneInstance = null;
+    }
+    const fallback = $('stats-3d-fallback');
+    if (fallback) fallback.style.display = 'flex';
+  }
+
+  function update3DOrientation(rawQ) {
+    if (!rawQ) return;
+    latestQuat = rawQ;
+    if (!sceneInstance) return;
+
+    if (selectedCamMode === 'orbit' && (orbitYaw !== 0 || orbitPitch !== 0)) {
+      if (window.THREE) {
+        const qOrbit = new window.THREE.Quaternion().setFromEuler(
+          new window.THREE.Euler(orbitPitch, orbitYaw, 0, 'YXZ')
+        );
+        const qRaw = new window.THREE.Quaternion().fromArray(rawQ);
+        const qFinal = qOrbit.multiply(qRaw);
+        sceneInstance.setQuaternion(qFinal);
+      } else {
+        sceneInstance.setQuaternion(rawQ);
+      }
+    } else {
+      sceneInstance.setQuaternion(rawQ);
+    }
+  }
 
   // Recorder
   const recorder = new TelemetryRecorder({
@@ -79,22 +149,34 @@ export function initTelemetry(paneEl) {
     };
   }
 
+  // Recenter helper
+  const recenterAll = () => {
+    orbitYaw = 0;
+    orbitPitch = 0;
+    call('ResetAHRS').catch(() => {});
+    if (latestQuat) update3DOrientation(latestQuat);
+  };
+
   // Recenter button
   const btnRecenter = $('btn-stats-recenter');
   if (btnRecenter) {
-    btnRecenter.onclick = () => {
-      call('ResetAHRS');
-    };
+    btnRecenter.onclick = recenterAll;
   }
 
-  // Spacebar hotkey
+  // Hotkeys: Space (recenter) & R (reset orbit)
   const onKeyDown = (e) => {
     if (!isActive) return;
+    const activeTag = document.activeElement ? document.activeElement.tagName : '';
+    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
     if (e.code === 'Space' && !e.repeat) {
-      const activeTag = document.activeElement ? document.activeElement.tagName : '';
-      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
       e.preventDefault();
-      call('ResetAHRS');
+      recenterAll();
+    } else if ((e.code === 'KeyR' || e.key === 'r' || e.key === 'к' || e.key === 'К') && !e.repeat) {
+      e.preventDefault();
+      orbitYaw = 0;
+      orbitPitch = 0;
+      if (latestQuat) update3DOrientation(latestQuat);
     }
   };
 
@@ -103,7 +185,9 @@ export function initTelemetry(paneEl) {
   modelBtns.forEach((btn) => {
     btn.onclick = () => {
       const m = btn.dataset.model || 'gamepad';
+      selectedModel = m;
       modelBtns.forEach((b) => toggleClass(b, 'is-active', b === btn));
+      if (sceneInstance) sceneInstance.setModel(selectedModel);
       try {
         localStorage.setItem('pg-stats-model', m);
       } catch (_) {}
@@ -112,6 +196,7 @@ export function initTelemetry(paneEl) {
   try {
     const savedModel = localStorage.getItem('pg-stats-model');
     if (savedModel) {
+      selectedModel = savedModel;
       modelBtns.forEach((b) => toggleClass(b, 'is-active', b.dataset.model === savedModel));
     }
   } catch (_) {}
@@ -119,17 +204,25 @@ export function initTelemetry(paneEl) {
   // Cam mode selector
   const camBtns = paneEl.querySelectorAll('#stats-cam-mode-seg .pg-seg__btn');
   const applyCamMode = (mode) => {
+    selectedCamMode = mode;
     camBtns.forEach((b) => toggleClass(b, 'is-active', b.dataset.cam === mode));
     const isQuad = mode === 'quad';
+    const isOrbit = mode === 'orbit';
     const quadWrap = $('stats-3d-quad-wrap');
     const singleVp = $('stats-3d-viewport-single');
+    const orbitHint = $('stats-orbit-hint');
+    const host = $('stats-3d-canvas-host');
+
     if (quadWrap) quadWrap.style.display = isQuad ? 'grid' : 'none';
     if (singleVp) singleVp.style.display = isQuad ? 'none' : 'flex';
+    if (orbitHint) orbitHint.style.display = isOrbit ? 'inline-flex' : 'none';
+    if (host) host.style.cursor = isOrbit ? 'grab' : 'default';
 
     const tag = $('stats-viewport-tag');
     if (tag) {
-      tag.textContent = mode === 'orbit' ? 'DYNAMIC ORBIT' : 'STATIC VIEW';
+      tag.textContent = isOrbit ? 'DYNAMIC ORBIT' : isQuad ? '4 CAMERAS' : 'STATIC VIEW';
     }
+    if (latestQuat) update3DOrientation(latestQuat);
     try {
       localStorage.setItem('pg-stats-cam', mode);
     } catch (_) {}
@@ -142,7 +235,53 @@ export function initTelemetry(paneEl) {
     if (savedCam) applyCamMode(savedCam);
   } catch (_) {}
 
-  // Resource saving toggle
+  // Orbit pointer interactions on canvas host
+  const host = $('stats-3d-canvas-host');
+  if (host) {
+    host.onpointerdown = (e) => {
+      if (selectedCamMode !== 'orbit') return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      host.style.cursor = 'grabbing';
+      try {
+        host.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    };
+
+    host.onpointermove = (e) => {
+      if (!isDragging || selectedCamMode !== 'orbit') return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      startX = e.clientX;
+      startY = e.clientY;
+      orbitYaw += dx * 0.008;
+      orbitPitch += dy * 0.008;
+      orbitPitch = Math.max(-1.4, Math.min(1.4, orbitPitch));
+      if (latestQuat) update3DOrientation(latestQuat);
+    };
+
+    const endDrag = (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      host.style.cursor = selectedCamMode === 'orbit' ? 'grab' : 'default';
+      try {
+        host.releasePointerCapture(e.pointerId);
+      } catch (_) {}
+    };
+    host.onpointerup = endDrag;
+    host.onpointercancel = endDrag;
+
+    host.ondblclick = () => {
+      if (selectedCamMode === 'orbit') {
+        orbitYaw = 0;
+        orbitPitch = 0;
+        if (latestQuat) update3DOrientation(latestQuat);
+      }
+    };
+  }
+
+  // Resource saving toggle & Window blur/focus listeners
   const ecoToggle = $('stats-eco-toggle');
   if (ecoToggle) {
     try {
@@ -155,6 +294,22 @@ export function initTelemetry(paneEl) {
       } catch (_) {}
     };
   }
+
+  const onWindowBlur = () => {
+    if (!isActive) return;
+    if (ecoToggle && ecoToggle.checked) {
+      if (sceneInstance) sceneInstance.setPaused(true);
+      const pauseBadge = $('stats-3d-ecopause');
+      if (pauseBadge) pauseBadge.style.display = 'inline-flex';
+    }
+  };
+
+  const onWindowFocus = () => {
+    if (!isActive) return;
+    if (sceneInstance) sceneInstance.setPaused(false);
+    const pauseBadge = $('stats-3d-ecopause');
+    if (pauseBadge) pauseBadge.style.display = 'none';
+  };
 
   // Handle tuning frames (60Hz)
   const handleTuningFrame = (tf) => {
@@ -184,9 +339,24 @@ export function initTelemetry(paneEl) {
     } catch (_) {}
   };
 
-  // Render State
+  // Handle 3D orientation quaternion (60Hz)
+  const handleAhrsQuat = (data) => {
+    if (!isActive || !data) return;
+    // In Three.js / GyroScene (x, y, z, w) = (q1, q2, q3, q0)
+    const rawQ = [data.q1 ?? 0, data.q2 ?? 0, data.q3 ?? 0, data.q0 ?? 1];
+    update3DOrientation(rawQ);
+  };
+
+  // Render State (15Hz)
   const renderState = (state) => {
     if (!isActive || !state) return;
+
+    // Offline overlay
+    const isOffline = state.status === 'offline';
+    const offlineOverlay = $('stats-3d-offline');
+    if (offlineOverlay) {
+      offlineOverlay.style.display = isOffline ? 'flex' : 'none';
+    }
 
     // Frequency
     const hz = state.hz || 0;
@@ -233,7 +403,7 @@ export function initTelemetry(paneEl) {
     const jitterSpark = $('stat-jitter-spark');
     if (jitterSpark) jitterSpark.setAttribute('d', buildSparkline(history.jitter, 0, Math.max(12, ...history.jitter)));
 
-    // Loss (from state or simulated 0)
+    // Loss (0% or calculated)
     const lossPct = 0;
     history.loss.push(lossPct);
     if (history.loss.length > MAX_HISTORY) history.loss.shift();
@@ -295,12 +465,41 @@ export function initTelemetry(paneEl) {
     setText($('tel-angle-roll'), (r >= 0 ? '+' : '') + r.toFixed(1) + '°');
     setText($('tel-angle-yaw'), (y >= 0 ? '+' : '') + y.toFixed(1) + '°');
 
-    // CSS 3D fallback cube rotation
+    // CSS 3D fallback cube rotation (for single viewport fallback)
     const cube = $('stats-cube-css');
     if (cube) {
       setVar(cube, '--rx', `${(-p).toFixed(1)}deg`);
       setVar(cube, '--ry', `${y.toFixed(1)}deg`);
       setVar(cube, '--rz', `${(-r).toFixed(1)}deg`);
+    }
+
+    // CSS 3D Quad viewports rotation
+    if (selectedCamMode === 'quad') {
+      const frontCube = paneEl.querySelector('.pg-cube-front');
+      const topCube = paneEl.querySelector('.pg-cube-top');
+      const rightCube = paneEl.querySelector('.pg-cube-right');
+      const isoCube = paneEl.querySelector('.pg-cube-iso');
+
+      if (frontCube) {
+        setVar(frontCube, '--rx', `${(-p).toFixed(1)}deg`);
+        setVar(frontCube, '--ry', `${y.toFixed(1)}deg`);
+        setVar(frontCube, '--rz', `${(-r).toFixed(1)}deg`);
+      }
+      if (topCube) {
+        setVar(topCube, '--rx', `${(-p - 90).toFixed(1)}deg`);
+        setVar(topCube, '--ry', `${y.toFixed(1)}deg`);
+        setVar(topCube, '--rz', `${(-r).toFixed(1)}deg`);
+      }
+      if (rightCube) {
+        setVar(rightCube, '--rx', `${(-p).toFixed(1)}deg`);
+        setVar(rightCube, '--ry', `${(y - 90).toFixed(1)}deg`);
+        setVar(rightCube, '--rz', `${(-r).toFixed(1)}deg`);
+      }
+      if (isoCube) {
+        setVar(isoCube, '--rx', `${(-p - 24).toFixed(1)}deg`);
+        setVar(isoCube, '--ry', `${(y - 32).toFixed(1)}deg`);
+        setVar(isoCube, '--rz', `${(-r).toFixed(1)}deg`);
+      }
     }
 
     // USB Status
@@ -311,6 +510,15 @@ export function initTelemetry(paneEl) {
       if (l1 && l1.textContent === '—') {
         setText(l1, `${state.usbPort} · 115200`);
       }
+    }
+
+    // If AHRS quaternion available from state and no standalone event yet
+    if (!latestQuat && (state.ahrsQ0 != null || state.qw != null)) {
+      const q0 = state.ahrsQ0 ?? state.qw ?? 1;
+      const q1 = state.ahrsQ1 ?? state.qx ?? 0;
+      const q2 = state.ahrsQ2 ?? state.qy ?? 0;
+      const q3 = state.ahrsQ3 ?? state.qz ?? 0;
+      update3DOrientation([q1, q2, q3, q0]);
     }
 
     // Record frame if active
@@ -348,22 +556,31 @@ export function initTelemetry(paneEl) {
       if (isActive) return;
       isActive = true;
       window.addEventListener('keydown', onKeyDown);
+      window.addEventListener('blur', onWindowBlur);
+      window.addEventListener('focus', onWindowFocus);
       on('tuning:frame', handleTuningFrame);
       on('livedebug:telemetry', handleLiveTelemetry);
+      on('ahrs:quat', handleAhrsQuat);
       call('SetTuningActive', true).catch(() => {});
+      mountScene();
       renderState(getState());
     },
     deactivate: () => {
       if (!isActive) return;
       isActive = false;
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('blur', onWindowBlur);
+      window.removeEventListener('focus', onWindowFocus);
       off('tuning:frame', handleTuningFrame);
       off('livedebug:telemetry', handleLiveTelemetry);
+      off('ahrs:quat', handleAhrsQuat);
       call('SetTuningActive', false).catch(() => {});
+      unmountScene();
       if (recorder.isRecording) {
         recorder.stop();
       }
     },
     getRecorder: () => recorder,
+    getScene: () => sceneInstance,
   };
 }
