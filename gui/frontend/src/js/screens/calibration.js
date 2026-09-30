@@ -201,15 +201,34 @@ function device() {
   return st.inputMode === 'usb' ? (st.deviceName || '') : (st.deviceName || 'iPhone');
 }
 
+// A pill is green when its step is completed; the ribbon keeps that while you jump around.
+// Redoing a step clears every later one (see invalidateAfter).
+function pillDone(i) {
+  if (i < STEPS.length) return !!(S.steps[i] && S.steps[i].done);
+  return STEPS.every((_, k) => S.steps[k] && S.steps[k].done) && !!S.matrix;
+}
+
 function stepper() {
   const pills = [...STEPS.map((s) => s.pill), 'step_pill_confirm'];
   const at = S.phase === 'verify' || S.phase === 'save' ? 4 : S.step;
   return '<div class="pg-stepper app-cal-stepper pg-scroll--x">' + pills.map((p, i) => {
-    const isDone = i < at;
-    const go = isDone && S.phase !== 'run' ? ` data-act="goto" data-step="${i}" role="button" tabindex="0"` : '';
-    return (i ? `<span class="pg-step__link${i <= at ? ' is-done' : ''}"></span>` : '')
-      + `<span class="pg-step${i === at ? ' is-active' : isDone ? ' is-done' : ''}"${go}><span class="pg-step__num">${i + 1}</span>${esc(c(p))}</span>`;
+    const done = pillDone(i);
+    const canGo = done && i !== at && S.phase !== 'run';
+    const go = canGo ? ` data-act="goto" data-step="${i}" role="button" tabindex="0"` : '';
+    return (i ? `<span class="pg-step__link${pillDone(i - 1) ? ' is-done' : ''}"></span>` : '')
+      + `<span class="pg-step${i === at ? ' is-active' : done ? ' is-done' : ''}"${go}><span class="pg-step__num">${i + 1}</span>${esc(c(p))}</span>`;
   }).join('') + '</div>';
+}
+
+// Redoing step k makes everything after it stale: those steps must be walked again.
+function invalidateAfter(k) {
+  for (let i = k + 1; i < STEPS.length; i++) {
+    S.steps[i] = null;
+    S.vectors[i] = undefined;
+    clearAxisRole(i);
+    if (i === 3) S.accelMap = [];
+  }
+  if (k <= 2) { S.matrix = null; S.result = null; }
 }
 
 const btn = (id, label, kind = '', dis = false) => `<button type="button" class="pg-btn${kind ? ' pg-btn--' + kind : ''}" data-act="${id}"${dis ? ' disabled' : ''}>${esc(label)}</button>`;
@@ -566,7 +585,7 @@ function render() {
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
         <div class="body-sm app-cal-disclaimer" id="cal-disclaimer">${esc(c('view_disclaimer'))}</div>
-        <div id="cal-right-extra"></div>
+        <div class="app-cal-extra app-cal-extra--r" id="cal-extra-r"></div>
       </div>
     </div>`;
   } else {
@@ -605,14 +624,14 @@ function render() {
           </div>`).join('')}
         </div>
         <div id="cal-mount"></div>
+        <div class="app-cal-extra app-cal-extra--l" id="cal-extra-l"></div>
       `;
     }
 
     setText($('cal-stage-cap'), c('confirm_caption'));
     foot().innerHTML = ringHost(btn('restart', c('confirm_restart'))) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
 
-    const extra = $('cal-right-extra');
-    if (extra) extra.innerHTML = `
+    const extraHTML = `
       <div class="app-cal-mcards">
         <div class="app-cal-mcard">
           <div class="app-cal-mcard__t"><span>${esc(t('ui.cal_gyro_title'))}</span><span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det ${det >= 0 ? '+' : '\u2212'}${Math.abs(det || 1).toFixed(0)}</span></div>
@@ -625,6 +644,7 @@ function render() {
       </div>
       <p class="app-cal-mnote">${esc(t('ui.cal_matrix_note'))}</p>
     `;
+    for (const id of ['cal-extra-l', 'cal-extra-r']) { const x = $(id); if (x) x.innerHTML = extraHTML; }
     renderMount();
     updateLiveRates(st);
     ensureScene('live');
@@ -634,8 +654,7 @@ function render() {
 
   // Steps 1–4
   stopQuatListener();
-  const extraEl = $('cal-right-extra');
-  if (extraEl && extraEl.firstChild) extraEl.innerHTML = '';
+  for (const id of ['cal-extra-l', 'cal-extra-r']) { const x = $(id); if (x && x.firstChild) x.innerHTML = ''; }
 
   const cfg = STEPS[S.step];
   const n = S.step;
@@ -773,6 +792,8 @@ async function capture() {
   if (cfg.axes) return listenAxes();
   S.hasRecorded = true;
   clearAxisRole(S.step);
+  S.steps[S.step] = null;
+  invalidateAfter(S.step);
   S.phase = 'run';
   render();
   const txt = $('cal-run-text');
@@ -842,6 +863,8 @@ function lockYaw(v) {
 // Axes: the aligner learns from free movement; poll until it locks.
 async function listenAxes() {
   S.hasRecorded = true;
+  S.steps[S.step] = null;
+  S.accelMap = [];
   S.phase = 'run';
   render();
   const txt = $('cal-run-text');
@@ -903,11 +926,16 @@ async function renderMount() {
   if (!m || !box.isConnected) return;
   const sign = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
   const text = c('mount_' + m.status, { tilt: m.tiltDeg.toFixed(1), fwd: sign(m.forwardDeg), right: sign(m.rightDeg), check: m.checkDeg.toFixed(1) });
-  box.innerHTML = `<div class="pg-group__list app-cal-mount"><div class="pg-row"><div class="pg-row__label">${esc(c('mount_title'))}</div>
-    ${m.status === 'ok' ? `<div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" id="cal-mount-on"${m.enabled ? ' checked' : ''} aria-label="mount"><span class="pg-toggle__track"></span></label></div>` : ''}</div>
-    <div class="pg-row"><span class="pg-row__sub">${esc(text)}</span></div></div>`;
-  const tg = $('cal-mount-on');
-  if (tg) tg.onchange = () => call('SetWizardMountEnabled', tg.checked);
+  if (m.status === 'ok') {
+    box.innerHTML = `<div class="pg-group__list app-cal-mount"><div class="pg-row"><div class="pg-row__label">${esc(c('mount_title'))}</div>
+      <div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" id="cal-mount-on"${m.enabled ? ' checked' : ''} aria-label="mount"><span class="pg-toggle__track"></span></label></div></div>
+      <div class="pg-row"><span class="pg-row__sub">${esc(text)}</span></div></div>`;
+    const tg = $('cal-mount-on');
+    if (tg) tg.onchange = () => call('SetWizardMountEnabled', tg.checked);
+    return;
+  }
+  const kind = m.status === 'small' ? 'pg-notice--plain' : 'pg-notice--warn';
+  box.innerHTML = `<div class="pg-notice ${kind} app-cal-mountnote"><div class="app-grow"><b>${esc(c('mount_title'))}</b><span class="pg-notice__sub">${esc(text)}</span></div></div>`;
 }
 
 function startFlow(slot) {
@@ -977,6 +1005,14 @@ export async function close(opts = {}) {
   await go('connect', { instant: opts.instant ?? false });
 }
 
+async function enterVerify() {
+  S.phase = 'verify';
+  S.slotDropdownOpen = false;
+  await call('PreviewMatrix', S.matrix);
+  recenter();
+  render();
+}
+
 async function act(a, target) {
   if (a === 'close') return requestClose();
   if (a === 'capture') return capture();
@@ -1028,15 +1064,12 @@ async function act(a, target) {
       render();
       return;
     }
-    S.phase = 'verify';
-    await call('PreviewMatrix', S.matrix);
-    recenter();
-    render();
-    return;
+    return enterVerify();
   }
   if (a === 'goto') {
     const k = Number(target.dataset.step);
-    if (S.phase === 'run' || !(k >= 0 && k < STEPS.length)) return;
+    if (S.phase === 'run' || !pillDone(k)) return;
+    if (k >= STEPS.length) { stopPoll(); if (S.timer) { clearInterval(S.timer); S.timer = 0; } return enterVerify(); }
     if (S.timer) { clearInterval(S.timer); S.timer = 0; }
     stopPoll();
     stopQuatListener();
