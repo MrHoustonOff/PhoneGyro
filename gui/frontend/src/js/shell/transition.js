@@ -14,6 +14,7 @@ export const SCREEN_CONFIG = {
   setup:       { chrome: { header: true,  footer: true  } },
   settings:    { chrome: { header: true,  footer: true  } },
   docs:        { chrome: { header: true,  footer: true  } },
+  stats:       { chrome: { header: true,  footer: true  } },
   soon:        { chrome: { header: true,  footer: true  } },
   calibration: { chrome: { header: false, footer: false } },
 };

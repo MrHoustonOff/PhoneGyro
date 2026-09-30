@@ -64,7 +64,7 @@ export function go(screen, tabOrOpts = null, maybeOpts = {}) {
     // Show/hide screen elements
     const allScreens = new Set([
       ...Object.keys(SCREEN_CONFIG),
-      'connect', 'setup', 'settings', 'docs', 'soon', 'calibration',
+      'connect', 'setup', 'settings', 'docs', 'stats', 'soon', 'calibration',
     ]);
     for (const s of allScreens) {
       const el = $('screen-' + s);
@@ -120,7 +120,7 @@ export function startRouter() {
     const b = e.target.closest('.pg-tab');
     if (!b) return;
     if (tab === b.dataset.tab) go('connect');
-    else if (b.dataset.tab === 'settings' || b.dataset.tab === 'docs') go(b.dataset.tab, b.dataset.tab);
+    else if (b.dataset.tab === 'settings' || b.dataset.tab === 'docs' || b.dataset.tab === 'stats') go(b.dataset.tab, b.dataset.tab);
     else go('soon', b.dataset.tab);
   });
   $('home').onclick = () => {

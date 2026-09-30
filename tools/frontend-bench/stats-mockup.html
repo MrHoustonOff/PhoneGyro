@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PhoneGyro — Статистика и 3D (Макеты)</title>
+<link rel="stylesheet" href="css/pg.css">
+<link rel="stylesheet" href="css/app.css">
+<style>
+/* Reset and mock host layout */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+/* Sub-tab navigation bar at top of Stats screen */
+.app-stats-subnav-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0 0 0.5rem;
+  flex: none;
+  z-index: 5;
+}
+
+/* Container for sub-tabs */
+.app-stats-container {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding-top: calc(var(--pg-hh) + 0.625rem);
+  padding-bottom: calc(var(--pg-fh) + 0.5rem);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Hide inactive subtabs */
+.app-subtab-pane {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+.app-subtab-pane.is-active {
+  display: flex;
+}
+
+/* ──────────────── SUBTAB 1: 3D & TELEMETRY ──────────────── */
+.app-subtab-telemetry {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.app-subtab-telemetry .pg-tel__side {
+  padding: 0.5rem 1.25rem 1rem;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.app-subtab-telemetry .pg-tel__views {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-tel-mode-bar {
+  position: absolute;
+  right: 1.25rem;
+  top: 0.5rem;
+  z-index: 5;
+}
+
+/* ──────────────── SUBTAB 2: MINI-GAMES ──────────────── */
+.app-subtab-games {
+  flex-direction: column;
+  padding: 0.5rem 1.5rem 1rem;
+  box-sizing: border-box;
+  gap: 0.75rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.app-games-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap;
+}
+
+.app-hud-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.app-hud-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+.app-hud-stat b {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.app-hud-timer {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  color: var(--ink);
+}
+
+.app-game-stage-wrap {
+  flex: 1;
+  min-height: 380px;
+  position: relative;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-inset);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Aim reticle styling */
+.app-aim-field {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+.app-target {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 3px solid rgba(239, 68, 68, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: app-pulse-target 1.8s ease-in-out infinite;
+}
+.app-target::before {
+  content: "";
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: 2px dashed rgba(245, 158, 11, 0.9);
+}
+.app-target::after {
+  content: "";
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+
+@keyframes app-pulse-target {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.app-aim-reticle {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  transform: translate(60px, -40px);
+}
+.app-aim-reticle svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+
+/* Platform 3D game mock */
+.app-platform-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 900px;
+}
+
+.app-platform-slab {
+  width: 320px;
+  height: 220px;
+  background: linear-gradient(135deg, #1e293b, #0f172a);
+  border: 3px solid #334155;
+  border-radius: 8px;
+  position: relative;
+  transform: rotateX(55deg) rotateZ(-12deg);
+  box-shadow: 0 30px 40px rgba(0,0,0,0.6), inset 0 0 20px rgba(14, 165, 233, 0.15);
+}
+
+.app-platform-runes {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-platform-runes::before {
+  content: "";
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 1px dashed rgba(14, 165, 233, 0.5);
+}
+
+.app-platform-hole {
+  position: absolute;
+  right: 40px;
+  top: 40px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #020617;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 14px var(--accent), inset 0 3px 6px rgba(0,0,0,0.9);
+}
+
+.app-platform-ball {
+  position: absolute;
+  left: 90px;
+  bottom: 60px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fef08a, #ca8a04 70%, #713f12);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+.app-game-disclosure {
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 0.625rem 1rem;
+}
+.app-game-disclosure summary {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  user-select: none;
+}
+.app-game-disclosure-body {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line-subtle);
+}
+
+/* ──────────────── SUBTAB 3: RESPONSE BENCH ──────────────── */
+.app-subtab-bench {
+  flex-direction: column;
+  padding: 0.5rem 1.5rem 1rem;
+  box-sizing: border-box;
+  gap: 0.75rem;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.app-bench-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  flex-wrap: wrap;
+}
+
+.app-bench-osc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.app-bench-osc-wrap {
+  height: 240px;
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-inset);
+}
+.app-bench-osc-wrap svg {
+  width: 100%;
+  height: 100%;
+}
+
+.app-bench-legend {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--ink-2);
+}
+.app-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.app-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.app-bench-controls {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.app-bench-slider-card {
+  padding: 0.75rem 1rem;
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.app-bench-slider-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+}
+.app-bench-slider-head b {
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+</style>
+</head>
+<body class="pg-app">
+
+<div class="pg-app pg-shell pg-window has-titlebar" id="shell" style="width: 1280px; height: 720px; position: relative;">
+
+  <!-- Title bar -->
+  <div class="pg-titlebar">
+    <div class="pg-titlebar__title app-tb-ver">
+      <span class="pg-titlebar__ver">2.0.0.116</span><span class="pg-badge pg-badge--warn app-tb-chan">DEV</span>
+    </div>
+    <div class="pg-titlebar__ctl">
+      <button class="pg-wc" type="button" aria-label="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
+      <button class="pg-wc" type="button" aria-label="Maximize"><svg class="wc-max" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.4"/></svg></button>
+      <button class="pg-wc pg-wc--close" type="button" aria-label="Close"><svg viewBox="0 0 12 12"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Body Container -->
+  <div class="app-stats-container">
+
+    <!-- Sub-tab switcher positioned below the floating header -->
+    <div class="app-stats-subnav-bar">
+      <nav class="pg-seg" id="stats-subtabs" role="tablist">
+        <button class="pg-seg__btn is-active" id="btn-subtab-telemetry" data-tab="telemetry">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          3D и телеметрия
+        </button>
+        <button class="pg-seg__btn" id="btn-subtab-games" data-tab="games">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Мини-игры
+        </button>
+        <button class="pg-seg__btn" id="btn-subtab-bench" data-tab="bench">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Стенд отклика
+        </button>
+      </nav>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- VIEW 1: 3D И ТЕЛЕМЕТРИЯ                                              -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="app-subtab-pane is-active" id="pane-telemetry">
+      <div class="app-subtab-telemetry">
+        
+        <!-- Left Side: Controls & Metrics -->
+        <aside class="pg-tel__side">
+          <!-- 3D Model, Resource Saving & Recenter Card -->
+          <div class="pg-card" style="padding:4px 14px; display:flex; flex-direction:column">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line-subtle)">
+              <div>
+                <div class="pg-card__title">3D-модель</div>
+                <div class="pg-card__desc">Выбор объекта отображения</div>
+              </div>
+              <div class="pg-seg">
+                <button class="pg-seg__btn is-active">Геймпад</button>
+                <button class="pg-seg__btn">Кубик</button>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line-subtle)">
+              <div>
+                <div class="pg-card__title">Экономия ресурсов</div>
+                <div class="pg-card__desc">Приостанавливать рендеринг при неактивном окне</div>
+              </div>
+              <label class="pg-toggle">
+                <input type="checkbox" checked aria-label="Resource Saving">
+                <span class="pg-toggle__track"></span>
+              </label>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0">
+              <div>
+                <div class="pg-card__title">Центрировать</div>
+                <div class="pg-card__desc">Мгновенный сброс ориентации к нейтрали</div>
+              </div>
+              <button class="pg-btn pg-btn--primary">
+                <span class="pg-kbd">Пробел</span>Центрировать
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: CSV Recorder -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px">
+            <div class="pg-overline"><span class="pg-ring"></span>Запись потока данных</div>
+            <span class="pg-badge pg-badge--ok pg-badge--dot">LIVE</span>
+          </div>
+          <div class="pg-card" style="padding:10px 14px">
+            <div class="pg-rec">
+              <div class="pg-rec__top">
+                <button class="pg-btn pg-btn--sm"><span class="pg-rec__dot"></span>Начать запись</button>
+                <div class="pg-rec__time">00:00 <small>/ 01:00</small></div>
+              </div>
+              <div class="pg-progress"><i style="--p:0%"></i></div>
+              <div class="pg-rec__meta"><span>0 строк · 0 KB</span><span class="pg-badge">Лимит: 1 мин</span></div>
+            </div>
+          </div>
+
+          <!-- Section: Telemetry Cards Grid -->
+          <div class="pg-overline"><span class="pg-ring"></span>Показатели потока</div>
+          <div class="pg-stats">
+            <!-- 1. In Hz -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Частота (In)<span class="pg-badge pg-badge--ok">60 Hz</span></div>
+              <div class="pg-stat__value">60.0<span class="pg-stat__unit">Hz</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 30 L40 29 L80 30 L120 29 L160 30 L200 30" style="stroke:var(--accent)"/></svg></div>
+            </div>
+            <!-- 2. Latency -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Задержка (RTT)<span class="pg-badge pg-badge--ok">&lt;20ms</span></div>
+              <div class="pg-stat__value">6.4<span class="pg-stat__unit">мс</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 40 L30 39 L60 41 L90 38 L120 40 L150 39 L200 40" style="stroke:var(--info)"/></svg></div>
+            </div>
+            <!-- 3. Jitter -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Джиттер<span class="pg-badge pg-badge--ok">плавно</span></div>
+              <div class="pg-stat__value">1.2<span class="pg-stat__unit">мс</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 48 L40 47 L80 49 L120 46 L160 48 L200 47" style="stroke:var(--accent)"/></svg></div>
+            </div>
+            <!-- 4. Packet Loss -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Потери<span class="pg-badge pg-badge--ok">0%</span></div>
+              <div class="pg-stat__value">0<span class="pg-stat__unit">(0.0%)</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 52 L200 52" style="stroke:var(--accent)"/></svg></div>
+            </div>
+            <!-- 5. Raw Gyro -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Сырой гироскоп °/s<span class="pg-badge">Raw</span></div>
+              <div class="pg-axis">
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span>+0.04</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span>-0.01</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span>+0.00</div>
+              </div>
+            </div>
+            <!-- 6. Raw Accel -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Сырой акселерометр g<span class="pg-badge">Raw</span></div>
+              <div class="pg-axis">
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span>+0.02</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span>-0.98</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span>+0.01</div>
+              </div>
+            </div>
+            <!-- 7. Out DSU Hz -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">DSU выход<span class="pg-badge pg-badge--ok">DSU</span></div>
+              <div class="pg-stat__value">60.0<span class="pg-stat__unit">Hz</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 30 L40 30 L80 30 L120 30 L160 30 L200 30" style="stroke:var(--accent)"/></svg></div>
+            </div>
+            <!-- 8. Pipe Latency -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Пайплайн<span class="pg-badge pg-badge--ok">&lt;1ms</span></div>
+              <div class="pg-stat__value">0.4<span class="pg-stat__unit">мс</span></div>
+              <div class="pg-spark"><svg viewBox="0 0 200 56" preserveAspectRatio="none"><path d="M0 50 L200 50" style="stroke:var(--info)"/></svg></div>
+            </div>
+            <!-- 9. DSU Clients -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">Клиенты DSU<span class="pg-badge pg-badge--ok">Cemu</span></div>
+              <div class="pg-stat__value">1<span class="pg-stat__unit">активен</span></div>
+              <div style="font-size:0.75rem; color:var(--ink-2); padding-top:4px">Cemu.exe (PID 4120)</div>
+            </div>
+            <!-- 10. Out Gyro -->
+            <div class="pg-stat">
+              <div class="pg-stat__head">DSU гироскоп °/s<span class="pg-badge">DSU</span></div>
+              <div class="pg-axis">
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span>+0.00</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span>+0.00</div>
+                <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span>+0.00</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Side: 3D Viewports -->
+        <section class="pg-tel__views">
+          <div class="pg-seg pg-tel__mode app-tel-mode-bar">
+            <button class="pg-seg__btn">Статический</button>
+            <button class="pg-seg__btn is-active">4 камеры</button>
+            <button class="pg-seg__btn">Динамический</button>
+          </div>
+
+          <div class="pg-viewport" style="border-radius:0; border-width:1px 0 0 1px">
+            <span class="pg-viewport__tag">СПЕРЕДИ (FRONT)</span>
+            <div class="pg-scene">
+              <div class="pg-rings-floor" style="--fx:76deg;--fy:52px"></div>
+              <div class="pg-cross"></div>
+              <div class="pg-cube" style="--rx:-6deg;--ry:-16deg;--rz:0deg">
+                <div class="pg-cube__f pg-cube__f--front">FRONT</div>
+                <div class="pg-cube__f pg-cube__f--back">BACK</div>
+                <div class="pg-cube__f pg-cube__f--right">RIGHT</div>
+                <div class="pg-cube__f pg-cube__f--left">LEFT</div>
+                <div class="pg-cube__f pg-cube__f--top">TOP</div>
+                <div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pg-viewport" style="border-radius:0; border-width:1px 0 0 1px">
+            <span class="pg-viewport__tag">СВЕРХУ (TOP)</span>
+            <div class="pg-scene">
+              <div class="pg-rings-floor" style="--fx:0deg;--fy:0px"></div>
+              <div class="pg-cross"></div>
+              <div class="pg-cube" style="--rx:-86deg;--ry:0deg;--rz:24deg">
+                <div class="pg-cube__f pg-cube__f--front">FRONT</div>
+                <div class="pg-cube__f pg-cube__f--back">BACK</div>
+                <div class="pg-cube__f pg-cube__f--right">RIGHT</div>
+                <div class="pg-cube__f pg-cube__f--left">LEFT</div>
+                <div class="pg-cube__f pg-cube__f--top">TOP</div>
+                <div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pg-viewport" style="border-radius:0; border-width:1px 0 0 1px">
+            <span class="pg-viewport__tag">СПРАВА (RIGHT)</span>
+            <div class="pg-scene">
+              <div class="pg-rings-floor" style="--fx:76deg;--fy:52px"></div>
+              <div class="pg-cross"></div>
+              <div class="pg-cube" style="--rx:-6deg;--ry:-78deg;--rz:0deg">
+                <div class="pg-cube__f pg-cube__f--front">FRONT</div>
+                <div class="pg-cube__f pg-cube__f--back">BACK</div>
+                <div class="pg-cube__f pg-cube__f--right">RIGHT</div>
+                <div class="pg-cube__f pg-cube__f--left">LEFT</div>
+                <div class="pg-cube__f pg-cube__f--top">TOP</div>
+                <div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pg-viewport" style="border-radius:0; border-width:1px 0 0 1px">
+            <span class="pg-viewport__tag">3/4 ОБЗОР (ISO)</span>
+            <div class="pg-scene">
+              <div class="pg-rings-floor" style="--fx:70deg;--fy:40px"></div>
+              <div class="pg-cross"></div>
+              <div class="pg-cube" style="--rx:-24deg;--ry:-32deg;--rz:0deg">
+                <div class="pg-cube__f pg-cube__f--front">FRONT</div>
+                <div class="pg-cube__f pg-cube__f--back">BACK</div>
+                <div class="pg-cube__f pg-cube__f--right">RIGHT</div>
+                <div class="pg-cube__f pg-cube__f--left">LEFT</div>
+                <div class="pg-cube__f pg-cube__f--top">TOP</div>
+                <div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- VIEW 2: МИНИ-ИГРЫ                                                    -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="app-subtab-pane" id="pane-games">
+      <div class="app-subtab-games">
+        
+        <!-- Clean Minimal HUD Header -->
+        <header class="app-games-hud">
+          <!-- Game Switcher -->
+          <div class="pg-seg" id="games-selector">
+            <button class="pg-seg__btn is-active" id="btn-game-aim" data-game="aim">🏹 Прицел Zelda</button>
+            <button class="pg-seg__btn" id="btn-game-platform" data-game="platform">⛩️ Платформа святилища</button>
+          </div>
+
+          <!-- Minimal In-Game Readouts -->
+          <div class="app-hud-group">
+            <div class="app-hud-stat">
+              <span class="pg-dim">Очки:</span>
+              <b id="hud-score-val">14</b>
+            </div>
+            <div class="app-hud-stat">
+              <span class="pg-dim">Рекорд:</span>
+              <b id="hud-record-val" style="color:var(--ink-2)">32</b>
+            </div>
+            <div class="app-hud-timer" id="hud-timer-val">
+              00:18.4
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="app-hud-group">
+            <button class="pg-btn pg-btn--primary pg-btn--sm" id="btn-game-start">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Старт
+            </button>
+            <button class="pg-btn pg-btn--sm" id="btn-game-recenter">
+              <span class="pg-kbd">Пробел</span>Центрировать
+            </button>
+            <button class="pg-btn-icon" id="btn-game-fullscreen" title="Во весь экран (F11 / Esc)" style="width:32px;height:32px">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Main Gaming Viewport -->
+        <main class="app-game-stage-wrap" id="game-stage">
+          
+          <!-- Aim Reticle View -->
+          <div class="app-aim-field" id="game-aim-view">
+            <!-- Pulsing Target -->
+            <div class="app-target" style="left: calc(50% + 80px); top: calc(50% - 60px);"></div>
+            
+            <!-- Zelda Bow Crosshair Reticle -->
+            <div class="app-aim-reticle">
+              <svg viewBox="0 0 100 100" fill="none">
+                <circle cx="50" cy="50" r="38" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="8 6"/>
+                <circle cx="50" cy="50" r="14" stroke="var(--accent)" stroke-width="1.8"/>
+                <circle cx="50" cy="50" r="3" fill="var(--accent)"/>
+                <line x1="50" y1="6" x2="50" y2="24" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="50" y1="76" x2="50" y2="94" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="6" y1="50" x2="24" y2="50" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+                <line x1="76" y1="50" x2="94" y2="50" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Platform Shrine 3D View (hidden by default in aim view) -->
+          <div class="app-platform-scene" id="game-platform-view" style="display:none">
+            <div class="app-platform-slab">
+              <div class="app-platform-runes"></div>
+              <div class="app-platform-hole"></div>
+              <div class="app-platform-ball"></div>
+            </div>
+          </div>
+
+        </main>
+
+        <!-- Collapsible Technical Details (Zero Clutter in Game Mode) -->
+        <details class="app-game-disclosure">
+          <summary>⚙️ Дополнительные параметры теста (скрыты во время игры)</summary>
+          <div class="app-game-disclosure-body">
+            <div style="display:flex; align-items:center; gap:0.5rem">
+              <span class="pg-dim">Поток данных:</span>
+              <div class="pg-seg">
+                <button class="pg-seg__btn is-active">DSU (с фильтром)</button>
+                <button class="pg-seg__btn">Сырой датчик</button>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.75rem">
+              <label style="display:flex; align-items:center; gap:0.375rem; font-size:0.8125rem">
+                <input type="checkbox"> Инверсия X (горизонталь)
+              </label>
+              <label style="display:flex; align-items:center; gap:0.375rem; font-size:0.8125rem">
+                <input type="checkbox"> Инверсия Y (вертикаль)
+              </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-left:auto">
+              <span class="pg-dim">Задержка пайплайна:</span>
+              <span class="pg-badge pg-badge--ok">0.4 мс</span>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- VIEW 3: СТЕНД ОТКЛИКА (TUNING BENCH & OSCILLOSCOPE)                  -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <div class="app-subtab-pane" id="pane-bench">
+      <div class="app-subtab-bench">
+        
+        <!-- Bench Header Bar -->
+        <header class="app-bench-head">
+          <div style="display:flex; align-items:center; gap:0.75rem">
+            <span class="pg-card__title">Источник сигнала:</span>
+            <div class="pg-seg">
+              <button class="pg-seg__btn is-active">DSU (сглаженный)</button>
+              <button class="pg-seg__btn">Сырой гироскоп</button>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:1rem">
+            <div style="display:flex; align-items:center; gap:0.5rem">
+              <span class="pg-dim">Статус:</span>
+              <span class="pg-badge pg-badge--ok pg-badge--dot">Стабильно</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem">
+              <span class="pg-dim">Шум:</span>
+              <b style="font-family:var(--font-mono); color:var(--ink)">1.2%</b>
+            </div>
+            <div style="display:flex; align-items:center; gap:0.5rem">
+              <span class="pg-dim">Пинг:</span>
+              <b style="font-family:var(--font-mono); color:var(--info)">6.4 мс</b>
+            </div>
+          </div>
+        </header>
+
+        <!-- Oscilloscope Card -->
+        <div class="app-bench-osc-card">
+          <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="pg-card__title">Осциллограф реального времени (140 кадров истории)</div>
+            <div class="pg-seg">
+              <button class="pg-seg__btn">Pitch (X)</button>
+              <button class="pg-seg__btn">Yaw (Y)</button>
+              <button class="pg-seg__btn">Roll (Z)</button>
+              <button class="pg-seg__btn is-active">Все 3 оси</button>
+            </div>
+          </div>
+
+          <!-- Waveform Canvas Mockup -->
+          <div class="app-bench-osc-wrap">
+            <svg viewBox="0 0 1000 240" preserveAspectRatio="none">
+              <!-- Center zero line -->
+              <line x1="0" y1="120" x2="1000" y2="120" stroke="rgba(255,255,255,0.15)" stroke-dasharray="4 4" stroke-width="1.2"/>
+              <line x1="0" y1="60" x2="1000" y2="60" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4" stroke-width="1"/>
+              <line x1="0" y1="180" x2="1000" y2="180" stroke="rgba(255,255,255,0.06)" stroke-dasharray="2 4" stroke-width="1"/>
+
+              <!-- Axis X (Pitch) - Red/Orange -->
+              <path d="M0 120 Q 80 40, 160 120 T 320 120 T 480 80 T 640 160 T 800 120 T 1000 120" fill="none" stroke="#ef4444" stroke-width="2.2" stroke-linecap="round"/>
+              <!-- Raw noise jitter shadow -->
+              <path d="M0 120 L 40 116 L 80 44 L 120 78 L 160 124 L 200 118 L 240 123 L 320 119 L 480 77 L 640 163 L 800 119 L 1000 122" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.35"/>
+
+              <!-- Axis Y (Yaw) - Green/Emerald -->
+              <path d="M0 120 Q 100 180, 200 120 T 400 140 T 600 100 T 800 120 T 1000 120" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round"/>
+              
+              <!-- Axis Z (Roll) - Blue/Cyan -->
+              <path d="M0 120 Q 140 100, 280 120 T 560 115 T 840 125 T 1000 120" fill="none" stroke="#06b6d4" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <div class="app-bench-legend">
+            <span class="app-legend-item"><span class="app-legend-dot" style="background:#ef4444"></span> Pitch (Крен вверх/вниз)</span>
+            <span class="app-legend-item"><span class="app-legend-dot" style="background:#10b981"></span> Yaw (Поворот вправо/влево)</span>
+            <span class="app-legend-item"><span class="app-legend-dot" style="background:#06b6d4"></span> Roll (Наклон боком)</span>
+            <span style="margin-left:auto; opacity:0.7">Тонкая линия — сырые датчики; Сплошная — после фильтрации</span>
+          </div>
+        </div>
+
+        <!-- Tuning Sliders Controls -->
+        <div class="app-bench-controls">
+          <div class="app-bench-slider-card">
+            <div class="app-bench-slider-head">
+              <span>Порог дрожи (Deadband)</span>
+              <b>0.15 °/s</b>
+            </div>
+            <input type="range" min="0" max="1" step="0.01" value="0.15" style="accent-color:var(--accent)">
+            <span class="pg-card__desc">Срезает микродрожание рук в неподвижном состоянии</span>
+          </div>
+
+          <div class="app-bench-slider-card">
+            <div class="app-bench-slider-head">
+              <span>Чувствительность (Sensitivity)</span>
+              <b>1.00x</b>
+            </div>
+            <input type="range" min="0.2" max="3" step="0.05" value="1.0" style="accent-color:var(--accent)">
+            <span class="pg-card__desc">Масштабирует угловую скорость перед отправкой в DSU</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Floating Header -->
+  <header class="pg-header">
+    <button class="pg-island pg-brand app-home" type="button">
+      <img class="app-logo app-brandmark" src="img/logo.webp" alt="" width="28" height="28">
+      <span class="pg-wordmark">PhoneGyr<i class="pg-wordmark__o is-live"></i></span>
+    </button>
+    <nav class="pg-island">
+      <button class="pg-tab" type="button">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+        <span class="pg-tab__l">Настройки</span>
+      </button>
+      <button class="pg-tab is-active" type="button">
+        <svg viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></svg>
+        <span class="pg-tab__l">Статистика &amp; 3D</span>
+      </button>
+      <button class="pg-tab" type="button">
+        <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 21.5A2.5 2.5 0 0 1 6.5 19H20"/></svg>
+        <span class="pg-tab__l">Документация</span>
+      </button>
+    </nav>
+    <div class="pg-island">
+      <button class="pg-btn-icon" type="button" aria-label="Theme"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/></svg></button>
+      <div class="pg-seg"><button class="pg-seg__btn is-active">RU</button><button class="pg-seg__btn">EN</button></div>
+      <span class="pg-status pg-status--online"><span class="pg-status__dot"></span><span class="pg-status__t">онлайн</span></span>
+    </div>
+  </header>
+
+  <!-- Floating Footer -->
+  <footer class="pg-footer">
+    <div class="pg-footer__group">
+      <div class="pg-island pg-island--sm pg-f-cpu"><span class="pg-dim">ЦП</span><b>1.2%</b></div>
+      <div class="pg-island pg-island--sm pg-f-ram"><span class="pg-dim">ОЗУ</span><b>48 MB</b></div>
+    </div>
+    <a class="pg-island pg-island--sm pg-f-repo" href="https://github.com/MrHoustonOff/PhoneGyro">
+      <span class="app-gh"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg></span>
+      <span class="pg-f-repo__n">MrHoustonOff/PhoneGyro</span>
+    </a>
+  </footer>
+
+</div>
+
+<script>
+// Mockup interactive switching between subtabs and games
+const tabs = {
+  telemetry: document.getElementById('pane-telemetry'),
+  games: document.getElementById('pane-games'),
+  bench: document.getElementById('pane-bench')
+};
+const btns = {
+  telemetry: document.getElementById('btn-subtab-telemetry'),
+  games: document.getElementById('btn-subtab-games'),
+  bench: document.getElementById('btn-subtab-bench')
+};
+
+function selectTab(name) {
+  Object.keys(tabs).forEach(k => {
+    tabs[k].classList.toggle('is-active', k === name);
+    btns[k].classList.toggle('is-active', k === name);
+  });
+}
+
+document.getElementById('stats-subtabs').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-tab]');
+  if (btn) selectTab(btn.dataset.tab);
+});
+
+// Mini-game switching (Aim vs Platform)
+const btnAim = document.getElementById('btn-game-aim');
+const btnPlatform = document.getElementById('btn-game-platform');
+const viewAim = document.getElementById('game-aim-view');
+const viewPlatform = document.getElementById('game-platform-view');
+
+function selectGame(game) {
+  if (game === 'aim') {
+    btnAim.classList.add('is-active');
+    btnPlatform.classList.remove('is-active');
+    viewAim.style.display = 'flex';
+    viewPlatform.style.display = 'none';
+    document.getElementById('hud-timer-val').textContent = '00:18.4';
+    document.getElementById('hud-score-val').textContent = '14';
+    document.getElementById('hud-record-val').textContent = '32';
+  } else {
+    btnAim.classList.remove('is-active');
+    btnPlatform.classList.add('is-active');
+    viewAim.style.display = 'none';
+    viewPlatform.style.display = 'flex';
+    document.getElementById('hud-timer-val').textContent = 'P: +2.4° R: -1.2°';
+    document.getElementById('hud-score-val').textContent = '3';
+    document.getElementById('hud-record-val').textContent = '8';
+  }
+}
+
+document.getElementById('games-selector')?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-game]');
+  if (btn) selectGame(btn.dataset.game);
+});
+
+// URL query parameter support for direct screenshot capture
+const params = new URLSearchParams(window.location.search);
+if (params.get('tab')) {
+  selectTab(params.get('tab'));
+}
+if (params.get('game')) {
+  selectGame(params.get('game'));
+}
+if (params.get('theme')) {
+  document.documentElement.setAttribute('data-theme', params.get('theme'));
+}
+</script>
+</body>
+</html>

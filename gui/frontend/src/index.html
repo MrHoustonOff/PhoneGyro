@@ -214,6 +214,505 @@
       <nav class="pg-toc" id="docs-toc"></nav>
     </main>
 
+    <!-- Stats & 3D screen: telemetry, mini-games, response bench -->
+    <main class="pg-page app-screen app-stats-page" id="screen-stats" hidden>
+      <div class="app-stats-subnav-bar">
+        <nav class="pg-seg app-stats-subnav" id="stats-subnav" role="tablist">
+          <button class="pg-seg__btn is-active" type="button" role="tab" data-subtab="telemetry" id="subtab-btn-telemetry" data-i18n="ui.stats_tab_telemetry">3D и телеметрия</button>
+          <button class="pg-seg__btn" type="button" role="tab" data-subtab="games" id="subtab-btn-games" data-i18n="ui.stats_tab_games">Мини-игры</button>
+          <button class="pg-seg__btn" type="button" role="tab" data-subtab="bench" id="subtab-btn-bench" data-i18n="ui.stats_tab_bench">Стенд отклика</button>
+        </nav>
+      </div>
+
+      <div class="app-stats-container" id="stats-container">
+        <!-- Subtab 1: 3D и телеметрия -->
+        <div class="app-subtab-pane is-active" id="pane-telemetry" role="tabpanel">
+          <div class="pg-tel" style="width:100%;height:100%">
+            <!-- Left column: Controls, CSV Recorder, USB Protocol, 10 Metrics -->
+            <aside class="pg-tel__side">
+              <!-- Controls card: 3D model, Resource saving, Recenter -->
+              <div class="pg-card" style="padding:0.25rem 0.875rem;display:flex;flex-direction:column">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--line-subtle)">
+                  <div>
+                    <div class="pg-card__title" data-i18n="ui.stats_model_title">3D-модель</div>
+                    <div class="pg-card__desc" data-i18n="ui.stats_model_desc">Выбор модели ориентации</div>
+                  </div>
+                  <div class="pg-seg" id="stats-model-seg">
+                    <button class="pg-seg__btn is-active" data-model="gamepad" type="button" data-i18n="ui.stats_model_gamepad">Геймпад</button>
+                    <button class="pg-seg__btn" data-model="cube" type="button" data-i18n="ui.stats_model_cube">Кубик</button>
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--line-subtle)">
+                  <div>
+                    <div class="pg-card__title" data-i18n="ui.stats_eco_title">Экономия ресурсов</div>
+                    <div class="pg-card__desc" data-i18n="ui.stats_eco_desc">Пауза рендеринга при неактивном окне</div>
+                  </div>
+                  <label class="pg-toggle">
+                    <input type="checkbox" id="stats-eco-toggle" checked aria-label="Resource Saving">
+                    <span class="pg-toggle__track"></span>
+                  </label>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;padding:0.5rem 0">
+                  <div>
+                    <div class="pg-card__title" data-i18n="ui.stats_recenter_title">Центрировать</div>
+                    <div class="pg-card__desc" data-i18n="ui.stats_recenter_desc">Сброс ориентации к нейтральной</div>
+                  </div>
+                  <button class="pg-btn pg-btn--primary" id="btn-stats-recenter" type="button">
+                    <span class="pg-kbd">Space</span>
+                    <span data-i18n="ui.stats_recenter_btn">Центрировать</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Overline: Statistics -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.125rem">
+                <div class="pg-overline"><span class="pg-ring"></span><span data-i18n="live_debug.stats_title">Статистика</span></div>
+                <span class="pg-badge pg-badge--ok pg-badge--dot" id="stats-live-badge" data-i18n="ui.stats_live">LIVE</span>
+              </div>
+
+              <!-- CSV Telemetry Recorder -->
+              <div class="pg-card" style="padding:0.625rem 0.875rem">
+                <div class="pg-rec">
+                  <div class="pg-rec__top">
+                    <button class="pg-btn pg-btn--sm" id="btn-stats-record" type="button">
+                      <span class="pg-rec__dot" id="stats-rec-dot"></span>
+                      <span id="btn-stats-record-label" data-i18n="live_debug.stats_record_start">Начать запись</span>
+                    </button>
+                    <div class="pg-rec__time" id="stats-rec-time">00:00 <small>/ 01:00</small></div>
+                  </div>
+                  <div class="pg-progress"><i id="stats-rec-prog" style="--p:0%"></i></div>
+                  <div class="pg-rec__meta">
+                    <span id="stats-rec-meta">0 строк · 0 KB</span>
+                    <span class="pg-badge" data-i18n="ui.stats_rec_limit">Лимит: 1 мин</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- USB Protocol Status Card (shown when USB controller is connected) -->
+              <div class="pg-card" id="stats-usb-card" style="padding:0.625rem 0.875rem" hidden>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.375rem">
+                  <div class="pg-card__title" style="display:flex;align-items:center;gap:0.375rem">
+                    <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
+                    <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
+                  </div>
+                  <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.25rem;font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2)">
+                  <div style="display:flex;justify-content:space-between">
+                    <span>L1: Порт / Бод</span>
+                    <b style="color:var(--ink)" id="stats-usb-l1">—</b>
+                  </div>
+                  <div style="display:flex;justify-content:space-between">
+                    <span>L2: Частота / Кадры</span>
+                    <b style="color:var(--ink)" id="stats-usb-l2">—</b>
+                  </div>
+                  <div style="display:flex;justify-content:space-between">
+                    <span>L3: Диапазоны</span>
+                    <b style="color:var(--ink)" id="stats-usb-l3">—</b>
+                  </div>
+                  <div style="display:flex;justify-content:space-between">
+                    <span>L4: Ошибки / Потери</span>
+                    <b style="color:var(--ink)" id="stats-usb-l4">—</b>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 10 Metric Cards in .pg-stats grid -->
+              <div class="pg-stats">
+                <!-- 1. Frequency (Hz) -->
+                <div class="pg-stat" id="stat-card-hz" data-i18n-title="live_debug.stats_in_hz_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_in_hz">Вход (Hz)</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-hz-badge">ok</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-hz-val">0.0</span><span class="pg-stat__unit">Hz</span>
+                  </div>
+                  <div class="pg-spark">
+                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+                      <path id="stat-hz-spark" style="stroke:var(--accent)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- 2. Latency (ms) -->
+                <div class="pg-stat" id="stat-card-latency" data-i18n-title="live_debug.stats_latency_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_latency">Задержка (мс)</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-lat-badge">ok</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-lat-val">0.0</span><span class="pg-stat__unit">ms</span>
+                  </div>
+                  <div class="pg-spark">
+                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+                      <path id="stat-lat-spark" style="stroke:var(--info)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- 3. Jitter (ms) -->
+                <div class="pg-stat" id="stat-card-jitter" data-i18n-title="live_debug.stats_jitter_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_jitter">Дрожание (мс)</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-jitter-badge">ok</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-jitter-val">0.0</span><span class="pg-stat__unit">ms</span>
+                  </div>
+                  <div class="pg-spark">
+                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+                      <path id="stat-jitter-spark" style="stroke:var(--warn)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- 4. Loss / Merged -->
+                <div class="pg-stat" id="stat-card-loss" data-i18n-title="live_debug.stats_loss_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_loss">Потери</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-loss-badge">0%</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-loss-val">0</span><span class="pg-stat__unit" id="stat-loss-unit">(0.0%)</span>
+                  </div>
+                  <div class="pg-spark">
+                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+                      <path id="stat-loss-spark" style="stroke:var(--danger)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- 5. Raw Gyroscope -->
+                <div class="pg-stat" id="stat-card-raw-gyro" data-i18n-title="live_debug.stats_raw_gyro_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_raw_gyro">Сырой гироскоп</span>
+                    <span class="pg-stat__unit">°/s</span>
+                  </div>
+                  <div class="pg-axis">
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-raw-gx">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-gy">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-gz">+0.00</span></div>
+                  </div>
+                </div>
+
+                <!-- 6. Raw Accelerometer -->
+                <div class="pg-stat" id="stat-card-raw-accel" data-i18n-title="live_debug.stats_raw_accel_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_raw_accel">Сырой акселерометр</span>
+                    <span class="pg-stat__unit">g</span>
+                  </div>
+                  <div class="pg-axis">
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-raw-ax">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-ay">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-az">-1.00</span></div>
+                  </div>
+                </div>
+
+                <!-- 7. DSU Output Gyro -->
+                <div class="pg-stat" id="stat-card-out-gyro" data-i18n-title="live_debug.stats_out_gyro_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_out_gyro">DSU выход</span>
+                    <span class="pg-stat__unit">°/s</span>
+                  </div>
+                  <div class="pg-axis">
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-out-gx">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-out-gy">+0.00</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-out-gz">+0.00</span></div>
+                  </div>
+                </div>
+
+                <!-- 8. Pipeline Delay (ms) -->
+                <div class="pg-stat" id="stat-card-pipe" data-i18n-title="live_debug.stats_pipe_latency_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_pipe_latency">Пайплайн</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-pipe-badge">ok</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-pipe-val">0.0</span><span class="pg-stat__unit">ms</span>
+                  </div>
+                  <div class="pg-spark">
+                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
+                      <path id="stat-pipe-spark" style="stroke:var(--accent)"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- 9. DSU Clients -->
+                <div class="pg-stat" id="stat-card-dsu-clients" data-i18n-title="live_debug.stats_dsu_clients_tip">
+                  <div class="pg-stat__head">
+                    <span data-i18n="live_debug.stats_dsu_clients">Клиенты DSU</span>
+                    <span class="pg-badge pg-badge--ok" id="stat-dsu-badge">0</span>
+                  </div>
+                  <div class="pg-stat__value">
+                    <span id="stat-dsu-count">0</span>
+                    <span class="pg-stat__unit" id="stat-dsu-label" data-i18n="live_debug.stats_dsu_clients_active">активен</span>
+                  </div>
+                  <div id="stat-dsu-client-name" style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:0.25rem">—</div>
+                </div>
+
+                <!-- 10. Euler Angles -->
+                <div class="pg-stat" id="stat-card-angles">
+                  <div class="pg-stat__head">
+                    <span data-i18n="ui.stats_angles">Углы ориентации</span>
+                    <span class="pg-stat__unit">°</span>
+                  </div>
+                  <div class="pg-axis">
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x" data-i18n="ui.stats_axis_pitch">P</span><span id="tel-angle-pitch">+0.0°</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y" data-i18n="ui.stats_axis_roll">R</span><span id="tel-angle-roll">+0.0°</span></div>
+                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z" data-i18n="ui.stats_axis_yaw">Y</span><span id="tel-angle-yaw">+0.0°</span></div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Right column: Viewports container (ready for GyroScene in Step 3) -->
+            <section class="pg-tel__views" id="stats-3d-views">
+              <div class="pg-seg pg-tel__mode" id="stats-cam-mode-seg">
+                <button class="pg-seg__btn is-active" data-cam="static" type="button" data-i18n="ui.stats_cam_static">Статический</button>
+                <button class="pg-seg__btn" data-cam="quad" type="button" data-i18n="ui.stats_cam_quad">4 камеры</button>
+                <button class="pg-seg__btn" data-cam="orbit" type="button" data-i18n="ui.stats_cam_orbit">Динамический</button>
+              </div>
+              <!-- Single / Orbit Viewport -->
+              <div class="pg-viewport" id="stats-3d-viewport-single" style="grid-column:1/-1;grid-row:1/-1;position:relative;overflow:hidden">
+                <span class="pg-viewport__tag" id="stats-viewport-tag">STATIC VIEW</span>
+                <div id="stats-3d-canvas-host" style="position:absolute;inset:0"></div>
+                <div class="pg-scene" id="stats-3d-fallback" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                  <div class="pg-rings-floor" style="--fx:70deg;--fy:40px"></div>
+                  <div class="pg-cross"></div>
+                  <div class="pg-cube" id="stats-cube-css" style="--rx:0deg;--ry:0deg;--rz:0deg">
+                    <div class="pg-cube__f pg-cube__f--front">FRONT</div>
+                    <div class="pg-cube__f pg-cube__f--back">BACK</div>
+                    <div class="pg-cube__f pg-cube__f--right">RIGHT</div>
+                    <div class="pg-cube__f pg-cube__f--left">LEFT</div>
+                    <div class="pg-cube__f pg-cube__f--top">TOP</div>
+                    <div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div>
+                  </div>
+                </div>
+
+                <!-- Orbit camera controls hint -->
+                <div id="stats-orbit-hint" class="pg-badge" style="position:absolute;top:0.625rem;left:0.625rem;z-index:2;display:none;background:var(--surface);border-color:var(--line);color:var(--ink-2);gap:0.375rem;pointer-events:none">
+                  <span class="pg-kbd">ЛКМ</span> <span data-i18n="ui.stats_orbit_hint">вращение · R сброс</span>
+                </div>
+
+                <!-- Eco pause pill -->
+                <div id="stats-3d-ecopause" class="pg-badge pg-badge--warn" style="position:absolute;bottom:0.75rem;left:0.75rem;z-index:3;display:none;align-items:center;gap:0.375rem">
+                  <span class="pg-status__dot" style="background:var(--warn);width:0.4375rem;height:0.4375rem;border-radius:50%"></span>
+                  <span data-i18n="ui.stats_eco_paused">Эко-режим: рендер на паузе</span>
+                </div>
+
+                <!-- Disconnected offline overlay -->
+                <div id="stats-3d-offline" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);display:none;flex-direction:column;align-items:center;justify-content:center;gap:0.5rem;z-index:4;pointer-events:none">
+                  <span class="pg-badge pg-badge--warn pg-badge--dot" data-i18n="ui.stats_offline">ОФФЛАЙН</span>
+                  <span style="font-size:0.8125rem;color:var(--ink-2);max-width:18rem;text-align:center" data-i18n="ui.stats_offline_tip">Подключите смартфон по Wi‑Fi или USB-контроллер</span>
+                </div>
+              </div>
+              <!-- 4 Quad Viewports (shown when cam === quad) -->
+              <div id="stats-3d-quad-wrap" style="position:absolute;inset:0;display:none;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr">
+                <div class="pg-viewport" style="border-radius:0;border-width:1px 0 0 1px"><span class="pg-viewport__tag">FRONT</span><div class="pg-scene" id="stats-quad-front"><div class="pg-rings-floor" style="--fx:76deg;--fy:52px"></div><div class="pg-cross"></div><div class="pg-cube pg-cube-front" style="--rx:0deg;--ry:0deg;--rz:0deg"><div class="pg-cube__f pg-cube__f--front">FRONT</div><div class="pg-cube__f pg-cube__f--back">BACK</div><div class="pg-cube__f pg-cube__f--right">RIGHT</div><div class="pg-cube__f pg-cube__f--left">LEFT</div><div class="pg-cube__f pg-cube__f--top">TOP</div><div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div></div></div></div>
+                <div class="pg-viewport" style="border-radius:0;border-width:1px 0 0 1px"><span class="pg-viewport__tag">TOP</span><div class="pg-scene" id="stats-quad-top"><div class="pg-rings-floor" style="--fx:0deg;--fy:0px"></div><div class="pg-cross"></div><div class="pg-cube pg-cube-top" style="--rx:-90deg;--ry:0deg;--rz:0deg"><div class="pg-cube__f pg-cube__f--front">FRONT</div><div class="pg-cube__f pg-cube__f--back">BACK</div><div class="pg-cube__f pg-cube__f--right">RIGHT</div><div class="pg-cube__f pg-cube__f--left">LEFT</div><div class="pg-cube__f pg-cube__f--top">TOP</div><div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div></div></div></div>
+                <div class="pg-viewport" style="border-radius:0;border-width:1px 0 0 1px"><span class="pg-viewport__tag">RIGHT</span><div class="pg-scene" id="stats-quad-right"><div class="pg-rings-floor" style="--fx:76deg;--fy:52px"></div><div class="pg-cross"></div><div class="pg-cube pg-cube-right" style="--rx:0deg;--ry:-90deg;--rz:0deg"><div class="pg-cube__f pg-cube__f--front">FRONT</div><div class="pg-cube__f pg-cube__f--back">BACK</div><div class="pg-cube__f pg-cube__f--right">RIGHT</div><div class="pg-cube__f pg-cube__f--left">LEFT</div><div class="pg-cube__f pg-cube__f--top">TOP</div><div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div></div></div></div>
+                <div class="pg-viewport" style="border-radius:0;border-width:1px 0 0 1px"><span class="pg-viewport__tag">3/4 VIEW</span><div class="pg-scene" id="stats-quad-iso"><div class="pg-rings-floor" style="--fx:70deg;--fy:40px"></div><div class="pg-cross"></div><div class="pg-cube pg-cube-iso" style="--rx:-24deg;--ry:-32deg;--rz:0deg"><div class="pg-cube__f pg-cube__f--front">FRONT</div><div class="pg-cube__f pg-cube__f--back">BACK</div><div class="pg-cube__f pg-cube__f--right">RIGHT</div><div class="pg-cube__f pg-cube__f--left">LEFT</div><div class="pg-cube__f pg-cube__f--top">TOP</div><div class="pg-cube__f pg-cube__f--bottom">BOTTOM</div></div></div></div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <!-- Subtab 2: Мини-игры -->
+        <div class="app-subtab-pane" id="pane-games" role="tabpanel" hidden>
+          <div class="app-games-wrap">
+            <!-- Compact HUD Top Bar -->
+            <div class="app-game-hud">
+              <!-- Game Switcher -->
+              <div class="pg-seg" id="game-picker-seg">
+                <button class="pg-seg__btn is-active" data-game="aim" type="button" data-i18n="ui.game_aim">Прицел Zelda</button>
+                <button class="pg-seg__btn" data-game="platform" type="button" data-i18n="ui.game_platform">Платформа святилища</button>
+              </div>
+
+              <!-- HUD Counters -->
+              <div class="app-game-hud-stats">
+                <div class="pg-badge">
+                  <span data-i18n="ui.game_score">Очки:</span>
+                  <b id="game-score" style="color:var(--accent);margin-left:0.25rem">0</b>
+                </div>
+                <div class="pg-badge">
+                  <span data-i18n="ui.game_record">Рекорд:</span>
+                  <b id="game-record" style="color:var(--ink);margin-left:0.25rem">0</b>
+                </div>
+                <div class="pg-badge" id="game-pill-time">
+                  <span id="game-label-timer" data-i18n="settings_modal.bench_aim_time">Время:</span>
+                  <b id="game-val-timer" style="color:var(--info);margin-left:0.25rem">30.0 с</b>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="app-game-hud-actions">
+                <button class="pg-btn pg-btn--primary pg-btn--sm" id="btn-game-start" type="button">
+                  <span id="game-start-label" data-i18n="ui.game_start">Старт</span>
+                </button>
+                <button class="pg-btn pg-btn--sm" id="btn-game-recenter" type="button">
+                  <span class="pg-kbd">Space</span>
+                  <span data-i18n="ui.stats_recenter_btn">Центрировать</span>
+                </button>
+                <button class="pg-btn pg-btn--sm" id="btn-game-fullscreen" type="button" aria-label="Fullscreen">
+                  <svg viewBox="0 0 24 24" style="width:0.875rem;height:0.875rem;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                  <span data-i18n="ui.game_fullscreen">Во весь экран</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Central Game Stage -->
+            <div class="app-game-stage" id="game-stage">
+              <!-- Game 1: Aim Target Viewport -->
+              <div id="game-aim-view" class="app-game-view">
+                <div id="game-aim-targets" class="app-aim-targets-layer"></div>
+                <!-- Sheikah reticle -->
+                <div id="game-aim-reticle" class="app-aim-reticle">
+                  <div class="app-aim-cross"></div>
+                  <div class="app-aim-ring"></div>
+                  <div class="app-aim-dot"></div>
+                </div>
+                <!-- Particle / Floating FX layer -->
+                <div id="game-aim-fx" class="app-aim-fx-layer"></div>
+                <!-- Game Over Card -->
+                <div id="game-aim-gameover" class="app-gameover-overlay" style="display:none">
+                  <div class="pg-card app-gameover-card">
+                    <div class="pg-card__title" data-i18n="settings_modal.bench_aim_gameover">Время вышло!</div>
+                    <div style="font-size:0.875rem;color:var(--ink-2);margin:0.25rem 0 0.75rem">
+                      <span data-i18n="settings_modal.bench_aim_targets_hit">Сбито мишеней</span>: <b id="game-aim-final-score" style="color:var(--accent)">0</b>
+                      <span style="margin:0 0.5rem">·</span>
+                      <span data-i18n="ui.game_record">Рекорд:</span> <b id="game-aim-final-record" style="color:var(--ink)">0</b>
+                    </div>
+                    <div style="display:flex;gap:0.5rem">
+                      <button class="pg-btn pg-btn--primary" id="btn-aim-restart" type="button" data-i18n="settings_modal.bench_aim_play_again">Играть снова</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Game 2: 3D Platform Marble Viewport -->
+              <div id="game-platform-view" class="app-game-view" style="display:none">
+                <canvas id="game-platform-canvas" style="width:100%;height:100%;display:block"></canvas>
+              </div>
+            </div>
+
+            <!-- Technical Test Parameters (Collapsible Disclosure) -->
+            <details class="app-game-disclosure">
+              <summary data-i18n="ui.game_details">Параметры теста и калибровки (скрыты во время игры)</summary>
+              <div class="app-game-params">
+                <div class="app-game-param-row">
+                  <span data-i18n="ui.game_source">Поток данных:</span>
+                  <div class="pg-seg" id="game-source-seg">
+                    <button class="pg-seg__btn is-active" data-source="dsu" type="button" data-i18n="ui.game_source_dsu">DSU с фильтром</button>
+                    <button class="pg-seg__btn" data-source="raw" type="button" data-i18n="ui.game_source_raw">Сырой гироскоп</button>
+                  </div>
+                </div>
+                <div class="app-game-param-row">
+                  <label class="pg-check" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.25rem">
+                    <input type="checkbox" id="game-invert-x">
+                    <span data-i18n="ui.game_invert_x">Инвертировать X</span>
+                  </label>
+                  <label class="pg-check" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.25rem">
+                    <input type="checkbox" id="game-invert-y">
+                    <span data-i18n="ui.game_invert_y">Инвертировать Y</span>
+                  </label>
+                </div>
+                <div class="app-game-param-row" style="flex:1">
+                  <span data-i18n="ui.game_sensitivity">Чувствительность</span>: <b id="game-sens-val">1.0x</b>
+                  <input type="range" id="game-sens-slider" min="0.2" max="3.0" step="0.1" value="1.0" class="pg-range" style="width:7.5rem">
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Subtab 3: Стенд отклика -->
+        <div class="app-subtab-pane" id="pane-bench" role="tabpanel" hidden>
+          <div class="app-subtab-bench">
+            <!-- Bench Header Bar -->
+            <header class="app-bench-head">
+              <div class="app-bench-head__left">
+                <span class="pg-card__title" data-i18n="ui.bench_signal_source">Источник сигнала:</span>
+                <div class="pg-seg" id="bench-source-seg">
+                  <button class="pg-seg__btn is-active" data-source="dsu" type="button" data-i18n="ui.game_source_dsu">DSU с фильтром</button>
+                  <button class="pg-seg__btn" data-source="raw" type="button" data-i18n="ui.game_source_raw">Сырой гироскоп</button>
+                </div>
+                <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-bench-recenter" type="button" title="[Space] Center">
+                  <kbd style="font-size:0.6875rem;padding:0.125rem 0.3125rem;border-radius:var(--radius-sm);background:var(--surface-inset);border:1px solid var(--line-subtle)">Space</kbd>
+                  <span data-i18n="ui.center_btn">Центрировать</span>
+                </button>
+              </div>
+
+              <div class="app-bench-head__right">
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_status">Статус:</span>
+                  <span class="pg-badge pg-badge--ok pg-badge--dot" id="bench-stability-badge" data-i18n="ui.bench_status_still">Покой</span>
+                </div>
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_noise">Шум:</span>
+                  <b id="bench-noise-val" style="font-family:var(--font-mono);color:var(--ink)">--%</b>
+                </div>
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_rate">Частота:</span>
+                  <b id="bench-rate-val" style="font-family:var(--font-mono);color:var(--info)">-- Hz</b>
+                </div>
+              </div>
+            </header>
+
+            <!-- Central Oscilloscope Card -->
+            <section class="pg-card app-bench-osc-card">
+              <div class="app-bench-osc-head">
+                <div class="app-bench-osc-title-wrap">
+                  <span class="pg-card__title" data-i18n="ui.bench_osc_title">Осциллограф реального времени</span>
+                  <span class="pg-dim" style="font-size:0.8125rem" data-i18n="ui.bench_osc_frames">(140 кадров истории)</span>
+                </div>
+                <div class="pg-seg" id="bench-axis-seg">
+                  <button class="pg-seg__btn" data-axis="x" type="button" data-i18n="ui.bench_axis_pitch">Pitch (X)</button>
+                  <button class="pg-seg__btn" data-axis="y" type="button" data-i18n="ui.bench_axis_yaw">Yaw (Y)</button>
+                  <button class="pg-seg__btn" data-axis="z" type="button" data-i18n="ui.bench_axis_roll">Roll (Z)</button>
+                  <button class="pg-seg__btn is-active" data-axis="all" type="button" data-i18n="ui.bench_axis_all">Все 3 оси</button>
+                </div>
+              </div>
+
+              <!-- Oscilloscope Canvas Wrap -->
+              <div class="app-bench-osc-wrap" id="bench-osc-wrap">
+                <canvas id="bench-oscilloscope-canvas"></canvas>
+              </div>
+
+              <!-- Legend -->
+              <footer class="app-bench-legend">
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#ef4444"></span> <span data-i18n="ui.bench_legend_pitch">Pitch (Тангаж)</span></span>
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#10b981"></span> <span data-i18n="ui.bench_legend_yaw">Yaw (Рыскание)</span></span>
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#06b6d4"></span> <span data-i18n="ui.bench_legend_roll">Roll (Крен)</span></span>
+                <span class="app-legend-note" data-i18n="ui.bench_legend_note">Тонкая линия — сырые датчики; Сплошная — после фильтрации DSU</span>
+              </footer>
+            </section>
+
+            <!-- Tuning Sliders Controls -->
+            <section class="app-bench-controls">
+              <div class="pg-card app-bench-slider-card">
+                <div class="app-bench-slider-head">
+                  <span data-i18n="ui.bench_deadband">Порог дрожи (Deadband)</span>
+                  <b id="bench-deadband-val">0.12 °/s</b>
+                </div>
+                <input type="range" id="bench-deadband-slider" min="0" max="0.5" step="0.01" value="0.12" class="pg-range">
+                <span class="pg-card__desc" data-i18n="ui.bench_deadband_desc">Срезает микродрожание рук и сенсорный шум в покое</span>
+              </div>
+
+              <div class="pg-card app-bench-slider-card">
+                <div class="app-bench-slider-head">
+                  <span data-i18n="ui.bench_sensitivity">Чувствительность (Sensitivity)</span>
+                  <b id="bench-sens-val">1.00x</b>
+                </div>
+                <input type="range" id="bench-sens-slider" min="0.25" max="3.0" step="0.05" value="1.00" class="pg-range">
+                <span class="pg-card__desc" data-i18n="ui.bench_sens_desc">Масштабирует угловую скорость перед отправкой в DSU</span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
     <!-- Screens that are still being moved over -->
     <main class="pg-page pg-page--center app-screen" id="screen-soon" hidden>
       <section class="pg-card pg-card--hero pg-rings-corner pg-conn">
