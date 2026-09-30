@@ -122,16 +122,16 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
     }
     function setRec(p) { S.rec = p; if (dyn.recMesh) { stage.remove(dyn.recMesh); disposeTree(dyn.recMesh); dyn.recMesh = null; }
       if (p > 0) { var m = new T.Mesh(new T.RingGeometry(1.78, 1.86, 128, 1, 0, Math.max(.01, p * Math.PI * 2)), new T.MeshBasicMaterial({ color: col('accent'), side: T.DoubleSide })); m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI / 2; m.position.y = FLOOR + .004; stage.add(m); dyn.recMesh = m; } }
-    var eul = new T.Euler(), qt = new T.Quaternion();
+    var still = !!opts.still, eul = new T.Euler(), qt = new T.Quaternion();
     function update(t) {
-      var st = S.step, bob = Math.sin(t * 1.5) * (st === 'rest' ? .008 : .045), x = 0, y = 0, z = 0;
+      var st = S.step, bob = still ? 0 : Math.sin(t * 1.5) * (st === 'rest' ? .008 : .045), x = 0, y = 0, z = 0;
       if (S.mode === 'platform') { var tx = S.tilt[0], tz = S.tilt[1]; if (st !== 'live') { tx = Math.sin(t * .9) * .22; tz = Math.sin(t * 1.3 + 1) * .22; } x = tz; z = -tx; y = 0;
         if (dyn.ball) { dyn.ball.position.x += ((tx * 5) - dyn.ball.position.x) * .06; dyn.ball.position.z += ((tz * -5) - dyn.ball.position.z) * .06; dyn.ball.position.x = Math.max(-1.1, Math.min(1.1, dyn.ball.position.x)); dyn.ball.position.z = Math.max(-1.1, Math.min(1.1, dyn.ball.position.z)); } }
       else if (st === 'pitch') x = .5 * Math.sin(t * 1.6);
       else if (st === 'roll') z = .5 * Math.sin(t * 1.6);
       else if (st === 'axes') { x = .42 * Math.sin(t * 1.1); z = .42 * Math.sin(t * 1.7 + 1); y = .7 * Math.sin(t * .7); }
-      else if (st === 'rest') { y = .04 * Math.sin(t * .4); }
-      else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }
+      else if (st === 'rest') { y = still ? 0 : .04 * Math.sin(t * .4); }
+      else if (still) { x = 0; y = 0; } else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }
       if (S.q) rig.quaternion.slerp(S.q, .25); else { eul.set(x - (st === 'idle' ? 0 : .12), y, z, 'YXZ'); qt.setFromEuler(eul); rig.quaternion.slerp(qt, reduce ? 1 : .35); }
       rig.position.y = bob; if (dyn.shadow) { var k = 1 - bob * 2; dyn.shadow.scale.set(k, k, 1); dyn.shadow.material.opacity = .85 - bob; }
       dyn.rings.forEach(function (m) { var r = m.userData.r; m.material.opacity = Math.max(0, (.62 - r * .13)) * (.6 + .4 * Math.sin(t * 1.3 - r * 1.7)); });
