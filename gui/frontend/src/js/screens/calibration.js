@@ -891,15 +891,24 @@ async function renderMount() {
   const sign = (v) => (v >= 0 ? '+' : '') + v.toFixed(1) + '°';
   const text = c('mount_' + m.status, { tilt: m.tiltDeg.toFixed(1), fwd: sign(m.forwardDeg), right: sign(m.rightDeg), check: m.checkDeg.toFixed(1) });
   if (m.status === 'ok') {
-    box.innerHTML = `<div class="pg-group__list app-cal-mount"><div class="pg-row"><div class="pg-row__label">${esc(c('mount_title'))}</div>
-      <div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" id="cal-mount-on"${m.enabled ? ' checked' : ''} aria-label="mount"><span class="pg-toggle__track"></span></label></div></div>
-      <div class="pg-row"><span class="pg-row__sub">${esc(text)}</span></div></div>`;
+    box.innerHTML = `<div class="app-cal-mount app-cal-mount--compact">
+      <div class="app-cal-mount__info">
+        <div class="app-cal-mount__t">${esc(c('mount_title'))}</div>
+        <div class="pg-row__sub app-cal-mount__sub">${esc(text)}</div>
+      </div>
+      <div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" id="cal-mount-on"${m.enabled ? ' checked' : ''} aria-label="mount"><span class="pg-toggle__track"></span></label></div>
+    </div>`;
     const tg = $('cal-mount-on');
     if (tg) tg.onchange = () => call('SetWizardMountEnabled', tg.checked);
     return;
   }
   const kind = m.status === 'small' ? 'pg-notice--plain' : 'pg-notice--warn';
-  box.innerHTML = `<div class="pg-notice ${kind} app-cal-mountnote"><div class="app-grow"><b>${esc(c('mount_title'))}</b><span class="pg-notice__sub">${esc(text)}</span></div></div>`;
+  box.innerHTML = `<div class="pg-notice ${kind} app-cal-mountnote app-cal-mount--compact">
+    <div class="app-cal-mount__info">
+      <div class="app-cal-mount__t"><b>${esc(c('mount_title'))}</b></div>
+      <div class="pg-row__sub app-cal-mount__sub">${esc(text)}</div>
+    </div>
+  </div>`;
 }
 
 function startFlow(slot) {

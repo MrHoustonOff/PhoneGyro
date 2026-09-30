@@ -14,7 +14,7 @@ export function openModal({ title, text = '', body = '', check = '', actions = [
     const back = document.activeElement;
     const overlay = document.createElement('div');
     overlay.className = 'pg-overlay app-overlay';
-    overlay.innerHTML = `<div class="pg-modal pg-rings-corner" role="dialog" aria-modal="true">
+    overlay.innerHTML = `<div class="pg-modal pg-rings-corner app-modal-dialog" role="dialog" aria-modal="true">
       <div class="pg-modal__head"><div><div class="pg-modal__title">${esc(title)}</div>${text ? `<div class="pg-modal__sub">${esc(text)}</div>` : ''}</div></div>
       ${body ? `<div class="pg-modal__body app-modal-text">${body}</div>` : ''}
       ${check ? `<div class="pg-modal__body"><label class="app-check"><span class="pg-toggle"><input type="checkbox"><span class="pg-toggle__track"></span></span>${esc(check)}</label></div>` : ''}
