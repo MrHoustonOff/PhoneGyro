@@ -124,27 +124,27 @@ body { user-select: none; -webkit-user-select: none; }
 .app-gh { display: inline-flex; width: 14px; height: 14px; }
 .app-soon-set { width: 100%; margin-top: 8px; }
 
-/* ── Launch animation (design Splash, compositor-only hand-over) ────────── */
+/* ── Launch animation (design: Splash) ─────────────────────────────────────
+   The design's sequence as is: a small window on a neutral ground, rings unroll,
+   the name writes itself, then the window GROWS into the app (the card takes the
+   whole window, its ground becomes the app's ground and the ring texture fades in)
+   and the real app's islands drop in on top. Only the growth moves layout (one
+   small element for 0.85 s); the rest is transform and opacity. */
 html:not(.is-splash) #splash { display: none; }
-.app-splash { position: fixed; inset: 0; z-index: 100; --sw: 100%; --sh: 100%; width: auto; height: auto; background: var(--bg);
-  transition: opacity .55s cubic-bezier(.4,0,.2,1); }
+.app-splash { position: fixed; inset: 0; z-index: 100; width: auto; height: auto; --sw: 100%; --sh: 100%; background: var(--bg); }
 .app-splash .pg-splash__mark { object-fit: contain; }
-/* The entrance keyframes own the card's transform, so the exit uses the separate
-   scale property; the whole layer fades. */
-.app-splash .pg-splash__win { transition: scale .8s cubic-bezier(.7,0,.15,1); }
-/* Hand-over: instead of animating the card's width and height (a layout every
-   frame), it scales up and fades while the rings fly out; only transform and
-   opacity move, so the compositor does all of it. */
-.app-splash.is-out { opacity: 0; pointer-events: none; transition-delay: .25s; }
-.app-splash.is-out .pg-splash__win { scale: 1.5; }
-.app-splash.is-out .pg-splash__rings { transform: scale(2.6); opacity: 0; }
-/* The app enters under it: islands drop and rise, the screen pops. */
-html.is-enter .pg-header > * { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) both; }
-html.is-enter .pg-header > *:nth-child(2) { animation-delay: .07s; }
+/* The app is under the grown window; the layer fades to hand it over. */
+.app-splash.is-app { opacity: 0; transition: opacity .35s ease-out .1s; pointer-events: none; }
+/* Keep the ring drift still until the hand-over, so the app's tile lines up with
+   the splash's (both start at the window's corner). */
+html.is-splash:not(.is-enter) .pg-drift::before { animation-play-state: paused; }
+/* The app enters: islands drop and rise, the screen pops (design: is-app). */
+html.is-enter .pg-titlebar { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) both; }
+html.is-enter .pg-header > * { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) .05s both; }
+html.is-enter .pg-header > *:nth-child(2) { animation-delay: .12s; }
 html.is-enter .pg-footer > * { animation: pg-rise .6s cubic-bezier(.2,.8,.2,1) .2s both; }
 html.is-enter .pg-footer > *:nth-child(2) { animation-delay: .27s; }
 html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,.8,.2,1) .12s both; }
-html.is-enter .pg-titlebar { animation: app-fade .5s ease-out both; }
 
 /* Copy button after a copy (ui/copy.js). */
 .pg-btn.is-copied { background: var(--accent); border-color: transparent; color: var(--on-accent); }
