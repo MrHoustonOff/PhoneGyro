@@ -277,16 +277,7 @@
       <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="pg-modal__body">
-      <!-- Blocking disconnect overlay: covers the entire modal body when offline during capture -->
-      <div class="app-cal-disconnect" id="cal-disconnect" hidden>
-        <div class="app-cal-disconnect__card">
-          <div class="app-cal-disconnect__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/><line x1="12" y1="9" x2="12" y2="15" stroke-width="2" stroke-dasharray="2 2"/></svg></div>
-          <div class="app-cal-disconnect__title" data-i18n="calibration.disconnect_alert_title">Телефон отключен</div>
-          <div class="app-cal-disconnect__desc" data-i18n="calibration.disconnect_alert_desc"></div>
-          <span class="pg-badge pg-badge--danger pg-badge--dot" data-i18n="calibration.disconnect_waiting">Ожидание переподключения…</span>
-          <button class="pg-btn" type="button" data-act="close" data-i18n="calibration.disconnect_btn_cancel">Отменить калибровку</button>
-        </div>
-      </div>
+      <div class="pg-notice pg-notice--danger app-cal-off" id="cal-offline" hidden><span><b data-i18n="calibration.disconnect_alert_title">Телефон отключен</b></span></div>
       <div id="cal-body"></div>
     </div>
     <div class="pg-modal__foot" id="cal-foot"></div>

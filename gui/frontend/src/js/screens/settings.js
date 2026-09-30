@@ -12,7 +12,7 @@ import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
-import { applyAccent } from '../ui/accent.js';
+import { ACCENTS, applyAccent } from '../ui/accent.js';
 import { setDebugPanel } from '../debug/toggle.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
@@ -51,7 +51,7 @@ const COLUMNS = [
       { type: 'datadir', label: 'settings_modal.data_dir' },
     ] },
     { title: 'settings_modal.group_appearance', rows: [
-      { key: 'accent', type: 'swatches', label: 'ui.accent', tip: 'ui.accent_tip', after: applyAccent, options: ['gold', 'green', 'blue', 'pink'] },
+      { key: 'accent', type: 'swatches', label: 'ui.accent', tip: 'ui.accent_tip', options: ACCENTS, reset: (v) => applyAccent(v) },
       { key: 'fontScale', type: 'slider', min: 0.5, max: 3, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %',
         label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
     ] },
@@ -60,6 +60,7 @@ const COLUMNS = [
       { key: 'debugLog', type: 'toggle', label: 'ui.debug_log', tip: 'ui.debug_log_tip' },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
+    // The global recenter hotkey still exists in Go: keep the way to turn it off.
     { title: 'settings_modal.group_hotkeys', rows: [
       { key: 'hotkeyRecenterEnabled', type: 'toggle', label: 'settings_modal.hotkey_recenter', kbd: 'hotkeyRecenterKey' },
     ] },
@@ -108,8 +109,9 @@ function control(r, i) {
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
     case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
-    case 'swatches': return `<div class="app-swatches" role="radiogroup">${r.options.map((o) =>
-      `<button type="button" class="app-swatch${v === o ? ' is-active' : ''}" data-swatch="${o}" role="radio" aria-checked="${v === o}" aria-label="${esc(t('ui.accent_' + o))}" data-tip="${esc(t('ui.accent_' + o))}"></button>`).join('')}</div>`;
+    // Design Accent picker: vendor/accent.js handles the click (wave + rings).
+    case 'swatches': return `<div class="pg-swatches" role="radiogroup">${r.options.map((o) =>
+      `<button type="button" class="pg-swatch" data-accent-pick="${o}" style="--sw:var(--sw-${o})" role="radio" aria-checked="${v === o}" aria-label="${esc(t('ui.accent_' + o))}" data-tip="${esc(t('ui.accent_' + o))}"></button>`).join('')}</div>`;
     case 'mixer': return `<button class="pg-btn pg-btn--sm app-mixbtn" type="button" data-mixer aria-expanded="${mixOpen}">${esc(t('settings_modal.sound_details_btn'))}${CHEV}</button>`;
     case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" data-tip="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
     default: return '';
@@ -166,6 +168,7 @@ function resetRow(rowEl) {
   if (!r || !r.key) return;
   cur[r.key] = def[r.key];
   if (r.after) r.after(cur[r.key]);
+  if (r.reset) r.reset(cur[r.key]);
   render();
   save(true);
 }
@@ -181,6 +184,7 @@ function resetAll() {
           if (!r.key || r.key === 'dsuMac' || !(r.key in def)) continue;
           cur[r.key] = def[r.key];
           if (r.after) r.after(cur[r.key]);
+          if (r.reset) r.reset(cur[r.key]);
         }
         cur.soundVolumes = Object.fromEntries(SOUNDS.map(([k]) => [k, 1]));
         render();
@@ -292,16 +296,13 @@ export function startSettings() {
   screen.addEventListener('input', onInput);
   screen.addEventListener('change', onInput);
   screen.addEventListener('click', (e) => {
-    const sw = e.target.closest('[data-swatch]');
+    // The colour itself changes in vendor/accent.js (its own click listener);
+    // here it is only stored in Go.
+    const sw = e.target.closest('[data-accent-pick]');
     if (sw) {
       const rowEl = sw.closest('.pg-row');
       const r = rows()[+rowEl.dataset.i];
-      cur[r.key] = sw.dataset.swatch;
-      rowEl.querySelectorAll('[data-swatch]').forEach((b) => {
-        b.classList.toggle('is-active', b === sw);
-        b.setAttribute('aria-checked', String(b === sw));
-      });
-      r.after(cur[r.key]);
+      cur[r.key] = sw.dataset.accentPick;
       mark(rowEl, r);
       save();
       return;
