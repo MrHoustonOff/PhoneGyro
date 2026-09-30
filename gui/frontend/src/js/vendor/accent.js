@@ -31,7 +31,7 @@ export const accent = (function () {
       opts = opts || {}; if (LIST.indexOf(n) < 0) return get();
       if (n === get() && !opts.force) return n;
       var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (opts.animate === false || reduce || busy) { apply(n); return n; }
+      if (true) { apply(n); return n; }
       var o = origin(opts.from), R = Math.hypot(Math.max(o.x, innerWidth - o.x), Math.max(o.y, innerHeight - o.y)) * 1.02, sw = opts.from && opts.from.classList ? opts.from : null;
       if (sw) { sw.classList.remove('is-pop'); void sw.offsetWidth; sw.classList.add('is-pop'); }
       function colour() { return getComputedStyle(root).getPropertyValue('--accent').trim() || '#888'; }

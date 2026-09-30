@@ -15,7 +15,6 @@ import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
 import { ACCENTS, applyAccent } from '../ui/accent.js';
 import { setDebugPanel } from '../debug/toggle.js';
-import { chartsGloballyOff, setChartsGloballyOff } from '../core/charts-flag.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -58,7 +57,6 @@ const COLUMNS = [
         label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
     ] },
     { title: 'ui.group_performance', rows: [
-      { type: 'chartsoff', label: 'ui.charts_off', tip: 'ui.charts_off_tip' },
       { key: 'debugPanel', type: 'toggle', label: 'ui.debug_panel', tip: 'ui.debug_panel_tip', after: setDebugPanel },
       { key: 'debugLog', type: 'toggle', label: 'ui.debug_log', tip: 'ui.debug_log_tip' },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
@@ -107,7 +105,6 @@ function control(r, i) {
     }
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
-    case 'chartsoff': return `<label class="pg-toggle"><input type="checkbox" id="set-charts-off"${chartsGloballyOff() ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
     case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
     // Design Accent picker: vendor/accent.js handles the click (wave + rings).
     case 'swatches': return `<div class="pg-swatches" role="radiogroup">${r.options.map((o) =>
@@ -225,7 +222,6 @@ function applyMotionFilterParams() {
 }
 
 function onInput(e) {
-  if (e.target.id === 'set-charts-off') { setChartsGloballyOff(e.target.checked); return; }
   const rowEl = e.target.closest('.pg-row');
   if (!rowEl) return;
   if (rowEl.dataset.mix) {
@@ -347,6 +343,12 @@ export function startSettings() {
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
     else if (e.target.closest('#btn-open-games')) go('games');
   });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#bench-fold')) return;
+    try { localStorage.setItem('pg-bench-open', benchOpen() ? '0' : '1'); } catch (_) { /* session only */ }
+    applyBenchFold();
+    syncBenchActive();
+  });
   onScreen((s) => {
     if (s === 'settings') load();
     syncBenchActive();
@@ -362,6 +364,16 @@ export function startSettings() {
   // Ctrl +/− while Settings is open: keep the slider's value in step.
   onZoom((v) => { if (cur && !screen.hidden && Math.abs((cur.fontScale || 1) - v) > 1e-6) { cur.fontScale = v; render(); } });
   onLang(() => { if (!screen.hidden) render(); });
+}
+
+// The filter-response card is folded by default; opening it is remembered.
+const benchOpen = () => { try { return localStorage.getItem('pg-bench-open') === '1'; } catch (_) { return false; } };
+function applyBenchFold() {
+  const card = $('set-bench-card'), btn = $('bench-fold');
+  if (!card || !btn) return;
+  const open = benchOpen();
+  card.classList.toggle('is-collapsed', !open);
+  btn.setAttribute('aria-expanded', String(open));
 }
 
 let benchLoaded = false;
@@ -391,7 +403,8 @@ export async function syncBenchActive() {
   const state = getState();
   const isConnected = state?.status === 'online';
 
-  if (isSettingsScreen) {
+  applyBenchFold();
+  if (isSettingsScreen && benchOpen()) {
     await ensureBenchLoaded();
     if (benchController) {
       benchController.setConnected(isConnected);

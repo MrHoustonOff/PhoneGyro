@@ -1953,6 +1953,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   top: auto !important; left: 50% !important; right: auto !important;
   bottom: calc(0.875rem + 2.625rem) !important; transform: translateX(-50%);
   white-space: nowrap; z-index: 3;
+}
 
 /* ───────── Mini-games entry button (Settings Screen) ───────── */
 .app-bench-games-btn {
@@ -2368,3 +2369,11 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   background: var(--surface-inset);
   flex-shrink: 0;
 }
+
+/* Filter response: folded by default, the heading is the fold button. */
+.app-bench-fold { display: flex; align-items: center; gap: 0.5rem; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.app-bench-fold .chev { transition: transform .15s; color: var(--ink-2); }
+.app-bench-fold[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.app-bench-card.is-collapsed > :not(.app-bench-card__head) { display: none; }
+.app-bench-card.is-collapsed .pg-seg { display: none; }
+.app-bench-card.is-collapsed { padding-bottom: 0.875rem; }
