@@ -32,10 +32,11 @@ func TestCloseWindow(t *testing.T) {
 		t.Fatal("CloseWindow with quit did not mark quitting")
 	}
 
+	// "ask" leaves the window alone: the UI shows its dialog.
 	a3 := &App{}
 	a3.SetCloseAction("ask")
 	a3.CloseWindow()
-	if !a3.quitting.Load() {
-		t.Fatal("CloseWindow with ask did not fall back to quit")
+	if a3.quitting.Load() || a3.uiHidden.Load() {
+		t.Fatal("CloseWindow with ask must wait for the dialog")
 	}
 }

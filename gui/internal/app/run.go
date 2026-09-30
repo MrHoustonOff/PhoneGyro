@@ -55,22 +55,7 @@ func Run(frontend fs.FS) {
 		},
 		OnShutdown: app.shutdown,
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {
-			if app.quitting.Load() {
-				return false
-			}
-			action := app.GetCloseAction()
-			switch action {
-			case "minimize":
-				app.hideWindow()
-				return true
-			case "quit":
-				return false
-			default: // "ask"
-				// The close dialog belongs to the UI, which is being rewritten
-				// (LEGACY/frontend holds the old one). Until the new UI has it,
-				// "ask" closes like "quit" so the window can always be closed.
-				return false
-			}
+			return app.requestClose()
 		},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "phonegyro-desktop-lock-uuid",

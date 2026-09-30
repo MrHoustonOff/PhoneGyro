@@ -107,14 +107,33 @@ func (a *App) hideWindow() {
 	}
 }
 
-// CloseWindow is the title bar's close button: the same "action on window close"
-// as the system close (OnBeforeClose in run.go).
-func (a *App) CloseWindow() {
-	if a.GetCloseAction() == "minimize" {
-		a.hideWindow()
-		return
+// requestClose applies the "action on window close" and reports whether the
+// window stays: hide to the tray, quit, or ("ask") let the UI show its dialog,
+// which answers with ConfirmCloseChoice. Used by the system close
+// (OnBeforeClose in run.go) and the title bar's close button.
+func (a *App) requestClose() (keep bool) {
+	if a.quitting.Load() {
+		return false
 	}
-	a.QuitApp()
+	switch a.GetCloseAction() {
+	case "minimize":
+		a.hideWindow()
+		return true
+	case "quit":
+		return false
+	default: // "ask"
+		if a.ctx != nil {
+			wailsRuntime.EventsEmit(a.ctx, "app:confirm-close")
+		}
+		return true
+	}
+}
+
+// CloseWindow is the title bar's close button.
+func (a *App) CloseWindow() {
+	if !a.requestClose() {
+		a.QuitApp()
+	}
 }
 
 // QuitApp cleanly terminates the entire application.
