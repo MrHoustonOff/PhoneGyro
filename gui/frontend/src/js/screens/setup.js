@@ -10,6 +10,14 @@ const STEPS = 6;
 let mode = 'pick'; // 'pick' | 'android' | 'ios'
 let step = 1;
 
+// Cross-fade the part that changed; back moves the other way.
+function swap(el, back = false) {
+  el.classList.remove('is-swap', 'is-back');
+  void el.offsetWidth;
+  el.classList.add('is-swap');
+  if (back) el.classList.add('is-back');
+}
+
 function render() {
   show($('wiz-pick'), mode === 'pick');
   show($('wiz-android'), mode === 'android');
@@ -39,10 +47,11 @@ function back() {
   if (mode === 'ios' && step > 1) step--;
   else mode = 'pick';
   render();
+  swap($(mode === 'pick' ? 'wiz-pick' : 'wiz-ios'), true);
 }
 
 function next() {
-  if (mode === 'ios' && step < STEPS) { step++; render(); return; }
+  if (mode === 'ios' && step < STEPS) { step++; render(); swap($('wiz-ios')); $('wiz-ios').scrollTop = 0; return; }
   go('connect');
 }
 
@@ -53,6 +62,7 @@ export function startSetup() {
     mode = b.dataset.platform;
     step = 1;
     render();
+    swap($(mode === 'ios' ? 'wiz-ios' : 'wiz-android'));
   });
   $('wiz-back').onclick = back;
   $('wiz-next').onclick = next;

@@ -9,6 +9,8 @@ import { startHeader } from './shell/header.js';
 import { startFooter } from './shell/footer.js';
 import { startRouter } from './shell/router.js';
 import { startCopy } from './ui/copy.js';
+import { startTooltips } from './ui/tooltip.js';
+import { startSelects } from './ui/select.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
@@ -21,6 +23,8 @@ const splash = startSplash();
 startTitlebar();
 startRouter();
 startCopy();
+startTooltips();
+startSelects();
 startCloseDialog();
 
 // Links in locale text open in the system browser, never inside the window.

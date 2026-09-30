@@ -14,6 +14,7 @@ export function go(screen, tabName = null) {
   for (const s of SCREENS) show($('screen-' + s), s === screen);
   tab = tabName;
   document.querySelectorAll('#nav .pg-tab').forEach((b) => toggleClass(b, 'is-active', b.dataset.tab === tab));
+  toggleClass($('home'), 'is-home', screen === 'connect');
   if (screen === 'soon') {
     setText($('soon-title'), t(TAB_TITLES[tab]));
   }
@@ -31,5 +32,7 @@ export function startRouter() {
     else if (b.dataset.tab === 'settings') go('settings', 'settings');
     else go('soon', b.dataset.tab);
   });
+  $('home').onclick = () => go('connect');
+  toggleClass($('home'), 'is-home', true);
   onLang(() => { if (tab) setText($('soon-title'), t(TAB_TITLES[tab])); });
 }

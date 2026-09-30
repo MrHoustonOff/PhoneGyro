@@ -176,6 +176,11 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "home": "Home",
+    "reset_one": "Back to the default",
+    "reset_all_title": "Reset the settings?",
+    "reset_all_desc": "Everything on this screen goes back to its default. Theme, language and the DSU MAC address stay.",
+    "usb_repo": "Firmware and protocol: PhoneGyro_hardware_protocol",
     "group_performance": "Performance",
     "level_level": "LEVEL",
     "level_down": "UPSIDE DOWN",

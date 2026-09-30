@@ -13,13 +13,18 @@ const LEVEL_DEG = 1;        // design: under 1° the bubble turns accent
 
 // Level dial (design: Dial): roll moves the bubble sideways, pitch up and down.
 // Past 90 degrees the device is upside down: the label says so.
-function renderLevel({ pitch = 0, roll = 0 }) {
+function renderLevel({ pitch = 0, roll = 0, yaw = 0 }) {
   const clamp = (v) => Math.max(-MAX_REM, Math.min(MAX_REM, v * REM_PER_DEG));
   const dial = $('dial');
   setVar(dial, '--bx', clamp(roll).toFixed(3) + 'rem');
   setVar(dial, '--by', clamp(-pitch).toFixed(3) + 'rem');
   const level = Math.abs(roll) < LEVEL_DEG && Math.abs(pitch) < LEVEL_DEG;
   toggleClass($('dial-bubble'), 'is-level', level);
+  // The green arrow shows heading: turning the device clockwise (seen from
+  // above; Go's yaw is + that way) turns it clockwise too.
+  const yawEl = $('dial-yaw');
+  const rot = `rotate(${(yaw || 0).toFixed(1)} 132 132)`;
+  if (yawEl.getAttribute('transform') !== rot) yawEl.setAttribute('transform', rot);
   const flipped = Math.abs(roll) > 90 || Math.abs(pitch) > 90;
   const big = Math.abs(roll) >= Math.abs(pitch) ? ['ROLL', roll] : ['PITCH', pitch];
   setText($('dial-label'), level ? t('ui.level_level') : flipped ? t('ui.level_down')

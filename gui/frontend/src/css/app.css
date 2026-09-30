@@ -197,3 +197,83 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 .app-steps { margin: 0; padding: 0.625rem 0.75rem 0.625rem 1.875rem; border-radius: var(--radius-md); background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); }
 .app-overlay .pg-modal__head { padding-right: var(--space-6); }
 .app-modal-link { margin: 0.75rem 0 0 !important; }
+
+/* ── Review fixes (2026-09-30) ──────────────────────────────────────────── */
+/* The body's scrollbar kept Windows' resize cursor from showing at the right
+   edge (resizing still worked): keep it off the window's resize border. */
+.pg-shell__body { right: 0.5rem; }
+/* Header and footer islands float over scrolling content: a deeper shadow
+   tells them apart from what passes underneath. */
+:root, [data-theme="light"] { --shadow-float: 0 0.125rem 0.375rem rgba(0,0,0,0.06), 0 0.625rem 1.75rem rgba(0,0,0,0.14); }
+[data-theme="dark"] { --shadow-float: inset 0 1px 0 rgba(255,255,255,0.05), 0 0.625rem 1.875rem rgba(0,0,0,0.75); }
+.pg-header .pg-island, .pg-footer .pg-island, .pg-titlebar__ctl { box-shadow: var(--shadow-float); }
+/* Info marks never shrink with a long label. */
+.pg-info { flex: none; }
+/* Slider track without a border: at fractional Windows scaling the 1px border
+   drew a second line over the fill. */
+.pg-slider::-webkit-slider-runnable-track { border: 0; height: 0.375rem; }
+.pg-slider::-webkit-slider-thumb { margin-top: -0.375rem; }
+
+/* Tooltips (ui/tooltip.js): a small raised sheet, placed above the target. */
+.app-tip { position: fixed; left: 0; top: 0; z-index: 90; max-width: 20rem; padding: 0.4375rem 0.625rem;
+  border-radius: var(--radius-md); background: var(--surface-raised) var(--tex-grain); border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop); color: var(--ink); font: 500 0.78125rem/1.35 var(--font-sans); white-space: pre-line;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease-out; }
+.app-tip.is-on { opacity: 1; }
+
+/* Dropdowns (ui/select.js): the design's pg-select as a button, a styled list. */
+.app-select { display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 7.5rem;
+  padding: 0 0.625rem 0 0.75rem; background-image: none; font: 500 0.875rem/1 var(--font-sans); white-space: nowrap; }
+.app-select span { overflow: hidden; text-overflow: ellipsis; }
+.app-select svg { width: 1rem; height: 1rem; flex: none; stroke: var(--ink-2); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.app-select[aria-expanded="true"] { border-color: var(--accent); }
+.app-select[aria-expanded="true"] svg { transform: rotate(180deg); }
+.app-select__menu { position: fixed; top: 0; left: 0; right: auto; z-index: 80; max-height: 20rem; animation: app-pop .12s ease-out; }
+.app-select__menu .app-menu__item { font-size: 0.875rem; white-space: nowrap; }
+
+/* Changed-from-default mark (design: pg-row.is-modified) that resets the row:
+   the dot itself is the button and shows ↺ on hover. */
+.pg-row.is-modified::before { display: none; }
+.app-reset { position: absolute; left: 0.25rem; top: 50%; width: 1.125rem; height: 1.125rem; margin-top: -0.5625rem;
+  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; color: var(--accent-text); }
+.app-reset::before { content: ""; width: 0.3125rem; height: 0.3125rem; border-radius: 50%; background: var(--accent); transition: opacity .12s; }
+.app-reset svg { position: absolute; width: 0.75rem; height: 0.75rem; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .12s; }
+.app-reset:hover { background: var(--accent-soft); }
+.app-reset:hover::before { opacity: 0; }
+.app-reset:hover svg { opacity: 1; }
+.app-set-foot { display: flex; justify-content: flex-end; }
+.pg-row.is-modified { padding-left: 1.375rem; }
+
+/* Brand pill = Home. Outlined in accent while the home screen shows. */
+.app-home { cursor: pointer; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; line-height: 1;
+  transition: border-color .15s, box-shadow .15s, background .15s; }
+.app-home:hover { background: var(--surface-hover) var(--tex-grain); }
+.app-home.is-home { border-color: var(--accent-line); box-shadow: var(--shadow-float), 0 0 0 1px var(--accent-line); }
+.app-brandmark { width: 1.75rem; height: 1.75rem; object-fit: contain; }
+
+/* Launch animation in the logo's gold: the card's rings, the ring "o", the
+   progress bar. The status line is bolder so it reads. */
+:root, [data-theme="light"] { --brand: #c6903b; --brand-text: #8a5e18; }
+[data-theme="dark"] { --brand: #d09a44; --brand-text: #e0b060; }
+.app-splash .pg-splash__rings circle { stroke: var(--brand); }
+.app-splash .pg-splash__word .pg-wordmark__o { border-color: var(--brand); }
+.app-splash .pg-splash__word .pg-wordmark__o::after { background: var(--brand); }
+.app-splash .pg-splash__bar i { background: var(--brand); }
+.app-splash .pg-splash__status span { font: 600 0.8125rem/1rem var(--font-mono); letter-spacing: .04em; color: var(--brand-text); }
+
+/* Initial setup: the step scrolls inside the card, the footer is slimmer, and
+   steps cross-fade (js/screens/setup.js restarts .is-swap). */
+#screen-setup .app-wiz { overflow: hidden; }
+.app-wiz-pick, .app-wiz-android, .app-wiz-ios { min-height: 0; overflow-y: auto; }
+.app-wiz-ios .pg-wiz__grid { flex: none; }
+.app-wiz-ios .pg-wiz__main { overflow: visible; }
+.app-wiz-ios .pg-wiz__shot { height: auto; }
+.app-wiz-ios .pg-wiz__shot img { max-height: 28rem; }
+#screen-setup .pg-wiz__foot { padding-top: 0.625rem; }
+.app-wiz-back { min-height: 2.5rem; }
+.app-wiz-next { min-height: 2.75rem; }
+.is-swap { animation: app-swap .32s cubic-bezier(.2,.8,.2,1); }
+@keyframes app-swap { from { opacity: 0; transform: translateX(0.75rem); } }
+.is-swap.is-back { animation-name: app-swap-back; }
+@keyframes app-swap-back { from { opacity: 0; transform: translateX(-0.75rem); } }
+@media (prefers-reduced-motion: reduce) { .is-swap { animation: none; } }

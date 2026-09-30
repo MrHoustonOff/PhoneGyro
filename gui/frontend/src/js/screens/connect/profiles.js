@@ -50,7 +50,7 @@ function render(st) {
   setText($('prof-name'), has ? active.name : t('ui.no_profile'));
   const cal = has ? calDate(active) : null;
   setText($('prof-sub'), has ? devText(active) + (cal ? ' · ' + cal.short : '') : t('ui.no_profiles'));
-  $('prof-current').title = cal ? cal.full : '';
+  $('prof-current').dataset.tip = cal ? cal.full : '';
   show($('prof-outdated'), has && active.outdated);
   show($('prof-warn'), has && active.outdated);
   show($('prof-slotbadge'), has);
@@ -77,10 +77,10 @@ function render(st) {
   const items = profiles.map((pr, i) => {
     if (!pr || !pr.name) return '';
     const c = calDate(pr);
-    return `<div class="app-menu__item${i === slot ? ' is-active' : ''}" role="option" data-slot="${i}"${c ? ` title="${esc(c.full)}"` : ''}>
+    return `<div class="app-menu__item${i === slot ? ' is-active' : ''}" role="option" data-slot="${i}"${c ? ` data-tip="${esc(c.full)}"` : ''}>
       <span class="app-grow"><span class="pg-profile__t">${esc(pr.name)}</span><span class="pg-profile__s">${esc(slotName(i))} · ${esc(devText(pr))}${c ? ' · ' + esc(c.short) : ''}</span></span>
       ${pr.outdated ? `<span class="pg-badge pg-badge--danger">${esc(t('calibration.outdated_badge'))}</span>` : ''}
-      <button class="pg-btn-icon" type="button" data-del="${i}" title="${esc(t('calibration.delete_profile_tip'))}">${X}</button></div>`;
+      <button class="pg-btn-icon" type="button" data-del="${i}" data-tip="${esc(t('calibration.delete_profile_tip'))}">${X}</button></div>`;
   }).join('');
   setHTML($('prof-menu'), items || `<div class="app-menu__empty">${esc(t('ui.no_profiles'))}</div>`);
 }

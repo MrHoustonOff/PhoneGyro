@@ -1,5 +1,5 @@
 // Strings come from pkg/i18n (the same files the phone page and the backend use).
-// Markup marks what it shows: data-i18n (text), data-i18n-title (tooltip),
+// Markup marks what it shows: data-i18n (text), data-i18n-title (tooltip, ui/tooltip.js),
 // data-md (text with `code` and **bold**).
 
 import { call, on } from './bridge.js';
@@ -23,7 +23,7 @@ export const onLang = (fn) => subs.push(fn);
 
 export function apply(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => { const v = t(el.dataset.i18n); if (v) setText(el, v); });
-  root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.dataset.tip = t(el.dataset.i18nTitle); }); // ui/tooltip.js
   root.querySelectorAll('[data-md]').forEach((el) => setHTML(el, md(t(el.dataset.md))));
 }
 

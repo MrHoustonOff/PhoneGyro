@@ -176,6 +176,11 @@
     "profile_deleted": "Профиль «{name}» удалён"
   },
   "ui": {
+    "home": "На главную",
+    "reset_one": "Вернуть значение по умолчанию",
+    "reset_all_title": "Сбросить настройки?",
+    "reset_all_desc": "Все параметры на этом экране вернутся к значениям по умолчанию. Тема, язык и MAC-адрес DSU останутся.",
+    "usb_repo": "Прошивка и протокол: PhoneGyro_hardware_protocol",
     "group_performance": "Производительность",
     "level_level": "РОВНО",
     "level_down": "ПЕРЕВЁРНУТ",

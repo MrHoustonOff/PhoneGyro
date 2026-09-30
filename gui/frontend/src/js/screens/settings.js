@@ -10,6 +10,7 @@ import { t, onLang } from '../core/i18n.js';
 import { onScreen } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
+import { enhanceSelects } from '../ui/select.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -55,9 +56,10 @@ const COLUMNS = [
 ];
 
 let cur = null;      // AppSettings as Go last returned them
+let def = null;      // a first launch's settings: the "changed" marks and resets
 let saveTimer = 0;
 
-const INFO = (tip) => (t(tip) ? `<button class="pg-info" type="button" aria-label="Info" title="${esc(t(tip))}">i</button>` : '');
+const INFO = (tip) => (t(tip) ? `<button class="pg-info" type="button" aria-label="Info" data-tip="${esc(t(tip))}">i</button>` : '');
 const REGEN = '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
 const FOLDER = '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
 
@@ -66,7 +68,7 @@ function control(r, i) {
   const v = r.key ? cur[r.key] : null;
   switch (r.type) {
     case 'port': return `<input class="pg-input pg-input--num" id="${id}" type="number" min="1024" max="65535" value="${esc(v)}">`;
-    case 'mac': return `<input class="pg-input pg-input--mono app-mac" id="${id}" value="${esc(v)}" readonly><button class="pg-btn-icon" type="button" data-regen title="${esc(t('settings_modal.dsu_mac_regen'))}">${REGEN}</button>`;
+    case 'mac': return `<input class="pg-input pg-input--mono app-mac" id="${id}" value="${esc(v)}" readonly><button class="pg-btn-icon" type="button" data-regen data-tip="${esc(t('settings_modal.dsu_mac_regen'))}">${REGEN}</button>`;
     case 'select': return `<select class="pg-select" id="${id}">${r.options.map(([val, key]) =>
       `<option value="${val}"${String(r.num ? Number(v).toFixed(2) : r.bool ? v !== false : v) === val ? ' selected' : ''}>${esc(t(key))}</option>`).join('')}</select>`;
     case 'slider': {
@@ -76,7 +78,7 @@ function control(r, i) {
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
     case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
-    case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" title="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
+    case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" data-tip="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
     default: return '';
   }
 }
@@ -90,14 +92,62 @@ function render() {
       ${g.note ? `<div class="pg-notice"><span>${esc(t(g.note))}</span></div>` : ''}
       <div class="pg-group__list">${g.rows.map((r) => {
         r._i = i++;
-        return `<div class="pg-row" data-i="${r._i}"><div class="pg-row__label">${esc(t(r.label))}${INFO(r.tip || r.label + '_tip')}</div><div class="pg-row__control">${control(r, r._i)}</div></div>`;
-      }).join('')}</div></div>`).join('');
+        const mod = modified(r);
+        return `<div class="pg-row${mod ? ' is-modified' : ''}" data-i="${r._i}">${mod ? resetBtn() : ''}<div class="pg-row__label">${esc(t(r.label))}${INFO(r.tip || r.label + '_tip')}</div><div class="pg-row__control">${control(r, r._i)}</div></div>`;
+      }).join('')}</div></div>`).join('')
+      + (c === COLUMNS.length - 1 ? `<div class="app-set-foot"><button class="pg-btn" type="button" id="set-reset-all">${esc(t('settings_modal.btn_reset'))}</button></div>` : '');
   });
+  enhanceSelects($('screen-settings'));
   refreshFirewall();
-  call('GetDataDir').then((d) => { const el = $('set-datadir'); if (el && d) { el.value = d; el.title = d; } });
+  call('GetDataDir').then((d) => { const el = $('set-datadir'); if (el && d) { el.value = d; el.dataset.tip = d; } });
 }
 
 const rows = () => COLUMNS.flat().flatMap((g) => g.rows);
+
+// Changed from the default? The DSU MAC is random per install, never "changed".
+function modified(r) {
+  if (!r.key || !def || r.key === 'dsuMac' || !(r.key in def)) return false;
+  const a = cur[r.key], b = def[r.key];
+  return typeof a === 'number' && typeof b === 'number' ? Math.abs(a - b) > 1e-6 : a !== b;
+}
+const resetBtn = () => `<button class="app-reset" type="button" data-reset aria-label="reset" data-tip="${esc(t('ui.reset_one'))}"><svg viewBox="0 0 24 24"><path d="M4 11a8 8 0 1 1 2.3 5.7"/><path d="M4 4v7h7"/></svg></button>`;
+
+// Re-marks one row after its value changed (no re-render: focus and drags survive).
+function mark(rowEl, r) {
+  const mod = modified(r);
+  rowEl.classList.toggle('is-modified', mod);
+  const btn = rowEl.querySelector(':scope > .app-reset');
+  if (mod && !btn) rowEl.insertAdjacentHTML('afterbegin', resetBtn());
+  if (!mod && btn) btn.remove();
+}
+
+function resetRow(rowEl) {
+  const r = rows()[+rowEl.dataset.i];
+  if (!r || !r.key) return;
+  cur[r.key] = def[r.key];
+  if (r.after) r.after(cur[r.key]);
+  render();
+  save(true);
+}
+
+function resetAll() {
+  openModal({
+    title: t('ui.reset_all_title'),
+    text: t('ui.reset_all_desc'),
+    actions: [
+      { label: t('settings_modal.btn_cancel') },
+      { label: t('settings_modal.btn_reset'), kind: 'danger', onClick: () => {
+        for (const r of rows()) {
+          if (!r.key || r.key === 'dsuMac' || !(r.key in def)) continue;
+          cur[r.key] = def[r.key];
+          if (r.after) r.after(cur[r.key]);
+        }
+        render();
+        save(true);
+      } },
+    ],
+  });
+}
 
 function save(now = false) {
   clearTimeout(saveTimer);
@@ -122,7 +172,7 @@ function onInput(e) {
     el.style.setProperty('--fill', ((v - r.min) / (r.max - r.min)) * 100 + '%');
     setText($(el.id + '-v'), r.fmt(v));
     cur[r.key] = v;
-    if (e.type === 'change') save();
+    if (e.type === 'change') { mark(rowEl, r); save(); }
     return;
   }
   if (e.type !== 'change') return;
@@ -136,6 +186,7 @@ function onInput(e) {
     cur[r.key] = v;
   }
   if (r.after) r.after(cur[r.key]);
+  mark(rowEl, r);
   save(r.type === 'port');
 }
 
@@ -148,7 +199,7 @@ async function refreshFirewall() {
   const bad = st.state === 'blocked' || st.state === 'pending';
   badge.className = 'pg-badge pg-badge--dot ' + (good ? 'pg-badge--ok' : bad ? 'pg-badge--danger' : '');
   setText(badge, t('firewall.state_' + st.state) || st.state);
-  badge.title = st.network ? t('firewall.network_' + st.network) : '';
+  badge.dataset.tip = st.network ? t('firewall.network_' + st.network) : '';
   show($('fw-allow'), bad || st.state === 'unknown');
 }
 
@@ -178,7 +229,7 @@ async function regenMac() {
 }
 
 async function load() {
-  cur = await call('GetAppSettings');
+  [cur, def] = await Promise.all([call('GetAppSettings'), call('GetDefaultAppSettings')]);
   render();
 }
 
@@ -187,7 +238,9 @@ export function startSettings() {
   screen.addEventListener('input', onInput);
   screen.addEventListener('change', onInput);
   screen.addEventListener('click', (e) => {
-    if (e.target.closest('[data-regen]')) regenMac();
+    if (e.target.closest('[data-reset]')) resetRow(e.target.closest('.pg-row'));
+    else if (e.target.closest('#set-reset-all')) resetAll();
+    else if (e.target.closest('[data-regen]')) regenMac();
     else if (e.target.closest('#fw-allow')) allowFirewall(e.target.closest('#fw-allow'));
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
   });

@@ -66,7 +66,7 @@
         <div class="body app-sub" data-i18n="usb_mode.desc"></div>
         <span class="pg-badge pg-badge--info pg-badge--dot app-scan" data-i18n="usb_mode.status_scanning">Поиск USB IMU-устройства...</span>
         <div class="app-dsu-slot" data-dsu-slot="usbwait"></div>
-        <button class="pg-btn" type="button" id="btn-usb-repo"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg><span data-i18n="usb_mode.repo_btn">Репозиторий проекта</span></button>
+        <button class="pg-btn" type="button" id="btn-usb-repo"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg><span data-i18n="ui.usb_repo">PhoneGyro_hardware_protocol</span></button>
       </section>
 
       <!-- A device is streaming (phone or USB): design ScreenUsb, shared by both -->
@@ -86,7 +86,7 @@
             <div class="pg-usbstage">
               <div class="app-dialwrap">
                 <div class="pg-dial" id="dial">
-                  <svg viewBox="0 0 264 264"><circle class="guide" cx="132" cy="132" r="92"/><circle class="guide guide--dash" cx="132" cy="132" r="62"/><circle class="guide" cx="132" cy="132" r="34"/><line class="cross" x1="132" y1="40" x2="132" y2="224"/><line class="cross" x1="40" y1="132" x2="224" y2="132"/><line class="tick" x1="187.0" y1="36.7" x2="193.0" y2="26.3"/><line class="tick" x1="227.3" y1="77.0" x2="237.7" y2="71.0"/><line class="tick tick--major" x1="235.0" y1="132.0" x2="254.0" y2="132.0"/><line class="tick" x1="227.3" y1="187.0" x2="237.7" y2="193.0"/><line class="tick" x1="187.0" y1="227.3" x2="193.0" y2="237.7"/><line class="tick tick--major" x1="132.0" y1="235.0" x2="132.0" y2="254.0"/><line class="tick" x1="77.0" y1="227.3" x2="71.0" y2="237.7"/><line class="tick" x1="36.7" y1="187.0" x2="26.3" y2="193.0"/><line class="tick tick--major" x1="29.0" y1="132.0" x2="10.0" y2="132.0"/><line class="tick" x1="36.7" y1="77.0" x2="26.3" y2="71.0"/><line class="tick" x1="77.0" y1="36.7" x2="71.0" y2="26.3"/><path class="level" d="M132 9l7 15h-14z"/></svg>
+                  <svg viewBox="0 0 264 264"><circle class="guide" cx="132" cy="132" r="92"/><circle class="guide guide--dash" cx="132" cy="132" r="62"/><circle class="guide" cx="132" cy="132" r="34"/><line class="cross" x1="132" y1="40" x2="132" y2="224"/><line class="cross" x1="40" y1="132" x2="224" y2="132"/><line class="tick" x1="187.0" y1="36.7" x2="193.0" y2="26.3"/><line class="tick" x1="227.3" y1="77.0" x2="237.7" y2="71.0"/><line class="tick tick--major" x1="235.0" y1="132.0" x2="254.0" y2="132.0"/><line class="tick" x1="227.3" y1="187.0" x2="237.7" y2="193.0"/><line class="tick" x1="187.0" y1="227.3" x2="193.0" y2="237.7"/><line class="tick tick--major" x1="132.0" y1="235.0" x2="132.0" y2="254.0"/><line class="tick" x1="77.0" y1="227.3" x2="71.0" y2="237.7"/><line class="tick" x1="36.7" y1="187.0" x2="26.3" y2="193.0"/><line class="tick tick--major" x1="29.0" y1="132.0" x2="10.0" y2="132.0"/><line class="tick" x1="36.7" y1="77.0" x2="26.3" y2="71.0"/><line class="tick" x1="77.0" y1="36.7" x2="71.0" y2="26.3"/><g id="dial-yaw"><path class="level" d="M132 9l7 15h-14z"/></g></svg>
                   <div class="pg-dial__well"></div><div class="pg-dial__bubble" id="dial-bubble"></div>
                 </div>
                 <span class="pg-dial__label" id="dial-label">LEVEL</span>
@@ -188,7 +188,12 @@
   </div>
 
   <!-- ───────── Floating header: navigation · controls ───────── -->
-  <header class="pg-header pg-header--two" id="header">
+  <header class="pg-header" id="header">
+    <!-- Brand pill (design: wordmark A); it is the Home button, outlined while home shows. -->
+    <button class="pg-island pg-brand app-home" id="home" type="button" data-i18n-title="ui.home">
+      <img class="app-logo app-brandmark" src="img/logo.webp" alt="" width="28" height="28">
+      <span class="pg-wordmark">PhoneGyr<i class="pg-wordmark__o" id="brand-o"></i></span>
+    </button>
     <nav class="pg-island" id="nav">
       <button class="pg-tab" type="button" data-tab="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span class="pg-tab__l" data-i18n="nav.settings">Настройки</span></button>
       <button class="pg-tab" type="button" data-tab="stats"><svg viewBox="0 0 24 24"><path d="M6 20V10M12 20V4M18 20v-7"/></svg><span class="pg-tab__l" data-i18n="nav.stats">Статистика &amp; 3D</span></button>

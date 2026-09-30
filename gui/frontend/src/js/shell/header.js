@@ -25,6 +25,7 @@ function renderStatus(st) {
     el.className = 'pg-status' + (kind === 'offline' ? '' : ' pg-status--' + kind);
   }
   const key = kind === 'usb' ? 'status.waiting_usb' : 'status.' + kind;
+  toggleClass($('brand-o'), 'is-live', kind === 'online'); // design: the ring's dot orbits while streaming
   setText($('status-t'), t(key).toLowerCase());
 }
 

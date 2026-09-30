@@ -17,7 +17,7 @@ export function startCloseDialog() {
       check: t('close_modal.remember'),
       actions: [
         { label: t('close_modal.cancel') },
-        { label: t('close_modal.quit'), onClick: (remember) => call('ConfirmCloseChoice', 'quit', remember) },
+        { label: t('close_modal.quit'), kind: 'danger', onClick: (remember) => call('ConfirmCloseChoice', 'quit', remember) },
         { label: t('close_modal.minimize'), kind: 'primary', onClick: (remember) => call('ConfirmCloseChoice', 'minimize', remember) },
       ],
     });
