@@ -117,3 +117,12 @@ func (a *App) closeDebugLog() {
 	}
 	a.debugLog.mu.Unlock()
 }
+
+// DisableDebug is the debug panel's close button: it turns the panel and the
+// debug log off in settings.json (the hotkey only hides it for now).
+func (a *App) DisableDebug() {
+	a.debugPanel.Store(false)
+	a.debugLogOn.Store(false)
+	a.closeDebugLog()
+	a.saveSettings()
+}

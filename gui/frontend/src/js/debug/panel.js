@@ -71,7 +71,13 @@ function build() {
         `<div class="app-dbg__group">${g}</div>` + rows.map(([k], i) => `<span>${k}</span><b data-k="${g}${i}"></b>`).join('')).join('')}</div></details>
     </div>`;
   document.body.appendChild(root);
-  root.querySelector('[data-dbg=close]').onclick = () => closePanel();
+  // The cross turns the panel and the debug log off in the settings too; the
+  // hotkey only hides it.
+  root.querySelector('[data-dbg=close]').onclick = () => {
+    closePanel();
+    try { localStorage.setItem('pg-debug', '0'); } catch (e) { /* Go has it */ }
+    call('DisableDebug').then(() => dispatchEvent(new CustomEvent('pg:settings-changed')));
+  };
   root.querySelector('[data-dbg=fold]').onclick = () => root.classList.toggle('is-folded');
   drag(root.querySelector('.app-dbg__head'));
 }

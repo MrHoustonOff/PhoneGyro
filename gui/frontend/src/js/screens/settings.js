@@ -318,6 +318,8 @@ export function startSettings() {
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
   });
   onScreen((s) => { if (s === 'settings') load(); });
+  // Changed elsewhere (the debug panel's cross): show it if this screen is open.
+  addEventListener('pg:settings-changed', () => { if (!screen.hidden) load(); });
   // Ctrl +/− while Settings is open: keep the slider's value in step.
   onZoom((v) => { if (cur && !screen.hidden && Math.abs((cur.fontScale || 1) - v) > 1e-6) { cur.fontScale = v; render(); } });
   onLang(() => { if (!screen.hidden) render(); });
