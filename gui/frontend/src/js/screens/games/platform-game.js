@@ -658,8 +658,8 @@ export const PlatformGame = {
 
   animateScore(type) {
     const els = [
-      document.getElementById('bench-hud-score'),
-      document.getElementById('games-hud-score')
+      document.getElementById('bench-platform-score-pill'),
+      document.getElementById('bench-hud-score')
     ];
     const cls = (type === 'up') ? 'bench-score-up' : 'bench-score-lost';
     els.forEach(el => {
@@ -835,9 +835,8 @@ export const PlatformGame = {
       record: document.getElementById('bench-hud-record'),
       pitch: document.getElementById('bench-hud-pitch'),
       roll: document.getElementById('bench-hud-roll'),
-      barScore: document.getElementById('game-score'),
-      barRecord: document.getElementById('game-record'),
-      barTimer: document.getElementById('game-val-timer')
+      topScore: document.getElementById('bench-platform-score'),
+      topRecord: document.getElementById('bench-platform-record')
     };
     return this.hudElements;
   },
@@ -850,14 +849,14 @@ export const PlatformGame = {
       this.lastHudScore = this.score;
       const scoreLabel = t('settings_modal.bench_score') || 'Счёт';
       if (els.score) els.score.textContent = `${scoreLabel}: ${this.score}`;
-      if (els.barScore) els.barScore.textContent = this.score.toString();
+      if (els.topScore) els.topScore.textContent = this.score.toString();
     }
 
     if (force || this.record !== this.lastHudRecord) {
       this.lastHudRecord = this.record;
       const recordLabel = t('settings_modal.bench_record') || 'Рекорд';
       if (els.record) els.record.textContent = `${recordLabel}: ${this.record}`;
-      if (els.barRecord) els.barRecord.textContent = this.record.toString();
+      if (els.topRecord) els.topRecord.textContent = this.record.toString();
     }
 
     if (force || (now - this.lastHudTs >= 100)) {
@@ -869,9 +868,6 @@ export const PlatformGame = {
       }
       if (els.roll) {
         els.roll.textContent = `R: ${(degR >= 0 ? '+' : '')}${degR.toFixed(1)}°`;
-      }
-      if (els.barTimer) {
-        els.barTimer.textContent = `P: ${(degP >= 0 ? '+' : '')}${degP.toFixed(1)}° R: ${(degR >= 0 ? '+' : '')}${degR.toFixed(1)}°`;
       }
     }
   },

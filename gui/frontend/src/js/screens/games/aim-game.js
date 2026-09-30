@@ -21,6 +21,11 @@ export const AimGame = {
   vpEl: null,
   targetsLayerEl: null,
   fxLayerEl: null,
+  timePillEl: null,
+  timerEl: null,
+  scoreEl: null,
+  recordEl: null,
+  hintEl: null,
   gameoverEl: null,
   finalScoreEl: null,
   finalRecordEl: null,
@@ -31,13 +36,17 @@ export const AimGame = {
     this.vpEl = document.getElementById('bench-aim-viewport');
     this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
     this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
+    this.timePillEl = document.getElementById('bench-aim-time-pill');
+    this.timerEl = document.getElementById('bench-aim-timer');
+    this.scoreEl = document.getElementById('bench-aim-score');
+    this.recordEl = document.getElementById('bench-aim-record');
+    this.hintEl = document.getElementById('bench-aim-hint');
     this.gameoverEl = document.getElementById('bench-aim-gameover');
     this.finalScoreEl = document.getElementById('bench-aim-final-score');
     this.finalRecordEl = document.getElementById('bench-aim-final-record');
     this.recordBadgeEl = document.getElementById('bench-aim-record-badge');
 
-    const barRecord = document.getElementById('game-record');
-    if (barRecord) barRecord.textContent = this.record.toString();
+    if (this.recordEl) this.recordEl.textContent = this.record.toString();
 
     if (this.initialized) {
       this.syncState();
@@ -73,8 +82,8 @@ export const AimGame = {
     const rightMargin = Math.min(100, Math.floor(w * 0.12));
     return {
       boundX: Math.max(100, halfW - 120 - Math.floor(rightMargin / 2)),
-      boundYTop: Math.max(60, halfH - 100),
-      boundYBottom: Math.max(60, halfH - 100),
+      boundYTop: Math.max(80, halfH - 150),    // Clearance for top arcade HUD pills
+      boundYBottom: Math.max(60, halfH - 100), // Clearance for bottom telemetry
       maxReticleX: Math.max(160, halfW - 50 - Math.floor(rightMargin / 2)),
       maxReticleY: Math.max(100, halfH - 50)
     };
@@ -118,13 +127,13 @@ export const AimGame = {
     this.timerStartTs = 0;
 
     if (this.gameoverEl) this.gameoverEl.hidden = true;
-
-    const barScore = document.getElementById('game-score');
-    if (barScore) barScore.textContent = '0';
-    const barRecord = document.getElementById('game-record');
-    if (barRecord) barRecord.textContent = this.record.toString();
-    const barTimer = document.getElementById('game-val-timer');
-    if (barTimer) barTimer.textContent = '30.0 с';
+    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
+    if (this.timerEl) this.timerEl.textContent = '30.0';
+    if (this.scoreEl) this.scoreEl.textContent = '0';
+    if (this.recordEl) this.recordEl.textContent = this.record.toString();
+    if (this.hintEl) {
+      this.hintEl.textContent = t('settings_modal.bench_aim_start_hint') || 'Сбейте 1-ю мишень для старта! • [Esc] Выход';
+    }
 
     this.spawnTarget();
   },
@@ -220,19 +229,20 @@ export const AimGame = {
       this.gameState = 'playing';
       this.timerStartTs = performance.now();
       this.timeLeft = 30.0;
+      if (this.hintEl) {
+        this.hintEl.textContent = t('settings_modal.bench_aim_playing_hint') || '30 секунд! Сбивайте мишени • [Пробел] Центр • [Esc] Выход';
+      }
     }
 
     this.score++;
-    const barScore = document.getElementById('game-score');
-    if (barScore) barScore.textContent = this.score.toString();
+    if (this.scoreEl) this.scoreEl.textContent = this.score.toString();
 
     if (this.score > this.record) {
       this.record = this.score;
       try {
         localStorage.setItem('gb_aim_record', this.record.toString());
       } catch (e) {}
-      const barRecord = document.getElementById('game-record');
-      if (barRecord) barRecord.textContent = this.record.toString();
+      if (this.recordEl) this.recordEl.textContent = this.record.toString();
     }
 
     // Visual and Sound Shot Feedback
@@ -286,9 +296,11 @@ export const AimGame = {
       const elapsed = (now - this.timerStartTs) / 1000;
       this.timeLeft = Math.max(0, 30.0 - elapsed);
 
-      const barTimer = document.getElementById('game-val-timer');
-      if (barTimer) {
-        barTimer.textContent = `${this.timeLeft.toFixed(1)} с`;
+      if (this.timerEl) {
+        this.timerEl.textContent = this.timeLeft.toFixed(1);
+      }
+      if (this.timePillEl) {
+        this.timePillEl.classList.toggle('urgent', this.timeLeft <= 5.0);
       }
 
       if (this.timeLeft <= 0) {
@@ -301,8 +313,8 @@ export const AimGame = {
     this.gameState = 'gameover';
     this.cleanupTargets();
 
-    const barTimer = document.getElementById('game-val-timer');
-    if (barTimer) barTimer.textContent = '0.0 с';
+    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
+    if (this.timerEl) this.timerEl.textContent = '0.0';
 
     const isNewRecord = (this.score >= this.record && this.score > 0);
 

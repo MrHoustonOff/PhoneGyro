@@ -617,16 +617,10 @@
           </div>
 
           <div class="app-games-bar__right">
-            <div class="app-games-hud">
-              <span class="pg-badge pg-badge--ok" id="games-hud-score"><span data-i18n="ui.game_score">Счёт:</span> <b id="game-score">0</b></span>
-              <span class="pg-badge" id="games-hud-record"><span data-i18n="ui.game_record">Рекорд:</span> <b id="game-record">0</b></span>
-              <span class="pg-badge" id="games-hud-metric"><span id="game-label-timer" data-i18n="ui.games_aim_time">Время:</span> <b id="game-val-timer">30.0 с</b></span>
-
-              <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-game-recenter" type="button" title="[Space] Center">
-                <kbd class="pg-kbd">Space</kbd>
-                <span data-i18n="settings_modal.bench_recenter">Центр</span>
-              </button>
-            </div>
+            <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-game-recenter" type="button" title="[Space] Center">
+              <kbd class="pg-kbd">Space</kbd>
+              <span data-i18n="settings_modal.bench_recenter">Центр</span>
+            </button>
           </div>
         </header>
 
@@ -635,6 +629,25 @@
           <!-- Mini-Game 1: Zelda Bow Aim Reticle Display -->
           <div class="bench-game-view" id="bench-game-aim">
             <div class="bench-target-viewport" id="bench-aim-viewport">
+              <!-- Aim Game In-Viewport Arcade HUD -->
+              <div class="bench-game-hud" id="bench-aim-hud">
+                <div class="bench-hud-pills-wrap">
+                  <span class="bench-hud-pill" id="bench-aim-time-pill">
+                    <span class="bench-hud-pill-label" data-i18n="settings_modal.bench_aim_time">Время</span>
+                    <span class="bench-hud-pill-val" id="bench-aim-timer">30.0</span>
+                  </span>
+                  <span class="bench-hud-pill">
+                    <span class="bench-hud-pill-label" data-i18n="settings_modal.bench_score">Счёт</span>
+                    <span class="bench-hud-pill-val" id="bench-aim-score">0</span>
+                  </span>
+                  <span class="bench-hud-record-pill">
+                    <span class="bench-hud-pill-label" data-i18n="settings_modal.bench_record">Рекорд</span>
+                    <span class="bench-hud-pill-val" id="bench-aim-record">0</span>
+                  </span>
+                </div>
+                <div class="bench-hud-hint" id="bench-aim-hint" data-i18n="settings_modal.bench_aim_start_hint">Сбейте 1-ю мишень для старта! • [Esc] Выход</div>
+              </div>
+
               <!-- Target Layer and FX Layer -->
               <div class="bench-aim-targets-layer" id="bench-aim-targets-layer"></div>
               <div class="bench-aim-fx-layer" id="bench-aim-fx-layer"></div>
@@ -692,6 +705,21 @@
           <div hidden class="bench-game-view" id="bench-game-platform">
             <div class="bench-platform-viewport" id="bench-platform-viewport">
               <canvas id="bench-platform-canvas"></canvas>
+
+              <!-- Platform Game In-Viewport Arcade HUD -->
+              <div class="bench-game-hud" id="bench-platform-hud">
+                <div class="bench-hud-pills-wrap">
+                  <span class="bench-hud-pill" id="bench-platform-score-pill">
+                    <span class="bench-hud-pill-label" data-i18n="settings_modal.bench_score">Счёт</span>
+                    <span class="bench-hud-pill-val" id="bench-platform-score">0</span>
+                  </span>
+                  <span class="bench-hud-record-pill">
+                    <span class="bench-hud-pill-label" data-i18n="settings_modal.bench_record">Рекорд</span>
+                    <span class="bench-hud-pill-val" id="bench-platform-record">0</span>
+                  </span>
+                </div>
+                <div class="bench-hud-hint" data-i18n="settings_modal.bench_fs_hint">Наклоняйте контроллер • Не уроните шарик! • [Esc] Выход</div>
+              </div>
 
               <!-- Bottom Right HUD -->
               <div class="bench-platform-hud">

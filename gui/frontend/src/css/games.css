@@ -468,6 +468,81 @@
 }
 
 
+/* ── In-Game Top Arcade HUD (Aim and Platform) ─────────────────────────── */
+.bench-game-hud {
+  position: absolute;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.bench-hud-pills-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.bench-hud-pill,
+.bench-hud-record-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
+  border-radius: 1.875rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(0.875rem);
+  -webkit-backdrop-filter: blur(0.875rem);
+  box-shadow: var(--shadow-card);
+}
+
+.bench-hud-pill-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: -0.01em;
+}
+
+.bench-hud-pill-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.bench-hud-record-pill .bench-hud-pill-val {
+  color: var(--warn);
+}
+
+.bench-hud-hint {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  opacity: 0.9;
+  text-shadow: 0 1px 0.125rem rgba(0, 0, 0, 0.4);
+}
+
+/* Urgent pulsating timer pill */
+#bench-aim-time-pill.urgent {
+  background: var(--danger-soft) !important;
+  border-color: var(--danger-line);
+  animation: urgentTimerPulse 0.5s infinite alternate ease-in-out;
+}
+#bench-aim-time-pill.urgent .bench-hud-pill-val {
+  color: var(--danger);
+}
+
+@keyframes urgentTimerPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); box-shadow: 0 0 1rem var(--danger-line); }
+}
+
 /* Game Over Modal */
 .bench-aim-gameover-overlay {
   position: absolute;
