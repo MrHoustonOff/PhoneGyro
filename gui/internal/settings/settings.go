@@ -28,8 +28,8 @@ const (
 	DefaultDeadbandPhone = 0.10
 	DefaultDeadbandUSB   = 0.50
 
-	MinFontScale = 0.70
-	MaxFontScale = 1.60
+	MinFontScale = 0.50
+	MaxFontScale = 3.00
 	MaxVolume    = 3 // sound volume levels are 0..3
 )
 
