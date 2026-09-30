@@ -606,9 +606,9 @@
         <!-- Compact Top Toolbar -->
         <header class="app-games-bar">
           <div class="app-games-bar__left">
-            <button class="pg-btn pg-btn--ghost app-games-back" id="btn-games-back" type="button">
-              <svg viewBox="0 0 12 12" style="width:0.75rem;height:0.75rem;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.5l-3.5 3.5L8 9.5"/></svg>
-              <span data-i18n="ui.back">Назад</span>
+            <button class="pg-btn pg-btn--danger pg-btn--sm app-games-close" id="btn-games-close" type="button">
+              <svg viewBox="0 0 12 12" style="width:0.6875rem;height:0.6875rem;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7"/></svg>
+              <span data-i18n="ui.close">Закрыть</span>
             </button>
             <div class="pg-seg bench-game-tabs" id="bench-game-tabs" role="tablist">
               <button class="pg-seg__btn bench-game-tab is-active" data-game="aim" type="button" role="tab" data-i18n="settings_modal.bench_mode_aim">Прицел</button>
@@ -622,16 +622,9 @@
               <span class="pg-badge" id="games-hud-record"><span data-i18n="ui.game_record">Рекорд:</span> <b id="game-record">0</b></span>
               <span class="pg-badge" id="games-hud-metric"><span id="game-label-timer" data-i18n="ui.games_aim_time">Время:</span> <b id="game-val-timer">30.0 с</b></span>
 
-              <button type="button" class="bench-btn-feed" id="btn-bench-feed" title="DSU / Сырой">DSU</button>
-              <button type="button" class="bench-btn-invert" id="btn-bench-inv-x" title="Инверсия оси X" data-i18n="settings_modal.bench_inv_x">Инв. X</button>
-              <button type="button" class="bench-btn-invert" id="btn-bench-inv-y" title="Инверсия оси Y" data-i18n="settings_modal.bench_inv_y">Инв. Y</button>
-
               <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-game-recenter" type="button" title="[Space] Center">
                 <kbd class="pg-kbd">Space</kbd>
                 <span data-i18n="settings_modal.bench_recenter">Центр</span>
-              </button>
-              <button class="pg-btn pg-btn--primary pg-btn--sm" id="btn-game-start" type="button">
-                <span id="bench-start-label" data-i18n="ui.game_start">Старт</span>
               </button>
             </div>
           </div>
@@ -642,41 +635,6 @@
           <!-- Mini-Game 1: Zelda Bow Aim Reticle Display -->
           <div class="bench-game-view" id="bench-game-aim">
             <div class="bench-target-viewport" id="bench-aim-viewport">
-              <!-- Fullscreen Action Toggle Button -->
-              <button type="button" class="bench-viewport-action-btn" id="btn-bench-aim-fullscreen" data-i18n-title="settings_modal.bench_fullscreen" title="На весь экран">
-                <svg class="icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <polyline points="9 21 3 21 3 15"></polyline>
-                  <line x1="21" y1="3" x2="14" y2="10"></line>
-                  <line x1="3" y1="21" x2="10" y2="14"></line>
-                </svg>
-                <svg hidden class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="4 14 10 14 10 20"></polyline>
-                  <polyline points="20 10 14 10 14 4"></polyline>
-                  <line x1="14" y1="10" x2="21" y2="3"></line>
-                  <line x1="3" y1="21" x2="10" y2="14"></line>
-                </svg>
-              </button>
-
-              <!-- Fullscreen Aim Game Top HUD (hidden; shown by aim-game.js when is-fs) -->
-              <div class="bench-fullscreen-hud" id="bench-aim-fs-hud" hidden>
-                <div class="bench-fs-score-wrap">
-                  <span class="bench-fs-score-pill" id="bench-aim-time-pill">
-                    <span class="bench-fs-label" data-i18n="settings_modal.bench_aim_time">Время</span>
-                    <span class="bench-fs-val" id="bench-aim-timer">30.0</span>
-                  </span>
-                  <span class="bench-fs-score-pill">
-                    <span class="bench-fs-label" data-i18n="settings_modal.bench_score">Счёт</span>
-                    <span class="bench-fs-val" id="bench-aim-score">0</span>
-                  </span>
-                  <span class="bench-fs-record-pill">
-                    <span class="bench-fs-label" data-i18n="settings_modal.bench_record">Рекорд</span>
-                    <span class="bench-fs-val" id="bench-aim-record">0</span>
-                  </span>
-                </div>
-                <div class="bench-fs-hint" id="bench-aim-fs-hint" data-i18n="settings_modal.bench_aim_start_hint">Сбейте 1-ю мишень для старта! • [Esc] Выход</div>
-              </div>
-
               <!-- Target Layer and FX Layer -->
               <div class="bench-aim-targets-layer" id="bench-aim-targets-layer"></div>
               <div class="bench-aim-fx-layer" id="bench-aim-fx-layer"></div>
@@ -734,35 +692,6 @@
           <div hidden class="bench-game-view" id="bench-game-platform">
             <div class="bench-platform-viewport" id="bench-platform-viewport">
               <canvas id="bench-platform-canvas"></canvas>
-              <button type="button" class="bench-viewport-action-btn" id="btn-bench-platform-fullscreen" data-i18n-title="settings_modal.bench_fullscreen" title="На весь экран">
-                <svg class="icon-expand" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <polyline points="9 21 3 21 3 15"></polyline>
-                  <line x1="21" y1="3" x2="14" y2="10"></line>
-                  <line x1="3" y1="21" x2="10" y2="14"></line>
-                </svg>
-                <svg hidden class="icon-collapse" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="4 14 10 14 10 20"></polyline>
-                  <polyline points="20 10 14 10 14 4"></polyline>
-                  <line x1="14" y1="10" x2="21" y2="3"></line>
-                  <line x1="3" y1="21" x2="10" y2="14"></line>
-                </svg>
-              </button>
-
-              <!-- Fullscreen Top HUD (hidden; shown by platform-game.js when is-fs) -->
-              <div class="bench-fullscreen-hud" id="bench-fullscreen-hud" hidden>
-                <div class="bench-fs-score-wrap">
-                  <span class="bench-fs-score-pill" id="bench-fs-score-pill">
-                    <span class="bench-fs-label" data-i18n="settings_modal.bench_score">Счёт</span>
-                    <span class="bench-fs-val" id="bench-fs-score">0</span>
-                  </span>
-                  <span class="bench-fs-record-pill">
-                    <span class="bench-fs-label" data-i18n="settings_modal.bench_record">Рекорд</span>
-                    <span class="bench-fs-val" id="bench-fs-record">0</span>
-                  </span>
-                </div>
-                <div class="bench-fs-hint" data-i18n="settings_modal.bench_fs_hint">Наклоняйте контроллер • Не уроните шарик! [Esc] Выход</div>
-              </div>
 
               <!-- Bottom Right HUD -->
               <div class="bench-platform-hud">

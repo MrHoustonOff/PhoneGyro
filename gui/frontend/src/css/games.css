@@ -80,14 +80,7 @@
     padding: 0.125rem 0.375rem;
     font-size: 0.6875rem;
   }
-  .bench-btn-feed,
-  .bench-btn-invert {
-    padding: 0 0.375rem;
-    font-size: 0.6875rem;
-    height: 1.75rem;
-  }
-  #btn-game-recenter,
-  #btn-game-start {
+  #btn-game-recenter {
     padding: 0 0.375rem;
     font-size: 0.6875rem;
     height: 1.75rem;
@@ -105,16 +98,11 @@
   }
 }
 
-.app-games-back {
+.app-games-close {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  font-weight: 500;
-  font-size: 0.8125rem;
-  color: var(--ink-2);
-}
-.app-games-back:hover {
-  color: var(--ink);
+  font-weight: 600;
 }
 
 .app-games-hud {
@@ -162,46 +150,6 @@
   display: none !important;
 }
 
-/* ── Feed & Invert & Recenter Action Buttons ────────────────────────────── */
-.bench-btn-feed,
-.bench-btn-invert,
-.bench-btn-recenter {
-  height: 1.875rem;
-  padding: 0 0.625rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-}
-
-.bench-btn-feed:hover,
-.bench-btn-invert:hover,
-.bench-btn-recenter:hover {
-  background: var(--surface-hover);
-  color: var(--ink);
-  border-color: var(--line-control);
-}
-
-.bench-btn-feed.raw,
-.bench-btn-invert.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-text);
-}
-
-.bench-btn-feed:active,
-.bench-btn-invert:active,
-.bench-btn-recenter:active {
-  transform: scale(0.96);
-}
 
 /* ── Aim Reticle Viewport ─────────────────────────────────────────────────── */
 .bench-target-viewport {
@@ -519,110 +467,6 @@
   100% { transform: translateY(-2.375rem) scale(1); opacity: 0; }
 }
 
-/* Fullscreen Mode Top HUD (for both Aim and Platform) */
-.bench-fullscreen-hud {
-  position: absolute;
-  top: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  z-index: 25;
-  pointer-events: none;
-}
-
-.bench-fullscreen-hud[hidden] {
-  display: none !important;
-}
-
-.bench-fs-score-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.bench-fs-score-pill,
-.bench-fs-record-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 1rem;
-  border-radius: 1.875rem;
-  background: var(--surface-inset);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(0.875rem);
-  -webkit-backdrop-filter: blur(0.875rem);
-  box-shadow: var(--shadow-card);
-}
-
-.bench-fs-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--ink-2);
-  letter-spacing: -0.01em;
-}
-
-.bench-fs-val {
-  font-size: 1.25rem;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  color: var(--accent);
-}
-
-.bench-fs-record-pill .bench-fs-val {
-  color: var(--warn);
-}
-
-.bench-fs-hint {
-  font-size: 0.6875rem;
-  font-weight: 500;
-  color: var(--ink-2);
-  opacity: 0.9;
-  text-shadow: 0 1px 0.125rem rgba(0, 0, 0, 0.4);
-}
-
-/* Urgent pulsating timer pill */
-#bench-aim-time-pill.urgent {
-  background: var(--danger-soft) !important;
-  border-color: var(--danger-line);
-  animation: urgentTimerPulse 0.5s infinite alternate ease-in-out;
-}
-#bench-aim-time-pill.urgent .bench-fs-val {
-  color: var(--danger);
-}
-
-@keyframes urgentTimerPulse {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.08); box-shadow: 0 0 1rem var(--danger-line); }
-}
-
-/* Fullscreen Toggle Action Button */
-.bench-viewport-action-btn {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 20;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: var(--radius-sm);
-  background: var(--surface-inset);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(0.5rem);
-  -webkit-backdrop-filter: blur(0.5rem);
-  transition: background 0.15s, transform 0.15s;
-}
-
-.bench-viewport-action-btn:hover {
-  background: var(--surface-hover);
-  transform: scale(1.05);
-}
 
 /* Game Over Modal */
 .bench-aim-gameover-overlay {
@@ -804,9 +648,4 @@
 
 .bench-score-up {
   animation: scoreGoalPop 0.36s ease;
-}
-
-/* Fullscreen mode (hide top bar to make viewport take 100% edge-to-edge under window buttons) */
-.app-games-card.is-fs .app-games-bar {
-  display: none;
 }

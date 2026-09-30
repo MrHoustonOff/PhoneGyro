@@ -45,7 +45,6 @@ export const PlatformGame = {
   beaconMesh: null,
   score: 0,
   record: parseInt(localStorage.getItem('gb_platform_record') || '0', 10),
-  isFullscreen: true,
   isOffline: false,
   pitch: 0, // rad (tilt around X)
   roll: 0,  // rad (tilt around Z)
@@ -310,16 +309,6 @@ export const PlatformGame = {
     platformGroup.add(ballGroup);
     this.ballMesh = ballGroup;
 
-    // Fullscreen Toggle
-    document.getElementById('btn-bench-platform-fullscreen')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleFullscreen();
-    });
-
-    canvas.addEventListener('dblclick', () => {
-      this.toggleFullscreen();
-    });
-
     this.recenter();
     this.syncDimensions(true);
   },
@@ -493,45 +482,6 @@ export const PlatformGame = {
     this.platformGroup.add(rimGroup);
     // Open borders for arcade pit physics
     rimGroup.visible = false;
-  },
-
-  toggleFullscreen() {
-    this.setFullscreen(!this.isFullscreen);
-  },
-
-  setFullscreen(enable) {
-    this.isFullscreen = !!enable;
-    const vp = document.getElementById('bench-platform-viewport');
-    const card = document.querySelector('.app-games-card');
-    const btn = document.getElementById('btn-bench-platform-fullscreen');
-    const fsHud = document.getElementById('bench-fullscreen-hud');
-    if (!vp) return;
-
-    if (this.isFullscreen) {
-      vp.classList.add('fullscreen');
-      card?.classList.add('is-fs');
-      if (fsHud) fsHud.hidden = false;
-    } else {
-      vp.classList.remove('fullscreen');
-      card?.classList.remove('is-fs');
-      if (fsHud) fsHud.hidden = true;
-    }
-
-    if (btn) {
-      const iconExpand = btn.querySelector('.icon-expand');
-      const iconCollapse = btn.querySelector('.icon-collapse');
-      if (iconExpand) iconExpand.hidden = this.isFullscreen;
-      if (iconCollapse) iconCollapse.hidden = !this.isFullscreen;
-      btn.title = this.isFullscreen
-        ? (t('settings_modal.bench_exit_fullscreen') || 'Свернуть')
-        : (t('settings_modal.bench_fullscreen') || 'На весь экран');
-    }
-
-    this.syncDimensions(true);
-    requestAnimationFrame(() => {
-      this.syncDimensions(true);
-    });
-    this.updateHud(true);
   },
 
   rebuildPlatformGeometry() {
@@ -709,7 +659,6 @@ export const PlatformGame = {
   animateScore(type) {
     const els = [
       document.getElementById('bench-hud-score'),
-      document.getElementById('bench-fs-score'),
       document.getElementById('games-hud-score')
     ];
     const cls = (type === 'up') ? 'bench-score-up' : 'bench-score-lost';
@@ -886,8 +835,6 @@ export const PlatformGame = {
       record: document.getElementById('bench-hud-record'),
       pitch: document.getElementById('bench-hud-pitch'),
       roll: document.getElementById('bench-hud-roll'),
-      fsScore: document.getElementById('bench-fs-score'),
-      fsRecord: document.getElementById('bench-fs-record'),
       barScore: document.getElementById('game-score'),
       barRecord: document.getElementById('game-record'),
       barTimer: document.getElementById('game-val-timer')
@@ -903,7 +850,6 @@ export const PlatformGame = {
       this.lastHudScore = this.score;
       const scoreLabel = t('settings_modal.bench_score') || 'Счёт';
       if (els.score) els.score.textContent = `${scoreLabel}: ${this.score}`;
-      if (els.fsScore) els.fsScore.textContent = this.score.toString();
       if (els.barScore) els.barScore.textContent = this.score.toString();
     }
 
@@ -911,7 +857,6 @@ export const PlatformGame = {
       this.lastHudRecord = this.record;
       const recordLabel = t('settings_modal.bench_record') || 'Рекорд';
       if (els.record) els.record.textContent = `${recordLabel}: ${this.record}`;
-      if (els.fsRecord) els.fsRecord.textContent = this.record.toString();
       if (els.barRecord) els.barRecord.textContent = this.record.toString();
     }
 

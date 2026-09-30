@@ -2,10 +2,10 @@
 // Direct transfer from LEGACY/frontend/js/aim-game.js adapted to ES module.
 
 import { t } from '../../core/i18n.js';
+import { go } from '../../shell/router.js';
 
 export const AimGame = {
   initialized: false,
-  isFullscreen: false,
   _placeholder: null,
   gameState: 'ready', // 'idle' | 'ready' | 'playing' | 'gameover'
   score: 0,
@@ -21,11 +21,6 @@ export const AimGame = {
   vpEl: null,
   targetsLayerEl: null,
   fxLayerEl: null,
-  timePillEl: null,
-  timerEl: null,
-  scoreEl: null,
-  recordEl: null,
-  hintEl: null,
   gameoverEl: null,
   finalScoreEl: null,
   finalRecordEl: null,
@@ -36,17 +31,11 @@ export const AimGame = {
     this.vpEl = document.getElementById('bench-aim-viewport');
     this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
     this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
-    this.timePillEl = document.getElementById('bench-aim-time-pill');
-    this.timerEl = document.getElementById('bench-aim-timer');
-    this.scoreEl = document.getElementById('bench-aim-score');
-    this.recordEl = document.getElementById('bench-aim-record');
-    this.hintEl = document.getElementById('bench-aim-fs-hint');
     this.gameoverEl = document.getElementById('bench-aim-gameover');
     this.finalScoreEl = document.getElementById('bench-aim-final-score');
     this.finalRecordEl = document.getElementById('bench-aim-final-record');
     this.recordBadgeEl = document.getElementById('bench-aim-record-badge');
 
-    if (this.recordEl) this.recordEl.textContent = this.record.toString();
     const barRecord = document.getElementById('game-record');
     if (barRecord) barRecord.textContent = this.record.toString();
 
@@ -56,31 +45,17 @@ export const AimGame = {
     }
     this.initialized = true;
 
-    // Fullscreen toggle button
-    document.getElementById('btn-bench-aim-fullscreen')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.toggleFullscreen();
-    });
-
-    // Double-click on viewport to toggle fullscreen
-    this.vpEl?.addEventListener('dblclick', (e) => {
-      if (e.target.closest('button') || e.target.closest('.bench-aim-gameover-card')) return;
-      this.toggleFullscreen();
-    });
-
     // Play again and exit buttons
     document.getElementById('btn-aim-play-again')?.addEventListener('click', () => {
       this.resetGame();
     });
 
     document.getElementById('btn-aim-exit')?.addEventListener('click', () => {
-      if (this.isFullscreen) {
-        this.setFullscreen(false);
-      }
       this.resetGame();
+      go('settings');
     });
 
-    // Window resize and visibility listeners: guarantee target never disappears
+    // Window resize listener
     window.addEventListener('resize', () => {
       this.syncState();
     });
@@ -95,16 +70,11 @@ export const AimGame = {
     const h = vp ? (vp.clientHeight || 500) : (window.innerHeight || 500);
     const halfW = Math.floor(w / 2);
     const halfH = Math.floor(h / 2);
-    // HUD clearances:
-    //   top      = fullscreen score bar when is-fs; also the fullscreen-toggle button (top:1rem right:1rem ~40px)
-    //   right    = telemetry badge (right:1rem bottom:0.75rem, ~90px wide)
-    //   bottom   = bottom telemetry badge height
-    // Reserve 100px on the right edge and 60px extra top so targets never overlap the toggle btn or badge.
     const rightMargin = Math.min(100, Math.floor(w * 0.12));
     return {
-      boundX: Math.max(100, halfW - 140 - Math.floor(rightMargin / 2)),
-      boundYTop: Math.max(80, halfH - 140),      // Clearance for top FS-HUD + fullscreen btn
-      boundYBottom: Math.max(60, halfH - 100),   // Clearance for bottom telemetry
+      boundX: Math.max(100, halfW - 120 - Math.floor(rightMargin / 2)),
+      boundYTop: Math.max(60, halfH - 100),
+      boundYBottom: Math.max(60, halfH - 100),
       maxReticleX: Math.max(160, halfW - 50 - Math.floor(rightMargin / 2)),
       maxReticleY: Math.max(100, halfH - 50)
     };
@@ -121,39 +91,6 @@ export const AimGame = {
     // If there is no active target or it was lost, spawn one immediately
     if (!this.activeTarget || !this.activeTarget.el || !this.activeTarget.el.isConnected) {
       this.spawnTarget();
-    }
-  },
-
-  toggleFullscreen() {
-    this.setFullscreen(!this.isFullscreen);
-  },
-
-  setFullscreen(enable) {
-    this.isFullscreen = !!enable;
-    const vp = this.vpEl || document.getElementById('bench-aim-viewport');
-    const card = document.querySelector('.app-games-card');
-    const btn = document.getElementById('btn-bench-aim-fullscreen');
-    const fsHud = document.getElementById('bench-aim-fs-hud');
-    if (!vp) return;
-
-    if (this.isFullscreen) {
-      vp.classList.add('fullscreen');
-      card?.classList.add('is-fs');
-      if (fsHud) fsHud.hidden = false;
-    } else {
-      vp.classList.remove('fullscreen');
-      card?.classList.remove('is-fs');
-      if (fsHud) fsHud.hidden = true;
-    }
-
-    if (btn) {
-      const iconExpand = btn.querySelector('.icon-expand');
-      const iconCollapse = btn.querySelector('.icon-collapse');
-      if (iconExpand) iconExpand.hidden = this.isFullscreen;
-      if (iconCollapse) iconCollapse.hidden = !this.isFullscreen;
-      btn.title = this.isFullscreen
-        ? (t('settings_modal.bench_exit_fullscreen') || 'Свернуть')
-        : (t('settings_modal.bench_fullscreen') || 'На весь экран');
     }
   },
 
@@ -181,10 +118,6 @@ export const AimGame = {
     this.timerStartTs = 0;
 
     if (this.gameoverEl) this.gameoverEl.hidden = true;
-    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
-    if (this.timerEl) this.timerEl.textContent = '30.0';
-    if (this.scoreEl) this.scoreEl.textContent = '0';
-    if (this.recordEl) this.recordEl.textContent = this.record.toString();
 
     const barScore = document.getElementById('game-score');
     if (barScore) barScore.textContent = '0';
@@ -192,12 +125,6 @@ export const AimGame = {
     if (barRecord) barRecord.textContent = this.record.toString();
     const barTimer = document.getElementById('game-val-timer');
     if (barTimer) barTimer.textContent = '30.0 с';
-    const startBtn = document.getElementById('bench-start-label');
-    if (startBtn) startBtn.textContent = t('ui.game_start') || 'Старт';
-
-    if (this.hintEl) {
-      this.hintEl.textContent = t('settings_modal.bench_aim_start_hint') || 'Сбейте 1-ю мишень для старта! • [Esc] Выход';
-    }
 
     this.spawnTarget();
   },
@@ -293,15 +220,9 @@ export const AimGame = {
       this.gameState = 'playing';
       this.timerStartTs = performance.now();
       this.timeLeft = 30.0;
-      if (this.hintEl) {
-        this.hintEl.textContent = t('settings_modal.bench_aim_playing_hint') || '30 секунд! Сбивайте мишени • [Пробел] Центр • [Esc] Выход';
-      }
-      const startBtn = document.getElementById('bench-start-label');
-      if (startBtn) startBtn.textContent = t('ui.game_reset') || 'Сброс';
     }
 
     this.score++;
-    if (this.scoreEl) this.scoreEl.textContent = this.score.toString();
     const barScore = document.getElementById('game-score');
     if (barScore) barScore.textContent = this.score.toString();
 
@@ -310,7 +231,6 @@ export const AimGame = {
       try {
         localStorage.setItem('gb_aim_record', this.record.toString());
       } catch (e) {}
-      if (this.recordEl) this.recordEl.textContent = this.record.toString();
       const barRecord = document.getElementById('game-record');
       if (barRecord) barRecord.textContent = this.record.toString();
     }
@@ -366,16 +286,9 @@ export const AimGame = {
       const elapsed = (now - this.timerStartTs) / 1000;
       this.timeLeft = Math.max(0, 30.0 - elapsed);
 
-      if (this.timerEl) {
-        this.timerEl.textContent = this.timeLeft.toFixed(1);
-      }
       const barTimer = document.getElementById('game-val-timer');
       if (barTimer) {
         barTimer.textContent = `${this.timeLeft.toFixed(1)} с`;
-      }
-
-      if (this.timePillEl) {
-        this.timePillEl.classList.toggle('urgent', this.timeLeft <= 5.0);
       }
 
       if (this.timeLeft <= 0) {
@@ -388,8 +301,6 @@ export const AimGame = {
     this.gameState = 'gameover';
     this.cleanupTargets();
 
-    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
-    if (this.timerEl) this.timerEl.textContent = '0.0';
     const barTimer = document.getElementById('game-val-timer');
     if (barTimer) barTimer.textContent = '0.0 с';
 
@@ -406,10 +317,6 @@ export const AimGame = {
     }
     if (this.gameoverEl) {
       this.gameoverEl.hidden = false;
-    }
-    const startBtn = document.getElementById('bench-start-label');
-    if (startBtn) {
-      startBtn.textContent = t('ui.game_again') || 'Играть снова';
     }
   },
 

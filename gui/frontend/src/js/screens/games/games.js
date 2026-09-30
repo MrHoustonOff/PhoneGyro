@@ -12,9 +12,6 @@ export const TuningBench = {
   active: false,
   initialized: false,
   activeGame: localStorage.getItem('gb_bench_active_game') || 'aim', // 'aim' | 'platform'
-  dataFeed: localStorage.getItem('gb_bench_data_feed') || 'dsu',     // 'dsu' | 'raw'
-  invertX: localStorage.getItem('gb_bench_inv_x') === 'true',
-  invertY: localStorage.getItem('gb_bench_inv_y') === 'true',
   reticleX: 0,
   reticleY: 0,
   lastFrameTs: 0,
@@ -32,10 +29,10 @@ export const TuningBench = {
     this.hudAimXEl = document.getElementById('bench-hud-aim-x');
     this.hudAimYEl = document.getElementById('bench-hud-aim-y');
 
-    // Back button
-    const btnBack = document.getElementById('btn-games-back');
-    if (btnBack) {
-      btnBack.onclick = () => go('settings');
+    // Close button (red button on the toolbar)
+    const btnClose = document.getElementById('btn-games-close');
+    if (btnClose) {
+      btnClose.onclick = () => go('settings');
     }
 
     // Mini-Game tabs switching ('aim' vs 'platform')
@@ -47,61 +44,10 @@ export const TuningBench = {
       });
     });
 
-    // Data feed toggle button ('dsu' vs 'raw')
-    const btnFeed = document.getElementById('btn-bench-feed');
-    if (btnFeed) {
-      btnFeed.addEventListener('click', () => {
-        this.dataFeed = (this.dataFeed === 'dsu') ? 'raw' : 'dsu';
-        try {
-          localStorage.setItem('gb_bench_data_feed', this.dataFeed);
-        } catch (_) {}
-        this.syncFeedButton();
-      });
-      this.syncFeedButton();
-    }
-
-    // Invert X toggle button
-    const btnInvX = document.getElementById('btn-bench-inv-x');
-    if (btnInvX) {
-      btnInvX.addEventListener('click', () => {
-        this.invertX = !this.invertX;
-        try {
-          localStorage.setItem('gb_bench_inv_x', String(this.invertX));
-        } catch (_) {}
-        btnInvX.classList.toggle('active', this.invertX);
-      });
-      btnInvX.classList.toggle('active', this.invertX);
-    }
-
-    // Invert Y toggle button
-    const btnInvY = document.getElementById('btn-bench-inv-y');
-    if (btnInvY) {
-      btnInvY.addEventListener('click', () => {
-        this.invertY = !this.invertY;
-        try {
-          localStorage.setItem('gb_bench_inv_y', String(this.invertY));
-        } catch (_) {}
-        btnInvY.classList.toggle('active', this.invertY);
-      });
-      btnInvY.classList.toggle('active', this.invertY);
-    }
-
-    // Recenter buttons
+    // Recenter button
     document.getElementById('btn-game-recenter')?.addEventListener('click', () => {
       this.recenter();
     });
-
-    // Start / Reset button
-    const btnStart = document.getElementById('btn-game-start');
-    if (btnStart) {
-      btnStart.addEventListener('click', () => {
-        if (this.activeGame === 'aim') {
-          AimGame.resetGame();
-        } else {
-          PlatformGame.recenter();
-        }
-      });
-    }
 
     // Theme observer for platform materials
     const observer = new MutationObserver(() => {
@@ -111,17 +57,8 @@ export const TuningBench = {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     onLang(() => {
-      this.syncFeedButton();
       this.switchGame(this.activeGame);
     });
-  },
-
-  syncFeedButton() {
-    const btnFeed = document.getElementById('btn-bench-feed');
-    if (!btnFeed) return;
-    const isRaw = (this.dataFeed === 'raw');
-    btnFeed.textContent = isRaw ? (t('settings_modal.bench_feed_raw') || 'Сырой') : (t('settings_modal.bench_feed_dsu') || 'DSU');
-    btnFeed.classList.toggle('raw', isRaw);
   },
 
   switchGame(target) {
@@ -140,25 +77,16 @@ export const TuningBench = {
     if (viewPlatform) viewPlatform.hidden = (target !== 'platform');
 
     const metricLabel = document.getElementById('game-label-timer');
-    const startBtn = document.getElementById('bench-start-label');
 
     if (target === 'platform') {
-      if (AimGame.isFullscreen) {
-        AimGame.setFullscreen(false);
-      }
       PlatformGame.init();
       PlatformGame.syncDimensions(true);
       PlatformGame.updateHud(true);
       if (metricLabel) metricLabel.textContent = t('ui.games_plat_tilt') || 'Наклон:';
-      if (startBtn) startBtn.textContent = t('ui.game_reset') || 'Сброс';
     } else if (target === 'aim') {
-      if (PlatformGame.isFullscreen && document.querySelector('.app-games-card')?.classList.contains('is-fs')) {
-        PlatformGame.setFullscreen(false);
-      }
       AimGame.init();
       AimGame.syncState();
       if (metricLabel) metricLabel.textContent = t('ui.games_aim_time') || 'Время:';
-      if (startBtn) startBtn.textContent = (AimGame.gameState === 'playing' ? (t('ui.game_reset') || 'Сброс') : (t('ui.game_start') || 'Старт'));
     }
   },
 
@@ -175,29 +103,19 @@ export const TuningBench = {
   onFrame(frame) {
     if (!this.active || !frame) return;
 
-    const rawX = (frame.rawX !== undefined) ? frame.rawX : (frame.RawX || 0);
-    const rawY = (frame.rawY !== undefined) ? frame.rawY : (frame.RawY || 0);
-    const rawZ = (frame.rawZ !== undefined) ? frame.rawZ : (frame.RawZ || 0);
     const outX = (frame.outX !== undefined) ? frame.outX : (frame.OutX || 0);
     const outY = (frame.outY !== undefined) ? frame.outY : (frame.OutY || 0);
-    const outZ = (frame.outZ !== undefined) ? frame.outZ : (frame.OutZ || 0);
 
     const now = performance.now();
     const dt = this.lastFrameTs ? Math.min(0.05, Math.max(0.001, (now - this.lastFrameTs) / 1000)) : 0.016;
     this.lastFrameTs = now;
 
-    // Active feed selection ('dsu' or 'raw')
-    const curX = (this.dataFeed === 'raw') ? rawX : outX;
-    const curY = (this.dataFeed === 'raw') ? rawY : outY;
-
     // 1. Numerical Aim Reticle Integration (Zelda mechanics: angular velocity integration)
     const vp = document.getElementById('bench-aim-viewport');
     const aimSpeed = Math.max(4.2, ((vp ? vp.clientWidth : (window.innerWidth || 800)) / 340) * 2.4); // px per degree
-    const multX = this.invertX ? -1 : 1;
-    const multY = this.invertY ? -1 : 1;
 
-    this.reticleX += curY * dt * aimSpeed * multX;
-    this.reticleY -= curX * dt * aimSpeed * multY;
+    this.reticleX += outY * dt * aimSpeed;
+    this.reticleY -= outX * dt * aimSpeed;
 
     // Dynamic viewport bounds from AimGame
     const bounds = AimGame.getBounds();
@@ -284,13 +202,7 @@ export const TuningBench = {
 
     if (e.key === 'Escape') {
       e.preventDefault();
-      if (AimGame.isFullscreen) {
-        AimGame.setFullscreen(false);
-      } else if (PlatformGame.isFullscreen && document.querySelector('.app-games-card')?.classList.contains('is-fs')) {
-        PlatformGame.setFullscreen(false);
-      } else {
-        go('settings');
-      }
+      go('settings');
     } else if (e.code === 'Space' || e.key === ' ') {
       e.preventDefault();
       if (this.activeGame === 'aim' && AimGame.gameState === 'gameover') {
@@ -301,12 +213,6 @@ export const TuningBench = {
     } else if (e.key === 'Enter' && this.activeGame === 'aim' && AimGame.gameState === 'gameover') {
       e.preventDefault();
       AimGame.resetGame();
-    } else if (e.key === 'f' || e.key === 'F') {
-      if (this.activeGame === 'aim') {
-        AimGame.toggleFullscreen();
-      } else if (this.activeGame === 'platform') {
-        PlatformGame.toggleFullscreen();
-      }
     }
   }
 };
