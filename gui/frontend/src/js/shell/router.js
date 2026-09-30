@@ -4,7 +4,7 @@
 import { $, show, toggleClass, setText } from '../core/dom.js';
 import { t, onLang } from '../core/i18n.js';
 
-const SCREENS = ['connect', 'setup', 'settings', 'soon'];
+const SCREENS = ['connect', 'setup', 'settings', 'docs', 'soon'];
 const TAB_TITLES = { settings: 'nav.settings', stats: 'nav.stats', docs: 'ui.docs' };
 let tab = null;
 const subs = [];
@@ -29,7 +29,7 @@ export function startRouter() {
     const b = e.target.closest('.pg-tab');
     if (!b) return;
     if (tab === b.dataset.tab) go('connect');
-    else if (b.dataset.tab === 'settings') go('settings', 'settings');
+    else if (b.dataset.tab === 'settings' || b.dataset.tab === 'docs') go(b.dataset.tab, b.dataset.tab);
     else go('soon', b.dataset.tab);
   });
   $('home').onclick = () => go('connect');

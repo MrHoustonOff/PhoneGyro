@@ -17,6 +17,7 @@ import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
 import { startSetup } from './screens/setup.js';
 import { startSettings } from './screens/settings.js';
+import { startDocs } from './screens/docs.js';
 import { startSplash, syncSplashSetting } from './splash.js';
 
 const splash = startSplash();
@@ -38,6 +39,7 @@ document.addEventListener('click', (e) => {
 startConnect();
 startSetup();
 startSettings();
+startDocs();
 
 async function boot() {
   await ready;

@@ -176,6 +176,14 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "docs_search": "Search the guide",
+    "docs_source": "Source code · GitHub",
+    "docs_nothing": "Nothing found",
+    "docs_on_page": "On this page",
+    "callout_note": "Note",
+    "callout_tip": "Tip",
+    "callout_important": "Important",
+    "callout_caution": "Caution",
     "home": "Home",
     "reset_one": "Back to the default",
     "reset_all_title": "Reset the settings?",

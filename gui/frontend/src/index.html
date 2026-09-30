@@ -179,6 +179,18 @@
       <div class="pg-set__main" id="set-col-2"></div>
     </main>
 
+    <!-- Docs (design: ScreenDocs): the user guide, one section at a time (js/screens/docs.js) -->
+    <main class="pg-docs app-screen" id="screen-docs" hidden>
+      <aside class="pg-card app-docnav">
+        <div class="pg-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="pg-input" id="docs-search" type="search" data-i18n-ph="ui.docs_search"></div>
+        <div id="docs-nav"></div>
+        <div class="app-grow"></div>
+        <button class="pg-docnav__item app-docnav__gh" type="button" id="docs-gh"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg><span data-i18n="ui.docs_source">Source code · GitHub</span></button>
+      </aside>
+      <article class="pg-card app-docbody" id="docs-article"><div class="pg-prose" id="docs-prose"></div></article>
+      <nav class="pg-toc" id="docs-toc"></nav>
+    </main>
+
     <!-- Screens that are still being moved over -->
     <main class="pg-page pg-page--center app-screen" id="screen-soon" hidden>
       <section class="pg-card pg-card--hero pg-rings-corner pg-conn">

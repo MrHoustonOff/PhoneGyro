@@ -24,6 +24,7 @@ export const onLang = (fn) => subs.push(fn);
 export function apply(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => { const v = t(el.dataset.i18n); if (v) setText(el, v); });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.dataset.tip = t(el.dataset.i18nTitle); }); // ui/tooltip.js
+  root.querySelectorAll('[data-i18n-ph]').forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
   root.querySelectorAll('[data-md]').forEach((el) => setHTML(el, md(t(el.dataset.md))));
 }
 
