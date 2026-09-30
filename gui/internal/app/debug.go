@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+
+	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -123,6 +125,10 @@ func (a *App) closeDebugLog() {
 func (a *App) DisableDebug() {
 	a.debugPanel.Store(false)
 	a.debugLogOn.Store(false)
+	a.syncDebug()
 	a.closeDebugLog()
 	a.saveSettings()
+	if a.ctx != nil {
+		wailsRuntime.EventsEmit(a.ctx, "debug:active", false)
+	}
 }

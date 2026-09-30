@@ -27,9 +27,18 @@ func Run(frontend fs.FS) {
 			runLiveDebug()
 			return
 		}
+		if arg == "--debugwin" {
+			runDebugWindow()
+			return
+		}
 	}
 
 	app := NewApp()
+	// Debug window / log on: up before the window, servers and DSU, so the
+	// start itself is recorded (debughub.go).
+	if app.debugPanel.Load() || app.debugLogOn.Load() {
+		app.startDebugHub()
+	}
 	debugApp := NewLiveDebugApp()
 
 	bgR, bgG, bgB := uint8(0xf1), uint8(0xf1), uint8(0xf1)
@@ -52,6 +61,7 @@ func Run(frontend fs.FS) {
 		OnStartup: app.startup,
 		OnDomReady: func(ctx context.Context) {
 			wailsRuntime.WindowCenter(ctx)
+			app.hubPhase("window DOM ready")
 		},
 		OnShutdown: app.shutdown,
 		OnBeforeClose: func(ctx context.Context) (prevent bool) {

@@ -67,6 +67,7 @@ type App struct {
 	debugLogOn      atomic.Bool   // settings.json debugLog (debug.go)
 	debugPanel      atomic.Bool   // settings.json debugPanel
 	debugLog        debugLogState // logs/debug.log
+	hub             debugHub      // debughub.go
 	accent          string        // UI accent colour (settings.json accent), guarded by themeMu
 	currentLang     string
 	firstLaunchDone bool
@@ -183,6 +184,7 @@ func (a *App) logEvent(level, format string, args ...any) {
 func (a *App) startup(ctx context.Context) {
 	a.routeStdLog()
 	a.ctx = ctx
+	a.hubPhase("startup")
 
 	a.trayMgr = tray.New(tray.Callbacks{
 		Status:   a.trayStatus,
@@ -206,6 +208,7 @@ func (a *App) startup(ctx context.Context) {
 		fmt.Printf("[-] CA init error: %v\n", err)
 	}
 	a.caMgr = caMgr
+	a.hubPhase("certificates ready")
 
 	// 2. Cemuhook DSU Server (UDP)
 	macBytes, err := settings.ParseMAC(a.getDSUMAC())
@@ -219,6 +222,7 @@ func (a *App) startup(ctx context.Context) {
 		fmt.Printf("[-] DSU start error: %v\n", err)
 	}
 	a.dsuSrv = dsuSrv
+	a.hubPhase("DSU server up")
 
 	// Each bank gets its own aligner (own sensor_frame.json) so a learned
 	// axis mapping never leaks between the phone and a USB device.
@@ -256,6 +260,7 @@ func (a *App) startup(ctx context.Context) {
 	go a.watchLinkLoss(ctx)
 	a.startResourceMonitor()
 	go a.watchNetwork()
+	a.hubPhase("services up")
 	go a.checkForUpdate() // update_check.go; does nothing unless switched on
 	go a.watchFirewall()  // firewall.go
 }

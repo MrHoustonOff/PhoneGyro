@@ -506,6 +506,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	} else if !s.DebugLog {
 		a.closeDebugLog()
 	}
+	a.syncDebug()
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
