@@ -1,14 +1,16 @@
 // Response Test Bench & Real-Time Motion Oscilloscope
 // Provides real-time waveform tracking (Raw vs Filtered DSU),
 // stability classification, noise suppression analysis,
-// and live parameter tuning (Deadband and Sensitivity) synchronized with Settings.
+// and live parameter tuning synchronized with Settings Motion group.
+// Adheres strictly to Rule 0: zero continuous rAF or streaming when idle or offline.
 
 import { $, toggleClass } from '../../core/dom.js';
 import { on, off, call } from '../../core/bridge.js';
+import { getState } from '../../core/state.js';
 import { t } from '../../core/i18n.js';
 
 export function initBench(container, options = {}) {
-  if (!container) return { activate: () => {}, deactivate: () => {}, setParams: () => {} };
+  if (!container) return { activate: () => {}, deactivate: () => {}, setParams: () => {}, setConnected: () => {} };
 
   // DOM Elements
   const canvas = $('bench-oscilloscope-canvas');
@@ -20,24 +22,26 @@ export function initBench(container, options = {}) {
   const noiseValEl = $('bench-noise-val');
   const rateValEl = $('bench-rate-val');
   const pingValEl = $('bench-ping-val');
-  const deadbandSlider = $('bench-deadband-slider');
-  const deadbandValEl = $('bench-deadband-val');
-  const sensSlider = $('bench-sens-slider');
-  const sensValEl = $('bench-sens-val');
-  const saveBtn = $('btn-bench-save');
+  const sparkCanvas = $('bench-net-spark-canvas');
+  const offlineOverlay = $('bench-offline-overlay');
 
   // State
   const MAX_HISTORY = 140;
   let activeAxis = localStorage.getItem('pg-bench-axis') || 'all'; // 'x' | 'y' | 'z' | 'all'
   let dataFeed = localStorage.getItem('pg-bench-feed') || 'dsu';    // 'dsu' | 'raw'
   let isActive = false;
-  let rafId = null;
+  let isConnected = false;
+  let renderScheduled = false;
   let lastFrameTs = 0;
   let lastDomUpdateTs = 0;
   let lastSpeed = 0;
-  let deadbandUsb = 0.50;
 
-  // History Buffers
+  let currentDeadband = 0.10;
+  let currentDeadbandUsb = 0.50;
+  let currentSensitivity = 1.0;
+
+  // Telemetry Buffers
+  const pingHistory = [];
   const historyRaw = {
     x: new Array(MAX_HISTORY).fill(0),
     y: new Array(MAX_HISTORY).fill(0),
@@ -94,39 +98,8 @@ export function initBench(container, options = {}) {
     }
   }
 
-  function updateSliderFill(slider, min, max) {
-    if (!slider) return;
-    const v = parseFloat(slider.value);
-    const fill = Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
-    slider.style.setProperty('--fill', `${fill}%`);
-  }
-
-  function updateDeadbandUI(val) {
-    const v = Number(val);
-    if (deadbandSlider) {
-      deadbandSlider.value = v;
-      updateSliderFill(deadbandSlider, 0, 0.5);
-    }
-    if (deadbandValEl) {
-      deadbandValEl.textContent = `${v.toFixed(2)} °/s`;
-    }
-  }
-
-  function updateSensUI(val) {
-    const v = Number(val);
-    if (sensSlider) {
-      sensSlider.value = v;
-      updateSliderFill(sensSlider, 0.25, 3.0);
-    }
-    if (sensValEl) {
-      sensValEl.textContent = `${v.toFixed(2)}x`;
-    }
-  }
-
   function applyTuningParams() {
-    const deadband = parseFloat(deadbandSlider?.value || 0.10);
-    const sensitivity = parseFloat(sensSlider?.value || 1.0);
-    call('SetTuningFilterParams', deadband, deadbandUsb, sensitivity);
+    call('SetTuningFilterParams', currentDeadband, currentDeadbandUsb, currentSensitivity);
   }
 
   // Event Listeners for UI Controls
@@ -139,6 +112,7 @@ export function initBench(container, options = {}) {
         localStorage.setItem('pg-bench-feed', dataFeed);
       } catch (_) {}
       syncUI();
+      scheduleDraw();
     });
   }
 
@@ -151,6 +125,7 @@ export function initBench(container, options = {}) {
         localStorage.setItem('pg-bench-axis', activeAxis);
       } catch (_) {}
       syncUI();
+      scheduleDraw();
     });
   }
 
@@ -162,43 +137,7 @@ export function initBench(container, options = {}) {
     recenterBtn.addEventListener('click', handleRecenter);
   }
 
-  if (deadbandSlider) {
-    deadbandSlider.addEventListener('input', () => {
-      const val = parseFloat(deadbandSlider.value);
-      updateDeadbandUI(val);
-      applyTuningParams();
-      if (options.onParamChange) {
-        options.onParamChange({
-          deadband: val,
-          sensitivity: parseFloat(sensSlider?.value || 1.0),
-        });
-      }
-    });
-  }
-
-  if (sensSlider) {
-    sensSlider.addEventListener('input', () => {
-      const val = parseFloat(sensSlider.value);
-      updateSensUI(val);
-      applyTuningParams();
-      if (options.onParamChange) {
-        options.onParamChange({
-          deadband: parseFloat(deadbandSlider?.value || 0.10),
-          sensitivity: val,
-        });
-      }
-    });
-  }
-
-  if (saveBtn) {
-    saveBtn.addEventListener('click', async () => {
-      if (options.onSave) {
-        await options.onSave();
-      }
-    });
-  }
-
-  // Keyboard shortcut: Space for recenter
+  // Keyboard shortcut: Space for recenter when active
   function handleKeyDown(e) {
     if (!isActive) return;
     if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
@@ -207,7 +146,7 @@ export function initBench(container, options = {}) {
     }
   }
 
-  // Frame Receiver
+  // Frame Receiver (Rule 0: draws on frame arrival, no continuous idle rAF)
   function handleFrame(frame) {
     if (!isActive || !frame) return;
 
@@ -253,16 +192,60 @@ export function initBench(container, options = {}) {
       lastDomUpdateTs = now;
       updateDOM(hz);
     }
+
+    scheduleDraw();
   }
 
   function handleState(s) {
-    if (!isActive || !s) return;
+    if (!s) return;
     if (s.pingMs !== undefined && pingValEl) {
-      pingValEl.textContent = `${Math.round(s.pingMs)} ms`;
+      pingValEl.textContent = s.pingMs >= 0 ? `${Math.round(s.pingMs)} ms` : '-- ms';
+      if (s.pingMs >= 0) {
+        pingHistory.push(s.pingMs);
+        if (pingHistory.length > 24) pingHistory.shift();
+        drawNetSparkline();
+      }
     }
     if (s.status === 'offline') {
       handleDisconnect();
     }
+  }
+
+  function drawNetSparkline() {
+    if (!sparkCanvas) return;
+    const w = sparkCanvas.clientWidth || 48;
+    const h = sparkCanvas.clientHeight || 14;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pw = Math.floor(w * dpr);
+    const ph = Math.floor(h * dpr);
+    if (sparkCanvas.width !== pw || sparkCanvas.height !== ph) {
+      sparkCanvas.width = pw;
+      sparkCanvas.height = ph;
+    }
+    const ctx = sparkCanvas.getContext('2d');
+    if (!ctx) return;
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    const n = pingHistory.length;
+    if (n >= 2) {
+      let maxVal = 50;
+      for (let i = 0; i < n; i++) if (pingHistory[i] > maxVal) maxVal = pingHistory[i];
+      const dx = (w - 2) / (n - 1);
+      const colors = getThemeColors();
+      ctx.beginPath();
+      ctx.strokeStyle = colors.axisY;
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < n; i++) {
+        const x = 1 + i * dx;
+        const y = h - 2 - (Math.min(pingHistory[i], maxVal) / maxVal) * (h - 4);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function updateDOM(hz) {
@@ -335,7 +318,7 @@ export function initBench(container, options = {}) {
     }
 
     const w = canvas.clientWidth || 340;
-    const h = canvas.clientHeight || (activeAxis === 'all' ? 300 : 180);
+    const h = canvas.clientHeight || (activeAxis === 'all' ? 150 : 120);
     const dpr = window.devicePixelRatio || 1;
     const pixelW = Math.round(w * dpr);
     const pixelH = Math.round(h * dpr);
@@ -364,7 +347,6 @@ export function initBench(container, options = {}) {
         'Yaw (Y)',
         'Roll (Z)',
       ];
-      // Colors per axis from tokens
       const filtColors = [colors.axisX, colors.axisY, colors.axisZ];
       const rawColor = colors.rawColorAll;
 
@@ -399,23 +381,23 @@ export function initBench(container, options = {}) {
 
         // Title Badge
         const title = titles[k];
-        ctx.font = '600 11px system-ui, -apple-system, sans-serif';
-        const titleW = ctx.measureText(title).width + 12;
-        const badgeH = 18;
-        const badgeX = 8;
-        const badgeY = topY + 5;
+        ctx.font = '600 10px system-ui, -apple-system, sans-serif';
+        const titleW = ctx.measureText(title).width + 10;
+        const badgeH = 16;
+        const badgeX = 6;
+        const badgeY = topY + 4;
 
         ctx.fillStyle = colors.badgeBg;
         if (ctx.roundRect) {
           ctx.beginPath();
-          ctx.roundRect(badgeX, badgeY, titleW, badgeH, 4);
+          ctx.roundRect(badgeX, badgeY, titleW, badgeH, 3);
           ctx.fill();
         } else {
           ctx.fillRect(badgeX, badgeY, titleW, badgeH);
         }
 
         ctx.fillStyle = colors.textColor;
-        ctx.fillText(title, badgeX + 6, badgeY + 13);
+        ctx.fillText(title, badgeX + 5, badgeY + 12);
 
         // Numeric Readout on right
         const curFilt = filtArr.length ? filtArr[filtArr.length - 1] : 0;
@@ -423,10 +405,10 @@ export function initBench(container, options = {}) {
         const readoutVal = dataFeed === 'raw' ? curRaw : curFilt;
         const readoutText = `${dataFeed.toUpperCase()}: ${(readoutVal >= 0 ? '+' : '')}${readoutVal.toFixed(1)}°/s`;
 
-        ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
+        ctx.font = '600 10px ui-monospace, SFMono-Regular, monospace';
         ctx.fillStyle = filtColors[k];
         const readoutW = ctx.measureText(readoutText).width;
-        ctx.fillText(readoutText, w - readoutW - 8, badgeY + 13);
+        ctx.fillText(readoutText, w - readoutW - 6, badgeY + 12);
 
         if (n < 2) continue;
 
@@ -497,9 +479,9 @@ export function initBench(container, options = {}) {
       const title = activeAxis === 'y' ? 'Yaw (Y)' : activeAxis === 'z' ? 'Roll (Z)' : 'Pitch (X)';
       const activeColor = activeAxis === 'y' ? colors.axisY : activeAxis === 'z' ? colors.axisZ : colors.axisX;
 
-      ctx.font = '600 12px system-ui, -apple-system, sans-serif';
+      ctx.font = '600 11px system-ui, -apple-system, sans-serif';
       const titleW = ctx.measureText(title).width + 12;
-      const badgeH = 20;
+      const badgeH = 18;
       const badgeX = 8;
       const badgeY = 8;
 
@@ -513,7 +495,7 @@ export function initBench(container, options = {}) {
       }
 
       ctx.fillStyle = colors.textColor;
-      ctx.fillText(title, badgeX + 6, badgeY + 14);
+      ctx.fillText(title, badgeX + 6, badgeY + 13);
 
       // Numeric Readout on right
       const curFilt = filtArr.length ? filtArr[filtArr.length - 1] : 0;
@@ -521,10 +503,10 @@ export function initBench(container, options = {}) {
       const readoutVal = dataFeed === 'raw' ? curRaw : curFilt;
       const readoutText = `${dataFeed.toUpperCase()}: ${(readoutVal >= 0 ? '+' : '')}${readoutVal.toFixed(1)}°/s`;
 
-      ctx.font = '600 12px ui-monospace, SFMono-Regular, monospace';
+      ctx.font = '600 11px ui-monospace, SFMono-Regular, monospace';
       ctx.fillStyle = activeColor;
       const readoutW = ctx.measureText(readoutText).width;
-      ctx.fillText(readoutText, w - readoutW - 8, badgeY + 14);
+      ctx.fillText(readoutText, w - readoutW - 8, badgeY + 13);
 
       if (n >= 2) {
         let maxAmp = 8.0;
@@ -567,22 +549,36 @@ export function initBench(container, options = {}) {
     ctx.restore();
   }
 
-  // Animation Loop: runs only while active
-  function loop() {
-    if (!isActive) {
-      rafId = null;
-      return;
-    }
-    drawOscilloscope();
-    rafId = requestAnimationFrame(loop);
+  function scheduleDraw() {
+    if (renderScheduled || !isActive) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+      renderScheduled = false;
+      if (isActive) drawOscilloscope();
+    });
   }
 
-  // Set parameters externally (e.g. from Settings screen sync)
-  function setParams({ deadband, sensitivity, deadbandUsb: dbUsb }) {
-    if (deadband !== undefined) updateDeadbandUI(deadband);
-    if (sensitivity !== undefined) updateSensUI(sensitivity);
-    if (dbUsb !== undefined) deadbandUsb = dbUsb;
+  // Set parameters externally from Settings screen Motion group
+  function setParams({ deadband, sensitivity, deadbandUsb }) {
+    if (deadband !== undefined) currentDeadband = deadband;
+    if (sensitivity !== undefined) currentSensitivity = sensitivity;
+    if (deadbandUsb !== undefined) currentDeadbandUsb = deadbandUsb;
     applyTuningParams();
+  }
+
+  // Set connected status and manage blur overlay
+  function setConnected(connected) {
+    isConnected = !!connected;
+    if (offlineOverlay) {
+      offlineOverlay.hidden = isConnected;
+    }
+    if (!isConnected) {
+      handleDisconnect();
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
   }
 
   // Lifecycle
@@ -591,7 +587,7 @@ export function initBench(container, options = {}) {
     isActive = true;
     syncUI();
 
-    // Reset history with zeroes
+    // Reset history buffers
     for (const k of ['x', 'y', 'z']) {
       historyRaw[k] = new Array(MAX_HISTORY).fill(0);
       historyFilt[k] = new Array(MAX_HISTORY).fill(0);
@@ -600,21 +596,21 @@ export function initBench(container, options = {}) {
     recentFiltDev.length = 0;
     lastFrameTs = 0;
 
-    // Load initial parameters from settings or options
+    // Load initial parameters from settings
     if (options.getInitialParams) {
       const p = options.getInitialParams();
       if (p) {
-        if (p.deadband !== undefined) updateDeadbandUI(p.deadband);
-        if (p.sensitivity !== undefined) updateSensUI(p.sensitivity);
-        if (p.deadbandUsb !== undefined) deadbandUsb = p.deadbandUsb;
+        if (p.deadband !== undefined) currentDeadband = p.deadband;
+        if (p.sensitivity !== undefined) currentSensitivity = p.sensitivity;
+        if (p.deadbandUsb !== undefined) currentDeadbandUsb = p.deadbandUsb;
       }
     } else {
       try {
         const s = await call('GetAppSettings');
         if (s) {
-          if (s.GyroDeadband !== undefined) updateDeadbandUI(s.GyroDeadband);
-          if (s.GyroSensitivity !== undefined) updateSensUI(s.GyroSensitivity);
-          if (s.GyroDeadbandUsb !== undefined) deadbandUsb = s.GyroDeadbandUsb;
+          if (s.GyroDeadband !== undefined) currentDeadband = s.GyroDeadband;
+          if (s.GyroSensitivity !== undefined) currentSensitivity = s.GyroSensitivity;
+          if (s.GyroDeadbandUsb !== undefined) currentDeadbandUsb = s.GyroDeadbandUsb;
         }
       } catch (_) {}
     }
@@ -630,20 +626,14 @@ export function initBench(container, options = {}) {
     on('device:connected', handleConnect);
     window.addEventListener('keydown', handleKeyDown);
 
-    // Start render loop
-    if (!rafId) {
-      rafId = requestAnimationFrame(loop);
-    }
+    handleState(getState());
+    scheduleDraw();
   }
 
   function deactivate() {
     if (!isActive) return;
     isActive = false;
-
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
+    renderScheduled = false;
 
     // Stop streaming on backend (Strict Rule 0)
     call('SetTuningActive', false);
@@ -660,5 +650,6 @@ export function initBench(container, options = {}) {
     activate,
     deactivate,
     setParams,
+    setConnected,
   };
 }

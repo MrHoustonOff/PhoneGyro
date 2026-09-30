@@ -6,6 +6,7 @@
 
 import { $, setText, show, esc } from '../core/dom.js';
 import { call } from '../core/bridge.js';
+import { getState, onState } from '../core/state.js';
 import { t, onLang } from '../core/i18n.js';
 import { onScreen } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
@@ -75,7 +76,7 @@ let mixOpen = false;  // the per-sound mixer is folded out
 // Per-event volumes (settings.json soundVolumes, 0..3, 1 by default).
 const SOUNDS = [
   ['connect', 'sound_phone_connect'], ['disconnect', 'sound_phone_disconnect'], ['loss', 'sound_link_loss'],
-  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'], ['goal', 'sound_bench_goal'], ['defeat', 'sound_bench_defeat'],
+  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'],
 ];
 const vol = (k) => { const v = cur.soundVolumes && cur.soundVolumes[k]; return v == null ? 1 : v; };
 const CHEV = '<svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>';
@@ -122,7 +123,9 @@ function render() {
   if (!cur) return;
   let i = 0;
   COLUMNS.forEach((groups, c) => {
-    $('set-col-' + (c + 1)).innerHTML = groups.map((g) => `<div class="pg-group">
+    const target = c === 0 ? $('set-col-1') : ($('set-col-2-groups') || $('set-col-2'));
+    if (!target) return;
+    target.innerHTML = groups.map((g) => `<div class="pg-group">
       <div class="pg-overline"><span class="pg-ring"></span>${esc(t(g.title))}</div>
       ${g.note ? `<div class="pg-notice"><span>${esc(t(g.note))}</span></div>` : ''}
       <div class="pg-group__list">${g.rows.map((r) => {
@@ -206,6 +209,15 @@ function save(now = false) {
   }, now ? 0 : 350);
 }
 
+function applyMotionFilterParams() {
+  if (!cur) return;
+  const db = Number(cur.gyroDeadband ?? 0.10);
+  const dbUsb = Number(cur.gyroDeadbandUsb ?? 0.50);
+  const sens = Number(cur.gyroSensitivity ?? 1.0);
+  call('SetTuningFilterParams', db, dbUsb, sens);
+  benchController?.setParams({ deadband: db, deadbandUsb: dbUsb, sensitivity: sens });
+}
+
 function onInput(e) {
   const rowEl = e.target.closest('.pg-row');
   if (!rowEl) return;
@@ -231,7 +243,7 @@ function onInput(e) {
     setText($(el.id + '-v'), r.fmt(v));
     cur[r.key] = v;
     if (r.key === 'gyroSensitivity') {
-      benchController?.setParams({ sensitivity: v });
+      applyMotionFilterParams();
     }
     if (e.type === 'change') { if (r.after) r.after(v); mark(rowEl, r); save(); }
     return;
@@ -240,10 +252,8 @@ function onInput(e) {
   if (r.type === 'toggle') cur[r.key] = el.checked;
   else if (r.type === 'select') {
     cur[r.key] = r.num ? Number(el.value) : r.bool ? el.value === 'true' : el.value;
-    if (r.key === 'gyroDeadband') {
-      benchController?.setParams({ deadband: Number(cur.gyroDeadband) });
-    } else if (r.key === 'gyroDeadbandUsb') {
-      benchController?.setParams({ deadbandUsb: Number(cur.gyroDeadbandUsb) });
+    if (r.key === 'gyroDeadband' || r.key === 'gyroDeadbandUsb') {
+      applyMotionFilterParams();
     }
   }
   else if (r.type === 'port') {
@@ -299,13 +309,7 @@ async function regenMac() {
 async function load() {
   [cur, def] = await Promise.all([call('GetAppSettings'), call('GetDefaultAppSettings')]);
   render();
-  if (benchController && cur) {
-    benchController.setParams({
-      deadband: cur.gyroDeadband,
-      sensitivity: cur.gyroSensitivity,
-      deadbandUsb: cur.gyroDeadbandUsb,
-    });
-  }
+  applyMotionFilterParams();
 }
 
 export function startSettings() {
@@ -342,111 +346,25 @@ export function startSettings() {
   document.addEventListener('visibilitychange', () => {
     syncBenchActive();
   });
+  onState(() => {
+    syncBenchActive();
+  });
   // Changed elsewhere (the debug panel's cross): show it if this screen is open.
   addEventListener('pg:settings-changed', () => { if (!screen.hidden) load(); });
   // Ctrl +/− while Settings is open: keep the slider's value in step.
   onZoom((v) => { if (cur && !screen.hidden && Math.abs((cur.fontScale || 1) - v) > 1e-6) { cur.fontScale = v; render(); } });
   onLang(() => { if (!screen.hidden) render(); });
-
-  // Bench & Mini-games collapsible section state
-  try {
-    benchOpen = localStorage.getItem('pg-settings-bench-open') === '1';
-    benchTab = localStorage.getItem('pg-settings-bench-tab') || 'bench';
-  } catch (_) {}
-  syncBenchSection();
-  syncBenchActive();
-
-  const benchToggle = $('set-bench-toggle');
-  if (benchToggle) {
-    benchToggle.addEventListener('click', () => {
-      benchOpen = !benchOpen;
-      try {
-        localStorage.setItem('pg-settings-bench-open', benchOpen ? '1' : '0');
-      } catch (_) {}
-      syncBenchSection();
-      syncBenchActive();
-    });
-  }
-
-  const benchSeg = $('set-bench-seg');
-  if (benchSeg) {
-    benchSeg.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-bench-tab]');
-      if (!btn) return;
-      benchTab = btn.dataset.benchTab || 'bench';
-      try {
-        localStorage.setItem('pg-settings-bench-tab', benchTab);
-      } catch (_) {}
-      syncBenchSection();
-      syncBenchActive();
-    });
-  }
 }
 
-let benchOpen = false;
-let benchTab = 'bench';
 let benchLoaded = false;
 let benchController = null;
-
-function findRowByKey(key) {
-  const allRows = rows();
-  const idx = allRows.findIndex((r) => r.key === key);
-  if (idx < 0) return { r: null, el: null };
-  const el = document.querySelector(`#screen-settings .pg-row[data-i="${idx}"]`);
-  return { r: allRows[idx], el };
-}
-
-function onBenchParamChange({ deadband, sensitivity }) {
-  if (deadband !== undefined && cur) {
-    cur.gyroDeadband = deadband;
-    const { r, el } = findRowByKey('gyroDeadband');
-    if (el && r) {
-      const select = el.querySelector('select');
-      if (select) {
-        const targetVal = deadband.toFixed(2);
-        const match = Array.from(select.options).find((opt) => opt.value === targetVal);
-        if (match) {
-          select.value = targetVal;
-        }
-      }
-      mark(el, r);
-    }
-  }
-
-  if (sensitivity !== undefined && cur) {
-    cur.gyroSensitivity = sensitivity;
-    const { r, el } = findRowByKey('gyroSensitivity');
-    if (el && r) {
-      const slider = el.querySelector('input[type="range"]');
-      if (slider) {
-        slider.value = sensitivity;
-        const fill = ((sensitivity - r.min) / (r.max - r.min)) * 100;
-        slider.style.setProperty('--fill', `${fill}%`);
-        setText($(slider.id + '-v'), r.fmt(sensitivity));
-      }
-      mark(el, r);
-    }
-  }
-}
-
-async function onBenchSave() {
-  if (!cur) return;
-  try {
-    await call('SaveAppSettings', cur);
-    toast(t('ui.bench_saved_toast') || 'Значения фильтра сохранены в настройки');
-  } catch (err) {
-    toast(String(err && err.message || err));
-  }
-}
 
 async function ensureBenchLoaded() {
   if (benchLoaded) return;
   benchLoaded = true;
   try {
     const { initBench } = await import('./settings/bench.js');
-    benchController = initBench($('set-pane-bench'), {
-      onParamChange: onBenchParamChange,
-      onSave: onBenchSave,
+    benchController = initBench($('set-bench-card'), {
       getInitialParams: () => ({
         deadband: cur?.gyroDeadband,
         sensitivity: cur?.gyroSensitivity,
@@ -459,13 +377,16 @@ async function ensureBenchLoaded() {
   }
 }
 
-async function syncBenchActive() {
+export async function syncBenchActive() {
   const isSettingsScreen = !$('screen-settings')?.hidden;
-  const shouldBeActive = isSettingsScreen && benchOpen && benchTab === 'bench' && !document.hidden;
+  const isDocVisible = !document.hidden;
+  const state = getState();
+  const isConnected = state?.status === 'online';
 
-  if (shouldBeActive) {
+  if (isSettingsScreen) {
     await ensureBenchLoaded();
-    if (benchController?.activate) {
+    if (benchController) {
+      benchController.setConnected(isConnected);
       if (cur) {
         benchController.setParams({
           deadband: cur.gyroDeadband,
@@ -473,39 +394,16 @@ async function syncBenchActive() {
           deadbandUsb: cur.gyroDeadbandUsb,
         });
       }
-      benchController.activate();
+      // Rule 0: live streaming and rAF run ONLY when settings screen is active AND window is visible AND device is connected
+      if (isDocVisible && isConnected) {
+        benchController.activate();
+      } else {
+        benchController.deactivate();
+      }
     }
   } else {
-    if (benchController?.deactivate) {
-      benchController.deactivate();
-    }
+    benchController?.deactivate();
   }
 }
 
-function syncBenchSection() {
-  const toggleBtn = $('set-bench-toggle');
-  const group = $('set-bench-group');
-  const body = $('set-bench-body');
-  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(benchOpen));
-  if (group) group.classList.toggle('is-open', benchOpen);
-  if (body) body.hidden = !benchOpen;
-
-  // Sync subtab
-  const seg = $('set-bench-seg');
-  if (seg) {
-    seg.querySelectorAll('.pg-seg__btn').forEach((btn) => {
-      btn.classList.toggle('is-active', btn.dataset.benchTab === benchTab);
-    });
-  }
-  const paneBench = $('set-pane-bench');
-  const paneGames = $('set-pane-games');
-  if (paneBench) {
-    paneBench.hidden = benchTab !== 'bench';
-    paneBench.classList.toggle('is-active', benchTab === 'bench');
-  }
-  if (paneGames) {
-    paneGames.hidden = benchTab !== 'games';
-    paneGames.classList.toggle('is-active', benchTab === 'games');
-  }
-}
 
