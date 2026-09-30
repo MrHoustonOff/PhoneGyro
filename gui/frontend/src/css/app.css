@@ -1721,6 +1721,18 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-stat-hero__spark {
   width: 6.25rem;
   flex: none;
+  position: relative;
+}
+.app-stat-hero__spark-label {
+  position: absolute;
+  bottom: 0.125rem;
+  right: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  line-height: 1;
+  color: var(--ink-2);
+  opacity: 0.7;
+  pointer-events: none;
 }
 .app-stat-hero__spark .pg-spark svg path {
   fill: none;
@@ -1752,6 +1764,34 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-session-list b {
   color: var(--ink);
+}
+
+/* DSU Client list */
+.app-dsu-client-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  font: 400 0.6875rem/0.875rem var(--font-mono);
+  color: var(--ink-2);
+}
+.app-dsu-client-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.1875rem 0.375rem;
+  background: var(--surface-inset);
+  border-radius: var(--radius-xs, 0.25rem);
+}
+.app-dsu-client-row b {
+  color: var(--ink);
+}
+
+.pg-badge--none {
+  border-color: var(--line-subtle);
+  color: var(--ink-2);
+  background: transparent;
 }
 
 /* Recording button in active state */

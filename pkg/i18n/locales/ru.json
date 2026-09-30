@@ -271,6 +271,7 @@
     "stats_quality_verdict_fair": "Приемлемое качество связи",
     "stats_quality_verdict_poor": "Нестабильный канал связи",
     "stats_quality_desc_idle": "Ожидание данных телеметрии...",
+    "stats_quality_spark_hint": "История качества (0–100 %)",
     "stats_tail_title": "Хвост RTT",
     "stats_tail_tip": "Максимальная задержка и 95-й процентиль (p95) за окно ~30 с + средний интервал между пакетами (Δt). Показывает микрофризы сети.",
     "stats_loss_merged_title": "Потери / Merged",

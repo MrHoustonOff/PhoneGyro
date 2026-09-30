@@ -271,6 +271,7 @@
     "stats_quality_verdict_fair": "Fair link quality",
     "stats_quality_verdict_poor": "Unstable connection",
     "stats_quality_desc_idle": "Waiting for telemetry data...",
+    "stats_quality_spark_hint": "Quality history (0–100%)",
     "stats_tail_title": "RTT Tail",
     "stats_tail_tip": "Maximum latency and 95th percentile (p95) over ~30s window + mean packet interval (Δt). Highlights network micro-stutters.",
     "stats_loss_merged_title": "Loss / Merged",

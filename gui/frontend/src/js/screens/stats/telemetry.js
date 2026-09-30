@@ -35,17 +35,23 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
 
 function setBadge(el, status, text = null) {
   if (!el) return;
-  el.className = `pg-badge pg-badge--${status || 'ok'}`;
-  if (text != null) setText(el, text);
+  if (status === 'none') {
+    el.className = 'pg-badge pg-badge--none';
+    setText(el, text != null ? text : 'нет данных');
+  } else {
+    el.className = `pg-badge pg-badge--${status || 'ok'}`;
+    if (text != null) setText(el, text);
+  }
 }
 
 function getCoreHost() {
   const h = window.location.hostname;
   if (!h || h === 'wails.localhost' || h === 'localhost.wails' || window.location.protocol === 'file:') {
-    return '127.0.0.1:8080';
+    const port = getState()?.httpPort || 8080;
+    return `127.0.0.1:${port}`;
   }
   if (h === 'localhost' || h === '127.0.0.1') {
-    return `${h}:${window.location.port || '8080'}`;
+    return `${h}:${window.location.port || getState()?.httpPort || '8080'}`;
   }
   return window.location.host;
 }
@@ -83,6 +89,52 @@ export function initTelemetry(paneEl) {
     noise: [],
   };
 
+  function handleUsbProto(msg) {
+    if (!msg) return;
+    const l1 = $('stats-usb-l1');
+    const l2 = $('stats-usb-l2');
+    const l3 = $('stats-usb-l3');
+    const l4 = $('stats-usb-l4');
+    if (l1) setText(l1, `${msg.port || 'USB'} · ${msg.baud || 115200}`);
+    if (l2) setText(l2, `${(msg.rate_hz || 0).toFixed(0)} Гц · ${msg.frames || 0} фр.`);
+    if (l3) setText(l3, `${msg.protocol || 'v1.1.0'} · ±${msg.gyro_range_dps || 2000}°/s · ±${msg.accel_range_g || 8}g`);
+    if (l4) setText(l4, `${msg.crc_rejects || 0} CRC · ${msg.lost || 0} потерь`);
+  }
+
+  function feedStreamFrame(msg) {
+    if (!isActive || !msg) return;
+    if (msg.type === 'usb_proto') {
+      handleUsbProto(msg);
+      if (msg.declared_hz) deriveEngine.setDeclaredUsbHz(msg.declared_hz);
+      return;
+    }
+    deriveEngine.feedFrame(msg);
+    if (recorder.isRecording) {
+      recorder.recordFrame({
+        q0: msg.q0 ?? 1,
+        q1: msg.q1 ?? 0,
+        q2: msg.q2 ?? 0,
+        q3: msg.q3 ?? 0,
+        rawGx: msg.raw_gx ?? msg.rawRotX ?? 0,
+        rawGy: msg.raw_gy ?? msg.rawRotY ?? 0,
+        rawGz: msg.raw_gz ?? msg.rawRotZ ?? 0,
+        rawAx: msg.raw_ax ?? msg.rawAccX ?? 0,
+        rawAy: msg.raw_ay ?? msg.rawAccY ?? 0,
+        rawAz: msg.raw_az ?? msg.rawAccZ ?? 0,
+        outGx: msg.out_gx ?? lastTuning?.OutX ?? 0,
+        outGy: msg.out_gy ?? lastTuning?.OutY ?? 0,
+        outGz: msg.out_gz ?? lastTuning?.OutZ ?? 0,
+        stickLx: msg.stick_lx ?? 0,
+        stickLy: msg.stick_ly ?? 0,
+        inHz: msg.in_hz ?? 0,
+        outHz: msg.out_hz ?? 0,
+        pipeMs: msg.pipe_ms ?? 0,
+        dsuClients: msg.dsu_clients ?? 0,
+        linkRttMs: msg.link_rtt_ms ?? -1,
+      });
+    }
+  }
+
   function connectWebSocket() {
     if (wsReconnectTimer) {
       clearTimeout(wsReconnectTimer);
@@ -98,10 +150,7 @@ export function initTelemetry(paneEl) {
         if (!isActive) return;
         try {
           const data = JSON.parse(event.data);
-          deriveEngine.feedFrame(data);
-          if (data && data.type === 'usb_proto') {
-            handleUsbProto(data);
-          }
+          feedStreamFrame(data);
         } catch (_) {}
       };
 
@@ -416,33 +465,35 @@ export function initTelemetry(paneEl) {
   const handleTuningFrame = (tf) => {
     if (!isActive || !tf) return;
     lastTuning = tf;
+    deriveEngine.feedTuning(tf);
     setText($('tel-out-gx'), (tf.OutX >= 0 ? '+' : '') + tf.OutX.toFixed(2));
     setText($('tel-out-gy'), (tf.OutY >= 0 ? '+' : '') + tf.OutY.toFixed(2));
     setText($('tel-out-gz'), (tf.OutZ >= 0 ? '+' : '') + tf.OutZ.toFixed(2));
+    if (recorder.isRecording && (!ws || ws.readyState !== 1)) {
+      recorder.recordFrame({
+        rawGx: tf.RawX,
+        rawGy: tf.RawY,
+        rawGz: tf.RawZ,
+        outGx: tf.OutX,
+        outGy: tf.OutY,
+        outGz: tf.OutZ,
+        inHz: tf.Hz,
+      });
+    }
   };
-
-  function handleUsbProto(msg) {
-    if (!msg) return;
-    const l1 = $('stats-usb-l1');
-    const l2 = $('stats-usb-l2');
-    const l3 = $('stats-usb-l3');
-    const l4 = $('stats-usb-l4');
-    if (l1) setText(l1, `${msg.port || 'USB'} · ${msg.baud || 115200}`);
-    if (l2) setText(l2, `${(msg.rate_hz || 0).toFixed(0)} Гц · ${msg.frames || 0} фр.`);
-    if (l3) setText(l3, `${msg.protocol || 'v1.1.0'} · ±${msg.gyro_range_dps || 2000}°/s · ±${msg.accel_range_g || 8}g`);
-    if (l4) setText(l4, `${msg.crc_rejects || 0} CRC · ${msg.lost || 0} потерь`);
-  }
 
   // Handle livedebug telemetry messages (e.g. from wails bridge)
   const handleLiveTelemetry = (raw) => {
     if (!isActive || !raw) return;
     try {
       const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      deriveEngine.feedFrame(msg);
-      if (msg && msg.type === 'usb_proto') {
-        handleUsbProto(msg);
-      }
+      feedStreamFrame(msg);
     } catch (_) {}
+  };
+
+  const handleResourceStats = (r) => {
+    if (!isActive || !r) return;
+    deriveEngine.feedResources(r);
   };
 
   // Handle 3D orientation quaternion (60Hz)
@@ -573,6 +624,75 @@ export function initTelemetry(paneEl) {
     setText($('stat-omega-peak'), res.omegaPeak);
     setBadge($('stat-omega-badge'), res.omegaStatus, res.omegaMag);
 
+    // ═══ GROUP C: Pipeline & Active Filter Chips ═══
+    setText($('stat-pipe-profile'), `Профиль: ${res.activeProfileName}`);
+    const pMount = $('stat-pipe-mount');
+    if (pMount) {
+      setText(pMount, `Наклон: ${res.mountText}`);
+      toggleClass(pMount, 'pg-badge--ok', res.mountActive);
+    }
+    const pCemu = $('stat-pipe-cemu');
+    if (pCemu) {
+      setText(pCemu, `Защита Cemu: ${res.cemuGuardText}`);
+      toggleClass(pCemu, 'pg-badge--ok', res.cemuGuardActive);
+    }
+    setText($('stat-pipe-deadband'), `Deadband: ${res.deadbandText}`);
+    setText($('stat-pipe-sens'), `Sens: ${res.sensText}`);
+
+    setText($('stat-pipe-val'), res.pipeMs);
+    setText($('stat-out-hz-val'), res.outHz);
+    setBadge($('stat-pipe-badge'), res.pipeStatus, res.pipeStatus === 'none' ? 'нет данных' : 'ok');
+    if (res.pipeMs !== '—') {
+      const pVal = Number(res.pipeMs) || 0;
+      history.pipe.push(pVal);
+      if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
+      const pipeSpark = $('stat-pipe-spark');
+      if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 5));
+    }
+
+    // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
+    setText($('tel-raw-gx'), res.rawGx);
+    setText($('tel-raw-gy'), res.rawGy);
+    setText($('tel-raw-gz'), res.rawGz);
+    setText($('tel-raw-ax'), res.rawAx);
+    setText($('tel-raw-ay'), res.rawAy);
+    setText($('tel-raw-az'), res.rawAz);
+    setText($('tel-out-gx'), res.outGx);
+    setText($('tel-out-gy'), res.outGy);
+    setText($('tel-out-gz'), res.outGz);
+
+    // ═══ GROUP E: DSU Clients & Session ═══
+    setText($('stat-dsu-count'), String(res.dsuCount));
+    setBadge($('stat-dsu-badge'), res.dsuCount > 0 ? 'ok' : 'none', String(res.dsuCount));
+
+    const dsuNameEl = $('stat-dsu-client-name');
+    if (dsuNameEl) {
+      if (res.dsuList && res.dsuList.length > 0) {
+        dsuNameEl.innerHTML = `
+          <div class="app-dsu-client-list">
+            ${res.dsuList.map((c) => `
+              <div class="app-dsu-client-row">
+                <b>${c.process}</b>
+                <span>${c.address}</span>
+                <span class="pg-badge pg-badge--ok">активен</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        dsuNameEl.textContent = '—';
+      }
+    }
+
+    setText($('stat-sess-time'), res.connectedTime);
+    setText($('stat-sess-pkts'), String(res.sessionPackets));
+    setText($('stat-sess-loss'), String(res.sessionLost));
+    setText($('stat-sess-bytes'), `${res.sessionKb} KB`);
+
+    setText($('stat-res-cpu'), res.cpuPercent === '—' ? '—' : `${res.cpuPercent}%`);
+    setText($('stat-res-ram'), res.ramMb === '—' ? '—' : `${res.ramMb} MB`);
+    setBadge($('stat-res-badge'), res.resStatus, res.resStatus === 'ok' ? 'ok' : 'warn');
+
     // Offline overlay
     const offlineOverlay = $('stats-3d-offline');
     if (offlineOverlay) {
@@ -580,9 +700,9 @@ export function initTelemetry(paneEl) {
     }
     const liveBadge = $('stats-live-badge');
     if (liveBadge) {
-      toggleClass(liveBadge, 'pg-badge--ok', res.isConnected);
-      toggleClass(liveBadge, 'pg-badge--warn', !res.isConnected);
-      setText(liveBadge, res.isConnected ? (t('ui.stats_live') || 'LIVE') : (t('ui.stats_offline') || 'ОФФЛАЙН'));
+      toggleClass(liveBadge, 'pg-badge--ok', res.hasLiveStream);
+      toggleClass(liveBadge, 'pg-badge--warn', !res.hasLiveStream);
+      setText(liveBadge, !res.isConnected ? (t('ui.stats_offline') || 'ОФФЛАЙН') : (!res.hasLiveStream ? 'НЕТ ДАННЫХ' : (t('ui.stats_live') || 'LIVE')));
     }
   };
 
@@ -591,79 +711,8 @@ export function initTelemetry(paneEl) {
     if (!isActive || !state) return;
     deriveEngine.feedState(state);
 
-    // ═══ GROUP C: Pipeline & Active Filter Chips ═══
-    const activeProf = state.activeSlot?.name || state.profileName || 'По умолчанию';
-    setText($('stat-pipe-profile'), `Профиль: ${activeProf}`);
-    setText($('stat-pipe-mount'), `Наклон: ${state.mountCorrection ? 'Вкл' : 'Выкл'}`);
-    setText($('stat-pipe-cemu'), `Защита Cemu: ${state.cemuGuardActive ? 'Вкл' : 'Выкл'}`);
-    setText($('stat-pipe-deadband'), `Deadband: ${state.deadbandActive ? 'Вкл' : 'Выкл'}`);
-    setText($('stat-pipe-sens'), `Sens: ${state.sensitivity != null ? state.sensitivity.toFixed(1) + 'x' : '1.0x'}`);
-
-    const pipeMs = Number(state.pipeMs ?? 0.4);
-    setText($('stat-pipe-val'), pipeMs.toFixed(1));
-    setText($('stat-out-hz-val'), (state.outHz || state.hz || 60).toFixed(0));
-    history.pipe.push(pipeMs);
-    if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
-    const pipeSpark = $('stat-pipe-spark');
-    if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 5));
-
-    // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
-    const gx = state.rawRotX || 0;
-    const gy = state.rawRotY || 0;
-    const gz = state.rawRotZ || 0;
-    const ax = state.rawAccX || 0;
-    const ay = state.rawAccY || 0;
-    const az = state.rawAccZ != null ? state.rawAccZ : -1.0;
-
-    const elRgx = $('tel-raw-gx') || $('stat-raw-gx');
-    if (elRgx) setText(elRgx, (gx >= 0 ? '+' : '') + gx.toFixed(2));
-    const elRgy = $('tel-raw-gy') || $('stat-raw-gy');
-    if (elRgy) setText(elRgy, (gy >= 0 ? '+' : '') + gy.toFixed(2));
-    const elRgz = $('tel-raw-gz') || $('stat-raw-gz');
-    if (elRgz) setText(elRgz, (gz >= 0 ? '+' : '') + gz.toFixed(2));
-
-    const elRax = $('tel-raw-ax') || $('stat-raw-ax');
-    if (elRax) setText(elRax, (ax >= 0 ? '+' : '') + ax.toFixed(2));
-    const elRay = $('tel-raw-ay') || $('stat-raw-ay');
-    if (elRay) setText(elRay, (ay >= 0 ? '+' : '') + ay.toFixed(2));
-    const elRaz = $('tel-raw-az') || $('stat-raw-az');
-    if (elRaz) setText(elRaz, (az >= 0 ? '+' : '') + az.toFixed(2));
-
-    // ═══ GROUP E: DSU Clients & Session ═══
-    const dsuCount = state.dsuClients || 0;
-    setText($('stat-dsu-count'), String(dsuCount));
-    setText($('stat-dsu-badge'), String(dsuCount));
-    const dsuList = state.dsuClientList;
-    const clientName = Array.isArray(dsuList) && dsuList.length > 0
-      ? dsuList.map((c) => c.name || c.ip || 'Client').join(', ')
-      : '—';
-    setText($('stat-dsu-client-name'), clientName);
-
-    // Session stats
-    if (state.connectedTime) {
-      setText($('stat-sess-time'), state.connectedTime);
-    }
-    if (state.sessionPackets != null) {
-      setText($('stat-sess-pkts'), String(state.sessionPackets));
-    }
-    if (state.sessionLoss != null) {
-      setText($('stat-sess-loss'), String(state.sessionLoss));
-    }
-    if (state.sessionBytes != null) {
-      const kb = (state.sessionBytes / 1024).toFixed(0);
-      setText($('stat-sess-bytes'), `${kb} KB`);
-    }
-
-    // Process Resources
-    if (state.cpuPercent != null) {
-      setText($('stat-res-cpu'), `${state.cpuPercent.toFixed(1)}%`);
-    }
-    if (state.ramMb != null) {
-      setText($('stat-res-ram'), `${state.ramMb.toFixed(0)} MB`);
-    }
-
     // USB Status
-    const isUsb = !!state.usbConnected;
+    const isUsb = !!(state.usbConnected || state.inputMode === 'usb');
     show($('stats-usb-card'), isUsb);
     if (isUsb && state.usbPort) {
       const l1 = $('stats-usb-l1');
@@ -679,32 +728,6 @@ export function initTelemetry(paneEl) {
       quatBuf[2] = state.ahrsQ3 ?? state.qz ?? 0;
       quatBuf[3] = state.ahrsQ0 ?? state.qw ?? 1;
       update3DOrientation(quatBuf);
-    }
-
-    // Record frame if active
-    if (recorder.isRecording) {
-      recorder.recordFrame({
-        q0: state.ahrsQ0 ?? 1,
-        q1: state.ahrsQ1 ?? 0,
-        q2: state.ahrsQ2 ?? 0,
-        q3: state.ahrsQ3 ?? 0,
-        rawGx: state.rawRotX ?? 0,
-        rawGy: state.rawRotY ?? 0,
-        rawGz: state.rawRotZ ?? 0,
-        rawAx: state.rawAccX ?? 0,
-        rawAy: state.rawAccY ?? 0,
-        rawAz: state.rawAccZ ?? 0,
-        outGx: lastTuning ? lastTuning.OutX : state.rawRotX ?? 0,
-        outGy: lastTuning ? lastTuning.OutY : state.rawRotY ?? 0,
-        outGz: lastTuning ? lastTuning.OutZ : state.rawRotZ ?? 0,
-        stickLx: 0,
-        stickLy: 0,
-        inHz: state.hz ?? 0,
-        outHz: state.hz ?? 0,
-        pipeMs: pipeMs,
-        dsuClients: state.dsuClients ?? 0,
-        linkRttMs: state.pingMs ?? -1,
-      });
     }
   };
 
@@ -722,6 +745,9 @@ export function initTelemetry(paneEl) {
       on('livedebug:telemetry', handleLiveTelemetry);
       on('ahrs:quat', handleAhrsQuat);
       call('SetTuningActive', true).catch(() => {});
+      call('GetAppSettings').then((s) => deriveEngine.feedSettings(s)).catch(() => {});
+      call('GetResourceStats').then((r) => deriveEngine.feedResources(r)).catch(() => {});
+      on('resource-stats', handleResourceStats);
       mountScene();
       connectWebSocket();
       deriveInterval = setInterval(tickDerive, 100);
@@ -737,6 +763,7 @@ export function initTelemetry(paneEl) {
       off('tuning:frame', handleTuningFrame);
       off('livedebug:telemetry', handleLiveTelemetry);
       off('ahrs:quat', handleAhrsQuat);
+      off('resource-stats', handleResourceStats);
       call('SetTuningActive', false).catch(() => {});
       if (ws) {
         try { ws.close(); } catch (_) {}

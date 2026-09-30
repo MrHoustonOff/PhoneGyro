@@ -78,8 +78,15 @@ export class TelemetryDeriveEngine {
 
     // State tracking
     this.lastRecvTs = 0;
+    this.lastFrameWallTime = 0;
+    this.declaredUsbHz = 0;
+    this.rollingInHzSum = 0;
+    this.rollingInHzCount = 0;
     this.latestFrame = null;
     this.latestState = null;
+    this.latestSettings = null;
+    this.latestResources = null;
+    this.latestTuning = null;
     this.lastDeriveTime = 0;
     this.cachedResult = null;
   }
@@ -100,9 +107,33 @@ export class TelemetryDeriveEngine {
     this.peakOmega = 0;
     this.qualityHistory = [];
     this.lastRecvTs = 0;
+    this.lastFrameWallTime = 0;
+    this.rollingInHzSum = 0;
+    this.rollingInHzCount = 0;
     this.latestFrame = null;
     this.latestState = null;
+    this.latestSettings = null;
+    this.latestResources = null;
+    this.latestTuning = null;
     this.cachedResult = null;
+  }
+
+  setDeclaredUsbHz(hz) {
+    if (typeof hz === 'number' && hz > 0) {
+      this.declaredUsbHz = hz;
+    }
+  }
+
+  feedSettings(s) {
+    if (s) this.latestSettings = s;
+  }
+
+  feedResources(r) {
+    if (r) this.latestResources = r;
+  }
+
+  feedTuning(t) {
+    if (t) this.latestTuning = t;
   }
 
   /**
@@ -114,6 +145,16 @@ export class TelemetryDeriveEngine {
     this.latestFrame = f;
 
     const now = performance.now();
+    this.lastFrameWallTime = now;
+    if (typeof f.in_hz === 'number' && f.in_hz > 0) {
+      this.rollingInHzSum += f.in_hz;
+      this.rollingInHzCount++;
+      if (this.rollingInHzCount > 120) {
+        this.rollingInHzSum /= 2;
+        this.rollingInHzCount /= 2;
+      }
+    }
+
     let recvMs = now;
     if (typeof f.recv_ts === 'number' && f.recv_ts > 0) {
       recvMs = f.recv_ts > 1e12 ? f.recv_ts / 1000 : f.recv_ts;
@@ -132,12 +173,12 @@ export class TelemetryDeriveEngine {
     this.lastRecvTs = recvMs;
 
     // Store raw gyro and accel
-    const gx = f.raw_gx ?? f.rawRotX ?? 0;
-    const gy = f.raw_gy ?? f.rawRotY ?? 0;
-    const gz = f.raw_gz ?? f.rawRotZ ?? 0;
-    const ax = f.raw_ax ?? f.rawAccX ?? 0;
-    const ay = f.raw_ay ?? f.rawAccY ?? 0;
-    const az = f.raw_az ?? f.rawAccZ ?? 0;
+    const gx = f.rawGx ?? f.raw_gx ?? f.rawRotX ?? 0;
+    const gy = f.rawGy ?? f.raw_gy ?? f.rawRotY ?? 0;
+    const gz = f.rawGz ?? f.raw_gz ?? f.rawRotZ ?? 0;
+    const ax = f.rawAx ?? f.raw_ax ?? f.rawAccX ?? 0;
+    const ay = f.rawAy ?? f.raw_ay ?? f.rawAccY ?? 0;
+    const az = f.rawAz ?? f.raw_az ?? f.rawAccZ ?? 0;
 
     this.gyroX[this.sampleIdx] = gx;
     this.gyroY[this.sampleIdx] = gy;
@@ -192,20 +233,34 @@ export class TelemetryDeriveEngine {
   compute(forceNow) {
     const now = forceNow ?? performance.now();
     // Return cached if called faster than 100ms (10Hz)
-    if (this.cachedResult && now - this.lastDeriveTime < 95) {
+    if (!forceNow && this.cachedResult && now >= this.lastDeriveTime && (now - this.lastDeriveTime < 95)) {
       return this.cachedResult;
     }
-    this.lastDeriveTime = now;
+    if (!forceNow) {
+      this.lastDeriveTime = now;
+    }
 
     const frame = this.latestFrame || {};
     const state = this.latestState || {};
 
     const isConnected = !!(frame.device_connected ?? (state.status === 'online' || state.status === 'calibrating'));
     const isUsb = !!(frame.loss_kind === 'usb' || state.inputMode === 'usb' || state.usbConnected);
+    const hasLiveStream = isConnected && this.lastFrameWallTime > 0 && (now - this.lastFrameWallTime <= 3000);
 
     // ── 1. GROUP A: Network / Transport ──
     const inHz = Number(frame.in_hz ?? state.hz ?? 0);
-    const targetHz = isUsb ? 200.0 : 60.0;
+
+    // Dynamic target Hz: declared by device metadata, or minute rolling average, or default
+    let targetHz = 60.0;
+    if (isUsb) {
+      if (this.declaredUsbHz > 0) {
+        targetHz = this.declaredUsbHz;
+      } else if (this.rollingInHzCount >= 10 && this.rollingInHzSum > 0) {
+        targetHz = Math.round(this.rollingInHzSum / this.rollingInHzCount);
+      } else {
+        targetHz = 200.0;
+      }
+    }
 
     const pingVal = typeof frame.link_rtt_ms === 'number'
       ? frame.link_rtt_ms
@@ -254,7 +309,15 @@ export class TelemetryDeriveEngine {
     let qualityStatus = 'danger';
     let qualityVerdict = 'ОФФЛАЙН';
 
-    if (isConnected) {
+    if (!isConnected) {
+      quality = 0;
+      qualityStatus = 'danger';
+      qualityVerdict = 'ОФФЛАЙН';
+    } else if (!hasLiveStream) {
+      quality = 0;
+      qualityStatus = 'none';
+      qualityVerdict = 'НЕТ ДАННЫХ';
+    } else {
       // 1. Loss score (40%)
       let sLoss = 1.0;
       if (lossPct > 0) {
@@ -311,8 +374,12 @@ export class TelemetryDeriveEngine {
     }
 
     // Update quality sparkline history
-    this.qualityHistory.push(quality);
-    if (this.qualityHistory.length > 20) this.qualityHistory.shift();
+    if (hasLiveStream) {
+      this.qualityHistory.push(quality);
+    } else if (isConnected) {
+      this.qualityHistory.push(0);
+    }
+    if (this.qualityHistory.length > 25) this.qualityHistory.shift();
 
     // ── 3. GROUP B: Signal State ──
     const gx = frame.raw_gx ?? state.rawRotX ?? 0;
@@ -320,7 +387,7 @@ export class TelemetryDeriveEngine {
     const gz = frame.raw_gz ?? state.rawRotZ ?? 0;
     const ax = frame.raw_ax ?? state.rawAccX ?? 0;
     const ay = frame.raw_ay ?? state.rawAccY ?? 0;
-    const az = frame.raw_az ?? state.rawAccZ ?? 0;
+    const az = frame.raw_az ?? state.rawAccZ ?? (hasLiveStream ? 0 : -1);
 
     const omegaMag = Math.sqrt(gx * gx + gy * gy + gz * gz);
     const gravityMag = Math.sqrt(ax * ax + ay * ay + az * az);
@@ -333,6 +400,8 @@ export class TelemetryDeriveEngine {
 
     if (!isConnected) {
       noiseTag = 'Офлайн';
+    } else if (!hasLiveStream) {
+      noiseTag = 'Нет данных';
     } else if (this.isResting && this.sampleCount >= 20) {
       let sumGx = 0, sumGy = 0, sumGz = 0;
       const n = this.sampleCount;
@@ -368,56 +437,162 @@ export class TelemetryDeriveEngine {
     }
 
     // Status badges according to task6.9 thresholds
-    const hzStatus = inHz >= 55 ? 'ok' : (inHz >= 30 ? 'warn' : 'danger');
-    const rttStatus = rttMs < 0 ? 'ok' : (rttMs < 15 ? 'ok' : (rttMs < 35 ? 'warn' : 'danger'));
-    const jitterStatus = jitterMs < 5.0 ? 'ok' : (jitterMs < 15.0 ? 'warn' : 'danger');
-    const tailStatus = p95Interval < 20.0 ? 'ok' : (p95Interval < 40.0 ? 'warn' : 'danger');
-    const lossStatus = lossLost === 0 ? 'ok' : (lossPct < 2.0 ? 'warn' : 'danger');
-    const mergedStatus = lossMerged === 0 ? 'ok' : 'warn';
+    const hzStatus = !hasLiveStream ? 'none' : (inHz >= 55 ? 'ok' : (inHz >= 30 ? 'warn' : 'danger'));
+    const rttStatus = !hasLiveStream ? 'none' : (rttMs < 0 ? 'ok' : (rttMs < 15 ? 'ok' : (rttMs < 35 ? 'warn' : 'danger')));
+    const jitterStatus = !hasLiveStream ? 'none' : (jitterMs < 5.0 ? 'ok' : (jitterMs < 15.0 ? 'warn' : 'danger'));
+    const tailStatus = !hasLiveStream ? 'none' : (p95Interval < 20.0 ? 'ok' : (p95Interval < 40.0 ? 'warn' : 'danger'));
+    const lossStatus = !hasLiveStream ? 'none' : (lossLost === 0 ? 'ok' : (lossPct < 2.0 ? 'warn' : 'danger'));
+    const mergedStatus = !hasLiveStream ? 'none' : (lossMerged === 0 ? 'ok' : 'warn');
 
-    const driftStatus = driftDps < 0.3 ? 'ok' : (driftDps < 1.0 ? 'warn' : 'danger');
-    const noiseStatus = noiseDps < 0.15 ? 'ok' : (noiseDps < 0.5 ? 'warn' : 'danger');
-    const gravityStatus = gravityDelta < 0.03 ? 'ok' : (gravityDelta <= 0.08 ? 'warn' : 'danger');
+    const driftStatus = !hasLiveStream ? 'none' : (driftDps < 0.3 ? 'ok' : (driftDps < 1.0 ? 'warn' : 'danger'));
+    const noiseStatus = !hasLiveStream ? 'none' : (noiseDps < 0.15 ? 'ok' : (noiseDps < 0.5 ? 'warn' : 'danger'));
+    const gravityStatus = !hasLiveStream ? 'none' : (gravityDelta < 0.03 ? 'ok' : (gravityDelta <= 0.08 ? 'warn' : 'danger'));
+
+    // ── 4. GROUP C: Pipeline & Active Corrections ──
+    const settings = this.latestSettings || {};
+    let activeProfileName = 'По умолчанию';
+    let mountActive = false;
+    let mountAngle = null;
+
+    if (state.profiles && typeof state.activeSlot === 'number' && state.activeSlot >= 0) {
+      const p = state.profiles[state.activeSlot];
+      if (p) {
+        activeProfileName = p.name || `Профиль #${state.activeSlot + 1}`;
+        if (p.mount && p.mount.enabled) {
+          mountActive = true;
+          mountAngle = typeof p.mount.tiltDeg === 'number' ? p.mount.tiltDeg : null;
+        }
+      }
+    }
+
+    const cemuGuardActive = !!(settings.cemuDriftGuard ?? state.cemuDriftGuard ?? true);
+    const deadbandVal = isUsb
+      ? Number(settings.gyroDeadbandUsb ?? 0.50)
+      : Number(settings.gyroDeadband ?? 0.10);
+    const sensVal = Number(settings.gyroSensitivity ?? 1.00);
+
+    const outHz = Number(frame.out_hz ?? state.hz ?? (hasLiveStream ? inHz : 0));
+    const pipeMs = Number(frame.pipe_ms ?? 0.4);
+    const pipeStatus = !hasLiveStream ? 'none' : (pipeMs < 2.0 ? 'ok' : (pipeMs < 5.0 ? 'warn' : 'danger'));
+
+    // ── 5. GROUP D: Raw & Output Numbers ──
+    const formatAxis = (v, dec = 2) => {
+      if (!hasLiveStream && !isConnected) return '—';
+      const num = Number(v || 0);
+      const sign = num >= 0 ? '+' : '';
+      return sign + num.toFixed(dec);
+    };
+
+    const rawGx = formatAxis(gx);
+    const rawGy = formatAxis(gy);
+    const rawGz = formatAxis(gz);
+    const rawAx = formatAxis(ax);
+    const rawAy = formatAxis(ay);
+    const rawAz = formatAxis(az);
+
+    const outGxVal = frame.outGx ?? frame.out_gx ?? (this.latestTuning ? this.latestTuning.OutX : gx);
+    const outGyVal = frame.outGy ?? frame.out_gy ?? (this.latestTuning ? this.latestTuning.OutY : gy);
+    const outGzVal = frame.outGz ?? frame.out_gz ?? (this.latestTuning ? this.latestTuning.OutZ : gz);
+
+    const outGx = formatAxis(outGxVal);
+    const outGy = formatAxis(outGyVal);
+    const outGz = formatAxis(outGzVal);
+
+    // ── 6. GROUP E: Clients & Session ──
+    const dsuCount = Number(frame.dsu_clients ?? state.dsuClients ?? (state.dsuClientList?.length ?? 0));
+    const dsuList = (frame.dsu_client_list ?? state.dsuClientList ?? []).map((c) => ({
+      process: c.process || c.Process || c.name || 'Client',
+      address: c.address || c.Address || `${c.ip || c.IP || '127.0.0.1'}:${c.port || c.Port || ''}`,
+      active: c.active ?? true,
+      lastSeenMs: c.lastSeenMs || c.LastSeenMs || 0,
+    }));
+
+    const connectedTime = state.connectedTime || (isConnected ? '00:00:00' : '—');
+    const sessionPackets = Number(frame.loss_total ?? state.sessionPackets ?? 0);
+    const sessionLost = Number(frame.loss_lost ?? state.sessionLoss ?? 0);
+    const sessionMerged = Number(frame.loss_merged ?? 0);
+    const sessionBytes = state.sessionBytes != null
+      ? state.sessionBytes
+      : (sessionPackets * 64);
+    const sessionKb = (sessionBytes / 1024).toFixed(0);
+
+    const res = this.latestResources || {};
+    const cpuPercent = Number(res.cpuPercent ?? state.cpuPercent ?? 0);
+    const ramMb = Number(res.ramMb ?? state.ramMb ?? 0);
+    const resStatus = cpuPercent > 15 || ramMb > 200 ? 'warn' : 'ok';
 
     this.cachedResult = {
       isConnected,
+      hasLiveStream,
       isUsb,
       // Group A
       quality,
       qualityStatus,
       qualityVerdict,
       qualityHistory: this.qualityHistory.slice(),
-      inHz: inHz.toFixed(1),
+      inHz: hasLiveStream ? inHz.toFixed(1) : '—',
       hzStatus,
-      rttMs: rttMs < 0 ? '—' : rttMs.toFixed(1),
+      rttMs: !hasLiveStream ? '—' : (rttMs < 0 ? '—' : rttMs.toFixed(1)),
       rttStatus,
-      jitterMs: jitterMs.toFixed(1),
+      jitterMs: hasLiveStream ? jitterMs.toFixed(1) : '—',
       jitterStatus,
-      tailP95: p95Interval > 0 ? p95Interval.toFixed(1) : '—',
-      tailMax: maxInterval > 0 ? maxInterval.toFixed(1) : '—',
-      tailAvg: avgInterval > 0 ? avgInterval.toFixed(1) : '—',
+      tailP95: hasLiveStream && p95Interval > 0 ? p95Interval.toFixed(1) : '—',
+      tailMax: hasLiveStream && maxInterval > 0 ? maxInterval.toFixed(1) : '—',
+      tailAvg: hasLiveStream && avgInterval > 0 ? avgInterval.toFixed(1) : '—',
       tailStatus,
-      lossCount: lossLost,
-      lossPct: lossPct.toFixed(1),
+      lossCount: hasLiveStream ? lossLost : '—',
+      lossPct: hasLiveStream ? lossPct.toFixed(1) : '—',
       lossStatus,
-      mergedCount: lossMerged,
+      mergedCount: hasLiveStream ? lossMerged : '—',
       mergedStatus,
       // Group B
       isResting: this.isResting,
-      driftDps: driftDps.toFixed(2),
-      driftX: (this.lastComputedDriftX != null && this.lastComputedDriftX >= 0 ? '+' : '') + (this.lastComputedDriftX ?? 0).toFixed(2),
-      driftY: (this.lastComputedDriftY != null && this.lastComputedDriftY >= 0 ? '+' : '') + (this.lastComputedDriftY ?? 0).toFixed(2),
-      driftZ: (this.lastComputedDriftZ != null && this.lastComputedDriftZ >= 0 ? '+' : '') + (this.lastComputedDriftZ ?? 0).toFixed(2),
+      driftDps: hasLiveStream ? driftDps.toFixed(2) : '—',
+      driftX: hasLiveStream ? ((this.lastComputedDriftX != null && this.lastComputedDriftX >= 0 ? '+' : '') + (this.lastComputedDriftX ?? 0).toFixed(2)) : '—',
+      driftY: hasLiveStream ? ((this.lastComputedDriftY != null && this.lastComputedDriftY >= 0 ? '+' : '') + (this.lastComputedDriftY ?? 0).toFixed(2)) : '—',
+      driftZ: hasLiveStream ? ((this.lastComputedDriftZ != null && this.lastComputedDriftZ >= 0 ? '+' : '') + (this.lastComputedDriftZ ?? 0).toFixed(2)) : '—',
       driftStatus,
-      noiseDps: noiseDps.toFixed(2),
+      noiseDps: hasLiveStream ? noiseDps.toFixed(2) : '—',
       noiseStatus,
       noiseTag,
-      gravityMag: gravityMag.toFixed(2),
-      gravityDelta: gravityDelta.toFixed(2),
+      gravityMag: hasLiveStream ? gravityMag.toFixed(2) : '—',
+      gravityDelta: hasLiveStream ? gravityDelta.toFixed(2) : '—',
       gravityStatus,
-      omegaMag: omegaMag.toFixed(1),
-      omegaPeak: this.peakOmega.toFixed(1),
-      omegaStatus: 'ok',
+      omegaMag: hasLiveStream ? omegaMag.toFixed(1) : '—',
+      omegaPeak: hasLiveStream ? this.peakOmega.toFixed(1) : '—',
+      omegaStatus: hasLiveStream ? 'ok' : 'none',
+      // Group C
+      activeProfileName,
+      mountActive,
+      mountText: mountActive ? (mountAngle != null ? `Вкл (+${mountAngle.toFixed(1)}°)` : 'Вкл') : 'Выкл',
+      cemuGuardActive,
+      cemuGuardText: cemuGuardActive ? 'Вкл' : 'Выкл',
+      deadbandText: `${deadbandVal.toFixed(2)}°/s`,
+      sensText: `${sensVal.toFixed(2)}x`,
+      outHz: hasLiveStream ? outHz.toFixed(1) : '—',
+      pipeMs: hasLiveStream ? pipeMs.toFixed(1) : '—',
+      pipeStatus,
+      // Group D
+      rawGx,
+      rawGy,
+      rawGz,
+      rawAx,
+      rawAy,
+      rawAz,
+      outGx,
+      outGy,
+      outGz,
+      // Group E
+      dsuCount,
+      dsuList,
+      connectedTime,
+      sessionPackets,
+      sessionLost,
+      sessionMerged,
+      sessionKb,
+      cpuPercent: cpuPercent > 0 ? cpuPercent.toFixed(1) : '—',
+      ramMb: ramMb > 0 ? ramMb.toFixed(0) : '—',
+      resStatus,
     };
 
     return this.cachedResult;

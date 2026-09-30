@@ -1,6 +1,7 @@
 import { openModal } from '../../ui/modal.js';
 import { toast } from '../../ui/toast.js';
 import { t } from '../../core/i18n.js';
+import { call } from '../../core/bridge.js';
 
 const CSV_HEADER = 'timestamp_ms,elapsed_ms,q0,q1,q2,q3,raw_gx,raw_gy,raw_gz,raw_ax,raw_ay,raw_az,out_gx,out_gy,out_gz,stick_lx,stick_ly,in_hz,out_hz,pipe_ms,dsu_clients,link_rtt_ms';
 const MAX_RECORD_MS = 60000; // 1-minute hard limit
@@ -113,7 +114,7 @@ export class TelemetryRecorder {
     const durationSec = (elapsed / 1000).toFixed(1);
     const lineCount = this.rows.length - 1;
     const sizeKb = (new Blob([csvContent]).size / 1024).toFixed(1);
-    const previewLines = this.rows.slice(0, 15).join('\n');
+    const previewLines = this.rows.slice(0, 21).join('\n');
 
     const bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:0.75rem">
@@ -122,7 +123,7 @@ export class TelemetryRecorder {
           <span>${t('live_debug.stats_modal_samples') || 'Строк:'} <b style="color:var(--accent)">${lineCount}</b></span>
           <span>${t('live_debug.stats_modal_size') || 'Размер:'} <b style="color:var(--ink)">${sizeKb} KB</b></span>
         </div>
-        <pre style="max-height:160px; overflow:auto; background:var(--surface-inset); border:1px solid var(--line-subtle); border-radius:var(--radius-md); padding:0.5rem 0.75rem; font:0.6875rem/1.35 var(--font-mono); color:var(--ink-2); white-space:pre; user-select:text;-webkit-user-select:text;">${previewLines}${lineCount > 15 ? '\n...' : ''}</pre>
+        <pre style="max-height:160px; overflow:auto; background:var(--surface-inset); border:1px solid var(--line-subtle); border-radius:var(--radius-md); padding:0.5rem 0.75rem; font:0.6875rem/1.35 var(--font-mono); color:var(--ink-2); white-space:pre; user-select:text;-webkit-user-select:text;">${previewLines}${lineCount > 20 ? '\n...' : ''}</pre>
       </div>
     `;
 
@@ -145,14 +146,18 @@ export class TelemetryRecorder {
           kind: 'primary',
           onClick: () => {
             const defaultName = `phonegyro_telemetry_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = defaultName;
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            toast(t('live_debug.stats_modal_saved') || 'Файл сохранён');
+            call('SaveCSVFile', defaultName, csvContent)
+              .then(() => toast(t('live_debug.stats_modal_saved') || 'Файл сохранён'))
+              .catch(() => {
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = defaultName;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                toast(t('live_debug.stats_modal_saved') || 'Файл сохранён');
+              });
           },
         },
         {
