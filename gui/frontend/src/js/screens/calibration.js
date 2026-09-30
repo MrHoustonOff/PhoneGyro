@@ -1,14 +1,16 @@
 // Calibration wizard (design: Modal with the stepper). The Go side does the
 // maths (gui/internal/app/calibration.go); this walks the user through it:
-//   slot → rest (1.6 s) → pitch (2.4 s) → roll (2.4 s) → axes (listen ≤ 20 s)
+//   rest (1.6 s) → pitch (2.4 s) → roll (2.4 s) → axes (listen ≤ 20 s)
 //        → verify (the new matrix is previewed live) → name → save.
-// Everything lives in one pg-modal; each phase re-renders its body.
+// Steps 1–4 feature a 2-column layout with texts and live rates on the left
+// and the 3D GyroScene stage on the right.
 
-import { $, esc, md } from '../core/dom.js';
+import { $, esc, md, setText, setHTML } from '../core/dom.js';
 import { call } from '../core/bridge.js';
 import { t } from '../core/i18n.js';
-import { getState } from '../core/state.js';
+import { getState, onState } from '../core/state.js';
 import { toast } from '../ui/toast.js';
+import { createGyroScene } from '../ui/scene.js';
 
 const STEPS = [
   { key: 'rest', pill: 'step_pill_rest', ms: 1600, rest: true },
@@ -19,8 +21,20 @@ const STEPS = [
 const AXES_TIMEOUT_MS = 20000;
 
 const S = {
-  open: false, slot: 0, step: 0, phase: 'slots', // slots | ready | run | done | fail | verify | save
-  vectors: [], matrix: null, result: null, timer: 0, poll: 0, busy: false,
+  open: false,
+  slot: 0,
+  step: 0,
+  phase: 'ready', // ready | run | done | fail | verify | save
+  vectors: [],
+  matrix: null,
+  result: null,
+  doneText: '',
+  failText: '',
+  timer: 0,
+  poll: 0,
+  busy: false,
+  scene: null,
+  sceneLoading: false,
 };
 
 const c = (k, vars) => t('calibration.' + k, vars);
@@ -44,25 +58,43 @@ function stepper() {
 
 const btn = (id, label, kind = '', dis = false) => `<button type="button" class="pg-btn${kind ? ' pg-btn--' + kind : ''}" data-act="${id}"${dis ? ' disabled' : ''}>${esc(label)}</button>`;
 
+async function ensureScene(stepKey) {
+  const stageEl = $('cal-stage');
+  if (!stageEl) return;
+  if (!S.scene && !S.sceneLoading) {
+    S.sceneLoading = true;
+    try {
+      const sc = await createGyroScene(stageEl, { step: stepKey });
+      if (!S.open || S.phase === 'verify' || S.phase === 'save') {
+        sc.dispose();
+        return;
+      }
+      S.scene = sc;
+    } catch (err) {
+      console.error('Failed to create GyroScene:', err);
+    } finally {
+      S.sceneLoading = false;
+    }
+  } else if (S.scene) {
+    S.scene.setStep(stepKey);
+  }
+}
+
+function disposeScene() {
+  if (S.scene) {
+    try { S.scene.dispose(); } catch (_) {}
+    S.scene = null;
+  }
+  S.sceneLoading = false;
+}
+
 function render() {
   const st = getState() || {};
   $('cal-sub').textContent = device() ? c('subtitle_device', { device: device() }) : c('subtitle');
-  $('cal-offline').hidden = st.status === 'online' || st.status === 'paused' || S.phase === 'slots' || S.phase === 'save';
-
-  if (S.phase === 'slots') {
-    const profiles = st.profiles || [];
-    body().innerHTML = `<div class="app-cal-slots">${[0, 1, 2, 3, 4, 5].map((i) => {
-      const p = profiles[i];
-      const has = p && p.name;
-      return `<div class="app-cal-slot${i === st.activeSlot ? ' is-active' : ''}">
-        <span class="app-grow"><span class="pg-profile__t">${esc(has ? p.name : c('slot_empty'))}</span><span class="pg-profile__s">${esc(c('slot_label', { n: i + 1 }))}${has && p.device ? ' · ' + esc(p.device) : ''}</span></span>
-        <button type="button" class="pg-btn pg-btn--sm${has ? '' : ' pg-btn--primary'}" data-act="slot" data-slot="${i}">${esc(has ? c('btn_recalibrate') : c('btn_calibrate_short'))}</button></div>`;
-    }).join('')}</div>`;
-    foot().innerHTML = '<span></span>' + btn('close', c('btn_cancel'));
-    return;
-  }
+  $('cal-offline').hidden = st.status === 'online' || st.status === 'paused' || S.phase === 'save';
 
   if (S.phase === 'verify') {
+    disposeScene();
     const r = S.result || {};
     body().innerHTML = stepper() + `<div class="app-cal-main">
       <div class="display-md">${esc(c('confirm_title'))}</div>
@@ -73,11 +105,12 @@ function render() {
     </div>`;
     foot().innerHTML = btn('restart', c('confirm_restart')) + btn('recenter', c('confirm_recenter').replace(/\s*\(.*\)$/, '')) + btn('tosave', c('confirm_yes'), 'primary');
     renderMount();
-    live();
+    updateLiveRates(st);
     return;
   }
 
   if (S.phase === 'save') {
+    disposeScene();
     const profiles = st.profiles || [];
     const old = profiles[S.slot];
     body().innerHTML = `<div class="app-cal-main">
@@ -90,25 +123,134 @@ function render() {
     return;
   }
 
-  // Capture steps.
+  // Steps 1–4 (Rest, Pitch, Roll, Axes)
   const cfg = STEPS[S.step];
   const n = S.step;
-  let status = '', icon = '';
-  if (S.phase === 'done') { icon = 'ok'; status = S.doneText; }
-  if (S.phase === 'fail') { icon = 'fail'; status = S.failText; }
-  body().innerHTML = stepper() + `<div class="app-cal-main">
-    <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
-    <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
-    <div class="pg-notice app-cal-caption"><span>${esc(c(`step${n}_caption`))}</span></div>
-    ${S.phase === 'run' ? `<div class="app-cal-run"><div class="app-cal-runrow"><b id="cal-run-text"></b><span class="pg-badge" id="cal-run-count"></span></div><div class="pg-progress"><i id="cal-bar"></i></div></div>` : ''}
-    ${icon ? `<div class="pg-notice pg-notice--${icon === 'ok' ? 'ok' : 'danger'}"><span><b>${esc(icon === 'ok' ? (cfg.axes ? c('align_success_title') : c('capture_success_title')) : (cfg.axes ? c('align_fail_title') : c('capture_fail_title')))}</b><span class="pg-notice__sub">${md(status || '')}</span></span></div>` : ''}
-  </div>`;
-  const back = btn('back', c('btn_back'), '', S.phase === 'run');
-  if (S.phase === 'ready') foot().innerHTML = back + btn('capture', c(`step${n}_btn`), 'primary');
-  else if (S.phase === 'run') foot().innerHTML = back + btn('wait', cfg.axes ? c('align_recording_btn') : cfg.rest ? c('btn_recording_rest') : c('btn_recording'), 'primary', true);
-  else if (S.phase === 'done') foot().innerHTML = back + '<span class="app-grow"></span>' + btn('capture', cfg.axes ? c('btn_recalibrate_align') : c('btn_retry')) + btn('next', n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step'), 'primary');
-  else foot().innerHTML = back + btn('capture', c('btn_retry'), 'primary');
-  if (n === 2 && S.phase === 'done') foot().querySelector('[data-act=next]').textContent = c('btn_next_step');
+  const stepKey = cfg.key;
+
+  let grid = $('cal-grid');
+  if (!grid) {
+    body().innerHTML = stepper() + `<div class="app-cal-grid" id="cal-grid">
+      <div class="app-cal-left" id="cal-left"></div>
+      <div class="app-cal-right">
+        <div class="pg-stage app-cal-stage" id="cal-stage">
+          <span class="pg-viewport__tag">GAMEPAD</span>
+          <div class="pg-stage__cap" id="cal-stage-cap"></div>
+        </div>
+        <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer') || t('ui.cal_orientation_disclaimer'))}</div>
+      </div>
+    </div>`;
+  } else {
+    const stepperBox = body().querySelector('.app-cal-stepper');
+    if (stepperBox) setHTML(stepperBox, stepper().replace(/^<div class="[^"]*">/, '').replace(/<\/div>$/, ''));
+  }
+
+  // Render left column
+  const leftCol = $('cal-left');
+  if (leftCol) {
+    const showStats = n <= 2;
+    let panelHTML = '';
+
+    if (S.phase === 'ready') {
+      panelHTML = `<div class="pg-notice pg-notice--plain app-cal-action-box">
+        <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_ready_badge') || 'Ready to capture')}</span>
+        <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" data-act="capture">
+          <svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"/></svg>
+          ${esc(c(`step${n}_btn`))}
+        </button>
+      </div>`;
+    } else if (S.phase === 'run') {
+      panelHTML = `<div class="app-cal-run">
+        <div class="app-cal-runrow">
+          <span class="pg-badge pg-badge--warn pg-badge--dot">${esc(t('ui.cal_recording_badge') || 'Recording')}</span>
+          <b id="cal-run-text">${esc(cfg.axes ? c('align_status_recording') : (cfg.rest ? c('status_recording_rest') : c('status_recording')))}</b>
+          <span class="pg-badge" id="cal-run-count"></span>
+        </div>
+        <div class="pg-progress"><i id="cal-bar"></i></div>
+        <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" disabled>
+          ${esc(cfg.axes ? c('align_recording_btn') : cfg.rest ? c('btn_recording_rest') : c('btn_recording'))}
+        </button>
+      </div>`;
+    } else if (S.phase === 'done') {
+      panelHTML = `<div class="pg-notice pg-notice--ok">
+        <span>
+          <b>${esc(cfg.axes ? c('align_success_title') : c('capture_success_title'))}</b>
+          <span class="pg-notice__sub">${md(S.doneText || '')}</span>
+        </span>
+      </div>`;
+    } else if (S.phase === 'fail') {
+      panelHTML = `<div class="pg-notice pg-notice--danger">
+        <span>
+          <b>${esc(cfg.axes ? c('align_fail_title') : c('capture_fail_title'))}</b>
+          <span class="pg-notice__sub">${md(S.failText || '')}</span>
+        </span>
+      </div>
+      <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" data-act="capture">
+        ${esc(c('btn_retry'))}
+      </button>`;
+    }
+
+    leftCol.innerHTML = `
+      ${showStats ? `<div class="app-cal-stats pg-stats" id="cal-stats">
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span><span class="pg-badge" id="cal-badge-x">—</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-x">+0°/s</div>
+        </div>
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--y">Y</span><span class="pg-badge" id="cal-badge-y">—</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-y">+0°/s</div>
+        </div>
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--z">Z</span><span class="pg-badge" id="cal-badge-z">—</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-z">+0°/s</div>
+        </div>
+      </div>` : ''}
+      <div class="app-cal-info">
+        <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
+        <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
+      </div>
+      <div class="app-cal-panel">${panelHTML}</div>
+    `;
+  }
+
+  // Update right column caption
+  const capText = c(`step${n}_caption`) || t(`ui.cal_cap_${stepKey}`);
+  setText($('cal-stage-cap'), capText);
+
+  // Footer buttons
+  const backLabel = n === 0 ? c('btn_cancel') : c('btn_back');
+  const backBtn = btn('back', backLabel, '', S.phase === 'run');
+  if (S.phase === 'ready') {
+    foot().innerHTML = backBtn + btn('capture', c(`step${n}_btn`), 'primary');
+  } else if (S.phase === 'run') {
+    foot().innerHTML = backBtn + btn('wait', cfg.axes ? c('align_recording_btn') : cfg.rest ? c('btn_recording_rest') : c('btn_recording'), 'primary', true);
+  } else if (S.phase === 'done') {
+    const nextLabel = n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step');
+    foot().innerHTML = backBtn + '<span class="app-grow"></span>' + btn('capture', cfg.axes ? c('btn_recalibrate_align') : c('btn_retry')) + btn('next', nextLabel, 'primary');
+  } else {
+    foot().innerHTML = backBtn + btn('capture', c('btn_retry'), 'primary');
+  }
+
+  // Live rates update
+  updateLiveRates(st);
+
+  // Update scene
+  ensureScene(stepKey);
+}
+
+function updateLiveRates(st) {
+  if (!S.open) return;
+  if (S.step <= 2 && S.phase !== 'verify' && S.phase !== 'save') {
+    const vx = Math.round(st.rawRotX || 0);
+    const vy = Math.round(st.rawRotY || 0);
+    const vz = Math.round(st.rawRotZ || 0);
+    setText($('cal-val-x'), (vx >= 0 ? '+' : '') + vx + '°/s');
+    setText($('cal-val-y'), (vy >= 0 ? '+' : '') + vy + '°/s');
+    setText($('cal-val-z'), (vz >= 0 ? '+' : '') + vz + '°/s');
+  } else if (S.phase === 'verify') {
+    const f = (v) => (v >= 0 ? '+' : '') + (v || 0).toFixed(0) + '°';
+    setText($('cal-live'), `PITCH ${f(st.pitch)} · ROLL ${f(st.roll)} · YAW ${f(st.yaw)}`);
+  }
 }
 
 // A gesture step: 2..1 countdown, then Go records for the step's duration.
@@ -119,11 +261,11 @@ async function capture() {
   render();
   const txt = $('cal-run-text');
   for (let k = 2; k >= 1; k--) {
-    txt.textContent = c('preparing') + ' ' + k;
+    if (txt) txt.textContent = c('preparing') + ' ' + k;
     await new Promise((r) => setTimeout(r, 650));
-    if (!S.open) return;
+    if (!S.open || S.phase !== 'run') return;
   }
-  txt.textContent = cfg.rest ? c('status_recording_rest') : c('status_recording');
+  if (txt) txt.textContent = cfg.rest ? c('status_recording_rest') : c('status_recording');
   await call('StartCapture');
   const t0 = performance.now();
   await new Promise((resolve) => {
@@ -131,13 +273,15 @@ async function capture() {
       const el2 = $('cal-bar');
       const p = Math.min(1, (performance.now() - t0) / cfg.ms);
       if (el2) el2.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+      if (S.scene) S.scene.setRecording(p);
       const st = getState() || {};
       const cnt = $('cal-run-count');
       if (cnt) cnt.textContent = Math.round(Math.hypot(st.rawRotX || 0, st.rawRotY || 0, st.rawRotZ || 0)) + '°/s';
-      if (p >= 1) { clearInterval(S.timer); resolve(); }
+      if (p >= 1) { clearInterval(S.timer); S.timer = 0; resolve(); }
     }, 50);
   });
-  if (!S.open) return;
+  if (!S.open || S.phase !== 'run') return;
+  if (S.scene) S.scene.setRecording(0);
   const res = await call('StopCapture', S.step);
   if (!res || !res.success) return fail(res && (c(res.errorCode) || res.errorMsg) || c('err_motion_record'));
   if (S.step === 0) {
@@ -159,25 +303,52 @@ async function capture() {
 async function listenAxes() {
   S.phase = 'run';
   render();
-  $('cal-run-text').textContent = c('align_status_recording');
+  const txt = $('cal-run-text');
+  if (txt) txt.textContent = c('align_status_recording');
   await call('StartAxisAlign', true);
   const t0 = performance.now();
   S.poll = setInterval(async () => {
     const st = await call('GetAxisAlignStatus');
     if (!S.open || S.phase !== 'run' || !st) return;
     const refining = st.pairs >= st.minPairs;
-    const bar = $('cal-bar'), cnt = $('cal-run-count'), txt = $('cal-run-text');
-    if (bar) bar.style.setProperty('--p', Math.min(100, (st.pairs / Math.max(1, st.minPairs)) * 100) + '%');
+    const bar = $('cal-bar'), cnt = $('cal-run-count'), tEl = $('cal-run-text');
+    const p = Math.min(1, st.pairs / Math.max(1, st.minPairs));
+    if (bar) bar.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+    if (S.scene) S.scene.setRecording(p);
     if (cnt) cnt.textContent = refining ? c('align_counter_refining') : `${st.pairs}/${st.minPairs}`;
-    if (txt) txt.textContent = refining ? c('align_status_refining') : c('align_status_recording');
-    if (st.known) { stopPoll(); done(c('align_success_desc', { mapping: (st.mapping || []).join(', ') })); }
-    else if (performance.now() - t0 > AXES_TIMEOUT_MS) { stopPoll(); fail(c('align_fail_desc')); }
+    if (tEl) tEl.textContent = refining ? c('align_status_refining') : c('align_status_recording');
+    if (st.known) {
+      stopPoll();
+      if (S.scene) S.scene.setRecording(0);
+      done(c('align_success_desc', { mapping: (st.mapping || []).join(', ') }));
+    } else if (performance.now() - t0 > AXES_TIMEOUT_MS) {
+      stopPoll();
+      if (S.scene) S.scene.setRecording(0);
+      fail(c('align_fail_desc'));
+    }
   }, 200);
 }
 
-function stopPoll() { clearInterval(S.poll); S.poll = 0; }
-function done(text) { S.phase = 'done'; S.doneText = text; render(); }
-function fail(text) { S.phase = 'fail'; S.failText = text; render(); }
+function stopPoll() {
+  if (S.poll) {
+    clearInterval(S.poll);
+    S.poll = 0;
+  }
+}
+
+function done(text) {
+  S.phase = 'done';
+  S.doneText = text;
+  if (S.scene) S.scene.setRecording(0);
+  render();
+}
+
+function fail(text) {
+  S.phase = 'fail';
+  S.failText = text;
+  if (S.scene) S.scene.setRecording(0);
+  render();
+}
 
 async function renderMount() {
   const box = $('cal-mount');
@@ -193,25 +364,14 @@ async function renderMount() {
   if (tg) tg.onchange = () => call('SetWizardMountEnabled', tg.checked);
 }
 
-// Verify: the tilt the new matrix produces, live, so the user sees it follows.
-function live() {
-  const tick = () => {
-    const out = $('cal-live');
-    if (!out || S.phase !== 'verify') return;
-    const st = getState() || {};
-    const f = (v) => (v >= 0 ? '+' : '') + (v || 0).toFixed(0) + '°';
-    out.textContent = `PITCH ${f(st.pitch)} · ROLL ${f(st.roll)} · YAW ${f(st.yaw)}`;
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
-
 function startFlow(slot) {
   S.slot = slot;
   S.step = 0;
   S.vectors = [];
   S.matrix = null;
   S.result = null;
+  S.doneText = '';
+  S.failText = '';
   S.phase = 'ready';
   call('StartAxisAlign', true); // recalibrating never reuses an old axis mapping
   render();
@@ -219,15 +379,26 @@ function startFlow(slot) {
 
 async function act(a, target) {
   if (a === 'close') return close();
-  if (a === 'slot') return startFlow(+target.dataset.slot);
   if (a === 'capture') return capture();
   if (a === 'back') {
-    clearInterval(S.timer); stopPoll();
-    if (S.step > 0) { S.step--; S.phase = 'ready'; render(); } else { S.phase = 'slots'; render(); }
+    if (S.timer) { clearInterval(S.timer); S.timer = 0; }
+    stopPoll();
+    if (S.step > 0) {
+      S.step--;
+      S.phase = 'ready';
+      render();
+    } else {
+      close();
+    }
     return;
   }
   if (a === 'next') {
-    if (S.step < STEPS.length - 1) { S.step++; S.phase = 'ready'; render(); return; }
+    if (S.step < STEPS.length - 1) {
+      S.step++;
+      S.phase = 'ready';
+      render();
+      return;
+    }
     S.phase = 'verify';
     await call('PreviewMatrix', S.matrix);
     call('ResetAHRS');
@@ -251,21 +422,23 @@ async function act(a, target) {
   }
 }
 
-/** Opens the wizard: on the slot list, or straight into a slot. */
+/** Opens the wizard: straight into step 1 for the target (or active) slot. */
 export function openCalibration(slot = null) {
   S.open = true;
   el().hidden = false;
-  if (slot === null) { S.phase = 'slots'; render(); } else startFlow(slot);
+  const targetSlot = slot == null ? (getState()?.activeSlot ?? 0) : slot;
+  startFlow(targetSlot);
 }
 
 function close() {
   if (!S.open) return;
-  if (S.phase === 'run') call('StopCapture', S.step);
-  clearInterval(S.timer);
+  if (S.phase === 'run') call('StopCapture', S.step).catch(() => {});
+  if (S.timer) { clearInterval(S.timer); S.timer = 0; }
   stopPoll();
+  disposeScene();
   S.open = false;
   el().hidden = true;
-  call('ClearPreview');
+  call('ClearPreview').catch(() => {});
 }
 
 export function startCalibration() {
@@ -280,5 +453,10 @@ export function startCalibration() {
     if (e.key === 'Escape') close();
     else if (e.key === 'Enter' && S.phase === 'save') act('save');
     else if (e.code === 'Space' && S.phase === 'verify') { e.preventDefault(); call('ResetAHRS'); }
+  });
+
+  onState((st) => {
+    if (!S.open || !st) return;
+    updateLiveRates(st);
   });
 }
