@@ -51,7 +51,7 @@ export function initBench(container, options = {}) {
     const cs = getComputedStyle(canvas);
     const v = (n) => cs.getPropertyValue(n).trim();
     colorsKey = key;
-    colors = { x: v('--axis-x'), y: v('--axis-y'), z: v('--axis-z'), raw: v('--warn'), diff: v('--danger'),
+    colors = { raw: v('--info'), filt: v('--accent'), diff: v('--danger'),
       line: v('--line-subtle'), zero: v('--line'), ink: v('--ink'), ink2: v('--ink-2'), chip: v('--tile-hi') };
     return colors;
   }
@@ -170,11 +170,11 @@ export function initBench(container, options = {}) {
       ctx.beginPath(); ctx.strokeStyle = c.raw; ctx.lineWidth = 1.6;
       for (let i = 0; i < n; i++) (i ? ctx.lineTo(px(i), py(R, i)) : ctx.moveTo(px(i), py(R, i)));
       ctx.stroke();
-      ctx.beginPath(); ctx.strokeStyle = c[a]; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.strokeStyle = c.filt; ctx.lineWidth = 2.2;
       for (let i = 0; i < n; i++) (i ? ctx.lineTo(px(i), py(F, i)) : ctx.moveTo(px(i), py(F, i)));
       ctx.stroke();
       const cur = F[n - 1];
-      ctx.font = '600 11px ui-monospace, Consolas, monospace'; ctx.fillStyle = c[a]; ctx.textAlign = 'right';
+      ctx.font = '600 11px ui-monospace, Consolas, monospace'; ctx.fillStyle = c.filt; ctx.textAlign = 'right';
       ctx.fillText(`${cur >= 0 ? '+' : ''}${cur.toFixed(1)}°/s`, x0 + w - 6, y0 + 14); ctx.textAlign = 'left';
     }
     ctx.font = '700 10px system-ui, sans-serif';
