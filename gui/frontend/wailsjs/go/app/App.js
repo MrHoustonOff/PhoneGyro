@@ -74,6 +74,10 @@ export function GetDataDir() {
   return window['go']['app']['App']['GetDataDir']();
 }
 
+export function GetDefaultAppSettings() {
+  return window['go']['app']['App']['GetDefaultAppSettings']();
+}
+
 export function GetFirewallStatus() {
   return window['go']['app']['App']['GetFirewallStatus']();
 }

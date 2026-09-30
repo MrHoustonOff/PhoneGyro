@@ -43,6 +43,8 @@ export function GetDSUStatus():Promise<Record<string, any>>;
 
 export function GetDataDir():Promise<string>;
 
+export function GetDefaultAppSettings():Promise<settings.Settings>;
+
 export function GetFirewallStatus():Promise<firewall.Status>;
 
 export function GetFontScale():Promise<number>;
