@@ -1,8 +1,13 @@
 // Live charts of the stats page, in the spirit of LEGACY Live Debug: smooth curves (Catmull-Rom),
 // a soft glow under the line, a glowing head dot, the full width from the first sample.
-// One SVG drawer for single-line sparks and three-axis X/Y/Z charts. No rAF loop: the caller pushes
-// values from its timer while the page is open; between pushes the picture glides left by one step
-// (Web Animations on transform, compositor only), so the chart moves instead of jumping.
+// One SVG drawer for single-line sparks and three-axis X/Y/Z charts.
+// Cost control (the look stays the same):
+//  - push() only records the sample and eases the range; drawing happens once per frame for all
+//    charts together (one-shot rAF, no loop), and only for charts on screen with the window visible;
+//    a chart scrolled out of view catches up in one draw when it comes back;
+//  - the glow is a <use> of the line (one path to parse, not two);
+//  - between pushes the data layer glides left by one step (one reused Web Animation on transform);
+//  - head dots move by transform, not top, so a sample causes no layout.
 // The Y range eases toward its target, so a new peak never snaps the already drawn data.
 
 import { t } from '../../core/i18n.js';
@@ -10,7 +15,44 @@ import { t } from '../../core/i18n.js';
 const NS = 'http://www.w3.org/2000/svg';
 const W = 100, H = 40, PAD = 4;
 const EASE = 0.18; // share of the way to the target range per push
-let gradSeq = 0;
+let seq = 0;
+
+// ── One frame for every dirty chart; charts off screen wait until they are seen. ──
+const dirty = new Set();
+let raf = 0;
+function flush() {
+  raf = 0;
+  for (const c of dirty) c.draw();
+  dirty.clear();
+}
+function schedule(c) {
+  if (!c.visible || document.hidden) { c.stale = true; return; }
+  dirty.add(c);
+  if (!raf) raf = requestAnimationFrame(flush);
+}
+const byHost = new WeakMap();
+const io = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      const c = byHost.get(e.target);
+      if (!c) continue;
+      c.visible = e.isIntersecting;
+      if (c.visible && c.stale) schedule(c);
+    }
+  })
+  : null;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  // back from a hidden window: redraw what went stale meanwhile (WeakMap is not iterable, so charts register here)
+  for (const c of live) if (c.stale) schedule(c);
+});
+const live = new Set();
+function watch(host, c) {
+  c.visible = !io;
+  byHost.set(host, c);
+  live.add(c);
+  if (io) io.observe(host);
+}
 
 function el(tag, cls, parent) {
   const e = document.createElementNS(NS, tag);
@@ -27,15 +69,15 @@ function nice(v) {
   return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
 }
 
+const f1 = (v) => Math.round(v * 10) / 10;
+
 // Smooth path through points (Catmull-Rom → cubic Bézier), like LEGACY drawAppleChart.
 function curve(xs, ys) {
   const n = ys.length;
-  let d = `M ${xs[0].toFixed(2)} ${ys[0].toFixed(2)}`;
+  let d = `M${f1(xs[0])} ${f1(ys[0])}`;
   for (let i = 0; i < n - 1; i++) {
     const i0 = i ? i - 1 : 0, i3 = i + 2 < n ? i + 2 : i + 1;
-    const c1x = xs[i] + (xs[i + 1] - xs[i0]) / 6, c1y = ys[i] + (ys[i + 1] - ys[i0]) / 6;
-    const c2x = xs[i + 1] - (xs[i3] - xs[i]) / 6, c2y = ys[i + 1] - (ys[i3] - ys[i]) / 6;
-    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)} ${c2x.toFixed(2)} ${c2y.toFixed(2)} ${xs[i + 1].toFixed(2)} ${ys[i + 1].toFixed(2)}`;
+    d += `C${f1(xs[i] + (xs[i + 1] - xs[i0]) / 6)} ${f1(ys[i] + (ys[i + 1] - ys[i0]) / 6)} ${f1(xs[i + 1] - (xs[i3] - xs[i]) / 6)} ${f1(ys[i + 1] - (ys[i3] - ys[i]) / 6)} ${f1(xs[i + 1])} ${f1(ys[i + 1])}`;
   }
   return d;
 }
@@ -59,12 +101,26 @@ function frame(host) {
   return svg;
 }
 
-function dot(host, cls) {
-  const d = document.createElement('i');
-  d.className = `app-chart__dot ${cls || ''}`;
-  host.appendChild(d);
-  return d;
+// A line plus its glow (<use> of the same path); stroke comes from the group, so each can style it.
+function lineWithGlow(svg, cls) {
+  const g = el('g', `app-chart__lines ${cls || ''}`, svg);
+  const id = `app-chart-l${++seq}`;
+  const halo = el('use', 'app-chart__halo', g);
+  const line = el('path', 'app-chart__line', g);
+  line.setAttribute('id', id);
+  halo.setAttribute('href', `#${id}`);
+  return line;
 }
+
+// Head dot: a full-height rail moved by transform (percent of the rail = percent of the chart).
+function dot(host, cls) {
+  const rail = document.createElement('i');
+  rail.className = `app-chart__rail ${cls || ''}`;
+  rail.appendChild(document.createElement('b'));
+  host.appendChild(rail);
+  return rail;
+}
+const placeDot = (rail, y) => { rail.style.transform = `translateY(${((y / H) * 100).toFixed(1)}%)`; };
 
 // X positions of n samples: the oldest one step left of the edge, so the glide never shows a gap.
 function xsFor(n) {
@@ -74,11 +130,22 @@ function xsFor(n) {
   return xs;
 }
 
-function glide(svg, n, ms) {
-  if (!svg.animate || !(ms > 0)) return;
-  const pct = 100 / (n - 2);
-  svg.getAnimations().forEach((a) => a.cancel());
-  svg.animate([{ transform: `translateX(${pct}%)` }, { transform: 'translateX(0)' }], { duration: ms, easing: 'linear' });
+function glider(svg, n, ms) {
+  if (!svg.animate || !(ms > 0)) return () => {};
+  const a = svg.animate([{ transform: `translateX(${100 / (n - 2)}%)` }, { transform: 'translateX(0)' }], { duration: ms, easing: 'linear' });
+  a.cancel();
+  return () => { a.cancel(); a.play(); };
+}
+
+function base(host) {
+  return { visible: true, stale: false, pending: 0, empty: true, host };
+}
+function markFilled(c) {
+  if (c.empty) { c.empty = false; c.host.classList.remove('is-empty'); }
+}
+function markEmpty(c) {
+  c.empty = true; c.pending = 0; c.stale = false; dirty.delete(c);
+  c.host.classList.add('is-empty');
 }
 
 /**
@@ -86,12 +153,12 @@ function glide(svg, n, ms) {
  */
 export function createSpark(host, opts = {}) {
   if (!host) return { push() {}, clear() {} };
-  const n = opts.n || 40, mode = opts.mode || 'zero', minSpan = opts.minSpan || 1, interval = opts.interval || 100;
+  const n = opts.n || 40, mode = opts.mode || 'zero', minSpan = opts.minSpan || 1;
   const svg = frame(host);
   let fill = null;
   if (opts.area !== false) {
     // Soft area under the line: the chart colour fading down (stops take --c from the host).
-    const id = `app-chart-g${++gradSeq}`;
+    const id = `app-chart-g${++seq}`;
     const g = el('linearGradient', null, el('defs', null, svg));
     g.setAttribute('id', id);
     g.setAttribute('x1', '0'); g.setAttribute('y1', '0'); g.setAttribute('x2', '0'); g.setAttribute('y2', '1');
@@ -103,12 +170,13 @@ export function createSpark(host, opts = {}) {
     fill = el('path', 'app-chart__area', svg);
     fill.setAttribute('fill', `url(#${id})`);
   }
-  const halo = el('path', 'app-chart__halo', svg);
-  const line = el('path', 'app-chart__line', svg);
+  const line = lineWithGlow(svg);
   const head = dot(host);
+  const glide = glider(svg, n, opts.interval || 100);
   const xs = xsFor(n);
   const buf = [];
   let lo = 0, hi = 0;
+  const c = base(host);
 
   function target() {
     let mn = Infinity, mx = -Infinity;
@@ -120,6 +188,20 @@ export function createSpark(host, opts = {}) {
     return [0, Math.max(minSpan, nice(mx / 0.8))];
   }
 
+  c.draw = () => {
+    if (!buf.length) return;
+    const span = hi - lo || 1;
+    const ys = buf.map((b) => H - PAD - Math.max(0, Math.min(1, (b - lo) / span)) * (H - PAD * 2));
+    const d = curve(xs, ys);
+    line.setAttribute('d', d);
+    if (fill) fill.setAttribute('d', `${d}L${W} ${H}L${f1(xs[0])} ${H}Z`);
+    placeDot(head, ys[n - 1]);
+    markFilled(c);
+    if (c.pending === 1 && !c.stale) glide(); // one fresh sample: slide it in; a catch-up draw just lands
+    c.pending = 0; c.stale = false;
+  };
+  watch(host, c);
+
   return {
     push(v) {
       const x = Number(v);
@@ -129,21 +211,14 @@ export function createSpark(host, opts = {}) {
       else { buf.push(x); buf.shift(); }
       const [tl, th] = target();
       if (first) { lo = tl; hi = th; } else { lo += (tl - lo) * EASE; hi += (th - hi) * EASE; }
-      const span = hi - lo || 1;
-      const ys = buf.map((b) => H - PAD - Math.max(0, Math.min(1, (b - lo) / span)) * (H - PAD * 2));
-      const d = curve(xs, ys);
-      line.setAttribute('d', d);
-      halo.setAttribute('d', d);
-      if (fill) fill.setAttribute('d', `${d} L ${W} ${H} L ${xs[0]} ${H} Z`);
-      head.style.top = `${((ys[n - 1] / H) * 100).toFixed(1)}%`;
-      host.classList.remove('is-empty');
-      if (!first) glide(svg, n, interval);
+      c.pending += first ? 2 : 1;
+      schedule(c);
     },
     clear() {
       buf.length = 0;
-      line.setAttribute('d', ''); halo.setAttribute('d', '');
+      line.setAttribute('d', '');
       if (fill) fill.setAttribute('d', '');
-      host.classList.add('is-empty');
+      markEmpty(c);
     },
   };
 }
@@ -151,16 +226,27 @@ export function createSpark(host, opts = {}) {
 /** Three signed series around a zero line (X/Y/Z colours from the axis tokens). opts: { n, minScale, interval } */
 export function createAxisChart(host, opts = {}) {
   if (!host) return { push() {}, clear() {} };
-  const n = opts.n || 64, minScale = opts.minScale || 1, interval = opts.interval || 50;
+  const n = opts.n || 64, minScale = opts.minScale || 1;
   const svg = frame(host);
-  const axes = ['ax-x', 'ax-y', 'ax-z'].map((c) => ({
-    halo: el('path', `app-chart__halo ${c}`, svg),
-    line: el('path', `app-chart__line ${c}`, svg),
-    head: dot(host, c),
-    buf: [],
-  }));
+  const axes = ['ax-x', 'ax-y', 'ax-z'].map((cls) => ({ line: lineWithGlow(svg, cls), head: dot(host, cls), buf: [] }));
+  const glide = glider(svg, n, opts.interval || 50);
   const xs = xsFor(n);
   let scale = minScale;
+  const c = base(host);
+
+  c.draw = () => {
+    if (!axes[0].buf.length) return;
+    const half = H / 2 - PAD;
+    for (const a of axes) {
+      const ys = a.buf.map((v) => H / 2 - Math.max(-1, Math.min(1, v / scale)) * half);
+      a.line.setAttribute('d', curve(xs, ys));
+      placeDot(a.head, ys[n - 1]);
+    }
+    markFilled(c);
+    if (c.pending === 1 && !c.stale) glide();
+    c.pending = 0; c.stale = false;
+  };
+  watch(host, c);
 
   return {
     push(vals) {
@@ -174,21 +260,13 @@ export function createAxisChart(host, opts = {}) {
       });
       const tgt = Math.max(minScale, peak * 1.15);
       scale = first ? tgt : scale + (tgt - scale) * EASE;
-      const half = H / 2 - PAD;
-      for (const a of axes) {
-        const ys = a.buf.map((v) => H / 2 - Math.max(-1, Math.min(1, v / scale)) * half);
-        const d = curve(xs, ys);
-        a.line.setAttribute('d', d);
-        a.halo.setAttribute('d', d);
-        a.head.style.top = `${((ys[n - 1] / H) * 100).toFixed(1)}%`;
-      }
-      host.classList.remove('is-empty');
-      if (!first) glide(svg, n, interval);
+      c.pending += first ? 2 : 1;
+      schedule(c);
     },
     clear() {
-      for (const a of axes) { a.buf.length = 0; a.line.setAttribute('d', ''); a.halo.setAttribute('d', ''); }
+      for (const a of axes) { a.buf.length = 0; a.line.setAttribute('d', ''); }
       scale = minScale;
-      host.classList.add('is-empty');
+      markEmpty(c);
     },
   };
 }
