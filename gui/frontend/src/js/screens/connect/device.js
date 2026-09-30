@@ -84,7 +84,7 @@ function render(st) {
   const online = st.status === 'online';
   toggleClass($('dev-chip'), 'is-usb', usb);
   setText($('dev-name'), st.deviceName || (usb ? t('usb_mode.connected_name') : t('mode.phone')));
-  badge($('dev-status'), online ? ' pg-badge--ok pg-badge--dot' : ' pg-badge--warn pg-badge--dot', t('status.' + (online ? 'online' : 'paused')).toLowerCase());
+  badge($('dev-status'), online ? ' pg-badge--ok pg-badge--dot' : ' pg-badge--danger pg-badge--dot', t('status.' + (online ? 'online' : 'paused')).toLowerCase());
   setText($('dev-hz'), `${Math.round(st.hz || 0)} Hz`);
   const extra = $('dev-extra');
   const extraText = usb ? (st.usbPort || '') : (st.pingMs >= 0 ? `${st.pingMs} ms` : '');

@@ -1802,3 +1802,13 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .pg-shell.is-screen-stats .pg-shell__body { padding: 0; }
 .pg-shell.has-no-chrome .pg-shell__body { inset: var(--pg-hh) 0 0 0; padding: 0; }
 .pg-shell.has-no-chrome .pg-footer { display: none; }
+
+/* Semantic status colours: fixed, never the user's accent. Green = online / active / clients present, red = offline / none. */
+:root, [data-theme="light"] { --good: #5b7c26; --good-text: #4a651d; --good-soft: rgba(91, 124, 38, 0.13); --good-line: rgba(91, 124, 38, 0.40); }
+[data-theme="dark"] { --good: #a3bc69; --good-text: #a3bc69; --good-soft: rgba(163, 188, 105, 0.15); --good-line: rgba(163, 188, 105, 0.42); }
+.pg-badge--ok { background: linear-gradient(var(--good-soft), var(--good-soft)), var(--surface); border-color: var(--good-line); color: var(--good-text); }
+.pg-badge--ok.pg-badge--dot::before { background: var(--good); }
+.pg-notice--ok { --nb: var(--good-soft); border-color: var(--good-line); }
+.pg-notice--ok::before { background: var(--good); box-shadow: 0 0 0 0.1875rem var(--good-soft); }
+.pg-status--online .pg-status__dot { background: var(--good); }
+.pg-status--online .pg-status__dot::after { color: var(--good); }

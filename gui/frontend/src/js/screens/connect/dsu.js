@@ -13,7 +13,7 @@ const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 const RE = '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
 
 export const el = document.createElement('div');
-el.className = 'pg-notice pg-notice--warn app-dsu';
+el.className = 'pg-notice pg-notice--danger app-dsu';
 el.innerHTML = `<div class="app-dsu__body"><div class="pg-notice__row"><span><b data-t="title"></b> <span class="pg-code" data-t="port"></span><span class="pg-notice__sub" data-t="sub"></span></span><span class="pg-badge pg-badge--warn" data-t="badge"></span></div><div class="app-dsu__list"></div></div>`;
 const part = (k) => el.querySelector(`[data-t="${k}"]`);
 const list = el.querySelector('.app-dsu__list');
@@ -67,13 +67,13 @@ function render() {
   const { clients, kicked } = dsu;
   const n = clients.length;
   const ok = n > 0;
-  const cls = 'pg-notice app-dsu pg-notice--' + (ok ? 'ok' : 'warn');
+  const cls = 'pg-notice app-dsu pg-notice--' + (ok ? 'ok' : 'danger');
   if (el.className !== cls) el.className = cls;
   setText(part('title'), t('status.dsu_title'));
   setText(part('port'), ':' + dsu.port);
   setText(part('sub'), ok ? t(n === 1 ? 'status.dsu_connected' : 'status.dsu_connected_plural', { n }) : t('status.dsu_idle_notice'));
   const badge = part('badge');
-  const bcls = 'pg-badge pg-badge--' + (ok ? 'ok' : 'warn');
+  const bcls = 'pg-badge pg-badge--' + (ok ? 'ok' : 'danger');
   if (badge.className !== bcls) badge.className = bcls;
   setText(badge, ok ? t(n === 1 ? 'status.dsu_clients_count' : 'status.dsu_clients_count_plural', { n }) : t('status.dsu_waiting'));
   // setHTML skips the rebuild while the list looks the same (hover and clicks survive).

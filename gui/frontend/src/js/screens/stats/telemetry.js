@@ -767,7 +767,7 @@ export function initTelemetry(paneEl) {
     // ═══ GROUP E: DSU Clients & Session ═══
     setText($('stat-dsu-count'), String(res.dsuCount));
     setText($('stat-dsu-label'), formatDsuClientsLabel(res.dsuCount));
-    setBadge($('stat-dsu-badge'), res.dsuCount > 0 ? 'ok' : 'none', String(res.dsuCount));
+    setBadge($('stat-dsu-badge'), res.dsuCount > 0 ? 'ok' : 'danger', String(res.dsuCount));
 
     const dsuNameEl = $('stat-dsu-client-name');
     if (dsuNameEl) {
