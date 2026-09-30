@@ -1858,3 +1858,10 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 /* The groups of the right column sit in one flex column with the design's gap (the wrapper div has none of its own). */
 .app-set-col-groups { display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }
 .pg-set__main > .pg-group, .app-set-col-groups > .pg-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Dynamic-camera key hint: centred just above the camera switch (bottom of the 3D block). */
+#stats-orbit-hint {
+  top: auto !important; left: 50% !important; right: auto !important;
+  bottom: calc(0.875rem + 2.625rem) !important; transform: translateX(-50%);
+  white-space: nowrap; z-index: 3;
+}
