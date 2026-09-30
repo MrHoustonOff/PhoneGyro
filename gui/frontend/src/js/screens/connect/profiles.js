@@ -10,6 +10,7 @@ import { onState, getState } from '../../core/state.js';
 import { openModal } from '../../ui/modal.js';
 import { openCalibration } from '../calibration.js';
 import { toast } from '../../ui/toast.js';
+import { profileIconSvg } from '../../ui/profile-icons.js';
 
 const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 let lastKey = '';
@@ -48,6 +49,9 @@ function render(st) {
 
   show($('prof-slot'), has);
   if (has) setText($('prof-slot'), t('ui.slot_active', { n: slot + 1 }));
+  // Icon chip in the active-profile button.
+  const iconEl = $('prof-icon');
+  if (iconEl) iconEl.innerHTML = profileIconSvg(has ? (active.icon || 'default') : 'default');
   setText($('prof-name'), has ? active.name : t('ui.no_profile'));
   const cal = has ? calDate(active) : null;
   setText($('prof-sub'), has ? devText(active) + (cal ? ' · ' + cal.short : '') : t('ui.no_profiles'));
@@ -74,17 +78,25 @@ function render(st) {
   }
   setHTML($('prof-axes'), `<b>${esc(t('calibration.axes_label'))}:</b> Pitch ${p} · Yaw ${y} · Roll ${r}<br><b>${esc(t('calibration.accel_axes_label'))}:</b> ${esc(acc)}`);
 
-  // The list: only slots that hold a profile.
-  const items = profiles.map((pr, i) => {
-    if (!pr || !pr.name) return '';
-    const c = calDate(pr);
-    return `<div class="app-menu__item${i === slot ? ' is-active' : ''}" role="option" data-slot="${i}"${c ? ` data-tip="${esc(c.full)}"` : ''}>
-      <span class="app-grow"><span class="pg-profile__t">${esc(pr.name)}</span><span class="pg-profile__s">${esc(slotName(i))} · ${esc(devText(pr))}${c ? ' · ' + esc(c.short) : ''}</span></span>
-      ${pr.outdated ? `<span class="pg-badge pg-badge--danger">${esc(t('calibration.outdated_badge'))}</span>` : ''}
-      <button class="pg-btn-icon" type="button" data-del="${i}" data-tip="${esc(t('calibration.delete_profile_tip'))}">${X}</button></div>`;
+  // The list: all 6 slots (empty ones shown as "empty", calibrated ones with icon).
+  const items = [0, 1, 2, 3, 4, 5].map((i) => {
+    const pr = profiles[i];
+    const hasPr = !!(pr && pr.name);
+    const c = hasPr ? calDate(pr) : null;
+    const label = hasPr ? pr.name : t('calibration.slot_empty');
+    const sub = hasPr
+      ? `${esc(slotName(i))} · ${esc(devText(pr))}${c ? ' · ' + esc(c.short) : ''}`
+      : esc(slotName(i));
+    return `<div class="app-menu__item${i === slot ? ' is-active' : ''}${!hasPr ? ' app-menu__item--empty' : ''}" role="option" data-slot="${i}"${c ? ` data-tip="${esc(c.full)}"` : ''}>
+      <span class="app-menu__icon">${profileIconSvg(hasPr ? (pr.icon || 'default') : 'default')}</span>
+      <span class="app-grow"><span class="pg-profile__t">${esc(label)}</span><span class="pg-profile__s">${sub}</span></span>
+      ${hasPr && pr.outdated ? `<span class="pg-badge pg-badge--danger">${esc(t('calibration.outdated_badge'))}</span>` : ''}
+      ${hasPr ? `<button class="pg-btn-icon" type="button" data-del="${i}" data-tip="${esc(t('calibration.delete_profile_tip'))}">${X}</button>` : ''}
+    </div>`;
   }).join('');
-  setHTML($('prof-menu'), items || `<div class="app-menu__empty">${esc(t('ui.no_profiles'))}</div>`);
+  setHTML($('prof-menu'), items);
 }
+
 
 function setMenu(open) {
   menuOpen = open;

@@ -13,7 +13,8 @@
     try { t = localStorage.getItem('pg-theme'); s = localStorage.getItem('pg-splash'); z = parseFloat(localStorage.getItem('pg-zoom')); } catch (e) {}
     if (z >= 0.5 && z <= 3) d.style.setProperty('--pg-zoom', String(z));
     var a = null; try { a = localStorage.getItem('pg-accent'); } catch (e) {}
-    d.setAttribute('data-accent', a || 'gold');
+    a = a === 'gold' ? 'amber' : (a || 'amber'); // green is the design's default: no attribute
+    if (a !== 'green') d.setAttribute('data-accent', a);
     if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
     if (s !== '0' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) d.classList.add('is-splash');
   })();
@@ -34,7 +35,9 @@
 
   <!-- ───────── Title bar (design: TitleBar) ───────── -->
   <div class="pg-titlebar" id="titlebar">
-    <div class="pg-titlebar__title"><img class="app-logo" src="img/logo.webp" alt="" width="16" height="16"><span>PhoneGyro</span><span class="pg-titlebar__ver" id="tb-ver"></span></div>
+    <div class="pg-titlebar__title app-tb-ver">
+      <span class="pg-titlebar__ver" id="tb-ver"></span><span class="pg-badge pg-badge--warn app-tb-chan" id="tb-chan" hidden></span>
+    </div>
     <div class="pg-titlebar__ctl">
       <button class="pg-wc" id="wc-min" type="button" aria-label="Minimize"><svg viewBox="0 0 12 12"><path d="M2 6h8"/></svg></button>
       <button class="pg-wc" id="wc-max" type="button" aria-label="Maximize"><svg class="wc-max" viewBox="0 0 12 12"><rect x="2" y="2" width="8" height="8" rx="1.4"/></svg><svg class="wc-restore" viewBox="0 0 12 12"><rect x="2" y="3.6" width="6.4" height="6.4" rx="1.2"/><path d="M4 3.6V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-.6"/></svg></button>
@@ -99,8 +102,25 @@
               <span class="pg-badge pg-badge--ok app-linkbadge" id="dev-link"></span>
               <span class="pg-timer"><span data-i18n="status.connected_time">Подключен</span> <b id="dev-timer">00:00:00</b></span>
             </div>
+            <!-- Stillness recal hint: soft warning, appears after stillness + off-center -->
+            <div class="app-hint app-hint--soft" id="hint-recal" hidden>
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+              <span data-i18n="status.recal_hint"></span>
+              <button class="app-hint__close" type="button" id="hint-recal-close" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </div>
             <button class="pg-btn pg-btn--info pg-btn--block" id="btn-recenter" type="button" data-i18n-title="recenter.btn_main_tip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span data-i18n="recenter.btn_main">Центрировать 3D-вид</span></button>
           </section>
+          <!-- New device banner: urgent, lives outside the card, spans full left column -->
+          <div class="app-hint app-hint--urgent" id="hint-new" hidden>
+            <div class="app-hint__body">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16v.5"/></svg>
+              <div>
+                <div class="app-hint__title" data-i18n="calibration.first_connect_title"></div>
+                <div class="app-hint__desc" data-i18n="calibration.first_connect_desc"></div>
+              </div>
+            </div>
+            <button class="app-hint__close" type="button" id="hint-new-close" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
         </div>
         <div class="pg-usb__col">
           <div class="app-dsu-slot" data-dsu-slot="dash"></div>
@@ -112,6 +132,7 @@
             </div>
             <div class="app-profwrap">
               <button class="pg-profile app-profbtn" id="prof-current" type="button" aria-haspopup="listbox" aria-expanded="false">
+                <span class="app-menu__icon" id="prof-icon"></span>
                 <span class="app-grow"><span class="pg-profile__t" id="prof-name"></span><span class="pg-profile__s" id="prof-sub"></span></span>
                 <span class="pg-badge pg-badge--danger" id="prof-outdated" hidden data-i18n="calibration.outdated_badge">Устарел</span>
                 <span class="pg-badge pg-badge--info" id="prof-slotbadge" hidden></span>
@@ -136,7 +157,7 @@
       <section class="pg-card pg-card--hero pg-wiz app-wiz" id="wiz">
         <button class="pg-btn-icon app-wiz-close" id="wiz-close" type="button" data-i18n-title="ui.close" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
         <!-- step 0: platform -->
-        <div class="app-wiz-pick" id="wiz-pick">
+        <div class="app-wiz-pick pg-scroll--rail" id="wiz-pick">
           <div class="display-xl app-wiz-title" data-i18n="setup.title">Начальная настройка</div>
           <div class="body app-sub" data-i18n="setup.select_platform"></div>
           <div class="app-platforms">
@@ -145,14 +166,14 @@
           </div>
         </div>
         <!-- android -->
-        <div class="app-wiz-android" id="wiz-android" hidden>
+        <div class="app-wiz-android pg-scroll--rail" id="wiz-android" hidden>
           <div class="display-xl app-wiz-title" data-i18n="setup.android_title">Android</div>
           <div class="app-wiz-text" data-md="setup.android_hint"></div>
           <div class="pg-qr"><img class="app-qr" id="wiz-android-qr" width="176" height="176" alt=""></div>
           <div class="pg-url"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span class="pg-url__text" id="wiz-android-url">…</span><button class="pg-btn pg-btn--sm" type="button" data-copy="wiz-android-url" data-i18n="qr.copy">Копировать</button></div>
         </div>
         <!-- iOS steps -->
-        <div class="app-wiz-ios" id="wiz-ios" hidden>
+        <div class="app-wiz-ios pg-scroll--rail" id="wiz-ios" hidden>
           <div class="app-center"><span class="pg-badge pg-badge--step" id="wiz-step-badge"></span><div class="display-xl app-wiz-title" id="wiz-step-title"></div></div>
           <div class="pg-wiz__grid">
             <div class="pg-wiz__main">
@@ -183,13 +204,13 @@
 
     <!-- Docs (design: ScreenDocs): the user guide, one section at a time (js/screens/docs.js) -->
     <main class="pg-docs app-screen" id="screen-docs" hidden>
-      <aside class="pg-card app-docnav">
+      <aside class="pg-card app-docnav pg-scroll--rail">
         <div class="pg-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input class="pg-input" id="docs-search" type="search" data-i18n-ph="ui.docs_search"></div>
         <div id="docs-nav"></div>
         <div class="app-grow"></div>
         <button class="pg-docnav__item app-docnav__gh" type="button" id="docs-gh"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg><span data-i18n="ui.docs_source">Source code · GitHub</span></button>
       </aside>
-      <article class="pg-card app-docbody" id="docs-article"><div class="pg-prose" id="docs-prose"></div></article>
+      <article class="pg-card app-docbody pg-scroll--fade" id="docs-article"><div class="pg-prose" id="docs-prose"></div></article>
       <nav class="pg-toc" id="docs-toc"></nav>
     </main>
 
@@ -227,7 +248,7 @@
       <div class="pg-island pg-island--sm pg-f-cpu" data-i18n-title="footer.cpu_tip"><span class="pg-dim" data-i18n="footer.cpu">ЦП</span><svg class="pg-mini" viewBox="0 0 44 16" preserveAspectRatio="none"><path id="cpu-area"/><polyline id="cpu-line"/></svg><b id="cpu-val">0%</b></div>
       <div class="pg-island pg-island--sm pg-f-ram" data-i18n-title="footer.ram_tip"><span class="pg-dim" data-i18n="footer.ram">ОЗУ</span><b id="ram-val">0 MB</b><span class="pg-meter"><i id="ram-bar"></i></span></div>
     </div>
-    <a class="pg-island pg-island--sm pg-f-repo" id="repo" href="https://github.com/MrHoustonOff/PhoneGyro"><span class="pg-dim" id="ft-ver"></span><span class="pg-badge pg-badge--warn app-chan" id="ft-chan" hidden></span><span class="pg-island__sep app-sep"></span><span class="app-gh"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span><span class="pg-f-repo__n">MrHoustonOff/PhoneGyro</span></a>
+    <a class="pg-island pg-island--sm pg-f-repo" id="repo" href="https://github.com/MrHoustonOff/PhoneGyro"><span class="app-gh"><svg viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg></span><span class="pg-f-repo__n">MrHoustonOff/PhoneGyro</span></a>
   </footer>
 </div>
 
@@ -256,7 +277,16 @@
       <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="pg-modal__body">
-      <div class="pg-notice pg-notice--danger app-cal-off" id="cal-offline" hidden><span><b data-i18n="calibration.disconnect_alert_title">Телефон отключен</b></span></div>
+      <!-- Blocking disconnect overlay: covers the entire modal body when offline during capture -->
+      <div class="app-cal-disconnect" id="cal-disconnect" hidden>
+        <div class="app-cal-disconnect__card">
+          <div class="app-cal-disconnect__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/><line x1="12" y1="9" x2="12" y2="15" stroke-width="2" stroke-dasharray="2 2"/></svg></div>
+          <div class="app-cal-disconnect__title" data-i18n="calibration.disconnect_alert_title">Телефон отключен</div>
+          <div class="app-cal-disconnect__desc" data-i18n="calibration.disconnect_alert_desc"></div>
+          <span class="pg-badge pg-badge--danger pg-badge--dot" data-i18n="calibration.disconnect_waiting">Ожидание переподключения…</span>
+          <button class="pg-btn" type="button" data-act="close" data-i18n="calibration.disconnect_btn_cancel">Отменить калибровку</button>
+        </div>
+      </div>
       <div id="cal-body"></div>
     </div>
     <div class="pg-modal__foot" id="cal-foot"></div>

@@ -60,6 +60,40 @@ body { user-select: none; -webkit-user-select: none; }
 .app-pause { letter-spacing: .14em; }
 .app-pause.is-paused { background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--surface); border-color: var(--warn-line); color: var(--warn-text); }
 
+/* ── Calibration hint banners ───────────────────────────────────────────────
+   Two reusable variants:
+   --soft  : inline below devfoot, orange warning, closeable, appears on stillness.
+   --urgent: full-width card below devcard, red alert, new-device first calibration. */
+.app-hint { display: flex; align-items: flex-start; gap: 0.625rem;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-md);
+  font-size: 0.8125rem; line-height: 1.45; }
+.app-hint svg { flex: none; width: 1rem; height: 1rem; stroke: currentColor;
+  fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 0.125rem; }
+.app-hint__close { flex: none; margin-left: auto; display: flex; padding: 0.125rem;
+  background: none; border: none; cursor: pointer; color: inherit; opacity: .6; border-radius: var(--radius-sm); }
+.app-hint__close:hover { opacity: 1; background: var(--surface-hover); }
+.app-hint__close svg { width: 0.875rem; height: 0.875rem; margin: 0; }
+
+/* Soft: inline inside devcard, warm amber */
+.app-hint--soft { background: var(--warn-soft); color: var(--warn-text); border: 1px solid var(--warn-line); }
+
+/* Urgent: bold red card, spans left column, outside devcard */
+.app-hint--urgent { flex-direction: column; gap: 0.5rem; position: relative;
+  background: var(--danger-soft); color: var(--danger-text);
+  border: 1.5px solid var(--danger-line); padding: 0.875rem 1rem; }
+.app-hint--urgent .app-hint__body { display: flex; align-items: flex-start; gap: 0.75rem; width: 100%; }
+.app-hint--urgent .app-hint__body svg { width: 1.25rem; height: 1.25rem; margin-top: 0.125rem; }
+.app-hint--urgent .app-hint__title { font-weight: 700; font-size: 0.875rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 0.25rem; }
+.app-hint--urgent .app-hint__desc { font-size: 0.8rem; opacity: .9; line-height: 1.5; }
+.app-hint--urgent .app-hint__close { position: absolute; top: 0.625rem; right: 0.625rem; }
+
+/* Calibrate button: pulsing accent when urgent calibration needed */
+#btn-calibrate.is-urgent { border-color: var(--danger-line); color: var(--danger-text);
+  background: linear-gradient(var(--danger-soft), var(--danger-soft)), var(--surface); }
+@keyframes app-cal-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--danger-line); } 50% { box-shadow: 0 0 0 3px var(--danger-soft); } }
+#btn-calibrate.is-urgent { animation: app-cal-pulse 2s ease-in-out infinite; }
+
+
 /* Profiles: the current one is a button that opens the list. */
 .app-profiles { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.125rem; }
 .app-profwrap { position: relative; }
@@ -77,6 +111,14 @@ body { user-select: none; -webkit-user-select: none; }
 .app-menu__item .pg-btn-icon { width: 1.625rem; height: 1.625rem; flex: none; }
 .app-menu__item .pg-btn-icon:hover { color: var(--danger-text); background: var(--danger-soft); }
 .app-menu__item .pg-btn-icon svg { width: 0.75rem; height: 0.75rem; }
+/* Profile icon chip — shown inside active-profile button and dropdown items */
+.app-menu__icon { flex: none; display: flex; align-items: center; justify-content: center;
+  width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm);
+  background: var(--surface-hover); border: 1px solid var(--line-subtle); }
+.app-menu__icon svg { width: 1rem; height: 1rem; stroke: var(--ink-2); fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* Empty slot rows: dimmed, not interactive */
+.app-menu__item--empty { opacity: .45; pointer-events: none; }
 .app-menu__empty { padding: 0.625rem; color: var(--ink-2); font-size: 0.8125rem; }
 .pg-profile__t, .pg-profile__s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -121,8 +163,15 @@ body { user-select: none; -webkit-user-select: none; }
 /* ── Footer bits ────────────────────────────────────────────────────────── */
 .app-chan { height: 1rem; font-size: 0.625rem; padding: 0 0.375rem; }
 .app-sep { height: 0.875rem; margin: 0 0.125rem; }
+/* Conditional separator: only visible when the DEV badge is shown. */
+.app-sep--cond { display: none; }
+#ft-chan:not([hidden]) ~ .app-sep--cond { display: inline-block; }
 .app-gh { display: inline-flex; width: 0.875rem; height: 0.875rem; }
 .app-soon-set { width: 100%; margin-top: 0.5rem; }
+/* Titlebar: version + channel badge, no logo or app name. */
+.app-tb-ver { gap: 0.375rem; }
+.app-tb-ver .pg-titlebar__ver { font: 600 0.75rem/1 var(--font-mono); color: var(--ink-2); letter-spacing: .02em; }
+.app-tb-ver .app-tb-chan { height: 1rem; font-size: 0.625rem; padding: 0 0.375rem; }
 
 /* ── Launch animation (design: Splash) ─────────────────────────────────────
    The design's sequence as is: a small window on a neutral ground, rings unroll,
@@ -186,6 +235,11 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 
 /* ── Settings ───────────────────────────────────────────────────────────── */
 #screen-settings { padding-top: 0.375rem; }
+/* Hide the browser's spin buttons on number inputs (port fields): they look
+   bad and serve no purpose in a settings form with keyboard / drag editing. */
+input[type="number"] { -webkit-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .app-mac { width: 10.625rem; }
 .app-path { width: 13.125rem; direction: rtl; text-overflow: ellipsis; }
 .app-kbd { margin-right: 0.25rem; }
@@ -264,7 +318,7 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 /* Initial setup: the step scrolls inside the card, the footer is slimmer, and
    steps cross-fade (js/screens/setup.js restarts .is-swap). */
 #screen-setup .app-wiz { overflow: hidden; }
-.app-wiz-pick, .app-wiz-android, .app-wiz-ios { min-height: 0; overflow-y: auto; }
+.app-wiz-pick, .app-wiz-android, .app-wiz-ios { min-height: 0; overflow-x: hidden; overflow-y: auto; } /* one axis (design Scroll) */
 .app-wiz-ios .pg-wiz__grid { flex: none; }
 .app-wiz-ios .pg-wiz__main { overflow: visible; }
 .app-wiz-ios .pg-wiz__shot { height: auto; }
@@ -292,9 +346,12 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 .app-docnav__gh { border-top: 1px solid var(--line-subtle); border-radius: 0 0 var(--radius-md) var(--radius-md); }
 .app-docnav__gh svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .app-docbody { padding: 1.75rem 2.5rem; }
+/* Obsidian-style centred reading column: prose is capped and centred inside
+   the article card while the card itself stays full-width for the background. */
+.pg-prose { max-width: 48rem; margin-left: auto; margin-right: auto; }
 .app-docs-crumb { margin-bottom: 0.5rem; }
 .app-hit { background: var(--accent-soft); color: inherit; border-radius: 0.1875rem; }
-.pg-prose pre { overflow: auto; padding: 0.75rem 1rem; border-radius: var(--radius-md); background: var(--surface-inset); box-shadow: var(--shadow-inset); font: 0.8125rem/1.5 var(--font-mono); }
+.pg-prose pre { overflow-x: auto; overflow-y: hidden; padding: 0.75rem 1rem; border-radius: var(--radius-md); background: var(--surface-inset); box-shadow: var(--shadow-inset); font: 0.8125rem/1.5 var(--font-mono); }
 .pg-prose { user-select: text; -webkit-user-select: text; }
 /* Compact (design ResponsiveDocs): the sections become a chip row. */
 @container pgwin (max-width: 859px) {
@@ -309,20 +366,78 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 .app-cal .pg-modal { max-width: 51.25rem; }
 .app-cal .pg-modal__foot { justify-content: space-between; }
 .app-cal .pg-modal__foot .pg-btn[data-act="next"], .app-cal .pg-modal__foot .pg-btn[data-act="capture"].pg-btn--primary { min-width: 13rem; }
-.app-cal-stepper { margin-bottom: 1.25rem; overflow-x: auto; scrollbar-width: none; }
-.app-cal-main { display: flex; flex-direction: column; gap: 0.875rem; min-height: 16rem; }
-.app-cal-desc { margin: 0; color: var(--ink-2); font-size: 0.9375rem; line-height: 1.45; }
-.app-cal-desc b { color: var(--ink); }
-.app-cal-run { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: var(--surface-inset); box-shadow: var(--shadow-inset); }
-.app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.app-cal-run .pg-progress > i { transition: width .05s linear; }
-.app-cal-off { margin-bottom: 0.75rem; }
-.app-cal-slots { display: flex; flex-direction: column; gap: 0.5rem; }
-.app-cal-slot { display: flex; align-items: center; gap: 0.75rem; padding: 0.625rem 0.75rem 0.625rem 1rem; border-radius: var(--radius-md); background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line); }
-.app-cal-slot.is-active { border-color: var(--accent-line); }
+/* Layout: two-column capture steps (text left + gamepad scene right) */
+.app-cal-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+.app-cal-col  { display: flex; flex-direction: column; gap: 0.875rem; }
+@container pgwin (max-width: 700px) { .app-cal-cols { grid-template-columns: 1fr; } .app-cal-scene { display: none; } }
+
+/* ── CSS 3D gamepad scene ────────────────────────────────────────────────────
+   A perspective-transformed gamepad silhouette. Tilt driven live by JS via
+   gp.style.transform. Deliberately lo-fi but recognisably a controller. */
+.app-cal-scene { display: flex; flex-direction: column; align-items: center; gap: 0.875rem;
+  padding: 1.25rem 1rem 1rem; border-radius: var(--radius-lg);
+  background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); min-height: 14rem; }
+.app-cal-gamepad { perspective: 400px; transition: transform .08s linear; will-change: transform; flex: none; }
+.app-cal-gp__body { display: flex; align-items: stretch; gap: 0;
+  background: var(--ink-3); border-radius: 1.5rem 1.5rem 1rem 1rem;
+  width: 9rem; height: 5.5rem; position: relative; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+.app-cal-gp__left  { flex: 1.3; border-radius: 1.5rem 0 0 1rem; background: inherit; }
+.app-cal-gp__mid   { flex: .6; background: color-mix(in srgb, var(--ink-3) 80%, var(--bg)); margin: .5rem 0; border-radius: .25rem; }
+.app-cal-gp__right { flex: 1.3; border-radius: 0 1.5rem 1rem 0; background: inherit; }
+/* Sticks */
+.app-cal-gp__stick { position: absolute; width: 1.25rem; height: 1.25rem; border-radius: 50%;
+  background: color-mix(in srgb, var(--ink-2) 50%, var(--bg)); border: 2px solid var(--ink-2); }
+.app-cal-gp__stick--l { top: 55%; left: 18%; }
+.app-cal-gp__stick--r { top: 55%; right: 25%; }
+/* D-pad */
+.app-cal-gp__dpad { position: absolute; top: 30%; left: 10%; display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 1px; width: 1.5rem; height: 1.5rem; }
+.app-cal-gp__dpad > div { background: var(--ink-2); border-radius: 1px; }
+.app-cal-gp__dpad > div:nth-child(2), .app-cal-gp__dpad > div:nth-child(4) { grid-column: 2; }
+/* Face buttons */
+.app-cal-gp__btns { position: absolute; top: 20%; right: 14%; display: grid; grid-template-columns: 1fr 1fr;
+  gap: 3px; width: 1.75rem; height: 1.75rem; }
+.app-cal-gp__btn { border-radius: 50%; width: .625rem; height: .625rem; }
+.app-cal-gp__btn--a { background: #5cb85c; }
+.app-cal-gp__btn--b { background: #d9534f; }
+.app-cal-gp__btn--x { background: #5bc0de; }
+.app-cal-gp__btn--y { background: #f0ad4e; }
+.app-cal-scene__cap { font-size: 0.75rem; color: var(--ink-3); text-align: center; line-height: 1.35; }
+
+/* ── Blocking disconnect overlay ─────────────────────────────────────────────
+   Covers pg-modal__body entirely; the card is centered inside. */
+.app-cal-disconnect { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border: 1.5px solid var(--danger-line); border-radius: var(--radius-lg); }
+.pg-modal__body { position: relative; }
+.app-cal-disconnect__card { display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 2rem 2.5rem; border-radius: var(--radius-lg); background: var(--surface-raised);
+  border: 1px solid var(--danger-line); box-shadow: var(--shadow-pop); text-align: center; max-width: 22rem; }
+.app-cal-disconnect__icon { width: 3.5rem; height: 3.5rem; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--danger-soft); color: var(--danger-text); }
+.app-cal-disconnect__icon svg { width: 1.75rem; height: 1.75rem; }
+.app-cal-disconnect__title { font-weight: 700; font-size: 1rem; }
+.app-cal-disconnect__desc { font-size: 0.875rem; color: var(--ink-2); line-height: 1.5; margin: 0; }
+
+/* ── Icon picker (save screen) ───────────────────────────────────────────────
+   Three large icon-cards in a row: gamepad / vertical / horizontal. */
+.app-cal-icon-grid { display: flex; gap: 0.625rem; }
+.app-cal-icon-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 0.5rem 0.625rem; border-radius: var(--radius-md); background: var(--surface-inset);
+  border: 1.5px solid var(--line); color: var(--ink-2); font: inherit; cursor: pointer; transition: border-color .12s; }
+.app-cal-icon-btn:hover { border-color: var(--line-control); color: var(--ink); }
+.app-cal-icon-btn.is-active { border-color: var(--accent-line); background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface); color: var(--ink); }
+.app-cal-icon-btn svg { width: 1.5rem; height: 1.5rem; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.app-cal-icon-btn span { font-size: 0.75rem; text-align: center; }
+
+/* ── Save screen layout ──────────────────────────────────────────────────────*/
+.app-cal-save { display: flex; flex-direction: column; gap: 1rem; }
+.app-cal-save__row { display: flex; flex-direction: column; gap: 0.375rem; }
+.app-cal-slot-sel { height: 2.5rem; padding: 0 0.875rem; font: inherit; background: var(--surface-inset);
+  border: 1px solid var(--line-control); border-radius: var(--radius-md); color: var(--ink); cursor: pointer; }
 .app-cal-label { font-weight: 600; font-size: 0.875rem; }
-.app-cal-name { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
-.app-cal-live { display: flex; justify-content: center; padding-top: 0.5rem; }
+.app-cal-name  { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
+.app-cal-live  { display: flex; justify-content: center; padding-top: 0.5rem; }
 .app-cal-mount .pg-row { min-height: 0; }
 
 /* Setup wizard in compact windows (and at a big interface scale): the design
@@ -345,21 +460,4 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 .app-mix__desc { font-weight: 400; }
 .app-mix .pg-slider { width: 6.5rem; }
 
-/* ── Accent colours (ui/accent.js). Green is the design's own, no override. ── */
-html[data-accent="gold"] { --accent: #b4822c; --accent-text: #7c5712; --on-accent: #ffffff; --accent-soft: rgba(180, 130, 44, 0.14); --accent-line: rgba(180, 130, 44, 0.42); }
-html[data-accent="gold"][data-theme="dark"] { --accent: #d8a64a; --accent-text: #e3b867; --on-accent: #0b0b0b; --accent-soft: rgba(216, 166, 74, 0.14); --accent-line: rgba(216, 166, 74, 0.42); }
-html[data-accent="blue"] { --accent: #3f7583; --accent-text: #2f5f6d; --on-accent: #ffffff; --accent-soft: rgba(63, 117, 131, 0.14); --accent-line: rgba(63, 117, 131, 0.42); }
-html[data-accent="blue"][data-theme="dark"] { --accent: #87aab5; --accent-text: #9dbfca; --on-accent: #0b0b0b; --accent-soft: rgba(135, 170, 181, 0.14); --accent-line: rgba(135, 170, 181, 0.42); }
-html[data-accent="pink"] { --accent: #b8487a; --accent-text: #9a3462; --on-accent: #ffffff; --accent-soft: rgba(184, 72, 122, 0.14); --accent-line: rgba(184, 72, 122, 0.42); }
-html[data-accent="pink"][data-theme="dark"] { --accent: #eb9cc1; --accent-text: #f2b0cf; --on-accent: #0b0b0b; --accent-soft: rgba(235, 156, 193, 0.14); --accent-line: rgba(235, 156, 193, 0.42); }
 
-/* Accent colour swatches (Settings): four squares, the chosen one ringed. */
-.app-swatches { display: flex; gap: 0.5rem; }
-.app-swatch { width: 1.75rem; height: 1.75rem; padding: 0; border-radius: var(--radius-sm); border: 1px solid var(--line-control);
-  background: var(--sw) var(--tex-grain); box-shadow: var(--shadow-key); cursor: pointer; transition: transform .12s, box-shadow .12s; }
-.app-swatch:hover { transform: translateY(-1px); }
-.app-swatch.is-active { box-shadow: 0 0 0 0.125rem var(--surface), 0 0 0 0.25rem var(--sw); border-color: transparent; }
-.app-swatch[data-swatch="gold"] { --sw: #c6903b; }
-.app-swatch[data-swatch="green"] { --sw: #7f9d45; }
-.app-swatch[data-swatch="blue"] { --sw: #5f8f9c; }
-.app-swatch[data-swatch="pink"] { --sw: #d4709e; }

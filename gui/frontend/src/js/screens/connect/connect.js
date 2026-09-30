@@ -11,6 +11,7 @@ import { el as dsuCard, startDsu } from './dsu.js';
 import { startPairing } from './pairing.js';
 import { startDevice } from './device.js';
 import { startProfiles } from './profiles.js';
+import { startCalHints } from './cal-hints.js';
 
 const VIEWS = ['pair', 'usbwait', 'dash'];
 let view = '';
@@ -55,5 +56,6 @@ export function startConnect() {
   startPairing();
   startDevice();
   startProfiles();
+  startCalHints();
   onState(render);
 }
