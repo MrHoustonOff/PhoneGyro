@@ -354,19 +354,28 @@ html[data-accent="pink"] { --accent: #b8487a; --accent-text: #9a3462; --on-accen
 html[data-accent="pink"][data-theme="dark"] { --accent: #eb9cc1; --accent-text: #f2b0cf; --on-accent: #0b0b0b; --accent-soft: rgba(235, 156, 193, 0.14); --accent-line: rgba(235, 156, 193, 0.42); }
 
 /* ── Debug panel (js/debug/panel.js) ────────────────────────────────────── */
-.app-dbg { position: fixed; top: 4.5rem; right: 1rem; z-index: 95; width: 26rem; max-height: calc(100% - 6rem); overflow: auto;
+.app-dbg { position: fixed; top: 4.5rem; right: 1rem; z-index: 110; /* over the launch animation */ width: 38rem; max-width: calc(100% - 2rem); max-height: calc(100% - 6rem); overflow: auto;
   border-radius: var(--radius-lg); background: var(--surface-raised) var(--tex-grain); border: 1px solid var(--line);
-  box-shadow: var(--shadow-pop); color: var(--ink); font: 400 0.75rem/1.35 var(--font-mono); opacity: .96; }
+  box-shadow: var(--shadow-pop); color: var(--ink); font: 400 0.75rem/1.35 var(--font-mono); }
 .app-dbg__head { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.625rem 0.5rem 0.875rem; cursor: move; border-bottom: 1px solid var(--line-subtle); user-select: none; }
-.app-dbg__head b { font: 700 0.8125rem/1 var(--font-sans); }
+.app-dbg__head b { font: 700 0.875rem/1 var(--font-sans); }
 .app-dbg__hint { flex: 1; color: var(--ink-3); font-size: 0.6875rem; }
 .app-dbg__btn { width: 1.5rem; height: 1.5rem; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink-2); cursor: pointer; font: 600 0.875rem/1 var(--font-sans); }
 .app-dbg__btn:hover { background: var(--surface-hover); color: var(--ink); }
 .app-dbg.is-folded .app-dbg__body { display: none; }
-.app-dbg__body { padding: 0.625rem 0.875rem 0.75rem; }
-.app-dbg__graph { display: block; width: 100%; height: 5.625rem; border-radius: var(--radius-sm); background: var(--surface-inset); box-shadow: var(--shadow-inset); }
-.app-dbg__legend { display: flex; gap: 0.75rem; margin: 0.375rem 0 0.5rem; color: var(--ink-2); font-size: 0.6875rem; }
-.app-dbg__legend i { display: inline-block; width: 0.625rem; height: 0.1875rem; margin-right: 0.25rem; vertical-align: middle; border-radius: 1px; background: var(--c); }
+.app-dbg__body { padding: 0.75rem; }
+/* The six tiles: what matters, big (design StatCard), a graph each. */
+.app-dbg__tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.app-dbg__tile { --line-c: var(--ink-3); }
+.app-dbg__tile[data-verdict="ok"] { --line-c: var(--accent); }
+.app-dbg__tile[data-verdict="warn"] { --line-c: var(--warn); }
+.app-dbg__tile[data-verdict="danger"] { --line-c: var(--danger); border-color: var(--danger-line); }
+.app-dbg__tile .pg-stat__value { font-size: 1.75rem; line-height: 2rem; }
+.app-dbg__tile .pg-spark { height: 3.5rem; }
+.app-dbg__tile canvas { display: block; width: 100%; height: 100%; }
+.app-dbg__tile .pg-badge { height: 1.125rem; font-size: 0.625rem; text-transform: uppercase; }
+.app-dbg__more { margin-top: 0.625rem; }
+.app-dbg__more summary { cursor: pointer; color: var(--ink-2); font: 600 0.75rem/1.5rem var(--font-sans); }
 .app-dbg__grid { display: grid; grid-template-columns: auto 1fr; gap: 0.1875rem 0.75rem; }
 .app-dbg__grid span { color: var(--ink-2); }
 .app-dbg__grid b { font-weight: 600; text-align: right; }

@@ -5,7 +5,7 @@ import { call, on } from './bridge.js';
 
 let current = null;
 /** How many states arrived (the debug panel's events per second). */
-export const stateStats = { count: 0 };
+export const stateStats = { count: 0, lastAt: 0, maxGap: 0 }; // maxGap: longest wait between two states, reset by the reader
 const subs = [];
 
 /** Calls fn(state, prev) now (if the state is known) and on every change. */
@@ -20,6 +20,9 @@ export const getState = () => current;
 export function setState(st) {
   if (!st) return;
   stateStats.count++;
+  const now = performance.now();
+  if (stateStats.lastAt) stateStats.maxGap = Math.max(stateStats.maxGap, now - stateStats.lastAt);
+  stateStats.lastAt = now;
   const prev = current;
   current = st;
   for (const fn of subs) fn(st, prev);

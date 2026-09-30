@@ -23,6 +23,7 @@ import { startDocs } from './screens/docs.js';
 import { startCalibration } from './screens/calibration.js';
 import { startSplash, syncSplashSetting } from './splash.js';
 
+startDebug();              // first: with the setting on, the debug panel sees the start too
 const splash = startSplash();
 
 startTitlebar();
@@ -52,7 +53,6 @@ async function boot() {
   startFooter();
   startZoom();
   startAccent();
-  startDebug();
   syncSplashSetting();
   startNotices();         // after the strings: they are shown in full
 }
