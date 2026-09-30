@@ -42,7 +42,9 @@ type Settings struct {
 	ActiveSlot            int            `json:"activeSlot"`
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
-	Splash                bool           `json:"splash"` // play the launch animation
+	Splash                bool           `json:"splash"`     // play the launch animation
+	DebugPanel            bool           `json:"debugPanel"` // the debug panel opens at start
+	DebugLog              bool           `json:"debugLog"`   // write logs/debug.log
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -188,6 +190,8 @@ type stored struct {
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
 	Splash                *bool          `json:"splash"`
+	DebugPanel            bool           `json:"debugPanel"`
+	DebugLog              bool           `json:"debugLog"`
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -242,6 +246,8 @@ func Load(dir string) (s Settings, found bool) {
 	if r.Splash != nil {
 		s.Splash = *r.Splash
 	}
+	s.DebugPanel = r.DebugPanel
+	s.DebugLog = r.DebugLog
 	if r.ActiveSlot >= 0 && r.ActiveSlot < 6 {
 		s.ActiveSlot = r.ActiveSlot
 	}

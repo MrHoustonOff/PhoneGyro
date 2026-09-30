@@ -67,6 +67,12 @@ func (a *App) applySettings(s AppSettings) {
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
 	a.splash.Store(s.Splash)
+	a.debugPanel.Store(s.DebugPanel)
+	if !a.debugLogOn.Swap(s.DebugLog) && s.DebugLog {
+		a.logEvent("INFO", "debug log on: logs/debug.log")
+	} else if !s.DebugLog {
+		a.closeDebugLog()
+	}
 	a.themeMu.Unlock()
 
 	if a.phoneBank != nil && s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
@@ -163,6 +169,8 @@ func (a *App) settingsSnapshot() AppSettings {
 		FirstLaunchDone:       firstLaunch,
 		HideAuthor:            hideAuthor,
 		Splash:                a.splash.Load(),
+		DebugPanel:            a.debugPanel.Load(),
+		DebugLog:              a.debugLogOn.Load(),
 		DSUPort:               orDefault(a.dsuPort, def.DSUPort),
 		DSUMAC:                a.getDSUMAC(),
 		HTTPPort:              orDefault(a.httpPort, def.HTTPPort),
@@ -492,6 +500,12 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 
 	a.splash.Store(s.Splash)
+	a.debugPanel.Store(s.DebugPanel)
+	if !a.debugLogOn.Swap(s.DebugLog) && s.DebugLog {
+		a.logEvent("INFO", "debug log on: logs/debug.log")
+	} else if !s.DebugLog {
+		a.closeDebugLog()
+	}
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)

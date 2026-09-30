@@ -64,7 +64,10 @@ type App struct {
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
-	accent          string // UI accent colour (settings.json accent), guarded by themeMu
+	debugLogOn      atomic.Bool   // settings.json debugLog (debug.go)
+	debugPanel      atomic.Bool   // settings.json debugPanel
+	debugLog        debugLogState // logs/debug.log
+	accent          string        // UI accent colour (settings.json accent), guarded by themeMu
 	currentLang     string
 	firstLaunchDone bool
 	hideAuthor      bool
