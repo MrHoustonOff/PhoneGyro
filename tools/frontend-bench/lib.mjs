@@ -111,7 +111,7 @@ export function backendStub({ fontScale } = {}) {
     PendingCemuNotice: () => null, GetResourceStats: () => ({ cpuPercent: 1, ramMb: 50, totalRamMb: 16000, ramPercent: 0.3 }),
     GetCloseAction: () => 'ask', GetAxisAlignStatus: () => ({ pairs: 8, minPairs: 8, known: true, mapping: ['+X -> Pitch', '+Y -> Yaw', '+Z -> Roll'] }), GetWizardMount: () => ({ status: 'ok', tiltDeg: 1.2, forwardDeg: 0.8, rightDeg: -0.4, checkDeg: 0.1, enabled: true }),
     StartCapture: () => 'ok',
-    StopCapture: (step) => ({ success: true, vector: [step === 1 ? 1 : 0, step === 0 ? 1 : 0, step === 2 ? 1 : 0], axisName: step === 1 ? 'Pitch' : step === 2 ? 'Roll' : 'Rest', confidence: 0.95, peakSpeed: 120 }),
+    StopCapture: (step) => ({ success: true, vector: [step === 1 ? 1 : 0, step === 0 ? 1 : 0, step === 2 ? 1 : 0], axisIdx: step === 1 ? 0 : step === 2 ? 2 : -1, axisName: step === 1 ? '+X' : step === 2 ? '+Z' : 'Rest', confidence: 0.95, peakSpeed: 120 }),
     ValidateCalibration: () => ({ success: true, matrix: [[1,0,0],[0,1,0],[0,0,-1]], det: -1.0, pitchAxis: '+X', yawAxis: '+Y', rollAxis: '-Z' }),
     StartAxisAlign: () => 'ok',
     PreviewMatrix: () => 'ok', ClearPreview: () => 'ok', ResetAHRS: () => 'ok',

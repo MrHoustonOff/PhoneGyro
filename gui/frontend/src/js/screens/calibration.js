@@ -44,7 +44,14 @@ const S = {
   slotDropdownOpen: false,
   hasRecorded: false,
   steps: [null, null, null, null],
+  axes: [null, null, null], // locked sensor axes: { role: 'pitch'|'roll'|'yaw', name: '+X', confidence }
 };
+
+// Per-axis tile cache: the DOM is only written when a tile's signature changes.
+let axisCache = [null, null, null];
+const RATE_FULL = 120; // deg/s that fills an axis bar
+const AXIS_TILES = [{ i: 0, k: 'x', l: 'X' }, { i: 1, k: 'y', l: 'Y' }, { i: 2, k: 'z', l: 'Z' }];
+const ringHost = (html) => `<span class="app-ringhost">${html}</span>`;
 
 let quatListenerActive = false;
 let lastAhrsTs = 0;
@@ -270,6 +277,57 @@ function selectSaveIcon(iconKey) {
   if (prevIcon) prevIcon.innerHTML = profileIconSvg(iconKey);
 }
 
+function axisTilesHTML() {
+  axisCache = [null, null, null];
+  return `<div class="app-cal-stats" id="cal-stats">${AXIS_TILES.map((a) => `
+    <div class="app-cal-axis" id="cal-ax-${a.i}">
+      <div class="app-cal-axis__head"><span class="pg-axis__key pg-axis__key--${a.k}">${a.l}</span><span class="app-cal-axis__tag" id="cal-axtag-${a.i}"></span></div>
+      <div class="mono app-cal-stat-val" id="cal-axval-${a.i}">+0°/s</div>
+      <div class="app-cal-axbar"><i id="cal-axfill-${a.i}"></i></div>
+    </div>`).join('')}</div>`;
+}
+
+// Live rate + fill per axis; a confirmed axis (found by a gesture) turns green and shows its role.
+function updateAxisTiles(st) {
+  if (!S.open || S.phase === 'verify' || S.phase === 'save' || !$('cal-ax-0')) return;
+  const vals = [st.rawRotX || 0, st.rawRotY || 0, st.rawRotZ || 0];
+  for (let i = 0; i < 3; i++) {
+    const lk = S.axes[i];
+    const pct = lk ? Math.round((lk.confidence || 0.95) * 100) : 0;
+    const sig = lk ? `L|${lk.role}|${lk.name}|${pct}` : `F|${Math.round(vals[i])}`;
+    if (axisCache[i] === sig) continue;
+    axisCache[i] = sig;
+    const tile = $('cal-ax-' + i);
+    tile.classList.toggle('is-locked', !!lk);
+    if (lk) {
+      setText($('cal-axtag-' + i), `${c('axis_' + lk.role) || lk.role} ${lk.name}`);
+      setText($('cal-axval-' + i), `${pct}%`);
+      $('cal-axfill-' + i).style.setProperty('--p', '1');
+    } else {
+      const v = Math.round(vals[i]);
+      setText($('cal-axtag-' + i), '');
+      setText($('cal-axval-' + i), `${v >= 0 ? '+' : ''}${v}°/s`);
+      $('cal-axfill-' + i).style.setProperty('--p', Math.min(1, Math.abs(vals[i]) / RATE_FULL).toFixed(2));
+    }
+  }
+}
+
+// A redone gesture step frees its axis (and the derived yaw axis).
+function clearAxisRole(step) {
+  const roles = step === 1 ? ['pitch', 'yaw'] : step === 2 ? ['roll', 'yaw'] : [];
+  for (let i = 0; i < 3; i++) if (S.axes[i] && roles.includes(S.axes[i].role)) S.axes[i] = null;
+}
+
+function updateSegs(pairs, min) {
+  const box = $('cal-segs');
+  if (!box) return;
+  if (box.childElementCount !== min) box.innerHTML = '<i></i>'.repeat(min);
+  for (let i = 0; i < min; i++) {
+    const on = i < pairs;
+    if (box.children[i].classList.contains('is-on') !== on) box.children[i].classList.toggle('is-on', on);
+  }
+}
+
 function formatMatrix(m) {
   if (!m || !Array.isArray(m) || !m.length) {
     return '[ +1.00  +0.00  +0.00 ]\n[ +0.00  +1.00  +0.00 ]\n[ +0.00  +0.00  −1.00 ]';
@@ -332,6 +390,7 @@ function renderSaveScreen(st) {
         <span class="pg-profile__t">${esc(sTitle)}</span>
         <span class="pg-profile__s">${esc(c('slot_label', { n: i + 1 }))} • ${esc(sSub)}</span>
       </span>
+      ${sEmpty ? `<span class="pg-badge app-cal-freebadge">${esc(t('ui.cal_slot_free'))}</span>` : ''}
       ${sp && sp.outdated ? `<span class="pg-badge pg-badge--danger">${esc(c('outdated_badge'))}</span>` : ''}
       ${isActive ? '<span class="app-menu__check">✓</span>' : ''}
     </button>`;
@@ -368,9 +427,9 @@ function renderSaveScreen(st) {
         <div class="app-cal-info">
           <div class="pg-overline app-cal-overline">
             <span class="pg-ring"></span>
-            <span>${esc(c('save_slot_title', 'Слот сохранения'))}</span>
+            <span>${esc(t('setup.step_x_of_y', { x: 5, y: 5 }))} · ${esc(t('ui.cal_save_step'))}</span>
           </div>
-          <div class="display-md">${esc(c('save_name_title', 'Название профиля'))}</div>
+          <div class="display-md">${esc(c('save_slot_title'))}</div>
           <p class="app-cal-desc">${esc(c('save_slot_hint'))}</p>
         </div>
 
@@ -445,7 +504,7 @@ function renderSaveScreen(st) {
     </div>
   `;
 
-  foot().innerHTML = btn('toverify', c('btn_back')) + '<span class="app-grow"></span>' + btn('save', c('btn_save'), 'primary');
+  foot().innerHTML = ringHost(btn('toverify', c('btn_back'))) + '<span class="app-grow"></span>' + btn('save', c('btn_save'), 'primary');
 
   const inp = $('cal-name');
   if (inp) {
@@ -475,17 +534,10 @@ function render() {
       <div class="app-cal-left" id="cal-left"></div>
       <div class="app-cal-right">
         <div class="pg-stage app-cal-stage" id="cal-stage">
-          <span class="pg-viewport__tag">GAMEPAD</span>
-          <div class="pg-stage__tools" id="cal-stage-tools"></div>
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
-        <div class="app-cal-legend" id="cal-legend">
-          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--x">X</span> <span>Pitch</span></span>
-          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--y">Y</span> <span>Yaw</span></span>
-          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--z">Z</span> <span>Roll</span></span>
-        </div>
-        <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer'))}</div>
-        <div class="app-cal-live mono"><span id="cal-live"></span></div>
+        <div class="body-sm app-cal-disclaimer" id="cal-disclaimer">${esc(c('view_disclaimer'))}</div>
+        <div id="cal-right-extra"></div>
       </div>
     </div>`;
   } else {
@@ -494,7 +546,8 @@ function render() {
   }
 
   const leftCol = $('cal-left');
-  const toolsEl = $('cal-stage-tools');
+  const disclaimer = $('cal-disclaimer');
+  if (disclaimer) disclaimer.hidden = S.phase === 'verify';
 
   if (S.phase === 'verify') {
     const r = S.result || {};
@@ -507,59 +560,39 @@ function render() {
         <div class="app-cal-info">
           <div class="pg-overline app-cal-overline">
             <span class="pg-ring"></span>
-            <span>${esc(t('step_x_of_y', { x: 5, y: 5 }) || 'Шаг 5 из 5')} · ${esc(c('step_pill_confirm'))}</span>
+            <span>${esc(t('setup.step_x_of_y', { x: 5, y: 5 }))} · ${esc(c('step_pill_confirm'))}</span>
           </div>
           <div class="display-md">${esc(c('confirm_title'))}</div>
           <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
+          <span class="app-cal-keyhint">${esc(t('ui.cal_recenter_hint'))}</span>
         </div>
-        <div class="app-cal-stats pg-stats app-cal-verify-stats" id="cal-verify-stats">
-          <div class="pg-stat">
-            <div class="pg-stat__head">
-              <span class="pg-axis__key pg-axis__key--x">Pitch</span>
-              <span class="pg-badge">${esc(r.pitchAxis || '+X')}</span>
+        <div class="app-cal-verify-stats" id="cal-verify-stats">
+          ${[['x', 'P', 'Pitch', r.pitchAxis || '+X', 'pitch'], ['y', 'Y', 'Yaw', r.yawAxis || '+Y', 'yaw'], ['z', 'R', 'Roll', r.rollAxis || '+Z', 'roll']].map((a) => `
+          <div class="app-cal-vstat">
+            <div class="app-cal-vstat__head">
+              <span class="app-cal-vstat__name"><span class="pg-axis__key pg-axis__key--${a[0]}">${a[1]}</span>${a[2]}</span>
+              <span class="pg-badge">${esc(a[3])}</span>
             </div>
-            <div class="mono app-cal-stat-val" id="cal-verify-pitch">+0°</div>
-          </div>
-          <div class="pg-stat">
-            <div class="pg-stat__head">
-              <span class="pg-axis__key pg-axis__key--y">Yaw</span>
-              <span class="pg-badge">${esc(r.yawAxis || '+Y')}</span>
-            </div>
-            <div class="mono app-cal-stat-val" id="cal-verify-yaw">+0°</div>
-          </div>
-          <div class="pg-stat">
-            <div class="pg-stat__head">
-              <span class="pg-axis__key pg-axis__key--z">Roll</span>
-              <span class="pg-badge">${esc(r.rollAxis || '+Z')}</span>
-            </div>
-            <div class="mono app-cal-stat-val" id="cal-verify-roll">+0°</div>
-          </div>
-        </div>
-        <div class="pg-card app-cal-matrix-card app-cal-matrix-box app-cal-ring-corner app-cal-ring-corner--tr">
-          <div class="pg-row app-cal-matrix-head">
-            <div class="pg-overline">
-              <span class="pg-ring"></span>
-              <b>${esc(c('axes_determined') || 'Оси определены:')} ${esc(c('matrix_title'))}</b>
-            </div>
-            <span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det: ${(det || -1).toFixed(2)}</span>
-          </div>
-          <div class="app-cal-chips" style="margin: 0.25rem 0">
-            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '+X')}</b></span>
-            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '+Y')}</b></span>
-            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '+Z')}</b></span>
-          </div>
-          <pre class="mono app-cal-matrix-pre">${esc(formatMatrix(S.matrix))}</pre>
+            <div class="mono app-cal-stat-val" id="cal-verify-${a[4]}">+0°</div>
+          </div>`).join('')}
         </div>
         <div id="cal-mount"></div>
       `;
     }
 
-    if (toolsEl) {
-      toolsEl.innerHTML = `<button type="button" class="pg-btn pg-btn--sm" data-act="recenter">${esc(c('confirm_recenter'))}</button>`;
-    }
     setText($('cal-stage-cap'), c('confirm_caption'));
-    foot().innerHTML = btn('restart', c('confirm_restart')) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
+    foot().innerHTML = ringHost(btn('restart', c('confirm_restart'))) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
 
+    const extra = $('cal-right-extra');
+    if (extra) extra.innerHTML = `
+        <div class="app-cal-matrix-card app-cal-ring-corner app-cal-ring-corner--tr">
+          <div class="app-cal-matrix-head">
+            <div class="pg-overline"><span class="pg-ring"></span><b>${esc(c('matrix_title'))}</b></div>
+            <span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det ${(det || -1).toFixed(2)}</span>
+          </div>
+          <pre class="mono app-cal-matrix-pre">${esc(formatMatrix(S.matrix))}</pre>
+        </div>
+    `;
     renderMount();
     updateLiveRates(st);
     ensureScene('live');
@@ -569,8 +602,8 @@ function render() {
 
   // Steps 1–4
   stopQuatListener();
-  if (toolsEl) toolsEl.innerHTML = '';
-  setText($('cal-live'), '');
+  const extraEl = $('cal-right-extra');
+  if (extraEl && extraEl.firstChild) extraEl.innerHTML = '';
 
   const cfg = STEPS[S.step];
   const n = S.step;
@@ -584,7 +617,6 @@ function render() {
 
   // Render left column
   if (leftCol) {
-    const showStats = n <= 2;
     let panelHTML = '';
 
     if (S.phase === 'ready') {
@@ -596,17 +628,23 @@ function render() {
         </button>
       </div>`;
     } else if (S.phase === 'run') {
-      panelHTML = `<div class="app-cal-run">
-        <div class="app-cal-runrow">
-          <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
-          <b id="cal-run-text">${esc(cfg.axes ? c('align_status_recording') : (cfg.rest ? c('status_recording_rest') : c('status_recording')))}</b>
-          <span class="pg-badge" id="cal-run-count"></span>
-        </div>
-        <div class="pg-progress"><i id="cal-bar"></i></div>
-        <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" disabled>
-          ${esc(cfg.axes ? c('align_recording_btn') : cfg.rest ? c('btn_recording_rest') : c('btn_recording'))}
-        </button>
-      </div>`;
+      panelHTML = cfg.axes
+        ? `<div class="app-cal-run">
+            <div class="app-cal-runrow">
+              <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
+              <span class="pg-badge" id="cal-run-count"></span>
+            </div>
+            <div class="app-cal-segs" id="cal-segs"></div>
+            <span class="app-cal-runtext app-cal-runtext--soft" id="cal-run-text">${esc(c('align_status_recording'))}</span>
+          </div>`
+        : `<div class="app-cal-run">
+            <div class="app-cal-runrow">
+              <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
+              <span class="pg-badge" id="cal-run-count"></span>
+            </div>
+            <b class="app-cal-runtext" id="cal-run-text">${esc(cfg.rest ? c('status_recording_rest') : c('status_recording'))}</b>
+            <div class="app-cal-bar"><i id="cal-bar"></i></div>
+          </div>`;
     } else if (S.phase === 'done') {
       panelHTML = `<div class="pg-notice pg-notice--ok app-cal-success-notice">
         <svg class="app-cal-ok-ico" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -631,24 +669,11 @@ function render() {
     }
 
     leftCol.innerHTML = `
-      ${showStats ? `<div class="app-cal-stats pg-stats" id="cal-stats">
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-x">+0°/s</div>
-        </div>
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--y">Y</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-y">+0°/s</div>
-        </div>
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--z">Z</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-z">+0°/s</div>
-        </div>
-      </div>` : ''}
+      ${axisTilesHTML()}
       <div class="app-cal-info">
         <div class="pg-overline app-cal-overline">
           <span class="pg-ring"></span>
-          <span>${esc(t('step_x_of_y', { x: n + 1, y: 4 }) || `Шаг ${n + 1} из 4`)} · ${esc(c(cfg.pill))}</span>
+          <span>${esc(t('setup.step_x_of_y', { x: n + 1, y: 4 }))} · ${esc(c(cfg.pill))}</span>
         </div>
         <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
         <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
@@ -667,7 +692,7 @@ function render() {
   const nextLabel = n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step');
   const isDone = S.phase === 'done' || !!(S.steps[n] && S.steps[n].done);
   const nextBtn = btn('next', nextLabel, isDone ? 'primary' : '', !isDone || S.phase === 'run');
-  foot().innerHTML = backBtn + '<span class="app-grow"></span>' + nextBtn;
+  foot().innerHTML = ringHost(backBtn) + '<span class="app-grow"></span>' + nextBtn;
 
   // Live rates update
   updateLiveRates(st);
@@ -678,13 +703,8 @@ function render() {
 
 function updateLiveRates(st) {
   if (!S.open) return;
-  if (S.step <= 2 && S.phase !== 'verify' && S.phase !== 'save') {
-    const vx = Math.round(st.rawRotX || 0);
-    const vy = Math.round(st.rawRotY || 0);
-    const vz = Math.round(st.rawRotZ || 0);
-    setText($('cal-val-x'), (vx >= 0 ? '+' : '') + vx + '°/s');
-    setText($('cal-val-y'), (vy >= 0 ? '+' : '') + vy + '°/s');
-    setText($('cal-val-z'), (vz >= 0 ? '+' : '') + vz + '°/s');
+  if (S.phase !== 'verify' && S.phase !== 'save') {
+    updateAxisTiles(st);
   } else if (S.phase === 'verify') {
     const f = (v) => (v >= 0 ? '+' : '−') + Math.round(Math.abs(v || 0)) + '°';
     const pEl = $('cal-verify-pitch');
@@ -696,8 +716,6 @@ function updateLiveRates(st) {
     if (pEl && pEl.textContent !== pTxt) setText(pEl, pTxt);
     if (yEl && yEl.textContent !== yTxt) setText(yEl, yTxt);
     if (rEl && rEl.textContent !== rTxt) setText(rEl, rTxt);
-    const liveEl = $('cal-live');
-    if (liveEl && liveEl.textContent) setText(liveEl, '');
     // Fallback if no ahrs:quat event received within 500ms
     if (S.scene && performance.now() - lastAhrsTs > 500) {
       if (st.ahrsQ0 !== undefined && st.ahrsQ1 !== undefined) {
@@ -722,6 +740,7 @@ async function capture() {
   const cfg = STEPS[S.step];
   if (cfg.axes) return listenAxes();
   S.hasRecorded = true;
+  clearAxisRole(S.step);
   S.phase = 'run';
   render();
   const txt = $('cal-run-text');
@@ -747,7 +766,7 @@ async function capture() {
       }
       const el2 = $('cal-bar');
       const p = Math.min(1, (performance.now() - t0) / cfg.ms);
-      if (el2) el2.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+      if (el2) el2.style.setProperty('--p', p.toFixed(3));
       if (S.scene) S.scene.setRecording(p);
       const st = getState() || {};
       const cnt = $('cal-run-count');
@@ -764,20 +783,28 @@ async function capture() {
     return done('');
   }
   S.vectors[S.step] = res.vector;
+  if (res.axisIdx >= 0 && res.axisIdx < 3) S.axes[res.axisIdx] = { role: S.step === 1 ? 'pitch' : 'roll', name: res.axisName, confidence: res.confidence };
   const detail = c('res_gesture', { axis: res.axisName, pct: Math.round((res.confidence || 0) * 100), spd: Math.round(res.peakSpeed || 0) });
   if (S.step === 1 && S.vectors[2]) {
     const v = await call('ValidateCalibration', S.vectors[1], S.vectors[2]);
     if (v && v.success) {
       S.matrix = v.matrix;
       S.result = v;
+      lockYaw(v);
     }
   } else if (S.step === 2 && S.vectors[1]) {
     const v = await call('ValidateCalibration', S.vectors[1], S.vectors[2]);
     if (!v || !v.success) return fail(v && (c(v.errorCode) || v.errorMsg) || c('err_axes_inconsistent'));
     S.matrix = v.matrix;
     S.result = v;
+    lockYaw(v);
   }
   done(detail);
+}
+
+// Pitch and roll are known: the one axis left over is yaw.
+function lockYaw(v) {
+  for (let i = 0; i < 3; i++) if (!S.axes[i]) S.axes[i] = { role: 'yaw', name: v.yawAxis || '', confidence: 1 };
 }
 
 // Axes: the aligner learns from free movement; poll until it locks.
@@ -787,15 +814,18 @@ async function listenAxes() {
   render();
   const txt = $('cal-run-text');
   if (txt) txt.textContent = c('align_status_recording');
+  updateSegs(0, 6);
+  const cnt0 = $('cal-run-count');
+  if (cnt0) cnt0.textContent = '0/6';
   await call('StartAxisAlign', true);
   const t0 = performance.now();
   S.poll = setInterval(async () => {
     const st = await call('GetAxisAlignStatus');
     if (!S.open || S.phase !== 'run' || !st) return;
     const refining = st.pairs >= st.minPairs;
-    const bar = $('cal-bar'), cnt = $('cal-run-count'), tEl = $('cal-run-text');
+    const cnt = $('cal-run-count'), tEl = $('cal-run-text');
     const p = Math.min(1, st.pairs / Math.max(1, st.minPairs));
-    if (bar) bar.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+    updateSegs(st.pairs, Math.max(1, st.minPairs));
     if (S.scene) S.scene.setRecording(p);
     if (cnt) cnt.textContent = refining ? c('align_counter_refining') : `${st.pairs}/${st.minPairs}`;
     if (tEl) tEl.textContent = refining ? c('align_status_refining') : c('align_status_recording');
@@ -851,6 +881,7 @@ function startFlow(slot) {
   S.slot = slot;
   S.step = 0;
   S.steps = [null, null, null, null];
+  S.axes = [null, null, null];
   S.vectors = [];
   S.matrix = null;
   S.result = null;

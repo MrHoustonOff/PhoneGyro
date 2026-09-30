@@ -224,10 +224,10 @@
 
     <!-- Calibration screen (design: Modal card inside #body), js/screens/calibration.js -->
     <main class="pg-page pg-page--center app-screen app-calpage" id="screen-calibration" hidden>
-      <div class="pg-modal app-cal-modal pg-rings-corner has-diag-rings" id="cal-card" role="region" aria-labelledby="cal-title">
+      <div class="pg-modal app-cal-modal" id="cal-card" role="region" aria-labelledby="cal-title">
         <div class="pg-modal__head">
           <div><div class="pg-modal__title" id="cal-title" data-i18n="calibration.title">Калибровка осей</div><div class="pg-modal__sub" id="cal-sub"></div></div>
-          <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          <span class="app-ringhost app-ringhost--x"><button class="pg-btn-icon app-cal-x" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></span>
         </div>
         <div class="pg-modal__body">
           <div id="cal-body"></div>

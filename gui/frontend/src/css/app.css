@@ -379,11 +379,16 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   --accent-soft: rgba(91, 124, 38, 0.13);
   --accent-line: rgba(91, 124, 38, 0.40);
   --axis-y: var(--accent);
+  /* Tiles: one step off the card surface so blocks read as blocks, not just as shadows. */
+  --tile: #f1f0ec;
+  --tile-hi: #e7e6e1;
+  --tile-line: rgba(0, 0, 0, 0.11);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100%;
+  height: 100%;
+  min-height: 0;
   padding: 1.5rem var(--space-4);
   box-sizing: border-box;
 }
@@ -396,6 +401,9 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   --accent-soft: rgba(163, 188, 105, 0.15);
   --accent-line: rgba(163, 188, 105, 0.42);
   --axis-y: var(--accent);
+  --tile: #262626;
+  --tile-hi: #2f2f2f;
+  --tile-line: rgba(255, 255, 255, 0.11);
 }
 
 .app-calpage .pg-btn--primary {
@@ -410,7 +418,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-modal {
   width: 100%;
   max-width: 65rem;
-  min-height: 35rem;
+  min-height: min(35rem, 100%);
+  max-height: 100%;
   box-shadow: var(--shadow-pop);
   position: relative;
   display: flex;
@@ -433,7 +442,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   }
   .app-cal-modal {
     max-width: 100%;
-    min-height: auto;
+    min-height: 0;
   }
 }
 .app-cal-stepper { margin-bottom: 1.25rem; }
@@ -458,13 +467,18 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 }
 .app-cal-disclaimer { text-align: center; color: var(--ink-3); }
 .app-cal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
-.app-cal-stats .pg-stat { padding: 0.5rem 0.625rem; }
 .app-cal-stat-val { font-size: 1rem; font-weight: 600; color: var(--ink); }
 
 /* Axis chips readability */
 .app-cal-modal .pg-axis__key {
-  width: 1.25rem;
+  width: auto;
+  min-width: 1.25rem;
   height: 1.125rem;
+  padding: 0 0.3125rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.25rem;
   font-weight: 800;
   border-width: 1px;
@@ -500,7 +514,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 
 .app-cal-panel {
   margin-top: auto;
-  min-height: 7.75rem;
+  min-height: 8.75rem;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -524,9 +538,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 }
 
 .app-cal-action-box { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 1rem; }
-.app-cal-run { display: flex; flex-direction: column; gap: 0.625rem; padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: var(--surface-inset); box-shadow: var(--shadow-inset); }
 .app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.app-cal-run .pg-progress > i { transition: width .05s linear; }
 .app-cal-main { display: flex; flex-direction: column; gap: 0.875rem; min-height: 16rem; }
 .app-cal-label { font-weight: 600; font-size: 0.875rem; }
 .app-cal-name { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
@@ -551,28 +563,29 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 }
 .app-cal-matrix-card {
   padding: 0.875rem 1rem;
-  border-radius: var(--radius-md);
-  background: var(--surface-inset);
-  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
+  align-items: center;
+  gap: 0.625rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 .app-cal-matrix-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
+  justify-content: center;
+  gap: 0.75rem;
 }
 .app-cal-matrix-pre {
   margin: 0;
   padding: 0.5rem 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--line-subtle);
-  border-radius: var(--radius-sm);
-  font: 400 0.8125rem/1.4 var(--font-mono);
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--radius-md);
+  font: 400 0.9375rem/1.5 var(--font-mono);
   letter-spacing: 0.04em;
   color: var(--ink);
   white-space: pre;
@@ -645,22 +658,6 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 }
 
 /* ── Corner Ring Decorations & Overlines (Task 4F) ──────────────────────── */
-.app-cal-modal.has-diag-rings::before {
-  content: "";
-  position: absolute;
-  left: -5.5rem;
-  bottom: -5.5rem;
-  width: 15rem;
-  height: 15rem;
-  border-radius: 50%;
-  pointer-events: none;
-  background: repeating-radial-gradient(circle at center, transparent 0 0.875rem, var(--accent-soft) 0.875rem 1.125rem);
-  -webkit-mask: radial-gradient(circle at center, #000 0, transparent 70%);
-  mask: radial-gradient(circle at center, #000 0, transparent 70%);
-  z-index: 0;
-  opacity: 0.65;
-}
-
 .app-cal-ring-corner {
   position: relative;
   overflow: hidden;
@@ -706,35 +703,11 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   gap: 0.375rem;
 }
 
-.app-cal-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 0.375rem 0 0.125rem;
-  font-size: 0.8125rem;
-  color: var(--ink-2);
-}
-.app-cal-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-weight: 500;
-}
-.app-cal-legend-item .pg-axis__key {
-  width: 1.25rem;
-  height: 1.25rem;
-  font-size: 0.6875rem;
-}
-
-.app-cal-stats .pg-stat,
 .app-cal-matrix-card,
 .app-cal-mount,
 .app-cal-preview-card {
-  background: var(--surface) var(--tex-grain);
-}
-.app-cal-panel {
-  background: var(--surface-inset) var(--tex-grain);
+  background: var(--tile) var(--tex-grain);
+  border: 1px solid var(--tile-line);
 }
 .app-cal-slotwrap {
   position: relative;
@@ -896,14 +869,186 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   .app-cal-left, .app-cal-right { display: contents; }
   .app-cal-grid .app-cal-info { order: 1; }
   .app-cal-stage { order: 2; height: 11.5rem; width: 100%; }
-  .app-cal-legend { order: 3; }
   .app-cal-panel { order: 4; }
-  .app-cal-stats { order: 5; }
+  .app-cal-stats { order: 0; }
   .app-cal-verify-stats { order: 4; }
-  .app-cal-matrix-card { order: 5; }
+  #cal-right-extra { order: 5; }
   #cal-mount { order: 6; }
   .app-cal-disclaimer { order: 7; }
   .app-cal-live { order: 8; }
+}
+
+/* ── Calibration review pass: ring hosts, tiles, axis tiles, run panel ───── */
+/* Ring host: the ripple pattern is centred on the control it sits behind (close
+   button, left footer button); the control itself is opaque and painted above it. */
+.app-ringhost {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.app-ringhost::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 17rem;
+  height: 17rem;
+  margin: -8.5rem 0 0 -8.5rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 1.4rem, color-mix(in srgb, var(--accent) 30%, transparent) 1.4rem 1.6rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, #000 28%, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, #000 28%, transparent 70%);
+}
+.app-ringhost > * { position: relative; z-index: 1; }
+.app-cal-x {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+  box-shadow: none;
+}
+.app-cal-x:hover { border-color: var(--line-control); }
+.app-cal-modal .pg-modal__foot .app-ringhost .pg-btn {
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-modal .pg-modal__foot .app-ringhost .pg-btn:hover:not([disabled]) { border-color: var(--line-control); }
+
+/* Axis tiles (legacy behaviour): live rate + fill bar; a confirmed axis turns green with its role. */
+.app-cal-axis, .app-cal-vstat {
+  --axc: var(--axis-x);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  min-width: 0;
+  padding: 0.5rem 0.625rem 0.625rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile) var(--tex-grain);
+  border: 1px solid var(--tile-line);
+  transition: border-color .2s, background-color .2s;
+}
+#cal-ax-1 { --axc: var(--axis-y); }
+#cal-ax-2 { --axc: var(--axis-z); }
+.app-cal-axis__head, .app-cal-vstat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-height: 1.25rem;
+}
+.app-cal-vstat__name { display: inline-flex; align-items: center; gap: 0.375rem; font-weight: 600; font-size: 0.8125rem; }
+.app-cal-axis__tag {
+  font: 700 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.app-cal-axbar, .app-cal-bar {
+  height: 0.375rem;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+.app-cal-bar { height: 0.5rem; }
+.app-cal-axbar > i, .app-cal-bar > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--axc, var(--accent));
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+  transition: transform .1s linear;
+}
+.app-cal-bar > i { background: var(--accent); }
+.app-cal-axis.is-locked {
+  border-color: var(--accent-line);
+  background: color-mix(in srgb, var(--accent) 15%, var(--tile)) var(--tex-grain);
+}
+.app-cal-axis.is-locked .app-cal-axbar > i { background: var(--accent); transition-duration: .35s; }
+.app-cal-axis.is-locked .app-cal-stat-val { color: var(--accent-text); }
+
+/* Action / recording panel */
+.app-cal-action-box.pg-notice {
+  background: var(--tile) var(--tex-grain);
+  border: 1px solid var(--tile-line);
+  box-shadow: none;
+}
+.app-cal-run {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile) var(--tex-grain);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.app-cal-runtext { font-size: 1rem; line-height: 1.3; font-weight: 700; color: var(--ink); }
+.app-cal-runtext--soft { font-size: 0.875rem; font-weight: 400; color: var(--ink-2); }
+.app-cal-segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0.3125rem; height: 0.625rem; }
+.app-cal-segs > i {
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  transition: background-color .15s;
+}
+.app-cal-segs > i.is-on { background: var(--accent); }
+.app-cal-success-notice {
+  background: color-mix(in srgb, var(--accent) 16%, var(--tile)) var(--tex-grain);
+  border: 1px solid var(--accent-line);
+}
+.app-cal-panel .pg-btn:not(.pg-btn--primary) {
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+
+/* Verify */
+.app-cal-verify-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
+.app-cal-keyhint { font: 500 0.75rem/1.2 var(--font-mono); color: var(--ink-3); margin-top: 0.125rem; }
+.app-cal-matrix-pre { text-align: center; }
+
+/* Save */
+.app-cal-preview-profile {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-slot-trigger,
+.app-cal-icon-card {
+  background: var(--tile);
+  border-color: var(--tile-line);
+}
+.app-cal-icon-card:hover { background: var(--tile-hi); }
+.app-cal-icon-card.is-selected {
+  background: color-mix(in srgb, var(--accent) 16%, var(--tile));
+  border-color: var(--accent);
+}
+.app-cal-slotmenu { background: var(--tile-hi) var(--tex-grain); border-color: var(--tile-line); }
+.app-cal-slotmenu .app-menu__item { border: 1px solid transparent; }
+.app-cal-slotmenu .app-cal-menu-item--empty { border: 1px dashed var(--line-control); }
+.app-cal-menu-item--empty .pg-profile__t { color: var(--ink-3); }
+.app-cal-menu-item--empty .app-menu__icon { border-style: dashed; }
+.app-cal-freebadge { color: var(--ink-3); background: transparent; border: 1px dashed var(--line-control); font-family: inherit; }
+.app-cal-device-badge { background: var(--tile); border-color: var(--tile-line); }
+
+/* Low windows: keep the whole step in view instead of scrolling inside the card. */
+@container pgwin (max-height: 859px) {
+  .app-calpage { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+  .app-cal-stepper { margin-bottom: 0.75rem; }
+  .app-cal-stage { height: 14.5rem; }
+  .app-cal-disclaimer { display: none; }
+  .app-cal-info { min-height: 0; }
+  .app-cal-left { min-height: 0; gap: 0.625rem; }
+  .app-cal-panel { min-height: 0; }
+  .app-cal-desc { font-size: 0.875rem; line-height: 1.4; }
 }
 
 /* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
