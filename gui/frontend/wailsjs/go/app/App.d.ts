@@ -27,6 +27,8 @@ export function CopyLast20Frames():Promise<string>;
 
 export function DeleteProfile(arg1:number):Promise<string>;
 
+export function DisableDebug():Promise<void>;
+
 export function DisconnectDSUClient(arg1:string):Promise<string>;
 
 export function FocusDSUClient(arg1:string):Promise<string>;
@@ -42,6 +44,8 @@ export function GetCloseAction():Promise<string>;
 export function GetDSUStatus():Promise<Record<string, any>>;
 
 export function GetDataDir():Promise<string>;
+
+export function GetDebugStats():Promise<app.DebugStats>;
 
 export function GetDefaultAppSettings():Promise<settings.Settings>;
 
@@ -71,6 +75,8 @@ export function GetTranslations(arg1:string):Promise<string>;
 
 export function GetWizardMount():Promise<motion.MountCorrection>;
 
+export function IsDebugActive():Promise<boolean>;
+
 export function IsFirstLaunch():Promise<boolean>;
 
 export function MarkFirstLaunchDone():Promise<void>;
@@ -88,6 +94,8 @@ export function PendingUpdate():Promise<app.UpdateInfo>;
 export function PlaySystemSound(arg1:string):Promise<void>;
 
 export function PreviewMatrix(arg1:any):Promise<void>;
+
+export function PushDebug(arg1:string,arg2:Record<string, any>):Promise<void>;
 
 export function QuitApp():Promise<void>;
 
@@ -135,6 +143,8 @@ export function StartCapture():Promise<void>;
 
 export function StopCapture(arg1:number):Promise<app.CaptureResult>;
 
+export function ToggleDebugWindow():Promise<void>;
+
 export function TogglePause():Promise<app.AppState>;
 
 export function TriggerRecenterFromHotkey():Promise<void>;
@@ -142,3 +152,5 @@ export function TriggerRecenterFromHotkey():Promise<void>;
 export function ValidateCalibration(arg1:any,arg2:any):Promise<app.ValidationResult>;
 
 export function ValidateSync():Promise<Array<string>>;
+
+export function WriteDebugLog(arg1:Array<string>):Promise<void>;

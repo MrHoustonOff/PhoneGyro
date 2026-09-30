@@ -1,7 +1,7 @@
 // Footer islands: the app's CPU load with a mini graph, RAM with a meter
 // (Go "resource-stats", every ~1.5 s), the version and the repository link.
 
-import { $, setText, show, setVar } from '../core/dom.js';
+import { $, setText, setVar } from '../core/dom.js';
 import { call, on, openURL } from '../core/bridge.js';
 
 const N = 12;            // samples in the mini graph
@@ -26,12 +26,5 @@ function renderStats(s) {
 export function startFooter() {
   on('resource-stats', renderStats);
   call('GetResourceStats').then(renderStats);
-  call('GetAppVersion').then((v) => {
-    if (!v) return;
-    setText($('ft-ver'), `${v.release}.${v.build}`);
-    const dev = v.channel !== 'release';
-    show($('ft-chan'), dev);
-    if (dev) setText($('ft-chan'), 'DEV');
-  });
   $('repo').addEventListener('click', (e) => { e.preventDefault(); openURL('https://github.com/MrHoustonOff/PhoneGyro'); });
 }

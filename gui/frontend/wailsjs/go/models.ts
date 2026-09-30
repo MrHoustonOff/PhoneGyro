@@ -170,6 +170,38 @@ export namespace app {
 	        this.prUrl = source["prUrl"];
 	    }
 	}
+	export class DebugStats {
+	    uptimeSec: number;
+	    goroutines: number;
+	    heapMb: number;
+	    heapSysMb: number;
+	    sysMb: number;
+	    numGc: number;
+	    lastPauseMs: number;
+	    gcCpu: number;
+	    cpuPercent: number;
+	    ramMb: number;
+	    logOn: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DebugStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.uptimeSec = source["uptimeSec"];
+	        this.goroutines = source["goroutines"];
+	        this.heapMb = source["heapMb"];
+	        this.heapSysMb = source["heapSysMb"];
+	        this.sysMb = source["sysMb"];
+	        this.numGc = source["numGc"];
+	        this.lastPauseMs = source["lastPauseMs"];
+	        this.gcCpu = source["gcCpu"];
+	        this.cpuPercent = source["cpuPercent"];
+	        this.ramMb = source["ramMb"];
+	        this.logOn = source["logOn"];
+	    }
+	}
 	export class FirewallResult {
 	    result: string;
 	    detail?: string;
@@ -402,12 +434,15 @@ export namespace settings {
 	
 	export class Settings {
 	    theme: string;
+	    accent: string;
 	    lang: string;
 	    fontScale: number;
 	    activeSlot: number;
 	    firstLaunchDone: boolean;
 	    hideAuthor: boolean;
 	    splash: boolean;
+	    debugPanel: boolean;
+	    debugLog: boolean;
 	    dsuPort: number;
 	    dsuMac: string;
 	    httpPort: number;
@@ -439,12 +474,15 @@ export namespace settings {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.theme = source["theme"];
+	        this.accent = source["accent"];
 	        this.lang = source["lang"];
 	        this.fontScale = source["fontScale"];
 	        this.activeSlot = source["activeSlot"];
 	        this.firstLaunchDone = source["firstLaunchDone"];
 	        this.hideAuthor = source["hideAuthor"];
 	        this.splash = source["splash"];
+	        this.debugPanel = source["debugPanel"];
+	        this.debugLog = source["debugLog"];
 	        this.dsuPort = source["dsuPort"];
 	        this.dsuMac = source["dsuMac"];
 	        this.httpPort = source["httpPort"];

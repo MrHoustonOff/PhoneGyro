@@ -42,6 +42,10 @@ export function DeleteProfile(arg1) {
   return window['go']['app']['App']['DeleteProfile'](arg1);
 }
 
+export function DisableDebug() {
+  return window['go']['app']['App']['DisableDebug']();
+}
+
 export function DisconnectDSUClient(arg1) {
   return window['go']['app']['App']['DisconnectDSUClient'](arg1);
 }
@@ -72,6 +76,10 @@ export function GetDSUStatus() {
 
 export function GetDataDir() {
   return window['go']['app']['App']['GetDataDir']();
+}
+
+export function GetDebugStats() {
+  return window['go']['app']['App']['GetDebugStats']();
 }
 
 export function GetDefaultAppSettings() {
@@ -130,6 +138,10 @@ export function GetWizardMount() {
   return window['go']['app']['App']['GetWizardMount']();
 }
 
+export function IsDebugActive() {
+  return window['go']['app']['App']['IsDebugActive']();
+}
+
 export function IsFirstLaunch() {
   return window['go']['app']['App']['IsFirstLaunch']();
 }
@@ -164,6 +176,10 @@ export function PlaySystemSound(arg1) {
 
 export function PreviewMatrix(arg1) {
   return window['go']['app']['App']['PreviewMatrix'](arg1);
+}
+
+export function PushDebug(arg1, arg2) {
+  return window['go']['app']['App']['PushDebug'](arg1, arg2);
 }
 
 export function QuitApp() {
@@ -258,6 +274,10 @@ export function StopCapture(arg1) {
   return window['go']['app']['App']['StopCapture'](arg1);
 }
 
+export function ToggleDebugWindow() {
+  return window['go']['app']['App']['ToggleDebugWindow']();
+}
+
 export function TogglePause() {
   return window['go']['app']['App']['TogglePause']();
 }
@@ -272,4 +292,8 @@ export function ValidateCalibration(arg1, arg2) {
 
 export function ValidateSync() {
   return window['go']['app']['App']['ValidateSync']();
+}
+
+export function WriteDebugLog(arg1) {
+  return window['go']['app']['App']['WriteDebugLog'](arg1);
 }

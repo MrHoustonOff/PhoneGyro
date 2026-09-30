@@ -79,13 +79,36 @@ function mark(root, q) {
   }
 }
 
+// Scroll to a heading inside docs-article by measuring its offsetTop
+// relative to the scrollable container. scrollIntoView is unreliable in
+// WebView2 when the target is inside an overflow:auto container — it scrolls
+// the viewport instead, which yanks the window to the top.
+function scrollToId(id) {
+  const article = $('docs-article');
+  const el = document.getElementById(id);
+  if (!el || el.tagName === 'H2') return;
+  // Walk up from the element to the article container, summing offsetTop.
+  let top = 0;
+  let node = el;
+  while (node && node !== article) {
+    top += node.offsetTop;
+    node = node.offsetParent;
+  }
+  article.scrollTo({ top: Math.max(0, top - 16), behavior: 'smooth' });
+}
+
 // A #link: the section holding that heading, scrolled to it.
 function jump(id) {
   const i = sections.findIndex((s) => s.ids.includes(id));
   if (i < 0) return;
-  if (i !== current) { current = i; renderSection(); }
-  const el = document.getElementById(id);
-  if (el && el.tagName !== 'H2') el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (i !== current) {
+    current = i;
+    renderSection(); // resets scrollTop=0 synchronously
+    // Wait one frame for the DOM to settle, then scroll to the target.
+    requestAnimationFrame(() => scrollToId(id));
+    return;
+  }
+  scrollToId(id);
 }
 
 // "On this page": the last heading scrolled past the article's top is active.

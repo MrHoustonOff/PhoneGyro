@@ -683,6 +683,129 @@ html.pg-root,html.pg-root body{margin:0;height:100%;overflow:hidden;background:v
 .pg-level3d .pg-level3d__fb{position:absolute;left:50%;top:50%;margin:-7rem 0 0 -7rem;width:14rem;height:14rem}
 .pg-usbstage .pg-level3d .pg-dial{width:14rem;height:14rem}
 @container pgwin (max-width:399px){.pg-usbstage .pg-level3d{width:13.5rem;height:13.5rem}}
+/* brand island carries the version (moved from the footer) */
+.pg-brand__ver{display:inline-flex;align-items:center;gap:0.5rem;margin-left:0.125rem}
+.pg-brand__ver .pg-island__sep{height:1rem;margin:0 0.125rem}
+.pg-brand__v{font:400 0.6875rem/1 var(--font-mono);letter-spacing:.02em;color:var(--ink-3)}
+@container pgwin (max-width:859px){.pg-brand__ver{display:none}}
 
-.pg-app *{scrollbar-width:thin;scrollbar-color:var(--line-control) transparent}
-.pg-app ::-webkit-scrollbar{width:0.5rem;height:0.5rem}.pg-app ::-webkit-scrollbar-thumb{background:var(--line-control);border-radius:624.9375rem}
+
+/* ===================== v16 · scrollbars: Sheikah slate =====================
+   Chromium/WebView2 ::-webkit-scrollbar. Never set scrollbar-color/width on the same element
+   (Chromium then ignores the pseudo-elements) and never hand-write a global scrollbar rule after this block.
+   Look: an engraved ruler lane (tick marks) and a stone capsule with two carved notches at each end;
+   hover wakes it like a Sheikah rune: accent spine glow, ring grip.
+   default  every scroll area in .pg-app: 0.625rem, ticks appear on hover, slim pill
+   rail     side panels and navs: ticks always on, tablet thumb with notches and ring grip
+   fade     long reading text: bar only while hovered, top and bottom edges dissolve
+   x        horizontal chip rows: no bar, edges dissolve, engraved line on hover
+   shell    the window body: rail look, and the ends are reserved for the floating header and footer */
+.pg-app{--sb-w:0.625rem;--sb-thumb:var(--line-control);--sb-tick:var(--line);
+ --sb-ticks-y:repeating-linear-gradient(to bottom,var(--sb-tick) 0 1px,transparent 1px 0.5rem);
+ --sb-ticks-x:repeating-linear-gradient(to right,var(--sb-tick) 0 1px,transparent 1px 0.5rem);
+ --sb-grip:radial-gradient(circle,var(--accent) 0 1px,transparent 0.0938rem 0.1625rem,var(--accent) 0.1875rem 0.225rem,transparent 0.2625rem);
+ --sb-notch-y:linear-gradient(var(--accent-line),var(--accent-line));
+}
+.pg-app ::-webkit-scrollbar,.pg-app::-webkit-scrollbar{width:var(--sb-w);height:var(--sb-w)}
+.pg-app ::-webkit-scrollbar-button{display:none;width:0;height:0}
+.pg-app ::-webkit-scrollbar-track,.pg-app ::-webkit-scrollbar-corner{background:transparent}
+.pg-app :hover::-webkit-scrollbar-track:vertical{background:var(--sb-ticks-y) center/0.25rem 100% no-repeat}
+.pg-app :hover::-webkit-scrollbar-track:horizontal{background:var(--sb-ticks-x) center/100% 0.25rem no-repeat}
+.pg-app ::-webkit-scrollbar-thumb{min-height:2.5rem;min-width:2.5rem;border-radius:6.1875rem;border:0.125rem solid transparent;background-color:var(--sb-thumb);background-clip:padding-box;transition:background-color .15s}
+.pg-app ::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
+.pg-app ::-webkit-scrollbar-thumb:active{background-color:var(--accent-text)}
+
+/* rail: the tablet */
+.pg-scroll--rail{--sb-w:1rem}
+.pg-scroll--rail::-webkit-scrollbar-track:vertical{background:var(--sb-ticks-y) center/0.3125rem 100% no-repeat}
+.pg-scroll--rail::-webkit-scrollbar-track:horizontal{background:var(--sb-ticks-x) center/100% 0.3125rem no-repeat}
+.pg-scroll--rail::-webkit-scrollbar-thumb,.pg-shell__body::-webkit-scrollbar-thumb{border:0.1875rem solid transparent;border-radius:0.4375rem;background-color:var(--surface);background-clip:padding-box;box-shadow:inset 0 0 0 1px var(--line-control)}
+.pg-scroll--rail::-webkit-scrollbar-thumb:vertical,.pg-shell__body::-webkit-scrollbar-thumb:vertical{background-image:var(--sb-grip),var(--sb-notch-y),var(--sb-notch-y),var(--sb-notch-y),var(--sb-notch-y);background-position:center,center 0.4375rem,center 0.6875rem,center calc(100% - 0.4375rem),center calc(100% - 0.6875rem);background-size:0.75rem 0.75rem,0.4375rem 1px,0.4375rem 1px,0.4375rem 1px,0.4375rem 1px;background-repeat:no-repeat}
+.pg-scroll--rail::-webkit-scrollbar-thumb:horizontal{background-image:var(--sb-grip),var(--sb-notch-y),var(--sb-notch-y),var(--sb-notch-y),var(--sb-notch-y);background-position:center,0.4375rem center,0.6875rem center,calc(100% - 0.4375rem) center,calc(100% - 0.6875rem) center;background-size:0.75rem 0.75rem,1px 0.4375rem,1px 0.4375rem,1px 0.4375rem,1px 0.4375rem;background-repeat:no-repeat}
+.pg-scroll--rail::-webkit-scrollbar-thumb:hover,.pg-shell__body::-webkit-scrollbar-thumb:hover{background-color:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent),inset 0 0 0.5rem var(--accent-soft)}
+.pg-scroll--rail::-webkit-scrollbar-thumb:active,.pg-shell__body::-webkit-scrollbar-thumb:active{background-color:var(--accent-soft);box-shadow:inset 0 0 0 0.0938rem var(--accent-text),inset 0 0 0.75rem var(--accent-line)}
+
+/* fade: bar only on hover, edges dissolve */
+.pg-scroll--fade{--sb-w:0.5rem;padding-block:0.875rem;-webkit-mask-image:linear-gradient(transparent,#000 0.875rem calc(100% - 0.875rem),transparent);mask-image:linear-gradient(transparent,#000 0.875rem calc(100% - 0.875rem),transparent)}
+.pg-scroll--fade::-webkit-scrollbar-thumb{background-color:transparent}
+.pg-scroll--fade:hover::-webkit-scrollbar-thumb{background-color:var(--sb-thumb)}
+.pg-scroll--fade:hover::-webkit-scrollbar-thumb:hover{background-color:var(--accent)}
+
+/* x: horizontal rows */
+.pg-scroll--x{--sb-w:0.25rem;overflow-x:auto;overflow-y:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 1rem calc(100% - 1rem),transparent);mask-image:linear-gradient(90deg,transparent,#000 1rem calc(100% - 1rem),transparent)}
+.pg-scroll--x::-webkit-scrollbar-track:horizontal{background:none}
+.pg-scroll--x::-webkit-scrollbar-thumb{border:0;background-color:transparent;min-width:3rem}
+.pg-scroll--x:hover::-webkit-scrollbar-thumb{background-color:var(--sb-thumb)}
+
+/* shell: reserve the ends for header and footer so the bar never runs under the islands */
+.pg-shell__body{--sb-w:1rem}
+.pg-shell__body::-webkit-scrollbar-track:vertical{background:var(--sb-ticks-y) center/0.3125rem 100% no-repeat}
+.pg-shell__body::-webkit-scrollbar-button:vertical:start:decrement{display:block;height:calc(var(--pg-tb) + var(--pg-hh) - 0.25rem);background:transparent}
+.pg-shell__body::-webkit-scrollbar-button:vertical:end:increment{display:block;height:calc(var(--pg-fh) - 0.25rem);background:transparent}
+.pg-shell__body::-webkit-scrollbar-button:vertical:start:increment,.pg-shell__body::-webkit-scrollbar-button:vertical:end:decrement{display:none}
+/* Firefox / older engines: closest standard equivalent */
+@supports not selector(::-webkit-scrollbar){.pg-app *{scrollbar-width:thin;scrollbar-color:var(--line-control) transparent}}
+
+@container pgwin (max-width:859px){
+ .pg-docs>aside.pg-scroll--rail{-webkit-mask-image:linear-gradient(90deg,transparent,#000 0.875rem calc(100% - 0.875rem),transparent);mask-image:linear-gradient(90deg,transparent,#000 0.875rem calc(100% - 0.875rem),transparent)}
+ .pg-docs>article.pg-scroll--fade{-webkit-mask-image:none;mask-image:none;padding-block:1.25rem}
+}
+
+/* ===================== v16 · accent colours + ring burst =====================
+   <html data-accent="green|teal|blue|violet|pink|coral|amber|graphite"> (green = default, no attribute needed).
+   All accent tokens are re-declared per theme; nothing else in the system changes.            */
+[data-accent="amber"]{--accent:#a06f08;--on-accent:#ffffff;--accent-text:#7d5500;--accent-soft:rgba(160,111,8,0.13);--accent-line:rgba(160,111,8,0.42)}
+[data-accent="teal"]{--accent:#2f7686;--on-accent:#ffffff;--accent-text:#255f6d;--accent-soft:rgba(47,118,134,0.13);--accent-line:rgba(47,118,134,0.42)}
+[data-accent="pink"]{--accent:#b04570;--on-accent:#ffffff;--accent-text:#923459;--accent-soft:rgba(176,69,112,0.12);--accent-line:rgba(176,69,112,0.40)}
+[data-theme="dark"][data-accent="amber"],[data-theme="dark"] [data-accent="amber"]{--accent:#f2cc85;--on-accent:#0b0b0b;--accent-text:#f2cc85;--accent-soft:rgba(242,204,133,0.14);--accent-line:rgba(242,204,133,0.42)}
+[data-theme="dark"][data-accent="teal"],[data-theme="dark"] [data-accent="teal"]{--accent:#7fc0cf;--on-accent:#0b0b0b;--accent-text:#93cdda;--accent-soft:rgba(127,192,207,0.14);--accent-line:rgba(127,192,207,0.42)}
+[data-theme="dark"][data-accent="pink"],[data-theme="dark"] [data-accent="pink"]{--accent:#eba3bd;--on-accent:#0b0b0b;--accent-text:#f1b6cb;--accent-soft:rgba(235,163,189,0.15);--accent-line:rgba(235,163,189,0.42)}
+[data-accent="blue"]{--accent:#3b6fb0;--on-accent:#ffffff;--accent-text:#2c5892;--accent-soft:rgba(59,111,176,0.13);--accent-line:rgba(59,111,176,0.42)}
+[data-theme="dark"][data-accent="blue"],[data-theme="dark"] [data-accent="blue"]{--accent:#8fb4e6;--on-accent:#0b0b0b;--accent-text:#a3c4ee;--accent-soft:rgba(143,180,230,0.15);--accent-line:rgba(143,180,230,0.42)}
+[data-accent="violet"]{--accent:#7454b0;--on-accent:#ffffff;--accent-text:#5d3f96;--accent-soft:rgba(116,84,176,0.13);--accent-line:rgba(116,84,176,0.42)}
+[data-theme="dark"][data-accent="violet"],[data-theme="dark"] [data-accent="violet"]{--accent:#b8a2e8;--on-accent:#0b0b0b;--accent-text:#c7b5ee;--accent-soft:rgba(184,162,232,0.15);--accent-line:rgba(184,162,232,0.42)}
+[data-accent="coral"]{--accent:#c4522a;--on-accent:#ffffff;--accent-text:#a03f1c;--accent-soft:rgba(196,82,42,0.13);--accent-line:rgba(196,82,42,0.42)}
+[data-theme="dark"][data-accent="coral"],[data-theme="dark"] [data-accent="coral"]{--accent:#f0a07f;--on-accent:#0b0b0b;--accent-text:#f4b096;--accent-soft:rgba(240,160,127,0.15);--accent-line:rgba(240,160,127,0.42)}
+[data-accent="graphite"]{--accent:#3a3a3a;--on-accent:#ffffff;--accent-text:#1f1f1f;--accent-soft:rgba(58,58,58,0.13);--accent-line:rgba(58,58,58,0.42)}
+[data-theme="dark"][data-accent="graphite"],[data-theme="dark"] [data-accent="graphite"]{--accent:#d0d0d0;--on-accent:#0b0b0b;--accent-text:#e6e6e6;--accent-soft:rgba(208,208,208,0.15);--accent-line:rgba(208,208,208,0.42)}
+:root,[data-theme="light"]{--sw-green:#5b7c26;--sw-teal:#2f7686;--sw-blue:#3b6fb0;--sw-violet:#7454b0;--sw-pink:#b04570;--sw-coral:#c4522a;--sw-amber:#a06f08;--sw-graphite:#3a3a3a;}
+[data-theme="dark"]{--sw-green:#a3bc69;--sw-teal:#7fc0cf;--sw-blue:#8fb4e6;--sw-violet:#b8a2e8;--sw-pink:#eba3bd;--sw-coral:#f0a07f;--sw-amber:#f2cc85;--sw-graphite:#d0d0d0;}
+/* swatch picker (Settings, Interface) */
+.pg-swatches{display:flex;gap:0.75rem;align-items:center}
+.pg-swatch{position:relative;width:2.125rem;height:2.125rem;padding:0;border:0;border-radius:50%;background:var(--sw);cursor:pointer;flex:none;transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+.pg-swatch:hover{transform:scale(1.08)}
+.pg-swatch::before{content:"";position:absolute;inset:-0.3125rem;border-radius:50%;border:0.125rem solid var(--sw);opacity:0;transform:scale(.86);transition:opacity .2s,transform .25s cubic-bezier(.2,.8,.2,1)}
+.pg-swatch[aria-checked="true"]::before{opacity:1;transform:none}
+.pg-swatch:focus-visible{outline:0.125rem solid var(--ink);outline-offset:0.375rem}
+.pg-swatch.is-pop{animation:pg-swpop .7s cubic-bezier(.2,.8,.2,1)}
+.pg-swatch.is-pop::after{content:"";position:absolute;inset:-0.3125rem;border-radius:50%;border:0.125rem solid var(--sw);animation:pg-swping .9s cubic-bezier(.1,.7,.2,1) forwards;pointer-events:none}
+@keyframes pg-swpop{0%{transform:scale(.82)}45%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes pg-swping{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(2.6)}}
+/* burst layer (appended to <body> by PhoneGyro.accent.set) */
+.pg-burst{position:fixed;inset:0;z-index:2147483000;pointer-events:none;view-transition-name:pg-burst;contain:strict}
+.pg-burst svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.pg-burst circle{fill:none;vector-effect:non-scaling-stroke;transform-box:view-box}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-old(root){z-index:1}
+::view-transition-new(root){z-index:2}
+::view-transition-group(pg-burst),::view-transition-old(pg-burst),::view-transition-new(pg-burst){animation:none;mix-blend-mode:normal}
+::view-transition-old(pg-burst){display:none}
+
+/* title bar info: name, version, app status, update watch. Monochrome on purpose (ink tokens only). */
+.pg-titlebar__title{gap:0.625rem;min-width:0;flex:1;overflow:hidden;white-space:nowrap}
+.pg-titlebar__title .pg-mark{width:0.875rem;height:0.875rem;flex:none}
+.pg-titlebar__title .pg-mark *{stroke:currentColor!important}
+.pg-titlebar__title .pg-mark .a{fill:currentColor!important}
+.pg-tbi{display:inline-flex;align-items:center;gap:0.375rem;flex:none;font:500 0.6875rem/1 var(--font-mono);letter-spacing:.02em;color:var(--ink-2)}
+.pg-tbi--name{font:700 0.75rem/1 var(--font-sans);letter-spacing:.01em;color:var(--ink)}
+.pg-titlebar__ver{font:400 0.6875rem/1 var(--font-mono);letter-spacing:.02em;color:var(--ink-2);flex:none}
+.pg-tbi__sep{flex:none;width:1px;height:0.75rem;background:var(--line)}
+.pg-tbi__dot{width:0.4375rem;height:0.4375rem;border-radius:50%;border:0.0938rem solid var(--ink-3);box-sizing:border-box}
+.pg-tbi__dot.is-on{background:var(--ink);border-color:var(--ink)}
+.pg-tbi--upd{color:var(--ink-3);min-width:0}
+.pg-tbi--upd svg{width:0.75rem;height:0.75rem;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.pg-tbi--upd.is-on{color:var(--ink-2)}
+.pg-tbi--upd.is-new{color:var(--ink);font-weight:700}
+.pg-tbi--upd span{overflow:hidden;text-overflow:ellipsis}
+@container pgwin (max-width:859px){.pg-tbi--app,.pg-tbi--app+.pg-tbi__sep{display:none}}
+@container pgwin (max-width:639px){.pg-tbi--upd span{display:none}.pg-titlebar__ver{display:none}}

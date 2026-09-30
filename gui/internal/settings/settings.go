@@ -72,14 +72,18 @@ type Settings struct {
 
 // ValidAccent reports whether a is one of the UI accent colours.
 func ValidAccent(a string) bool {
-	return a == "gold" || a == "green" || a == "blue" || a == "pink"
+	switch a {
+	case "green", "teal", "blue", "violet", "pink", "coral", "amber", "graphite":
+		return true
+	}
+	return false
 }
 
 // Defaults is a first launch's settings (DSUMAC is left empty: Load makes one).
 func Defaults() Settings {
 	return Settings{
 		Theme:                 "dark",
-		Accent:                "gold",
+		Accent:                "amber",
 		Lang:                  "ru",
 		FontScale:             1.00,
 		ActiveSlot:            -1,
@@ -234,6 +238,9 @@ func Load(dir string) (s Settings, found bool) {
 
 	if r.Theme == "dark" || r.Theme == "light" {
 		s.Theme = r.Theme
+	}
+	if r.Accent == "gold" { // the first palette's gold is the design's amber
+		r.Accent = "amber"
 	}
 	if ValidAccent(r.Accent) {
 		s.Accent = r.Accent

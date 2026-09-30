@@ -43,4 +43,5 @@ export async function startHeader() {
   onState(renderStatus);
   on('theme-sync', applyTheme);
   applyTheme(await call('GetTheme'));
+  markLang(); // highlight the active language button immediately
 }

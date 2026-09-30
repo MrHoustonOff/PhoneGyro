@@ -2,7 +2,7 @@
 // resizing are the Wails runtime's (--wails-draggable in the CSS); this wires the
 // three buttons, double-click to maximize, the restore icon and the blur dimming.
 
-import { $, setText, toggleClass } from '../core/dom.js';
+import { $, setText, show, toggleClass } from '../core/dom.js';
 import { call, ready, runtime } from '../core/bridge.js';
 
 export function startTitlebar() {
@@ -25,5 +25,11 @@ export function startTitlebar() {
     bar.addEventListener('dblclick', (e) => { if (!e.target.closest('.pg-titlebar__ctl')) toggleMax(); });
   }, () => {});
 
-  call('GetAppVersion').then((v) => { if (v) setText($('tb-ver'), `${v.release}.${v.build}`); });
+  call('GetAppVersion').then((v) => {
+    if (!v) return;
+    setText($('tb-ver'), `v${v.release}.${v.build}`);
+    const dev = v.channel !== 'release';
+    const chan = $('tb-chan');
+    if (chan) { show(chan, dev); if (dev) setText(chan, 'DEV'); }
+  });
 }
