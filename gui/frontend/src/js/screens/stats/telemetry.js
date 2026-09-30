@@ -33,6 +33,28 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
   return pts.join(' ');
 }
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatDsuClientsLabel(count) {
+  const lang = (window.__i18nLang || document.documentElement.lang || 'ru').toLowerCase();
+  if (lang.startsWith('en')) {
+    return count === 1
+      ? (t('live_debug.stats_dsu_clients_one') || 'active')
+      : (t('live_debug.stats_dsu_clients_many') || 'active');
+  }
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod100 >= 11 && mod100 <= 14) {
+    return t('live_debug.stats_dsu_clients_many') || 'активных';
+  }
+  if (mod10 === 1) {
+    return t('live_debug.stats_dsu_clients_one') || 'активный';
+  }
+  return t('live_debug.stats_dsu_clients_many') || 'активных';
+}
+
 function setBadge(el, status, text = null) {
   if (!el) return;
   if (status === 'none') {
@@ -89,16 +111,97 @@ export function initTelemetry(paneEl) {
     noise: [],
   };
 
+  let latestUsbProto = null;
+
+  function renderUsbProto(msg) {
+    const card = $('stats-usb-card');
+    if (!card) return;
+
+    if (!msg) {
+      setText($('stats-usb-l1'), '—');
+      setBadge($('stats-usb-badge-l1'), 'none', '—');
+      setText($('stats-usb-l2'), '—');
+      setBadge($('stats-usb-badge-l2'), 'none', '—');
+      setText($('stats-usb-l3'), '—');
+      setBadge($('stats-usb-badge-l3'), 'none', '—');
+      setText($('stats-usb-l4'), '—');
+      setBadge($('stats-usb-badge-l4'), 'none', '—');
+      setText($('stats-usb-l5'), '—');
+      setBadge($('stats-usb-badge-l5'), 'none', '—');
+      return;
+    }
+
+    // L1: Transport (connected, port, baud)
+    const port = msg.port || 'USB';
+    const baud = msg.baud ? `${msg.baud} ${t('live_debug.stats_usb_baud_unit') || 'бод'}` : '—';
+    setText($('stats-usb-l1'), `${port} · ${baud}`);
+    setBadge(
+      $('stats-usb-badge-l1'),
+      msg.connected ? 'ok' : 'none',
+      msg.connected ? (t('live_debug.stats_usb_conn_ok') || 'подключен') : (t('live_debug.stats_usb_conn_none') || 'нет')
+    );
+
+    // L2: Frames (rate_hz, frames, lost, crc_rejects, garbage_bytes)
+    const rate = msg.rate_hz != null ? Number(msg.rate_hz) : 0;
+    const frames = msg.frames || 0;
+    const lost = msg.lost || 0;
+    const crc = msg.crc_rejects || 0;
+    const hzUnit = t('live_debug.stats_hz_unit') || 'Гц';
+    const frUnit = t('live_debug.stats_usb_frames') || 'фр.';
+    const lossUnit = t('live_debug.stats_usb_loss') || 'потерь';
+    const crcUnit = t('live_debug.stats_usb_crc') || 'CRC';
+    const l2Val = `${rate > 0 ? rate.toFixed(0) : '—'} ${hzUnit} · ${frames} ${frUnit} (${lossUnit}: ${lost}, ${crcUnit}: ${crc})`;
+    setText($('stats-usb-l2'), l2Val);
+    if (lost > 0 || crc > 0) {
+      setBadge($('stats-usb-badge-l2'), 'warn', `${lost + crc} ош.`);
+    } else if (rate > 0 || frames > 0) {
+      setBadge($('stats-usb-badge-l2'), 'ok', 'стабильно');
+    } else {
+      setBadge($('stats-usb-badge-l2'), 'none', '—');
+    }
+
+    // L3: Protocol (meta_seen, protocol, gyro_range_dps, accel_range_g, declared_hz, meta_age_ms)
+    const proto = msg.protocol ? `v${msg.protocol}` : '—';
+    const gyroR = msg.gyro_range_dps ? `±${msg.gyro_range_dps}°/s` : '—';
+    const accR = msg.accel_range_g ? `±${msg.accel_range_g}g` : '—';
+    const declHz = msg.declared_hz ? `${msg.declared_hz} ${hzUnit}` : '—';
+    setText($('stats-usb-l3'), `${proto} · ${gyroR} · ${accR} · ${declHz}`);
+    const metaAge = msg.meta_age_ms || 0;
+    if (msg.meta_seen && metaAge > 5000) {
+      setBadge($('stats-usb-badge-l3'), 'warn', t('live_debug.stats_usb_meta_stale') || 'устарели');
+    } else if (msg.meta_seen) {
+      setBadge($('stats-usb-badge-l3'), 'ok', t('live_debug.stats_usb_meta_ok') || 'актуален');
+    } else {
+      setBadge($('stats-usb-badge-l3'), 'none', '—');
+    }
+
+    // L4: Device (name)
+    setText($('stats-usb-l4'), msg.name || '—');
+    setBadge(
+      $('stats-usb-badge-l4'),
+      msg.name ? 'ok' : 'none',
+      msg.name ? (t('live_debug.stats_usb_identified') || 'определен') : '—'
+    );
+
+    // L5: Reset (reset_button, reset_presses)
+    const hasReset = !!msg.reset_button;
+    const presses = msg.reset_presses || 0;
+    const l5Val = hasReset
+      ? `${t('live_debug.stats_usb_btn_present') || 'Кнопка есть'} · ${presses} наж.`
+      : (t('live_debug.stats_usb_btn_none') || 'Нет кнопки');
+    setText($('stats-usb-l5'), l5Val);
+    setBadge(
+      $('stats-usb-badge-l5'),
+      hasReset ? 'ok' : 'none',
+      hasReset ? 'ok' : '—'
+    );
+  }
+
   function handleUsbProto(msg) {
     if (!msg) return;
-    const l1 = $('stats-usb-l1');
-    const l2 = $('stats-usb-l2');
-    const l3 = $('stats-usb-l3');
-    const l4 = $('stats-usb-l4');
-    if (l1) setText(l1, `${msg.port || 'USB'} · ${msg.baud || 115200}`);
-    if (l2) setText(l2, `${(msg.rate_hz || 0).toFixed(0)} Гц · ${msg.frames || 0} фр.`);
-    if (l3) setText(l3, `${msg.protocol || 'v1.1.0'} · ±${msg.gyro_range_dps || 2000}°/s · ±${msg.accel_range_g || 8}g`);
-    if (l4) setText(l4, `${msg.crc_rejects || 0} CRC · ${msg.lost || 0} потерь`);
+    latestUsbProto = msg;
+    if (msg.declared_hz) deriveEngine.setDeclaredUsbHz(msg.declared_hz);
+    renderUsbProto(msg);
   }
 
   function feedStreamFrame(msg) {
@@ -663,24 +766,27 @@ export function initTelemetry(paneEl) {
 
     // ═══ GROUP E: DSU Clients & Session ═══
     setText($('stat-dsu-count'), String(res.dsuCount));
+    setText($('stat-dsu-label'), formatDsuClientsLabel(res.dsuCount));
     setBadge($('stat-dsu-badge'), res.dsuCount > 0 ? 'ok' : 'none', String(res.dsuCount));
 
     const dsuNameEl = $('stat-dsu-client-name');
     if (dsuNameEl) {
       if (res.dsuList && res.dsuList.length > 0) {
+        dsuNameEl.style.display = '';
         dsuNameEl.innerHTML = `
           <div class="app-dsu-client-list">
             ${res.dsuList.map((c) => `
               <div class="app-dsu-client-row">
-                <b>${c.process}</b>
-                <span>${c.address}</span>
-                <span class="pg-badge pg-badge--ok">активен</span>
+                <b>${escapeHtml(c.process || c.name || 'DSU Client')}</b>
+                <span>${escapeHtml(c.address || c.addr || '')}</span>
+                <span class="pg-badge pg-badge--ok">${escapeHtml(c.status || t('live_debug.stats_dsu_client_active_status') || 'активен')}</span>
               </div>
             `).join('')}
           </div>
         `;
       } else {
-        dsuNameEl.textContent = '—';
+        dsuNameEl.style.display = 'none';
+        dsuNameEl.innerHTML = '';
       }
     }
 
@@ -692,6 +798,16 @@ export function initTelemetry(paneEl) {
     setText($('stat-res-cpu'), res.cpuPercent === '—' ? '—' : `${res.cpuPercent}%`);
     setText($('stat-res-ram'), res.ramMb === '—' ? '—' : `${res.ramMb} MB`);
     setBadge($('stat-res-badge'), res.resStatus, res.resStatus === 'ok' ? 'ok' : 'warn');
+
+    // ═══ GROUP F: USB Protocol (Live Update) ═══
+    const isUsb = !!(latestState?.inputMode === 'usb');
+    const usbCard = $('stats-usb-card');
+    if (usbCard) {
+      usbCard.hidden = !isUsb;
+      if (isUsb) {
+        renderUsbProto(latestUsbProto);
+      }
+    }
 
     // Offline overlay
     const offlineOverlay = $('stats-3d-offline');
@@ -706,18 +822,29 @@ export function initTelemetry(paneEl) {
     }
   };
 
+  let latestState = null;
+
   // Render State (15Hz from Go AppState)
   const renderState = (state) => {
     if (!isActive || !state) return;
+    latestState = state;
     deriveEngine.feedState(state);
 
-    // USB Status
-    const isUsb = !!(state.usbConnected || state.inputMode === 'usb');
-    show($('stats-usb-card'), isUsb);
-    if (isUsb && state.usbPort) {
-      const l1 = $('stats-usb-l1');
-      if (l1 && l1.textContent === '—') {
-        setText(l1, `${state.usbPort} · 115200`);
+    // USB Status (Group F)
+    const isUsb = !!(state.inputMode === 'usb');
+    const usbCard = $('stats-usb-card');
+    if (usbCard) {
+      usbCard.hidden = !isUsb;
+      if (isUsb) {
+        if (!latestUsbProto && state.usbPort) {
+          renderUsbProto({
+            connected: !!state.usbConnected,
+            port: state.usbPort,
+            baud: 115200,
+          });
+        } else {
+          renderUsbProto(latestUsbProto);
+        }
       }
     }
 
@@ -744,6 +871,8 @@ export function initTelemetry(paneEl) {
       on('tuning:frame', handleTuningFrame);
       on('livedebug:telemetry', handleLiveTelemetry);
       on('ahrs:quat', handleAhrsQuat);
+      on('usb_proto', handleUsbProto);
+      on('usb:status', handleUsbProto);
       call('SetTuningActive', true).catch(() => {});
       call('GetAppSettings').then((s) => deriveEngine.feedSettings(s)).catch(() => {});
       call('GetResourceStats').then((r) => deriveEngine.feedResources(r)).catch(() => {});
@@ -763,6 +892,8 @@ export function initTelemetry(paneEl) {
       off('tuning:frame', handleTuningFrame);
       off('livedebug:telemetry', handleLiveTelemetry);
       off('ahrs:quat', handleAhrsQuat);
+      off('usb_proto', handleUsbProto);
+      off('usb:status', handleUsbProto);
       off('resource-stats', handleResourceStats);
       call('SetTuningActive', false).catch(() => {});
       if (ws) {

@@ -499,8 +499,8 @@ export class TelemetryDeriveEngine {
     const outGz = formatAxis(outGzVal);
 
     // ── 6. GROUP E: Clients & Session ──
-    const dsuCount = Number(frame.dsu_clients ?? state.dsuClients ?? (state.dsuClientList?.length ?? 0));
-    const dsuList = (frame.dsu_client_list ?? state.dsuClientList ?? []).map((c) => ({
+    const dsuCount = Number(frame.dsu_clients ?? state.dsuClients ?? (state.dsuClientList?.length ?? state.dsuClientsList?.length ?? 0));
+    const dsuList = (frame.dsu_client_list ?? state.dsuClientList ?? state.dsuClientsList ?? []).map((c) => ({
       process: c.process || c.Process || c.name || 'Client',
       address: c.address || c.Address || `${c.ip || c.IP || '127.0.0.1'}:${c.port || c.Port || ''}`,
       active: c.active ?? true,

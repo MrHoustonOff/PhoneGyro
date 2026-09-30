@@ -351,35 +351,6 @@
                 </div>
               </div>
 
-              <!-- USB Protocol Status Card (shown when USB controller is connected) -->
-              <div class="pg-card" id="stats-usb-card" style="padding:0.625rem 0.875rem" hidden>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.375rem">
-                  <div class="pg-card__title" style="display:flex;align-items:center;gap:0.375rem">
-                    <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
-                    <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
-                  </div>
-                  <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:0.25rem;font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2)">
-                  <div style="display:flex;justify-content:space-between">
-                    <span>L1: Порт / Бод</span>
-                    <b style="color:var(--ink)" id="stats-usb-l1">—</b>
-                  </div>
-                  <div style="display:flex;justify-content:space-between">
-                    <span>L2: Частота / Кадры</span>
-                    <b style="color:var(--ink)" id="stats-usb-l2">—</b>
-                  </div>
-                  <div style="display:flex;justify-content:space-between">
-                    <span>L3: Диапазоны</span>
-                    <b style="color:var(--ink)" id="stats-usb-l3">—</b>
-                  </div>
-                  <div style="display:flex;justify-content:space-between">
-                    <span>L4: Ошибки / Потери</span>
-                    <b style="color:var(--ink)" id="stats-usb-l4">—</b>
-                  </div>
-                </div>
-              </div>
-
               <!-- Metric Cards in 3-column .pg-stats grid, grouped by importance (A-E) -->
               <div class="pg-stats">
                 <!-- ═══ GROUP A: Connection & Link Quality ═══ -->
@@ -492,31 +463,61 @@
                   </div>
                 </div>
 
-                <!-- ═══ GROUP F: USB Protocol (shown only on USB mode) ═══ -->
-                <div class="pg-card pg-stat--full" id="stats-usb-card" style="padding:0.625rem 0.875rem" data-i18n-title="ui.stats_usb_tip" hidden>
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.375rem">
-                    <div class="pg-card__title" style="display:flex;align-items:center;gap:0.375rem">
+                <!-- ═══ GROUP F: USB Protocol (shown only on USB mode, between A and B) ═══ -->
+                <div class="pg-card pg-stat--full app-stat-usb-card" id="stats-usb-card" data-i18n-title="ui.stats_usb_tip" hidden>
+                  <div class="app-cal-ring-corner app-cal-ring-corner--tr"></div>
+                  <div class="pg-card__head app-stat-usb-head">
+                    <div class="pg-card__title app-stat-usb-title">
                       <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
                       <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
                     </div>
                     <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
                   </div>
-                  <div style="display:flex;flex-direction:column;gap:0.25rem;font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2)">
-                    <div style="display:flex;justify-content:space-between">
-                      <span>L1: Порт / Бод</span>
-                      <b style="color:var(--ink)" id="stats-usb-l1">—</b>
+                  <div class="app-usb-rows">
+                    <!-- L1 Transport -->
+                    <div class="app-usb-row" id="stats-usb-row-l1" data-i18n-title="ui.stats_usb_l1_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L1</span>
+                        <span data-i18n="ui.stats_usb_l1_title">Канал</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l1">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l1">—</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <span>L2: Частота / Кадры</span>
-                      <b style="color:var(--ink)" id="stats-usb-l2">—</b>
+                    <!-- L2 Frames -->
+                    <div class="app-usb-row" id="stats-usb-row-l2" data-i18n-title="ui.stats_usb_l2_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L2</span>
+                        <span data-i18n="ui.stats_usb_l2_title">Поток</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l2">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l2">—</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <span>L3: Диапазоны</span>
-                      <b style="color:var(--ink)" id="stats-usb-l3">—</b>
+                    <!-- L3 Protocol -->
+                    <div class="app-usb-row" id="stats-usb-row-l3" data-i18n-title="ui.stats_usb_l3_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L3</span>
+                        <span data-i18n="ui.stats_usb_l3_title">Протокол</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l3">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l3">—</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between">
-                      <span>L4: Ошибки / Потери</span>
-                      <b style="color:var(--ink)" id="stats-usb-l4">—</b>
+                    <!-- L4 Device -->
+                    <div class="app-usb-row" id="stats-usb-row-l4" data-i18n-title="ui.stats_usb_l4_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L4</span>
+                        <span data-i18n="ui.stats_usb_l4_title">Устройство</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l4">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l4">—</span>
+                    </div>
+                    <!-- L5 Reset -->
+                    <div class="app-usb-row" id="stats-usb-row-l5" data-i18n-title="ui.stats_usb_l5_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L5</span>
+                        <span data-i18n="ui.stats_usb_l5_title">Сброс</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l5">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l5">—</span>
                     </div>
                   </div>
                 </div>
@@ -669,11 +670,11 @@
                     <span data-i18n="live_debug.stats_dsu_clients">Клиенты DSU</span>
                     <span class="pg-badge pg-badge--ok" id="stat-dsu-badge">0</span>
                   </div>
-                  <div class="pg-stat__value">
+                  <div class="pg-stat__value app-dsu-clients-val">
                     <span id="stat-dsu-count">0</span>
-                    <span class="pg-stat__unit" id="stat-dsu-label" data-i18n="live_debug.stats_dsu_clients_active">активен</span>
+                    <span class="pg-stat__unit" id="stat-dsu-label" data-i18n="live_debug.stats_dsu_clients_active">активных</span>
                   </div>
-                  <div id="stat-dsu-client-name" style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:0.25rem">—</div>
+                  <div id="stat-dsu-client-name" style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:0.25rem;display:none"></div>
                 </div>
 
                 <!-- 17. Session Stats -->
