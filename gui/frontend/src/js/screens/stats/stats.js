@@ -58,10 +58,9 @@ async function ensureSubtabsLoaded() {
   subtabsLoaded = true;
 
   try {
-    // Dynamic import of subtab handlers when first demanded
-    // For Step 1, controllers can be light placeholders or initial skeleton drivers
+    const { initTelemetry } = await import('./telemetry.js');
     subtabControllers = {
-      telemetry: null,
+      telemetry: initTelemetry($('pane-telemetry')),
       games: null,
       bench: null,
     };
