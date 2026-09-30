@@ -421,13 +421,12 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 :root, [data-theme="light"] { --tile: #e4e3dd; --tile-hi: #d7d6cf; --tile-line: rgba(0, 0, 0, 0.16); }
 [data-theme="dark"] { --tile: #303030; --tile-hi: #3c3c3c; --tile-line: rgba(255, 255, 255, 0.16); }
 /* Tiles have no image texture at all (a noise tile costs a raster layer and reads as dirt on small blocks).
-   Their character is drawn with gradients: small tiles get a lift (light from above + bevel), large panels a fine dot grid. */
+   Their character is drawn with gradients: small tiles get a lift (light from above + bevel), large panels the same lift. */
 :root {
   --tile-tex: none;
   --tile-hi-tex: none;
   --tile-lift: linear-gradient(180deg, color-mix(in srgb, var(--tile-hi) 70%, transparent), transparent 65%);
   --tile-bevel: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent), inset 0 -1px 0 color-mix(in srgb, #000 20%, transparent);
-  --tile-dots: radial-gradient(color-mix(in srgb, var(--ink) 16%, transparent) 0.06rem, transparent 0.07rem) 0 0 / 0.75rem 0.75rem;
 }
 .app-axcards { display: flex; flex-direction: column; gap: 0.375rem; }
 .app-axcards .app-cal-mcards { gap: 0.5rem; }
@@ -1336,11 +1335,25 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 
 /* Tile character (see the tokens near the top): last, so it wins over the flat fills above. */
-.app-cal-axis, .app-cal-vstat, .app-cal-mcard, .app-cal-preview-profile {
+.app-cal-axis, .app-cal-vstat, .app-cal-mcard, .app-cal-preview-profile,
+.app-cal-run, .app-cal-action-box.pg-notice, .app-cal-preview-card, .app-cal-mountnote, .app-cal-matrix-card, .app-cal-mount {
   background: var(--tile-lift) var(--tile);
   box-shadow: var(--tile-bevel);
 }
 .app-cal-axis.is-locked { background: color-mix(in srgb, var(--accent) 15%, var(--tile)); }
-.app-cal-run, .app-cal-action-box.pg-notice, .app-cal-preview-card, .app-cal-mountnote, .app-cal-matrix-card, .app-cal-mount {
-  background: var(--tile-dots) var(--tile);
+
+/* Control profiles: the current-profile button and the list bubbles use the tile look. */
+#prof-current, #prof-menu .app-menu__item {
+  background: var(--tile-lift) var(--tile);
+  border: 1px solid var(--tile-line);
+  box-shadow: var(--tile-bevel);
 }
+#prof-menu { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem; background: var(--surface-raised); }
+#prof-menu .app-menu__item { border-radius: var(--radius-lg); }
+#prof-menu .app-menu__item:hover { background: var(--tile-lift) var(--tile-hi); border-color: var(--line-control); }
+#prof-menu .app-menu__item.is-active {
+  background: color-mix(in srgb, var(--accent) 15%, var(--tile));
+  border-color: var(--accent-line);
+}
+#prof-menu .app-menu__icon, #prof-current .app-menu__icon { background: var(--tile-hi); border-color: var(--tile-line); }
+#prof-current:hover { border-color: var(--line-control); }
