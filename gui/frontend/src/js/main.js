@@ -13,7 +13,7 @@ import { startTooltips } from './ui/tooltip.js';
 import { startSelects } from './ui/select.js';
 import { startZoom } from './ui/zoom.js';
 import { startAccent } from './ui/accent.js';
-import { startDebug } from './debug/toggle.js';
+import { startDebug, debugBooted } from './debug/toggle.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
@@ -55,6 +55,7 @@ async function boot() {
   startAccent();
   syncSplashSetting();
   startNotices();         // after the strings: they are shown in full
+  debugBooted();
 }
 
 const booted = boot().catch((e) => console.error('PhoneGyro UI start failed:', e));

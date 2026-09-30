@@ -176,10 +176,10 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
-    "debug_panel": "Debug panel",
-    "debug_panel_tip": "A panel over the window: FPS, stalls, memory, load, link, window. Ctrl+Shift+Alt+D also opens and closes it while the PhoneGyro window is active. Closed, it measures nothing.",
+    "debug_panel": "Debug window",
+    "debug_panel_tip": "A separate window (its own process, about 100 MB while open): the main window's FPS and frame time, CPU, RAM, sensor and ping with graphs, start phases, warnings and errors. When on, it starts before everything else and sees the start. Ctrl+Shift+Alt+D in the PhoneGyro window opens or closes it for now.",
     "debug_log": "Write the debug log",
-    "debug_log_tip": "While the debug panel is open: a summary line a second plus lines about stalls, ping and sensor rate in logs/debug.log (data folder). Past 5 MB the file starts over.",
+    "debug_log_tip": "Writes logs/debug.log (data folder): a session header, start phases, a summary line a second, warnings and errors. When on, it starts before everything else. Past 5 MB the file starts over.",
     "accent": "Accent colour",
     "accent_tip": "The colour of toggles, highlights, active tabs and indicators.",
     "accent_gold": "Gold",

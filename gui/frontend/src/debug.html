@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PhoneGyro Debug</title>
+<script>
+  (function () {
+    var d = document.documentElement, t = null, a = null;
+    try { t = localStorage.getItem('pg-theme'); a = localStorage.getItem('pg-accent'); } catch (e) {}
+    if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
+    d.setAttribute('data-accent', a || 'gold');
+  })();
+</script>
+<link rel="stylesheet" href="css/pg.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/debug.css">
+<script type="module" src="js/debug/window.js"></script>
+</head>
+<body class="pg-app dbg">
+  <header class="dbg-head">
+    <b class="dbg-title">PhoneGyro Debug</b>
+    <span class="pg-badge pg-badge--dot" id="conn">connecting</span>
+    <span class="dbg-sub" id="uptime"></span>
+    <span class="app-grow"></span>
+    <label class="dbg-ontop"><span class="pg-toggle"><input type="checkbox" id="ontop"><span class="pg-toggle__track"></span></span>Always on top</label>
+    <button class="pg-btn pg-btn--sm" type="button" id="close">Turn debugging off</button>
+  </header>
+
+  <main class="dbg-main">
+    <section class="dbg-tiles" id="tiles"></section>
+
+    <section class="dbg-row">
+      <div class="pg-card dbg-card dbg-timeline">
+        <div class="pg-overline"><span class="pg-ring"></span>Start</div>
+        <ol id="phases"></ol>
+      </div>
+      <div class="pg-card dbg-card dbg-details">
+        <div class="pg-overline"><span class="pg-ring"></span>Details</div>
+        <div class="dbg-grid" id="details"></div>
+      </div>
+    </section>
+
+    <section class="pg-card dbg-card dbg-events">
+      <div class="dbg-events__head"><div class="pg-overline"><span class="pg-ring"></span>Events</div>
+        <div class="pg-seg" id="filter"><button class="pg-seg__btn is-active" type="button" data-f="all">All</button><button class="pg-seg__btn" type="button" data-f="WARN">Warnings</button><button class="pg-seg__btn" type="button" data-f="ERROR">Errors</button></div></div>
+      <div class="dbg-log" id="log"></div>
+    </section>
+  </main>
+</body>
+</html>

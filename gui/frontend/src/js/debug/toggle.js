@@ -1,37 +1,41 @@
-// Opens and closes the debug panel. The panel's code (debug/panel.js) is only
-// loaded the first time it opens. Ctrl+Shift+Alt+D toggles it while this window
-// is active (a page keydown: nothing global). With the setting on it opens at
-// once, over the launch animation: the setting is mirrored to localStorage so
-// the start does not wait for Go.
+// Debugging switch in the main window. The debug window itself is a separate
+// process run by Go (internal/app/debughub.go); here: the collector
+// (debug/collect.js) runs while Go's debug hub is active, and Ctrl+Shift+Alt+D
+// (only while this window is active) shows or closes the debug window.
+// localStorage mirrors the setting so collecting starts before the launch
+// animation, without waiting for Go.
 
-import { call } from '../core/bridge.js';
+import { call, on as onEvent, ready } from '../core/bridge.js';
+import { onScreen } from '../shell/router.js';
+import { startCollect, stopCollect, flushEarly, debugLog, debugPhase } from './collect.js';
 
-let panel = null;
-const load = () => (panel = panel || import('./panel.js'));
-const remember = (on) => { try { localStorage.setItem('pg-debug', on ? '1' : '0'); } catch (e) { /* next start waits for Go */ } };
+const remember = (v) => { try { localStorage.setItem('pg-debug', v ? '1' : '0'); } catch (e) { /* next start asks Go */ } };
 
-export async function setDebugPanel(on) {
-  remember(on);
-  if (!on && !panel) return;
-  const p = await load();
-  if (on) p.openPanel(); else p.closePanel();
+function apply(active) {
+  remember(active);
+  if (active) startCollect(); else stopCollect();
 }
 
-/** Called first thing at start (before the bridge and the launch animation). */
+/** Settings → Performance changed the debug window or log setting. */
+export function setDebugPanel(v) { remember(v); }
+
+/** First thing at start. */
 export function startDebug() {
-  addEventListener('keydown', async (e) => {
-    if (!(e.ctrlKey && e.shiftKey && e.altKey && e.code === 'KeyD')) return;
-    e.preventDefault();
-    const p = await load();
-    if (p.isOpen()) p.closePanel(); else p.openPanel();
-  }, true);
   let early = false;
   try { early = localStorage.getItem('pg-debug') === '1'; } catch (e) { /* ask Go */ }
-  if (early) setDebugPanel(true);
-  // Go's setting is the truth: open it if it is on, and keep the mirror right.
-  call('GetAppSettings').then((s) => {
-    if (!s) return;
-    remember(!!s.debugPanel);
-    if (s.debugPanel && !early) setDebugPanel(true);
-  });
+  if (early) { startCollect(); debugPhase('page start'); }
+  addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey && e.shiftKey && e.altKey && e.code === 'KeyD')) return;
+    e.preventDefault();
+    call('ToggleDebugWindow');
+  }, true);
+  onEvent('debug:active', apply);
+  onScreen((s) => debugLog('INFO', `screen: ${s}`));
+  ready.then(async () => {
+    flushEarly();
+    apply(!!(await call('IsDebugActive')));
+  }, () => {});
 }
+
+/** The UI finished booting (main.js). */
+export const debugBooted = () => debugPhase('ui ready');
