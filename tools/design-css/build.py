@@ -108,6 +108,8 @@ _still = [
     ("else if (st === 'rest') { y = .04 * Math.sin(t * .4); }", "else if (st === 'rest') { y = still ? 0 : .04 * Math.sin(t * .4); }"),
     ("else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }", "else if (still) { x = 0; y = 0; } else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }"),
     ("var eul = new T.Euler()", "var still = !!opts.still, eul = new T.Euler()"),
+    # floor lower (model turned in any pose stays above it)
+    ("var FLOOR = -.95,", "var FLOOR = opts.floor != null ? opts.floor : -.95,"),
     ("var S = { mode: opts.model || 'gamepad'", "var S = { views: opts.views || 'single', mode: opts.model || 'gamepad'"),
     # app-side camera views and quad scissor setup
     ("cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0);",
@@ -115,9 +117,9 @@ _still = [
      "var camTop = new T.PerspectiveCamera(28, 1, .1, 60); camTop.position.set(0, 8.4, 0); camTop.up.set(0, 0, -1); camTop.lookAt(0, 0, 0); "
      "var camRight = new T.PerspectiveCamera(28, 1, .1, 60); camRight.position.set(8.0, 0.3, 0); camRight.lookAt(0, -.12, 0); "
      "var camIso = new T.PerspectiveCamera(28, 1, .1, 60); camIso.position.set(3.1, 3.0, 8.8); camIso.lookAt(0, -.12, 0); "
-     "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view); "
+     "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else if (v === 'high') cam.position.set(0, 4.6, 6.4); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view); "
      "function setViews(v) { S.views = v; } if (opts.views) setViews(opts.views); "
-     "var oAz0 = Math.atan2(2.5, 7.1), oEl0 = Math.atan2(2.4, Math.hypot(2.5, 7.1)), oR0 = Math.hypot(2.5, 2.4, 7.1); "
+     "var oAz0 = 0, oEl0 = Math.atan2(4.6, 6.4), oR0 = Math.hypot(4.6, 6.4); "
      "function setOrbit(o) { var az = oAz0 + (o.yaw || 0), el = Math.max(-1.45, Math.min(1.45, oEl0 + (o.pitch || 0))), r = oR0 / (o.zoom || 1); "
      "var dir = new T.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)); "
      "var right = new T.Vector3(0, 1, 0).cross(dir).normalize(), up = dir.clone().cross(right).normalize(); "

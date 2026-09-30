@@ -327,6 +327,8 @@ export function initTelemetry(paneEl) {
         model: selectedModel,
         axes: true,
         still: true,
+        view: 'high', // in front, looking down
+        floor: -1.55, // the floor sits lower so a turned pad never cuts through it
         views: selectedCamMode === 'quad' ? 'quad' : 'single',
       });
       if (!isActive) {
