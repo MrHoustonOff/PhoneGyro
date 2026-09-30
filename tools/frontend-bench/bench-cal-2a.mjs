@@ -131,9 +131,8 @@ async function main() {
     // Advance to Step 3 (Roll)
     console.log('[Bench 2A] Advancing to Step 3 (Roll)...');
     await ev(() => {
-      // Simulate done and advance
-      const nextBtn = document.querySelector('#cal-foot [data-act="capture"]');
-      if (nextBtn) nextBtn.click();
+      const capBtn = document.querySelector('[data-act="capture"]');
+      if (capBtn) capBtn.click();
     });
     await sleep(4200); // 1300ms countdown + 2400ms recording + buffer
     await ev(() => {
@@ -149,8 +148,8 @@ async function main() {
     // Advance to Step 4 (Axes)
     console.log('[Bench 2A] Advancing to Step 4 (Axes)...');
     await ev(() => {
-      const nextBtn = document.querySelector('#cal-foot [data-act="capture"]');
-      if (nextBtn) nextBtn.click();
+      const capBtn = document.querySelector('[data-act="capture"]');
+      if (capBtn) capBtn.click();
     });
     await sleep(4200);
     await ev(() => {
@@ -194,7 +193,7 @@ async function main() {
     console.log('[Bench 2A] Testing narrow window (820px)...');
     await p.S('Emulation.setDeviceMetricsOverride', {
       width: 820,
-      height: 700,
+      height: 720,
       deviceScaleFactor: 1,
       mobile: false,
     });
@@ -202,11 +201,24 @@ async function main() {
     const shotNarrow = await p.screenshot();
     writeFileSync(path.join(OUT_DIR, '06_narrow_820px.png'), shotNarrow);
 
-    // Reset window size and theme
-    await p.S('Emulation.clearDeviceMetricsOverride');
-    await ev(() => {
+    // Zoom 200% test
+    console.log('[Bench 2A] Testing 200% zoom...');
+    await ev(async () => {
+      const { setZoom } = await import('./js/ui/zoom.js');
+      setZoom(2.0, { save: false, quiet: true });
+    });
+    await sleep(400);
+    const shotZoom = await p.screenshot();
+    writeFileSync(path.join(OUT_DIR, '07_zoom_200.png'), shotZoom);
+
+    // Reset zoom, window size and theme
+    await ev(async () => {
+      const { setZoom } = await import('./js/ui/zoom.js');
+      setZoom(1.0, { save: false, quiet: true });
       document.documentElement.setAttribute('data-theme', 'dark');
     });
+    await p.S('Emulation.clearDeviceMetricsOverride');
+    await sleep(200);
 
     // Close modal test
     console.log('[Bench 2A] Navigating back to step 1 and clicking Back to close...');

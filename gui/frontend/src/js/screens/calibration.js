@@ -58,6 +58,12 @@ export function showDisconnectAlert() {
   if (modalEl) {
     modalEl.classList.add('is-disconnected');
     modalEl.scrollTop = 0;
+    const head = modalEl.querySelector('.pg-modal__head');
+    const bdy = modalEl.querySelector('.pg-modal__body');
+    const ft = modalEl.querySelector('.pg-modal__foot');
+    if (head) head.inert = true;
+    if (bdy) bdy.inert = true;
+    if (ft) ft.inert = true;
   }
 
   // If capture was running, abort countdown/recording safely
@@ -86,6 +92,12 @@ export function hideDisconnectAlert(opts = {}) {
   const modalEl = el().querySelector('.app-cal-modal');
   if (modalEl) {
     modalEl.classList.remove('is-disconnected');
+    const head = modalEl.querySelector('.pg-modal__head');
+    const bdy = modalEl.querySelector('.pg-modal__body');
+    const ft = modalEl.querySelector('.pg-modal__foot');
+    if (head) head.inert = false;
+    if (bdy) bdy.inert = false;
+    if (ft) ft.inert = false;
   }
 
   const alertOverlay = $('cal-disconnect-overlay');
@@ -95,11 +107,13 @@ export function hideDisconnectAlert(opts = {}) {
 
   if (!opts.silent) {
     // TODO: playSound('connect')
-    toast(c('disconnect_reconnected_toast') || 'Телефон подключен. Нажмите «Запись», чтобы повторить шаг.');
   }
 
   if (S.wasInterruptedByDisconnect) {
     S.wasInterruptedByDisconnect = false;
+    if (!opts.silent) {
+      toast(c('disconnect_reconnected_toast'));
+    }
     render();
   }
 }
@@ -139,6 +153,8 @@ async function ensureScene(stepKey) {
         return;
       }
       S.scene = sc;
+      const currentStepKey = STEPS[S.step] ? STEPS[S.step].key : stepKey;
+      S.scene.setStep(currentStepKey);
     } catch (err) {
       console.error('Failed to create GyroScene:', err);
     } finally {
@@ -205,7 +221,7 @@ function render() {
           <span class="pg-viewport__tag">GAMEPAD</span>
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
-        <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer') || t('ui.cal_orientation_disclaimer'))}</div>
+        <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer'))}</div>
       </div>
     </div>`;
   } else {
@@ -221,7 +237,7 @@ function render() {
 
     if (S.phase === 'ready') {
       panelHTML = `<div class="pg-notice pg-notice--plain app-cal-action-box">
-        <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_ready_badge') || 'Ready to capture')}</span>
+        <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_ready_badge'))}</span>
         <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" data-act="capture">
           <svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"/></svg>
           ${esc(c(`step${n}_btn`))}
@@ -230,7 +246,7 @@ function render() {
     } else if (S.phase === 'run') {
       panelHTML = `<div class="app-cal-run">
         <div class="app-cal-runrow">
-          <span class="pg-badge pg-badge--warn pg-badge--dot">${esc(t('ui.cal_recording_badge') || 'Recording')}</span>
+          <span class="pg-badge pg-badge--warn pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
           <b id="cal-run-text">${esc(cfg.axes ? c('align_status_recording') : (cfg.rest ? c('status_recording_rest') : c('status_recording')))}</b>
           <span class="pg-badge" id="cal-run-count"></span>
         </div>
@@ -245,7 +261,10 @@ function render() {
           <b>${esc(cfg.axes ? c('align_success_title') : c('capture_success_title'))}</b>
           <span class="pg-notice__sub">${md(S.doneText || '')}</span>
         </span>
-      </div>`;
+      </div>
+      <button type="button" class="pg-btn pg-btn--block" data-act="capture">
+        ${esc(cfg.axes ? c('btn_recalibrate_align') : c('btn_retry'))}
+      </button>`;
     } else if (S.phase === 'fail') {
       panelHTML = `<div class="pg-notice pg-notice--danger">
         <span>
@@ -259,45 +278,38 @@ function render() {
     }
 
     leftCol.innerHTML = `
-      ${showStats ? `<div class="app-cal-stats pg-stats" id="cal-stats">
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span><span class="pg-badge" id="cal-badge-x">—</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-x">+0°/s</div>
-        </div>
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--y">Y</span><span class="pg-badge" id="cal-badge-y">—</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-y">+0°/s</div>
-        </div>
-        <div class="pg-stat">
-          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--z">Z</span><span class="pg-badge" id="cal-badge-z">—</span></div>
-          <div class="mono app-cal-stat-val" id="cal-val-z">+0°/s</div>
-        </div>
-      </div>` : ''}
       <div class="app-cal-info">
         <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
         <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
       </div>
+      ${showStats ? `<div class="app-cal-stats pg-stats" id="cal-stats">
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-x">+0°/s</div>
+        </div>
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--y">Y</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-y">+0°/s</div>
+        </div>
+        <div class="pg-stat">
+          <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--z">Z</span></div>
+          <div class="mono app-cal-stat-val" id="cal-val-z">+0°/s</div>
+        </div>
+      </div>` : ''}
       <div class="app-cal-panel">${panelHTML}</div>
     `;
   }
 
   // Update right column caption
-  const capText = c(`step${n}_caption`) || t(`ui.cal_cap_${stepKey}`);
+  const capText = c(`step${n}_caption`);
   setText($('cal-stage-cap'), capText);
 
-  // Footer buttons
+  // Footer buttons: left Back/Cancel, right Next (active when done)
   const backLabel = n === 0 ? c('btn_cancel') : c('btn_back');
   const backBtn = btn('back', backLabel, '', S.phase === 'run');
-  if (S.phase === 'ready') {
-    foot().innerHTML = backBtn + btn('capture', c(`step${n}_btn`), 'primary');
-  } else if (S.phase === 'run') {
-    foot().innerHTML = backBtn + btn('wait', cfg.axes ? c('align_recording_btn') : cfg.rest ? c('btn_recording_rest') : c('btn_recording'), 'primary', true);
-  } else if (S.phase === 'done') {
-    const nextLabel = n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step');
-    foot().innerHTML = backBtn + '<span class="app-grow"></span>' + btn('capture', cfg.axes ? c('btn_recalibrate_align') : c('btn_retry')) + btn('next', nextLabel, 'primary');
-  } else {
-    foot().innerHTML = backBtn + btn('capture', c('btn_retry'), 'primary');
-  }
+  const nextLabel = n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step');
+  const nextBtn = btn('next', nextLabel, S.phase === 'done' ? 'primary' : '', S.phase !== 'done');
+  foot().innerHTML = backBtn + '<span class="app-grow"></span>' + nextBtn;
 
   // Live rates update
   updateLiveRates(st);

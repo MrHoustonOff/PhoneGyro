@@ -36,17 +36,26 @@ async function main() {
       const overlay = document.getElementById('cal-disconnect-overlay');
       const modal = document.querySelector('.app-cal-modal');
       const oldOff = document.getElementById('cal-offline');
+      const head = modal?.querySelector('.pg-modal__head');
+      const bdy = modal?.querySelector('.pg-modal__body');
+      const ft = modal?.querySelector('.pg-modal__foot');
       return {
         calOpen: !cal?.hidden,
         overlayHidden: !!overlay?.hidden,
         modalDisconnected: modal?.classList.contains('is-disconnected'),
         hasOldOff: !!oldOff,
+        headInert: !!head?.inert,
+        bdyInert: !!bdy?.inert,
+        ftInert: !!ft?.inert,
       };
     });
     console.log('[Bench 2B] Initial offline open state:', initOffline);
     if (!initOffline.calOpen) throw new Error('Calibration modal failed to open');
     if (initOffline.overlayHidden) throw new Error('Disconnect overlay should be visible when opened while offline');
     if (!initOffline.modalDisconnected) throw new Error('Modal should have is-disconnected when opened while offline');
+    if (!initOffline.headInert || !initOffline.bdyInert || !initOffline.ftInert) {
+      throw new Error('Modal head, body, and foot must have inert attribute during disconnect alert');
+    }
     if (initOffline.hasOldOff) throw new Error('#cal-offline old notice should be removed');
 
     // ── 1. Bring Device Online ──
@@ -61,14 +70,28 @@ async function main() {
     const onlineState = await ev(() => {
       const overlay = document.getElementById('cal-disconnect-overlay');
       const modal = document.querySelector('.app-cal-modal');
+      const toast = document.getElementById('toast');
+      const head = modal?.querySelector('.pg-modal__head');
+      const bdy = modal?.querySelector('.pg-modal__body');
+      const ft = modal?.querySelector('.pg-modal__foot');
       return {
         overlayHidden: !!overlay?.hidden,
         modalDisconnected: modal?.classList.contains('is-disconnected'),
+        toastHidden: !!toast?.hidden,
+        headInert: !!head?.inert,
+        bdyInert: !!bdy?.inert,
+        ftInert: !!ft?.inert,
       };
     });
     console.log('[Bench 2B] State after going online:', onlineState);
     if (!onlineState.overlayHidden) throw new Error('Disconnect overlay should hide when device goes online');
     if (onlineState.modalDisconnected) throw new Error('Modal should remove is-disconnected when device goes online');
+    if (onlineState.headInert || onlineState.bdyInert || onlineState.ftInert) {
+      throw new Error('inert must be removed from modal elements when online');
+    }
+    if (!onlineState.toastHidden) {
+      throw new Error('Toast should NOT appear upon normal reconnect when capture was not interrupted');
+    }
 
     // ── 2. Simulate Device Disconnect during Wizard ──
     console.log('[Bench 2B] Triggering device disconnect (status: offline)...');
@@ -86,9 +109,15 @@ async function main() {
       const desc = document.querySelector('.app-cal-disconnect-desc')?.textContent;
       const badge = document.querySelector('.app-cal-disconnect-badge')?.textContent;
       const btn = document.getElementById('btn-cancel-cal-disconnect')?.textContent;
+      const head = modal?.querySelector('.pg-modal__head');
+      const bdy = modal?.querySelector('.pg-modal__body');
+      const ft = modal?.querySelector('.pg-modal__foot');
       return {
         overlayHidden: !!overlay?.hidden,
         modalDisconnected: modal?.classList.contains('is-disconnected'),
+        headInert: !!head?.inert,
+        bdyInert: !!bdy?.inert,
+        ftInert: !!ft?.inert,
         title,
         desc,
         badge: badge?.trim(),
@@ -98,6 +127,9 @@ async function main() {
     console.log('[Bench 2B] Disconnect overlay state (Dark, RU):', disconnectState);
     if (disconnectState.overlayHidden) throw new Error('Disconnect overlay must be visible when offline');
     if (!disconnectState.modalDisconnected) throw new Error('Modal must have is-disconnected class when offline');
+    if (!disconnectState.headInert || !disconnectState.bdyInert || !disconnectState.ftInert) {
+      throw new Error('inert must be set on modal parts during disconnect');
+    }
     if (!disconnectState.title?.includes('Телефон отключен')) throw new Error(`Unexpected title: ${disconnectState.title}`);
 
     // Dismiss any old toast before capturing disconnect screenshots
@@ -154,7 +186,7 @@ async function main() {
     });
     await sleep(300);
 
-    // ── 4. Reconnection & Toast ──
+    // ── 4. Reconnection without interruption: NO toast ──
     console.log('[Bench 2B] Simulating device reconnection (status: online)...');
     await ev(() => {
       const s = Object.assign({}, window.__STATE, { status: 'online' });
@@ -163,7 +195,7 @@ async function main() {
     });
     await sleep(350);
 
-    const reconnectedState = await ev(() => {
+    const reconnectedIdleState = await ev(() => {
       const overlay = document.getElementById('cal-disconnect-overlay');
       const modal = document.querySelector('.app-cal-modal');
       const toast = document.getElementById('toast');
@@ -171,24 +203,17 @@ async function main() {
         overlayHidden: !!overlay?.hidden,
         modalDisconnected: modal?.classList.contains('is-disconnected'),
         toastHidden: !!toast?.hidden,
-        toastText: toast?.textContent?.trim(),
       };
     });
-    console.log('[Bench 2B] Reconnected state:', reconnectedState);
-    if (!reconnectedState.overlayHidden) throw new Error('Disconnect overlay must hide on reconnection');
-    if (reconnectedState.modalDisconnected) throw new Error('Modal is-disconnected class must be removed');
-    if (reconnectedState.toastHidden) throw new Error('Toast must be visible upon reconnection');
-    if (!reconnectedState.toastText?.includes('Телефон подключен')) {
-      throw new Error(`Unexpected toast text: ${reconnectedState.toastText}`);
-    }
+    console.log('[Bench 2B] Reconnected state (idle, no toast):', reconnectedIdleState);
+    if (!reconnectedIdleState.overlayHidden) throw new Error('Disconnect overlay must hide on reconnection');
+    if (reconnectedIdleState.modalDisconnected) throw new Error('Modal is-disconnected class must be removed');
+    if (!reconnectedIdleState.toastHidden) throw new Error('Toast must NOT show when reconnecting from idle');
 
-    console.log('[Bench 2B] Saving screenshot: 04_reconnected_toast.png...');
-    writeFileSync(path.join(OUT_DIR, '04_reconnected_toast.png'), await p.screenshot());
-
-    // ── 5. Interrupted In-Flight Capture ──
+    // ── 5. Interrupted In-Flight Capture: YES toast ──
     console.log('[Bench 2B] Starting capture, then disconnecting mid-operation...');
     await ev(() => {
-      const captureBtn = document.querySelector('#cal-foot [data-act="capture"]') || document.querySelector('#cal-left [data-act="capture"]');
+      const captureBtn = document.querySelector('[data-act="capture"]');
       if (captureBtn) captureBtn.click();
     });
     // Wait for countdown / recording to become active
@@ -213,7 +238,7 @@ async function main() {
     });
     if (midCaptureState.overlayHidden) throw new Error('Overlay must be shown when capture was interrupted');
 
-    // Reconnect device and verify ready-to-retry UI
+    // Reconnect device and verify ready-to-retry UI + toast
     console.log('[Bench 2B] Reconnecting after interrupted capture...');
     await ev(() => {
       const s = Object.assign({}, window.__STATE, { status: 'online' });
@@ -226,19 +251,25 @@ async function main() {
       const overlay = document.getElementById('cal-disconnect-overlay');
       const toast = document.getElementById('toast');
       const actionBox = document.querySelector('.app-cal-action-box');
-      const captureBtn = document.querySelector('#cal-foot [data-act="capture"]');
+      const captureBtn = document.querySelector('[data-act="capture"]');
+      const nextBtn = document.querySelector('#cal-foot [data-act="next"]');
       return {
         overlayHidden: !!overlay?.hidden,
         toastVisible: !toast?.hidden,
         toastText: toast?.textContent?.trim(),
         hasActionBox: !!actionBox,
         captureBtnDisabled: !!captureBtn?.disabled,
+        nextBtnDisabled: !!nextBtn?.disabled,
       };
     });
     console.log('[Bench 2B] Post-interrupted state:', postInterruptedState);
     if (!postInterruptedState.overlayHidden) throw new Error('Overlay must be hidden after reconnection');
-    if (!postInterruptedState.toastVisible) throw new Error('Toast must be visible after interrupted reconnection');
+    if (!postInterruptedState.toastVisible) throw new Error('Toast MUST be visible after interrupted reconnection');
+    if (!postInterruptedState.toastText?.includes('Телефон подключен')) {
+      throw new Error(`Unexpected toast text: ${postInterruptedState.toastText}`);
+    }
     if (postInterruptedState.captureBtnDisabled) throw new Error('Capture button should be enabled and ready to retry');
+    if (!postInterruptedState.nextBtnDisabled) throw new Error('Footer Next button must be disabled until step is done');
 
     console.log('[Bench 2B] Saving screenshot: 05_capture_interrupted_reconnected.png...');
     writeFileSync(path.join(OUT_DIR, '05_capture_interrupted_reconnected.png'), await p.screenshot());

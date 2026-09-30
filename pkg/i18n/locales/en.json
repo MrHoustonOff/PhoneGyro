@@ -227,12 +227,7 @@
     "setup_android_url": "Address for the phone",
     "usb_waiting": "Waiting for the USB controller",
     "cal_ready_badge": "Ready to capture",
-    "cal_recording_badge": "Recording",
-    "cal_cap_rest": "Place your phone on the table in gaming grip",
-    "cal_cap_pitch": "Tilt forward (nod)",
-    "cal_cap_roll": "Bank right (roll)",
-    "cal_cap_axes": "Twist and tilt the phone together, pausing a second between moves",
-    "cal_orientation_disclaimer": "3D orientation may differ from your physical grip"
+    "cal_recording_badge": "Recording"
   },
   "splash": {
     "starting": "Starting…",
