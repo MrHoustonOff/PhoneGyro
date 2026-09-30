@@ -9,7 +9,7 @@ import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
 import { TelemetryDeriveEngine } from './derive.js';
-import { createSpark, createAxisChart } from './charts.js';
+import { createSpark, createAxisChart, setChartsEnabled } from './charts.js';
 
 const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
@@ -570,6 +570,21 @@ export function initTelemetry(paneEl) {
         localStorage.setItem('pg-stats-eco', String(ecoToggle.checked));
       } catch (_) {}
     };
+  }
+
+  // Charts switch: off hides the chart wells and stops drawing them (numbers keep updating)
+  const chartsToggle = $('stats-charts-toggle');
+  if (chartsToggle) {
+    try { chartsToggle.checked = localStorage.getItem('pg-stats-charts') !== 'false'; } catch (_) {}
+    const applyCharts = () => {
+      toggleClass(paneEl, 'is-charts-off', !chartsToggle.checked);
+      setChartsEnabled(chartsToggle.checked);
+    };
+    chartsToggle.onchange = () => {
+      try { localStorage.setItem('pg-stats-charts', String(chartsToggle.checked)); } catch (_) {}
+      applyCharts();
+    };
+    applyCharts();
   }
 
   const onWindowBlur = () => {

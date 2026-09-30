@@ -259,6 +259,8 @@
     "stats_model_cube": "Cube",
     "stats_eco_title": "Resource Saving",
     "stats_eco_desc": "Pause rendering when window is inactive",
+    "stats_charts_title": "Charts",
+    "stats_charts_desc": "Turn off to save resources on drawing",
     "stats_recenter_title": "Recenter",
     "stats_recenter_desc": "Resets orientation to neutral",
     "stats_recenter_btn": "Recenter",

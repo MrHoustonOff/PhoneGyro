@@ -25,8 +25,9 @@ function flush() {
   for (const c of dirty) c.draw();
   dirty.clear();
 }
+let enabled = true; // the "Charts" switch on the stats page: off = no drawing at all, samples still recorded
 function schedule(c) {
-  if (!c.visible || document.hidden) { c.stale = true; return; }
+  if (!enabled || !c.visible || document.hidden) { c.stale = true; return; }
   dirty.add(c);
   if (!raf) raf = requestAnimationFrame(flush);
 }
@@ -47,6 +48,12 @@ document.addEventListener('visibilitychange', () => {
   for (const c of live) if (c.stale) schedule(c);
 });
 const live = new Set();
+
+/** Turns chart drawing on/off; turning on catches every chart up in one frame. */
+export function setChartsEnabled(on) {
+  enabled = !!on;
+  if (enabled) for (const c of live) if (c.stale) schedule(c);
+}
 function watch(host, c) {
   c.visible = !io;
   byHost.set(host, c);

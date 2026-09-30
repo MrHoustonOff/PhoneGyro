@@ -1910,6 +1910,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-chart.is-empty .app-chart__empty { display: flex; }
 .app-chart.is-empty .app-chart__rail { display: none; }
+.app-stats-page.is-charts-off .app-chart { display: none; } /* "Charts" switch off: the tiles keep their numbers */
 .app-chart.is-empty .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
 
 /* X / Y / Z: legend in the head, current values in one row, the chart below across the tile. */

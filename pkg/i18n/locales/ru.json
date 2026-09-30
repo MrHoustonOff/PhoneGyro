@@ -259,6 +259,8 @@
     "stats_model_cube": "Кубик",
     "stats_eco_title": "Экономия ресурсов",
     "stats_eco_desc": "Пауза рендеринга при неактивном окне",
+    "stats_charts_title": "Графики",
+    "stats_charts_desc": "Выключите, чтобы не тратить ресурсы на отрисовку",
     "stats_recenter_title": "Центрировать",
     "stats_recenter_desc": "Сброс ориентации к нейтральной",
     "stats_recenter_btn": "Центрировать",
