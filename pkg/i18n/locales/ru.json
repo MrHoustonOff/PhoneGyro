@@ -187,6 +187,10 @@
     "profile_deleted": "Профиль «{name}» удалён"
   },
   "ui": {
+    "stats_orbit_hint_rot": "вращение",
+    "stats_orbit_hint_pan": "сдвиг",
+    "stats_orbit_hint_zoom": "масштаб",
+    "stats_orbit_hint_reset": "сброс",
     "bench_offline_title": "Нет подключённого устройства",
     "bench_offline_desc": "Подключите устройство, чтобы видеть отклик в реальном времени",
     "bench_axis_pitch_s": "Pitch",

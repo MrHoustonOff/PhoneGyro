@@ -266,16 +266,6 @@
                     <span class="pg-toggle__track"></span>
                   </label>
                 </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;padding:0.5rem 0">
-                  <div>
-                    <div class="pg-card__title" data-i18n="ui.stats_recenter_title">Центрировать</div>
-                    <div class="pg-card__desc" data-i18n="ui.stats_recenter_desc">Сброс ориентации к нейтральной</div>
-                  </div>
-                  <button class="pg-btn pg-btn--primary" id="btn-stats-recenter" type="button">
-                    <span class="pg-kbd">Space</span>
-                    <span data-i18n="ui.stats_recenter_btn">Центрировать</span>
-                  </button>
-                </div>
               </div>
 
               <!-- Overline: Statistics -->
@@ -285,7 +275,8 @@
               </div>
 
               <!-- CSV Telemetry Recorder -->
-              <div class="pg-card" style="padding:0.625rem 0.875rem">
+              <div class="app-stats-top">
+<div class="pg-card" style="padding:0.625rem 0.875rem">
                 <div class="pg-rec">
                   <div class="pg-rec__top">
                     <button class="pg-btn pg-btn--sm" id="btn-stats-record" type="button">
@@ -301,12 +292,7 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Metric Cards in 3-column .pg-stats grid, grouped by importance (A-E) -->
-              <div class="pg-stats">
-                <!-- ═══ GROUP A: Connection & Link Quality ═══ -->
-                <!-- 1. Link Quality (Hero tile across all 3 columns) -->
-                <div class="pg-stat pg-stat--full app-stat-hero" id="stat-card-quality" data-i18n-title="ui.stats_quality_tip">
+<div class="pg-stat app-stat-hero" id="stat-card-quality" data-i18n-title="ui.stats_quality_tip">
                   <div class="app-cal-ring-corner app-cal-ring-corner--tr"></div>
                   <div class="pg-stat__head">
                     <span data-i18n="ui.stats_quality_title">Качество канала</span>
@@ -335,6 +321,13 @@
                     </div>
                   </div>
                 </div>
+</div>
+
+              <!-- Metric Cards in 3-column .pg-stats grid, grouped by importance (A-E) -->
+              <div class="pg-stats">
+                <!-- ═══ GROUP A: Connection & Link Quality ═══ -->
+                <!-- 1. Link Quality (Hero tile across all 3 columns) -->
+                
 
                 <!-- 2. Frequency In (Hz) -->
                 <div class="pg-stat" id="stat-card-hz" data-i18n-title="live_debug.stats_in_hz_tip">
@@ -415,66 +408,9 @@
                 </div>
 
                 <!-- ═══ GROUP F: USB Protocol (shown only on USB mode, between A and B) ═══ -->
-                <div class="pg-card pg-stat--full app-stat-usb-card" id="stats-usb-card" data-i18n-title="ui.stats_usb_tip" hidden>
-                  <div class="app-cal-ring-corner app-cal-ring-corner--tr"></div>
-                  <div class="pg-card__head app-stat-usb-head">
-                    <div class="pg-card__title app-stat-usb-title">
-                      <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
-                      <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
-                    </div>
-                    <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
-                  </div>
-                  <div class="app-usb-rows">
-                    <!-- L1 Transport -->
-                    <div class="app-usb-row" id="stats-usb-row-l1" data-i18n-title="ui.stats_usb_l1_tip">
-                      <div class="app-usb-row__label">
-                        <span class="pg-badge">L1</span>
-                        <span data-i18n="ui.stats_usb_l1_title">Канал</span>
-                      </div>
-                      <div class="app-usb-row__val" id="stats-usb-l1">—</div>
-                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l1">—</span>
-                    </div>
-                    <!-- L2 Frames -->
-                    <div class="app-usb-row" id="stats-usb-row-l2" data-i18n-title="ui.stats_usb_l2_tip">
-                      <div class="app-usb-row__label">
-                        <span class="pg-badge">L2</span>
-                        <span data-i18n="ui.stats_usb_l2_title">Поток</span>
-                      </div>
-                      <div class="app-usb-row__val" id="stats-usb-l2">—</div>
-                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l2">—</span>
-                    </div>
-                    <!-- L3 Protocol -->
-                    <div class="app-usb-row" id="stats-usb-row-l3" data-i18n-title="ui.stats_usb_l3_tip">
-                      <div class="app-usb-row__label">
-                        <span class="pg-badge">L3</span>
-                        <span data-i18n="ui.stats_usb_l3_title">Протокол</span>
-                      </div>
-                      <div class="app-usb-row__val" id="stats-usb-l3">—</div>
-                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l3">—</span>
-                    </div>
-                    <!-- L4 Device -->
-                    <div class="app-usb-row" id="stats-usb-row-l4" data-i18n-title="ui.stats_usb_l4_tip">
-                      <div class="app-usb-row__label">
-                        <span class="pg-badge">L4</span>
-                        <span data-i18n="ui.stats_usb_l4_title">Устройство</span>
-                      </div>
-                      <div class="app-usb-row__val" id="stats-usb-l4">—</div>
-                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l4">—</span>
-                    </div>
-                    <!-- L5 Reset -->
-                    <div class="app-usb-row" id="stats-usb-row-l5" data-i18n-title="ui.stats_usb_l5_tip">
-                      <div class="app-usb-row__label">
-                        <span class="pg-badge">L5</span>
-                        <span data-i18n="ui.stats_usb_l5_title">Сброс</span>
-                      </div>
-                      <div class="app-usb-row__val" id="stats-usb-l5">—</div>
-                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l5">—</span>
-                    </div>
-                  </div>
-                </div>
+                
 
                 <!-- ═══ GROUP B: Signal State (Drift, Noise, Gravity, Omega) ═══ -->
-                <div class="pg-overline app-stats-group-label"><span class="pg-ring"></span><span data-i18n="ui.stats_group_signal">Состояние сигнала</span></div>
 
                 <!-- 7. Rest Drift -->
                 <div class="pg-stat" id="stat-card-drift" data-i18n-title="ui.stats_drift_tip">
@@ -534,22 +470,9 @@
                 </div>
 
                 <!-- ═══ GROUP C: Pipeline ═══ -->
-                <div class="pg-overline app-stats-group-label"><span class="pg-ring"></span><span data-i18n="ui.stats_group_pipeline">Конвейер</span></div>
 
                 <!-- 11. Pipeline Active Filters Chain (across all 3 columns) -->
-                <div class="pg-stat pg-stat--full" id="stat-card-pipeline-chain" data-i18n-title="ui.stats_pipeline_chain_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_pipeline_chain_title">Активные поправки</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-pipe-active-badge">DSU Pipeline</span>
-                  </div>
-                  <div class="app-pipeline-chips">
-                    <span class="pg-badge" id="stat-pipe-profile">Профиль: —</span>
-                    <span class="pg-badge" id="stat-pipe-mount">Наклон: —</span>
-                    <span class="pg-badge" id="stat-pipe-cemu">Защита Cemu: —</span>
-                    <span class="pg-badge" id="stat-pipe-deadband">Deadband: —</span>
-                    <span class="pg-badge" id="stat-pipe-sens">Sens: —</span>
-                  </div>
-                </div>
+                
 
                 <!-- 12. DSU Output Rate & Pipeline Latency -->
                 <div class="pg-stat" id="stat-card-pipe" data-i18n-title="ui.stats_dsu_pipe_tip">
@@ -571,7 +494,6 @@
                 </div>
 
                 <!-- ═══ GROUP D: Raw & Output Data ═══ -->
-                <div class="pg-overline app-stats-group-label"><span class="pg-ring"></span><span data-i18n="ui.stats_group_raw">Сырые и выходные данные</span></div>
 
                 <!-- 13. Raw Gyroscope -->
                 <div class="pg-stat" id="stat-card-raw-gyro" data-i18n-title="live_debug.stats_raw_gyro_tip">
@@ -584,7 +506,7 @@
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-gy">+0.00</span></div>
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-gz">+0.00</span></div>
                   </div>
-                </div>
+                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="rawgyro"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
 
                 <!-- 14. Raw Accelerometer -->
                 <div class="pg-stat" id="stat-card-raw-accel" data-i18n-title="live_debug.stats_raw_accel_tip">
@@ -597,7 +519,7 @@
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-ay">+0.00</span></div>
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-az">-1.00</span></div>
                   </div>
-                </div>
+                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="rawaccel"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
 
                 <!-- 15. DSU Output Gyro -->
                 <div class="pg-stat" id="stat-card-out-gyro" data-i18n-title="live_debug.stats_out_gyro_tip">
@@ -610,13 +532,12 @@
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-out-gy">+0.00</span></div>
                     <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-out-gz">+0.00</span></div>
                   </div>
-                </div>
+                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="outgyro"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
 
                 <!-- ═══ GROUP E: Clients & Session ═══ -->
-                <div class="pg-overline app-stats-group-label"><span class="pg-ring"></span><span data-i18n="ui.stats_group_session">Клиенты и сеанс</span></div>
 
                 <!-- 16. DSU Clients (across all 3 columns) -->
-                <div class="pg-stat pg-stat--full" id="stat-card-dsu-clients" data-i18n-title="live_debug.stats_dsu_clients_tip">
+                <div class="pg-stat" id="stat-card-dsu-clients" data-i18n-title="live_debug.stats_dsu_clients_tip">
                   <div class="pg-stat__head">
                     <span data-i18n="live_debug.stats_dsu_clients">Клиенты DSU</span>
                     <span class="pg-badge pg-badge--ok" id="stat-dsu-badge">0</span>
@@ -642,14 +563,62 @@
                 </div>
 
                 <!-- 18. Process Resources -->
-                <div class="pg-stat" id="stat-card-resources" data-i18n-title="ui.stats_resources_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_resources_title">Ресурсы</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-res-badge">ok</span>
+                
+              <div class="pg-card app-stat-usb-card" id="stats-usb-card" data-i18n-title="ui.stats_usb_tip" hidden>
+                  <div class="app-cal-ring-corner app-cal-ring-corner--tr"></div>
+                  <div class="pg-card__head app-stat-usb-head">
+                    <div class="pg-card__title app-stat-usb-title">
+                      <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
+                      <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
+                    </div>
+                    <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
                   </div>
-                  <div class="app-session-list">
-                    <div>CPU: <b id="stat-res-cpu">—%</b></div>
-                    <div>RAM: <b id="stat-res-ram">— MB</b></div>
+                  <div class="app-usb-rows">
+                    <!-- L1 Transport -->
+                    <div class="app-usb-row" id="stats-usb-row-l1" data-i18n-title="ui.stats_usb_l1_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L1</span>
+                        <span data-i18n="ui.stats_usb_l1_title">Канал</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l1">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l1">—</span>
+                    </div>
+                    <!-- L2 Frames -->
+                    <div class="app-usb-row" id="stats-usb-row-l2" data-i18n-title="ui.stats_usb_l2_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L2</span>
+                        <span data-i18n="ui.stats_usb_l2_title">Поток</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l2">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l2">—</span>
+                    </div>
+                    <!-- L3 Protocol -->
+                    <div class="app-usb-row" id="stats-usb-row-l3" data-i18n-title="ui.stats_usb_l3_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L3</span>
+                        <span data-i18n="ui.stats_usb_l3_title">Протокол</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l3">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l3">—</span>
+                    </div>
+                    <!-- L4 Device -->
+                    <div class="app-usb-row" id="stats-usb-row-l4" data-i18n-title="ui.stats_usb_l4_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L4</span>
+                        <span data-i18n="ui.stats_usb_l4_title">Устройство</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l4">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l4">—</span>
+                    </div>
+                    <!-- L5 Reset -->
+                    <div class="app-usb-row" id="stats-usb-row-l5" data-i18n-title="ui.stats_usb_l5_tip">
+                      <div class="app-usb-row__label">
+                        <span class="pg-badge">L5</span>
+                        <span data-i18n="ui.stats_usb_l5_title">Сброс</span>
+                      </div>
+                      <div class="app-usb-row__val" id="stats-usb-l5">—</div>
+                      <span class="pg-badge pg-badge--none" id="stats-usb-badge-l5">—</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -664,7 +633,6 @@
               </div>
               <!-- Single / Orbit Viewport -->
               <div class="pg-viewport" id="stats-3d-viewport-single" style="grid-column:1/-1;grid-row:1/-1;position:relative;overflow:hidden">
-                <span class="pg-viewport__tag" id="stats-viewport-tag">STATIC VIEW</span>
                 <div id="stats-3d-canvas-host" style="position:absolute;inset:0"></div>
                 <div class="pg-scene" id="stats-3d-fallback" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
                   <div class="pg-rings-floor" style="--fx:70deg;--fy:40px"></div>
@@ -681,7 +649,7 @@
 
                 <!-- Orbit camera controls hint -->
                 <div id="stats-orbit-hint" class="pg-badge" style="position:absolute;top:0.625rem;left:0.625rem;z-index:2;display:none;background:var(--surface);border-color:var(--line);color:var(--ink-2);gap:0.375rem;pointer-events:none">
-                  <span class="pg-kbd">ЛКМ</span> <span data-i18n="ui.stats_orbit_hint">вращение · R сброс</span>
+                  <span class="pg-kbd">ЛКМ</span> <span data-i18n="ui.stats_orbit_hint_rot">вращение</span> <span class="pg-kbd">ПКМ</span> <span data-i18n="ui.stats_orbit_hint_pan">сдвиг</span> <span class="pg-kbd">Колесо</span> <span data-i18n="ui.stats_orbit_hint_zoom">масштаб</span> <span class="pg-kbd">R</span> <span data-i18n="ui.stats_orbit_hint_reset">сброс</span>
                 </div>
 
                 <!-- Eco pause pill -->

@@ -17,10 +17,10 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
   if (!history || history.length < 2) return '';
   let min = minVal != null ? minVal : Math.min(...history);
   let max = maxVal != null ? maxVal : Math.max(...history);
-  if (Math.abs(max - min) < 0.001) {
-    min -= 1;
-    max += 1;
-  }
+  const span = Math.max(Math.abs(max - min), Math.abs(max) * 0.04, 0.4);
+  const mid = (max + min) / 2;
+  min = mid - span * 0.6;
+  max = mid + span * 0.6;
   const padY = 2;
   const drawH = h - padY * 2;
   const stepX = w / (history.length - 1);
@@ -31,6 +31,46 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
     return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
   });
   return pts.join(' ');
+}
+
+// A spark is a line plus a soft filled area under it (created once next to the line, same colour).
+function sparkSet(el, d) {
+  if (!el) return;
+  el.setAttribute('d', d);
+  let fill = el._fill;
+  if (!fill) {
+    fill = el._fill = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    fill.setAttribute('class', 'app-spark-fill');
+    fill.style.fill = el.style.stroke || 'var(--accent)';
+    el.parentNode.insertBefore(fill, el);
+  }
+  fill.setAttribute('d', d ? d + ' L 100 32 L 0 32 Z' : '');
+}
+
+// Three-axis live chart (X/Y/Z lines over ~90 samples, stepped scale so the picture does not breathe).
+const AXCHART_N = 90;
+const AXCHART_STEPS = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
+const axCharts = {};
+function axChartPush(key, vals) {
+  let c = axCharts[key];
+  if (!c) {
+    const svg = document.querySelector(`[data-axchart="${key}"]`);
+    if (!svg) return;
+    c = axCharts[key] = { svg, paths: svg.querySelectorAll('path'), buf: [[], [], []], scale: AXCHART_STEPS[3], calm: 0 };
+  }
+  for (let k = 0; k < 3; k++) { const b = c.buf[k]; b.push(Number(vals[k]) || 0); if (b.length > AXCHART_N) b.shift(); }
+  let peak = 0;
+  for (const b of c.buf) for (const v of b) if (Math.abs(v) > peak) peak = Math.abs(v);
+  let s = c.scale;
+  if (peak > s * 0.9) s = AXCHART_STEPS.find((x) => x * 0.9 >= peak) || AXCHART_STEPS[AXCHART_STEPS.length - 1];
+  else if (peak < s * 0.25 && s > AXCHART_STEPS[0]) { if (++c.calm > 30) { s = AXCHART_STEPS[Math.max(0, AXCHART_STEPS.indexOf(s) - 1)]; c.calm = 0; } } else c.calm = 0;
+  c.scale = s;
+  for (let k = 0; k < 3; k++) {
+    const b = c.buf[k];
+    if (b.length < 2) continue;
+    const step = 100 / (AXCHART_N - 1), off = (AXCHART_N - b.length) * step;
+    c.paths[k].setAttribute('d', b.map((v, i) => `${i ? 'L' : 'M'} ${(off + i * step).toFixed(1)} ${(16 - (v / s) * 14).toFixed(1)}`).join(' '));
+  }
 }
 
 function escapeHtml(s) {
@@ -90,6 +130,9 @@ export function initTelemetry(paneEl) {
   let orbitYaw = 0;
   let orbitPitch = 0;
   let orbitZoom = 1.0;
+  let orbitPanX = 0;
+  let orbitPanY = 0;
+  let dragMode = 'orbit'; // 'orbit' (left button) | 'pan' (right / middle / Shift+left)
   let isDragging = false;
   let startX = 0;
   let startY = 0;
@@ -321,19 +364,13 @@ export function initTelemetry(paneEl) {
     latestQuat = rawQ;
     if (!sceneInstance) return;
 
-    if (selectedCamMode === 'orbit' && (orbitYaw !== 0 || orbitPitch !== 0 || orbitZoom !== 1.0)) {
-      if (window.THREE) {
-        const qOrbit = new window.THREE.Quaternion().setFromEuler(
-          new window.THREE.Euler(orbitPitch, orbitYaw, 0, 'YXZ')
-        );
-        const qRaw = new window.THREE.Quaternion().fromArray(rawQ);
-        const qFinal = qOrbit.multiply(qRaw);
-        sceneInstance.setQuaternion(qFinal);
-      } else {
-        sceneInstance.setQuaternion(rawQ);
-      }
-    } else {
-      sceneInstance.setQuaternion(rawQ);
+    sceneInstance.setQuaternion(rawQ);
+  }
+
+  // Dynamic camera: orbit around the model, pan, zoom (all on the camera, the model keeps the device's attitude)
+  function applyOrbit() {
+    if (sceneInstance && typeof sceneInstance.setOrbit === 'function') {
+      sceneInstance.setOrbit({ yaw: orbitYaw, pitch: orbitPitch, zoom: orbitZoom, px: orbitPanX, py: orbitPanY });
     }
   }
 
@@ -377,32 +414,19 @@ export function initTelemetry(paneEl) {
     orbitYaw = 0;
     orbitPitch = 0;
     orbitZoom = 1.0;
-    if (latestQuat) update3DOrientation(latestQuat);
+    orbitPanX = 0;
+    orbitPanY = 0;
+    applyOrbit();
   };
 
-  // Recenter helper
-  const recenterAll = () => {
-    resetCamera();
-    call('ResetAHRS').catch(() => {});
-    if (latestQuat) update3DOrientation(latestQuat);
-  };
 
-  // Recenter button
-  const btnRecenter = $('btn-stats-recenter');
-  if (btnRecenter) {
-    btnRecenter.onclick = recenterAll;
-  }
-
-  // Hotkeys: Space (recenter) & R (reset orbit)
+  // Hotkey: R resets the dynamic camera
   const onKeyDown = (e) => {
     if (!isActive) return;
     const activeTag = document.activeElement ? document.activeElement.tagName : '';
     if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
 
-    if (e.code === 'Space') {
-      e.preventDefault();
-      recenterAll();
-    } else if (e.code === 'KeyR') {
+    if (e.code === 'KeyR') {
       if (selectedCamMode === 'orbit') {
         e.preventDefault();
         resetCamera();
@@ -455,10 +479,7 @@ export function initTelemetry(paneEl) {
     if (orbitHint) orbitHint.style.display = isOrbit ? 'inline-flex' : 'none';
     if (host) host.style.cursor = isOrbit ? 'grab' : 'default';
 
-    const tag = $('stats-viewport-tag');
-    if (tag) {
-      tag.textContent = isOrbit ? 'DYNAMIC ORBIT' : isQuad ? '4 CAMERAS' : 'STATIC VIEW';
-    }
+    if (!isOrbit) resetCamera();
     if (latestQuat) update3DOrientation(latestQuat);
     try {
       localStorage.setItem('pg-stats-cam', mode);
@@ -475,12 +496,14 @@ export function initTelemetry(paneEl) {
   // Orbit pointer interactions on canvas host
   const host = $('stats-3d-canvas-host');
   if (host) {
+    host.oncontextmenu = (e) => { if (selectedCamMode === 'orbit') e.preventDefault(); };
     host.onpointerdown = (e) => {
       if (selectedCamMode !== 'orbit') return;
       isDragging = true;
+      dragMode = (e.button === 2 || e.button === 1 || e.shiftKey) ? 'pan' : 'orbit';
       startX = e.clientX;
       startY = e.clientY;
-      host.style.cursor = 'grabbing';
+      host.style.cursor = dragMode === 'pan' ? 'move' : 'grabbing';
       try {
         host.setPointerCapture(e.pointerId);
       } catch (_) {}
@@ -492,10 +515,16 @@ export function initTelemetry(paneEl) {
       const dy = e.clientY - startY;
       startX = e.clientX;
       startY = e.clientY;
-      orbitYaw += dx * 0.008;
-      orbitPitch += dy * 0.008;
-      orbitPitch = Math.max(-1.4, Math.min(1.4, orbitPitch));
-      if (latestQuat) update3DOrientation(latestQuat);
+      if (dragMode === 'pan') {
+        const k = 0.012 / orbitZoom;
+        orbitPanX -= dx * k;
+        orbitPanY += dy * k;
+      } else {
+        orbitYaw -= dx * 0.008;
+        orbitPitch += dy * 0.008;
+        orbitPitch = Math.max(-1.4, Math.min(1.4, orbitPitch));
+      }
+      applyOrbit();
     };
 
     const endDrag = (e) => {
@@ -519,9 +548,9 @@ export function initTelemetry(paneEl) {
     host.onwheel = (e) => {
       if (selectedCamMode !== 'orbit') return;
       e.preventDefault();
-      orbitZoom += e.deltaY * -0.001;
-      orbitZoom = Math.max(0.6, Math.min(2.0, orbitZoom));
-      if (latestQuat) update3DOrientation(latestQuat);
+      orbitZoom *= Math.exp(e.deltaY * -0.0015);
+      orbitZoom = Math.max(0.35, Math.min(4.0, orbitZoom));
+      applyOrbit();
     };
   }
 
@@ -644,7 +673,7 @@ export function initTelemetry(paneEl) {
     const qualSpark = $('stat-quality-spark');
     if (qualSpark) {
       const p = buildSparkline(res.qualityHistory, 0, 100, 100, 32);
-      if (p) qualSpark.setAttribute('d', p);
+      if (p) sparkSet(qualSpark, p);
     }
 
     // ═══ GROUP A: Network / Connection ═══
@@ -655,7 +684,7 @@ export function initTelemetry(paneEl) {
     history.hz.push(hzVal);
     if (history.hz.length > MAX_HISTORY) history.hz.shift();
     const hzSpark = $('stat-hz-spark');
-    if (hzSpark) hzSpark.setAttribute('d', buildSparkline(history.hz, 0, 70));
+    if (hzSpark) sparkSet(hzSpark, buildSparkline(history.hz));
 
     // 3. Latency RTT (ms)
     setText($('stat-lat-val'), res.rttMs);
@@ -665,7 +694,7 @@ export function initTelemetry(paneEl) {
       history.lat.push(latVal);
       if (history.lat.length > MAX_HISTORY) history.lat.shift();
       const latSpark = $('stat-lat-spark');
-      if (latSpark) latSpark.setAttribute('d', buildSparkline(history.lat, 0, Math.max(25, ...history.lat)));
+      if (latSpark) sparkSet(latSpark, buildSparkline(history.lat));
     }
 
     // 4. Jitter (ms)
@@ -675,7 +704,7 @@ export function initTelemetry(paneEl) {
     history.jitter.push(jitVal);
     if (history.jitter.length > MAX_HISTORY) history.jitter.shift();
     const jitSpark = $('stat-jitter-spark');
-    if (jitSpark) jitSpark.setAttribute('d', buildSparkline(history.jitter, 0, Math.max(12, ...history.jitter)));
+    if (jitSpark) sparkSet(jitSpark, buildSparkline(history.jitter));
 
     // 5. Latency Tail
     setText($('stat-tail-p95'), res.tailP95);
@@ -691,7 +720,7 @@ export function initTelemetry(paneEl) {
     history.loss.push(lossVal);
     if (history.loss.length > MAX_HISTORY) history.loss.shift();
     const lossSpark = $('stat-loss-spark');
-    if (lossSpark) lossSpark.setAttribute('d', buildSparkline(history.loss, 0, 10));
+    if (lossSpark) sparkSet(lossSpark, buildSparkline(history.loss));
 
     // ═══ GROUP B: Signal State ═══
     // 7. Drift in Rest
@@ -750,10 +779,13 @@ export function initTelemetry(paneEl) {
       history.pipe.push(pVal);
       if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
       const pipeSpark = $('stat-pipe-spark');
-      if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 5));
+      if (pipeSpark) sparkSet(pipeSpark, buildSparkline(history.pipe));
     }
 
     // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
+    axChartPush('rawgyro', [res.rawGx, res.rawGy, res.rawGz]);
+    axChartPush('rawaccel', [res.rawAx, res.rawAy, res.rawAz]);
+    axChartPush('outgyro', [res.outGx, res.outGy, res.outGz]);
     setText($('tel-raw-gx'), res.rawGx);
     setText($('tel-raw-gy'), res.rawGy);
     setText($('tel-raw-gz'), res.rawGz);

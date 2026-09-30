@@ -61,10 +61,12 @@ export class TelemetryDeriveEngine {
     this.sampleIdx = 0;
 
     // Rest detection state
-    this.REST_OMEGA_THRESHOLD = 0.5; // deg/s
+    this.REST_OMEGA_THRESHOLD = 0.5; // deg/s (kept for reference)
+    this.REST_RANGE = 1.6; // deg/s: peak-to-peak on every axis over the window that still counts as lying still
     this.REST_TIME_REQUIRED_MS = 1000; // 1.0 s
     this.restStartTime = 0;
     this.isResting = false;
+    this.restWin = [];
     this.lastComputedDrift = null;
     this.lastComputedNoise = null;
 
@@ -98,6 +100,7 @@ export class TelemetryDeriveEngine {
     this.sampleIdx = 0;
     this.restStartTime = 0;
     this.isResting = false;
+    this.restWin = [];
     this.lastComputedDrift = null;
     this.lastComputedDriftX = null;
     this.lastComputedDriftY = null;
@@ -203,15 +206,19 @@ export class TelemetryDeriveEngine {
     }
     this.peakOmega = p;
 
-    // Resting state evaluation (|ω| < 0.5 deg/s for >= 1.0 s)
-    if (omega < this.REST_OMEGA_THRESHOLD) {
-      if (this.restStartTime === 0) {
-        this.restStartTime = frameTime;
-      } else if (frameTime - this.restStartTime >= this.REST_TIME_REQUIRED_MS) {
-        this.isResting = true;
+    // Resting = the signal has been steady for ~1 s (every axis moved less than REST_RANGE deg/s), whatever its offset:
+    // a pad lying still still reads its own bias (e.g. 1.8 deg/s), so an absolute |omega| threshold never matched.
+    this.restWin.push({ ts: frameTime, x: gx, y: gy, z: gz });
+    while (this.restWin.length > 1 && frameTime - this.restWin[0].ts > this.REST_TIME_REQUIRED_MS) this.restWin.shift();
+    if (frameTime - this.restWin[0].ts >= this.REST_TIME_REQUIRED_MS * 0.9) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const s of this.restWin) {
+        if (s.x < x0) x0 = s.x; if (s.x > x1) x1 = s.x;
+        if (s.y < y0) y0 = s.y; if (s.y > y1) y1 = s.y;
+        if (s.z < z0) z0 = s.z; if (s.z > z1) z1 = s.z;
       }
+      this.isResting = Math.max(x1 - x0, y1 - y0, z1 - z0) < this.REST_RANGE;
     } else {
-      this.restStartTime = 0;
       this.isResting = false;
     }
   }
@@ -402,14 +409,10 @@ export class TelemetryDeriveEngine {
       noiseTag = 'Офлайн';
     } else if (!hasLiveStream) {
       noiseTag = 'Нет данных';
-    } else if (this.isResting && this.sampleCount >= 20) {
+    } else if (this.isResting && this.restWin.length >= 20) {
+      const n = this.restWin.length;
       let sumGx = 0, sumGy = 0, sumGz = 0;
-      const n = this.sampleCount;
-      for (let i = 0; i < n; i++) {
-        sumGx += this.gyroX[i];
-        sumGy += this.gyroY[i];
-        sumGz += this.gyroZ[i];
-      }
+      for (const s of this.restWin) { sumGx += s.x; sumGy += s.y; sumGz += s.z; }
       const meanX = sumGx / n;
       const meanY = sumGy / n;
       const meanZ = sumGz / n;
@@ -422,10 +425,10 @@ export class TelemetryDeriveEngine {
 
       // Variance across 3 axes
       let varSum = 0;
-      for (let i = 0; i < n; i++) {
-        const dx = this.gyroX[i] - meanX;
-        const dy = this.gyroY[i] - meanY;
-        const dz = this.gyroZ[i] - meanZ;
+      for (const s of this.restWin) {
+        const dx = s.x - meanX;
+        const dy = s.y - meanY;
+        const dz = s.z - meanZ;
         varSum += (dx * dx + dy * dy + dz * dz) / 3.0;
       }
       noiseDps = Math.sqrt(varSum / n);

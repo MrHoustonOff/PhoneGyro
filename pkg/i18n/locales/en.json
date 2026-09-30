@@ -187,6 +187,10 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "stats_orbit_hint_rot": "rotate",
+    "stats_orbit_hint_pan": "pan",
+    "stats_orbit_hint_zoom": "zoom",
+    "stats_orbit_hint_reset": "reset",
     "bench_offline_title": "No connected device",
     "bench_offline_desc": "Connect a device to see the response in real time",
     "bench_axis_pitch_s": "Pitch",

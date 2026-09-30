@@ -111,19 +111,25 @@ _still = [
     ("var S = { mode: opts.model || 'gamepad'", "var S = { views: opts.views || 'single', mode: opts.model || 'gamepad'"),
     # app-side camera views and quad scissor setup
     ("cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0);",
-     "var camFront = new T.PerspectiveCamera(28, 1, .1, 60); camFront.position.set(0, 0.4, 5.8); camFront.lookAt(0, -.12, 0); "
-     "var camTop = new T.PerspectiveCamera(28, 1, .1, 60); camTop.position.set(0, 6.5, 0); camTop.up.set(0, 0, -1); camTop.lookAt(0, 0, 0); "
-     "var camRight = new T.PerspectiveCamera(28, 1, .1, 60); camRight.position.set(6.2, 0.2, 0); camRight.lookAt(0, -.12, 0); "
-     "var camIso = cam; "
+     "var camFront = new T.PerspectiveCamera(28, 1, .1, 60); camFront.position.set(0, 0.5, 7.6); camFront.lookAt(0, -.12, 0); "
+     "var camTop = new T.PerspectiveCamera(28, 1, .1, 60); camTop.position.set(0, 8.4, 0); camTop.up.set(0, 0, -1); camTop.lookAt(0, 0, 0); "
+     "var camRight = new T.PerspectiveCamera(28, 1, .1, 60); camRight.position.set(8.0, 0.3, 0); camRight.lookAt(0, -.12, 0); "
+     "var camIso = new T.PerspectiveCamera(28, 1, .1, 60); camIso.position.set(3.1, 3.0, 8.8); camIso.lookAt(0, -.12, 0); "
      "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view); "
-     "function setViews(v) { S.views = v; } if (opts.views) setViews(opts.views);"),
+     "function setViews(v) { S.views = v; } if (opts.views) setViews(opts.views); "
+     "var oAz0 = Math.atan2(2.5, 7.1), oEl0 = Math.atan2(2.4, Math.hypot(2.5, 7.1)), oR0 = Math.hypot(2.5, 2.4, 7.1); "
+     "function setOrbit(o) { var az = oAz0 + (o.yaw || 0), el = Math.max(-1.45, Math.min(1.45, oEl0 + (o.pitch || 0))), r = oR0 / (o.zoom || 1); "
+     "var dir = new T.Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)); "
+     "var right = new T.Vector3(0, 1, 0).cross(dir).normalize(), up = dir.clone().cross(right).normalize(); "
+     "var tg = new T.Vector3(0, -.12, 0).addScaledVector(right, o.px || 0).addScaledVector(up, o.py || 0); "
+     "cam.position.copy(tg).addScaledVector(dir, r); cam.lookAt(tg); }"),
     ("function draw(now) { size(); update((now - S.t0) / 1000); ren.render(scene, cam); }",
      "function draw(now) { size(); update((now - S.t0) / 1000); "
      "if (S.views === 'quad') { ren.setScissorTest(true); var hw = Math.floor(W / 2), hh = Math.floor(H / 2); "
      "var qd = [{ c: camFront, x: 0, y: hh, w: hw, h: H - hh }, { c: camTop, x: hw, y: hh, w: W - hw, h: H - hh }, { c: camRight, x: 0, y: 0, w: hw, h: hh }, { c: camIso, x: hw, y: 0, w: W - hw, h: hh }]; "
      "for (var i = 0; i < 4; i++) { var v = qd[i]; ren.setViewport(v.x, v.y, v.w, v.h); ren.setScissor(v.x, v.y, v.w, v.h); v.c.aspect = v.w / v.h; v.c.fov = v.w / v.h < 1.15 ? 36 : 28; v.c.updateProjectionMatrix(); ren.render(scene, v.c); } "
      "ren.setScissorTest(false); } else { ren.setScissorTest(false); ren.setViewport(0, 0, W, H); ren.render(scene, cam); } }"),
-    ("setPaused: function (b) { S.paused = !!b; },", "setPaused: function (b) { S.paused = !!b; }, setView: setView, setViews: setViews, getViews: function () { return S.views; },"),
+    ("setPaused: function (b) { S.paused = !!b; },", "setPaused: function (b) { S.paused = !!b; }, setView: setView, setOrbit: setOrbit, setViews: setViews, getViews: function () { return S.views; },"),
     ("ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement);",
      "try { var gl = ren.getContext(); if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext(); } catch (_) {} ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement);"),
 ]

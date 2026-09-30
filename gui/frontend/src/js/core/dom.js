@@ -4,6 +4,7 @@
 export const $ = (id) => document.getElementById(id);
 
 export function setText(el, value) {
+  if (!el) return;
   const v = value == null ? '' : String(value);
   if (el.textContent !== v) el.textContent = v;
 }
