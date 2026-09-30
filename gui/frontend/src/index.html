@@ -402,13 +402,13 @@
                     <div class="app-chart app-chart--line" data-chart="jitter" style="--c:var(--viz-teal)"></div>
                   </div>
                   <div class="pg-stat app-tile" id="stat-card-loss" data-i18n-title="ui.stats_loss_merged_tip">
-                    <div class="pg-stat__head"><span data-i18n="ui.stats_loss_merged_title">Потери / Merged</span><span class="pg-badge pg-badge--ok" id="stat-loss-badge">0%</span></div>
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_loss_merged_title">Потери пакетов</span><span class="pg-badge pg-badge--ok" id="stat-loss-badge">0%</span></div>
                     <div class="pg-stat__value"><span id="stat-loss-val">0</span><span class="pg-stat__unit" id="stat-loss-unit">(0.0%)</span></div>
                     <div class="app-chart app-chart--line" data-chart="loss" style="--c:var(--danger)"></div>
                   </div>
                   <div class="pg-stat app-tile app-tile--wide app-tile--short" id="stat-card-tail" data-i18n-title="ui.stats_tail_tip">
-                    <div class="pg-stat__head"><span data-i18n="ui.stats_tail_title">Хвост RTT</span><span class="pg-badge pg-badge--ok" id="stat-tail-badge">ok</span></div>
-                    <div class="pg-stat__value"><span><span id="stat-tail-p95">—</span><span class="pg-stat__unit"> ms (p95)</span></span><span class="app-tile__sub">max <b id="stat-tail-max">—</b> · Δt <b id="stat-tail-dt">—</b> ms</span></div>
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_tail_title">Подвисания</span><span class="pg-badge pg-badge--ok" id="stat-tail-badge">ok</span></div>
+                    <div class="pg-stat__value"><span><span id="stat-tail-p95">—</span><span class="pg-stat__unit"> ms</span></span><span class="app-tile__sub"><span data-i18n="ui.stats_tail_worst">худшая</span> <b id="stat-tail-max">—</b> · <span data-i18n="ui.stats_tail_step">шаг</span> <b id="stat-tail-dt">—</b> ms</span></div>
                     <div class="app-chart" data-chart="tail" style="--c:var(--warn)"></div>
                   </div>
                   <div class="pg-stat app-tile app-tile--wide app-tile--axes" id="stat-card-raw-gyro" data-i18n-title="live_debug.stats_raw_gyro_tip">
@@ -444,12 +444,12 @@
                     <div class="app-chart app-chart--line" data-chart="noise" style="--c:var(--viz-amber)"></div>
                   </div>
                   <div class="pg-stat app-tile app-tile--mini" id="stat-card-gravity" data-i18n-title="ui.stats_gravity_tip">
-                    <div class="pg-stat__head"><span data-i18n="ui.stats_gravity_title">Гравитация |a|</span><span class="pg-badge pg-badge--ok" id="stat-gravity-badge">ok</span></div>
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_gravity_title">Сила тяжести</span><span class="pg-badge pg-badge--ok" id="stat-gravity-badge">ok</span></div>
                     <div class="pg-stat__value"><span id="stat-gravity-val">1.00</span><span class="app-tile__sub">Δ <b id="stat-gravity-delta">0.00</b> g</span></div>
                     <div class="app-chart app-chart--line" data-chart="gravity" style="--c:var(--viz-leaf)"></div>
                   </div>
                   <div class="pg-stat app-tile app-tile--mini" id="stat-card-omega" data-i18n-title="ui.stats_omega_tip">
-                    <div class="pg-stat__head"><span data-i18n="ui.stats_omega_title">Скорость |ω|</span><span class="pg-badge pg-badge--ok" id="stat-omega-badge">0.0</span></div>
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_omega_title">Скорость вращения</span><span class="pg-badge pg-badge--ok" id="stat-omega-badge">0.0</span></div>
                     <div class="pg-stat__value"><span id="stat-omega-val">0.0</span><span class="app-tile__sub"><span data-i18n="ui.stats_omega_peak">пик 1 мин</span> <b id="stat-omega-peak">0.0</b></span></div>
                     <div class="app-chart" data-chart="omega" style="--c:var(--info)"></div>
                   </div>

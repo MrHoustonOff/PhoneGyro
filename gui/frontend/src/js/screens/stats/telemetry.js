@@ -120,17 +120,26 @@ export function initTelemetry(paneEl) {
   let wsReconnectTimer = null;
 
   // Live charts (js/screens/stats/charts.js). Lowest scale per chart, so a calm signal stays a calm line.
-  const SPARK_MIN = { hz: 50, lat: 5, jitter: 0.5, loss: 1, tail: 5, noise: 0.1, gravity: 1, omega: 5, outhz: 50, pipe: 0.5 };
-  const AXIS_MIN = { rawgyro: 1, rawaccel: 0.5, outgyro: 1, drift: 0.05 };
+  // mode 'level' draws around the value (rates, gravity), 'zero' from the floor up; minSpan keeps a calm signal calm.
+  const SPARK_OPT = {
+    hz: { mode: 'level', minSpan: 10 }, outhz: { mode: 'level', minSpan: 10 }, gravity: { mode: 'level', minSpan: 0.1 },
+    lat: { minSpan: 10 }, jitter: { minSpan: 2 }, loss: { minSpan: 1 }, tail: { minSpan: 20 },
+    noise: { minSpan: 0.2 }, omega: { minSpan: 20 }, pipe: { minSpan: 1 },
+  };
+  // Raw/output axes are fed from the stream at 20 Hz (AXIS_MS); drift from the 10 Hz derive tick.
+  const AXIS_MS = 50;
+  const AXIS_OPT = { rawgyro: { minScale: 20 }, rawaccel: { minScale: 1.2 }, outgyro: { minScale: 20 }, drift: { minScale: 0.3, n: 40, interval: 100 } };
+  const axisLive = { rawgyro: null, rawaccel: null, outgyro: null }; // latest stream values
+  let axisTimer = null;
   const sparks = {};
   const axes = {};
   paneEl.querySelectorAll('[data-chart]').forEach((h) => {
     const k = h.dataset.chart;
-    sparks[k] = createSpark(h, { area: !h.classList.contains('app-chart--line'), minScale: SPARK_MIN[k] });
+    sparks[k] = createSpark(h, { area: !h.classList.contains('app-chart--line'), ...SPARK_OPT[k] });
   });
   paneEl.querySelectorAll('[data-axchart]').forEach((h) => {
     const k = h.dataset.axchart;
-    axes[k] = createAxisChart(h, { minScale: AXIS_MIN[k] });
+    axes[k] = createAxisChart(h, { interval: AXIS_MS, ...AXIS_OPT[k] });
   });
   const pushSpark = (k, v) => { if (v !== '—' && v != null) sparks[k]?.push(v); };
   const pushAxes = (k, x, y, z) => {
@@ -238,6 +247,9 @@ export function initTelemetry(paneEl) {
       return;
     }
     deriveEngine.feedFrame(msg);
+    if (msg.raw_gx != null) axisLive.rawgyro = [msg.raw_gx, msg.raw_gy, msg.raw_gz];
+    if (msg.raw_ax != null) axisLive.rawaccel = [msg.raw_ax, msg.raw_ay, msg.raw_az];
+    if (msg.out_gx != null) axisLive.outgyro = [msg.out_gx, msg.out_gy, msg.out_gz];
     if (recorder.isRecording) {
       recorder.recordFrame({
         q0: msg.q0 ?? 1,
@@ -580,6 +592,8 @@ export function initTelemetry(paneEl) {
   const handleTuningFrame = (tf) => {
     if (!isActive || !tf) return;
     lastTuning = tf;
+    axisLive.outgyro = [tf.OutX, tf.OutY, tf.OutZ];
+    axisLive.rawgyro = [tf.RawX, tf.RawY, tf.RawZ];
     deriveEngine.feedTuning(tf);
     setText($('tel-out-gx'), (tf.OutX >= 0 ? '+' : '') + tf.OutX.toFixed(2));
     setText($('tel-out-gy'), (tf.OutY >= 0 ? '+' : '') + tf.OutY.toFixed(2));
@@ -748,11 +762,6 @@ export function initTelemetry(paneEl) {
     if (res.isConnected) pushSpark('outhz', res.outHz);
 
     // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
-    if (res.isConnected) {
-      pushAxes('rawgyro', res.rawGx, res.rawGy, res.rawGz);
-      pushAxes('rawaccel', res.rawAx, res.rawAy, res.rawAz);
-      pushAxes('outgyro', res.outGx, res.outGy, res.outGz);
-    }
     setText($('tel-raw-gx'), res.rawGx);
     setText($('tel-raw-gy'), res.rawGy);
     setText($('tel-raw-gz'), res.rawGz);
@@ -881,6 +890,9 @@ export function initTelemetry(paneEl) {
       mountScene();
       connectWebSocket();
       deriveInterval = setInterval(tickDerive, 100);
+      axisTimer = setInterval(() => {
+        for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
+      }, AXIS_MS);
       renderState(getState());
       tickDerive();
     },
@@ -910,6 +922,8 @@ export function initTelemetry(paneEl) {
         deriveInterval = null;
       }
       deriveEngine.reset();
+      if (axisTimer) { clearInterval(axisTimer); axisTimer = null; }
+      for (const k in axisLive) axisLive[k] = null;
       for (const k in sparks) sparks[k].clear();
       for (const k in axes) axes[k].clear();
       unmountScene();
