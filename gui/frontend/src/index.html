@@ -519,7 +519,112 @@
         </div>
 
         <!-- Subtab 2: Мини-игры -->
-        <div class="app-subtab-pane" id="pane-games" role="tabpanel" hidden></div>
+        <div class="app-subtab-pane" id="pane-games" role="tabpanel" hidden>
+          <div class="app-games-wrap">
+            <!-- Compact HUD Top Bar -->
+            <div class="app-game-hud">
+              <!-- Game Switcher -->
+              <div class="pg-seg" id="game-picker-seg">
+                <button class="pg-seg__btn is-active" data-game="aim" type="button" data-i18n="ui.game_aim">Прицел Zelda</button>
+                <button class="pg-seg__btn" data-game="platform" type="button" data-i18n="ui.game_platform">Платформа святилища</button>
+              </div>
+
+              <!-- HUD Counters -->
+              <div class="app-game-hud-stats">
+                <div class="pg-badge">
+                  <span data-i18n="ui.game_score">Очки:</span>
+                  <b id="game-score" style="color:var(--accent);margin-left:0.25rem">0</b>
+                </div>
+                <div class="pg-badge">
+                  <span data-i18n="ui.game_record">Рекорд:</span>
+                  <b id="game-record" style="color:var(--ink);margin-left:0.25rem">0</b>
+                </div>
+                <div class="pg-badge" id="game-pill-time">
+                  <span id="game-label-timer" data-i18n="settings_modal.bench_aim_time">Время:</span>
+                  <b id="game-val-timer" style="color:var(--info);margin-left:0.25rem">30.0 с</b>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="app-game-hud-actions">
+                <button class="pg-btn pg-btn--primary pg-btn--sm" id="btn-game-start" type="button">
+                  <span id="game-start-label" data-i18n="ui.game_start">Старт</span>
+                </button>
+                <button class="pg-btn pg-btn--sm" id="btn-game-recenter" type="button">
+                  <span class="pg-kbd">Space</span>
+                  <span data-i18n="ui.stats_recenter_btn">Центрировать</span>
+                </button>
+                <button class="pg-btn pg-btn--sm" id="btn-game-fullscreen" type="button" aria-label="Fullscreen">
+                  <svg viewBox="0 0 24 24" style="width:0.875rem;height:0.875rem;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                  <span data-i18n="ui.game_fullscreen">Во весь экран</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Central Game Stage -->
+            <div class="app-game-stage" id="game-stage">
+              <!-- Game 1: Aim Target Viewport -->
+              <div id="game-aim-view" class="app-game-view">
+                <div id="game-aim-targets" class="app-aim-targets-layer"></div>
+                <!-- Sheikah reticle -->
+                <div id="game-aim-reticle" class="app-aim-reticle">
+                  <div class="app-aim-cross"></div>
+                  <div class="app-aim-ring"></div>
+                  <div class="app-aim-dot"></div>
+                </div>
+                <!-- Particle / Floating FX layer -->
+                <div id="game-aim-fx" class="app-aim-fx-layer"></div>
+                <!-- Game Over Card -->
+                <div id="game-aim-gameover" class="app-gameover-overlay" style="display:none">
+                  <div class="pg-card app-gameover-card">
+                    <div class="pg-card__title" data-i18n="settings_modal.bench_aim_gameover">Время вышло!</div>
+                    <div style="font-size:0.875rem;color:var(--ink-2);margin:0.25rem 0 0.75rem">
+                      <span data-i18n="settings_modal.bench_aim_targets_hit">Сбито мишеней</span>: <b id="game-aim-final-score" style="color:var(--accent)">0</b>
+                      <span style="margin:0 0.5rem">·</span>
+                      <span data-i18n="ui.game_record">Рекорд:</span> <b id="game-aim-final-record" style="color:var(--ink)">0</b>
+                    </div>
+                    <div style="display:flex;gap:0.5rem">
+                      <button class="pg-btn pg-btn--primary" id="btn-aim-restart" type="button" data-i18n="settings_modal.bench_aim_play_again">Играть снова</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Game 2: 3D Platform Marble Viewport -->
+              <div id="game-platform-view" class="app-game-view" style="display:none">
+                <canvas id="game-platform-canvas" style="width:100%;height:100%;display:block"></canvas>
+              </div>
+            </div>
+
+            <!-- Technical Test Parameters (Collapsible Disclosure) -->
+            <details class="app-game-disclosure">
+              <summary data-i18n="ui.game_details">Параметры теста и калибровки (скрыты во время игры)</summary>
+              <div class="app-game-params">
+                <div class="app-game-param-row">
+                  <span data-i18n="ui.game_source">Поток данных:</span>
+                  <div class="pg-seg" id="game-source-seg">
+                    <button class="pg-seg__btn is-active" data-source="dsu" type="button" data-i18n="ui.game_source_dsu">DSU с фильтром</button>
+                    <button class="pg-seg__btn" data-source="raw" type="button" data-i18n="ui.game_source_raw">Сырой гироскоп</button>
+                  </div>
+                </div>
+                <div class="app-game-param-row">
+                  <label class="pg-check" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.25rem">
+                    <input type="checkbox" id="game-invert-x">
+                    <span data-i18n="ui.game_invert_x">Инвертировать X</span>
+                  </label>
+                  <label class="pg-check" style="cursor:pointer;display:inline-flex;align-items:center;gap:0.25rem">
+                    <input type="checkbox" id="game-invert-y">
+                    <span data-i18n="ui.game_invert_y">Инвертировать Y</span>
+                  </label>
+                </div>
+                <div class="app-game-param-row" style="flex:1">
+                  <span data-i18n="ui.game_sensitivity">Чувствительность</span>: <b id="game-sens-val">1.0x</b>
+                  <input type="range" id="game-sens-slider" min="0.2" max="3.0" step="0.1" value="1.0" class="pg-range" style="width:7.5rem">
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
 
         <!-- Subtab 3: Стенд отклика -->
         <div class="app-subtab-pane" id="pane-bench" role="tabpanel" hidden></div>

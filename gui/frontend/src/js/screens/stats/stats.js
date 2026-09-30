@@ -59,9 +59,10 @@ async function ensureSubtabsLoaded() {
 
   try {
     const { initTelemetry } = await import('./telemetry.js');
+    const { initGames } = await import('./games.js');
     subtabControllers = {
       telemetry: initTelemetry($('pane-telemetry')),
-      games: null,
+      games: initGames($('pane-games')),
       bench: null,
     };
   } catch (err) {
