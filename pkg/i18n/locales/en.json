@@ -176,6 +176,15 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "group_performance": "Performance",
+    "level_model": "Level model",
+    "level_model_tip": "How the level on the device card is drawn. 3D is a solid dial (Three.js, GPU) that also reads standing on an edge. Flat is the light CSS version, next to no load.",
+    "level_3d": "3D model",
+    "level_flat": "Flat",
+    "level_level": "LEVEL",
+    "level_tilt": "TILT",
+    "level_steep": "STEEP",
+    "level_down": "FACE DOWN",
     "docs": "Docs",
     "scan_title": "Scan with phone camera",
     "scan_sub": "Both devices on the same Wi‑Fi. Safari or Chrome opens the controller.",

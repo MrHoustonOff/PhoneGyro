@@ -42,9 +42,13 @@ const COLUMNS = [
       { key: 'soundMode', type: 'select', label: 'settings_modal.sound_mode',
         options: [['cute', 'settings_modal.sound_cute'], ['windows', 'settings_modal.sound_windows'], ['off', 'settings_modal.sound_off']] },
       { key: 'soundVolume', type: 'slider', min: 0, max: 3, step: 1, fmt: (v) => v + 'x', label: 'settings_modal.sound_volume' },
-      { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
       { key: 'checkUpdates', type: 'toggle', label: 'settings_modal.check_updates' },
       { type: 'datadir', label: 'settings_modal.data_dir' },
+    ] },
+    { title: 'ui.group_performance', rows: [
+      { key: 'level3d', type: 'select', bool: true, label: 'ui.level_model', tip: 'ui.level_model_tip',
+        options: [['true', 'ui.level_3d'], ['false', 'ui.level_flat']] },
+      { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
     { title: 'settings_modal.group_hotkeys', rows: [
       { key: 'hotkeyRecenterEnabled', type: 'toggle', label: 'settings_modal.hotkey_recenter', kbd: 'hotkeyRecenterKey' },
@@ -66,7 +70,7 @@ function control(r, i) {
     case 'port': return `<input class="pg-input pg-input--num" id="${id}" type="number" min="1024" max="65535" value="${esc(v)}">`;
     case 'mac': return `<input class="pg-input pg-input--mono app-mac" id="${id}" value="${esc(v)}" readonly><button class="pg-btn-icon" type="button" data-regen title="${esc(t('settings_modal.dsu_mac_regen'))}">${REGEN}</button>`;
     case 'select': return `<select class="pg-select" id="${id}">${r.options.map(([val, key]) =>
-      `<option value="${val}"${String(r.num ? Number(v).toFixed(2) : v) === val ? ' selected' : ''}>${esc(t(key))}</option>`).join('')}</select>`;
+      `<option value="${val}"${String(r.num ? Number(v).toFixed(2) : r.bool ? v !== false : v) === val ? ' selected' : ''}>${esc(t(key))}</option>`).join('')}</select>`;
     case 'slider': {
       const fill = ((v - r.min) / (r.max - r.min)) * 100;
       return `<input class="pg-slider" id="${id}" type="range" min="${r.min}" max="${r.max}" step="${r.step}" value="${v}" style="--fill:${fill}%"><span class="pg-value" id="${id}-v">${esc(r.fmt(Number(v)))}</span>`;
@@ -102,6 +106,7 @@ function save(now = false) {
   saveTimer = setTimeout(async () => {
     try {
       await call('SaveAppSettings', cur);
+      dispatchEvent(new CustomEvent('pg:settings', { detail: cur })); // live settings (e.g. the level model)
     } catch (e) {
       toast(String(e && e.message || e));
       load();
@@ -125,7 +130,7 @@ function onInput(e) {
   }
   if (e.type !== 'change') return;
   if (r.type === 'toggle') cur[r.key] = el.checked;
-  else if (r.type === 'select') cur[r.key] = r.num ? Number(el.value) : el.value;
+  else if (r.type === 'select') cur[r.key] = r.num ? Number(el.value) : r.bool ? el.value === 'true' : el.value;
   else if (r.type === 'port') {
     const v = Number(el.value);
     const others = ['dsuPort', 'httpPort', 'httpsPort'].filter((k) => k !== r.key).map((k) => cur[k]);

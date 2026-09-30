@@ -197,3 +197,8 @@ html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,
 .app-steps { margin: 0; padding: 0.625rem 0.75rem 0.625rem 1.875rem; border-radius: var(--radius-md); background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); }
 .app-overlay .pg-modal__head { padding-right: var(--space-6); }
 .app-modal-link { margin: 0.75rem 0 0 !important; }
+
+/* 3D level: the flat dial inside is only the fallback / the "Flat" model. */
+.pg-level3d.is-3d .pg-level3d__fb { display: none; }
+.pg-level3d:not(.is-3d) { width: auto; height: auto; }
+.pg-level3d:not(.is-3d) .pg-level3d__fb { position: relative; left: auto; top: auto; margin: 0; }
