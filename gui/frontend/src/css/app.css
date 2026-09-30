@@ -1788,3 +1788,8 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .pg-shell__body { inset: calc(var(--pg-tb) + var(--pg-hh)) 0.5rem var(--pg-fh) 0; padding: 0; }
 .pg-shell.is-screen-stats .pg-shell__body { padding: 0; }
 .pg-shell.has-no-chrome .pg-shell__body { inset: var(--pg-tb, 2rem) 0 0 0; padding: 0; }
+
+/* The groups of a column sit in one flex column with the design's 1.125rem gap (the wrapper div had none,
+   so each heading was glued to the card above it). */
+.app-set-col-groups { display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }
+.pg-set__main > .pg-group, .app-set-col-groups > .pg-group { display: flex; flex-direction: column; gap: 0.5rem; }
