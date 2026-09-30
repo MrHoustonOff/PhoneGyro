@@ -1834,26 +1834,99 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-stats-top .app-stat-hero__body { flex-wrap: nowrap; gap: 0.625rem; }
 .app-stats-top .app-stat-hero__desc { display: none; }
 
-.app-stats-page .pg-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(9.5rem, auto); gap: 0.5rem; }
-.app-stats-page .pg-stat {
-  min-height: 9.5rem; padding: 0.625rem 0.75rem; justify-content: space-between;
+/* Stats column (task 7): three sections like LEGACY Live Debug (USB protocol / INPUT / OUTPUT), tiles of two
+   sizes, the chart leads every tile. Charts are SVG drawn by js/screens/stats/charts.js into .app-chart. */
+.app-sec { --sec: var(--info); display: flex; flex-direction: column; gap: 0.625rem; margin-top: 0.875rem; min-width: 0; }
+.app-sec--usb { --sec: var(--viz-teal); }
+.app-sec--out { --sec: var(--accent); }
+.app-sec--usb:has(> #stats-usb-card[hidden]) { display: none; }
+.app-sec__head { display: flex; align-items: center; gap: 0.625rem; padding-inline: 0.125rem; min-width: 0; }
+.app-sec__title { flex: 1; min-width: 0; color: var(--sec); }
+.app-sec__title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--sec) 45%, transparent), transparent); }
+.app-sec__title .pg-ring { background: radial-gradient(circle, var(--sec) 0 0.0938rem, transparent 0.125rem 0.2rem, var(--sec) 0.225rem 0.2875rem, transparent 0.3125rem 0.375rem); }
+.app-sec .app-stat-usb-card { padding: 0.5rem 0.75rem; }
+
+.app-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; align-items: stretch; }
+@container pgside (max-width: 330px) { .app-tiles { grid-template-columns: minmax(0, 1fr); } }
+.app-stats-page .app-tile {
+  min-height: 0; padding: 0.75rem 0.875rem 0.8125rem; gap: 0.5rem; justify-content: flex-start;
   transition: transform .18s cubic-bezier(.2, .8, .2, 1), box-shadow .18s;
 }
-.app-stats-page .pg-stat:hover { transform: scale(1.03); box-shadow: var(--shadow-pop); z-index: 2; }
-.app-stats-page .app-stat-usb-card { grid-column: 1 / -1; }
+.app-stats-page .app-tile:hover { transform: scale(1.025); box-shadow: var(--shadow-pop); z-index: 2; }
+.app-tile--wide { grid-column: 1 / -1; }
+.app-tile .pg-stat__head { white-space: normal; overflow: visible; align-items: flex-start; gap: 0.5rem; }
+.app-tile .pg-stat__head > span:first-child { flex: 1 1 auto; min-width: 0; font-size: 0.75rem; line-height: 1.15; }
+.app-tile .pg-stat__head .pg-badge { flex: none; max-width: none; font-size: 0.625rem; }
+.app-tile .pg-stat__value { font-size: 1.375rem; line-height: 1.625rem; font-variant-numeric: tabular-nums; align-items: baseline; gap: 0.5rem; }
+.app-tile--mini .pg-stat__value { font-size: 1.125rem; line-height: 1.375rem; }
+.app-tile__sub { font: 400 0.6875rem/1rem var(--font-mono); color: var(--ink-3); letter-spacing: 0; white-space: nowrap; }
+.app-tile__sub b { color: var(--ink-2); font-weight: 600; }
+
+/* The chart: an inset well; the height keeps it at about half the tile or more. */
+.app-chart {
+  --c: var(--accent);
+  position: relative; flex: 1 0 auto; height: 4.75rem; overflow: hidden;
+  background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
+}
+.app-tile--mini .app-chart { height: 3.5rem; }
+.app-tile--short .app-chart { height: 3.5rem; }
+.app-chart--axes { height: 5.25rem; }
+.app-tile--mini .app-chart--axes { height: 3.5rem; }
+.app-chart__svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.app-chart__grid { fill: none; stroke: var(--line-subtle); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.app-chart--axes .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
+.app-chart__line { fill: none; stroke: var(--c); stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.app-chart__area { stroke: none; }
+.app-chart--axes .ax-x { stroke: var(--axis-x); }
+.app-chart--axes .ax-y { stroke: var(--axis-y); }
+.app-chart--axes .ax-z { stroke: var(--axis-z); }
+.app-chart__dot {
+  position: absolute; right: 0.125rem; top: 50%; width: 0.375rem; height: 0.375rem; margin-top: -0.1875rem;
+  border-radius: 50%; background: var(--c); box-shadow: 0 0 0.5rem var(--c); pointer-events: none;
+}
+.app-chart__empty {
+  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+  font: 600 0.625rem/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+.app-chart.is-empty .app-chart__empty { display: flex; }
+.app-chart.is-empty .app-chart__dot { display: none; }
+.app-chart.is-empty .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
+
+/* X / Y / Z: legend in the head, current values in one row, the chart below across the tile. */
+.app-axlegend { flex: none; font: 600 0.625rem/1rem var(--font-mono); letter-spacing: .06em; color: var(--ink-3); }
+.app-axlegend i { font-style: normal; }
+.app-axlegend .ax-x { color: var(--axis-x); }
+.app-axlegend .ax-y { color: var(--axis-y); }
+.app-axlegend .ax-z { color: var(--axis-z); }
+.app-axvals { display: flex; flex-wrap: wrap; gap: 0.375rem 1.125rem; font: 600 0.875rem/1.25rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.app-axvals > span { display: inline-flex; align-items: center; gap: 0.375rem; }
+.app-axvals b { font-weight: 600; min-width: 4.5em; }
+.app-axvals--mini { flex-wrap: nowrap; gap: 0.375rem; font-size: 0.6875rem; line-height: 1rem; }
+.app-axvals--mini > span { gap: 0.1875rem; min-width: 0; }
+.app-axvals--mini b { min-width: 0; }
+.app-axvals--mini .pg-axis__key { width: 0.875rem; height: 0.875rem; font-size: 0.5rem; }
+
+/* DSU clients: the list, or an idle emulator mark while nobody listens. */
+.app-dsu-box {
+  flex: 1 0 auto; min-height: 4.25rem; display: flex; align-items: center; justify-content: center; padding: 0.375rem;
+  background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
+}
+.app-dsu-box > #stat-dsu-client-name { align-self: stretch; width: 100%; }
+.app-dsu-box .app-dsu-client-list { margin-top: 0; }
+.app-dsu-box .app-dsu-client-row { min-width: 0; }
+.app-dsu-box .app-dsu-client-row > span:not(.pg-badge) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-dsu-box .app-dsu-client-row .pg-badge { flex: none; }
+.app-dsu-box__idle { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font: 500 0.6875rem/1rem var(--font-sans); color: var(--ink-3); text-align: center; }
+.app-dsu-box__idle svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.app-dsu-box__idle[hidden] { display: none; }
+.app-tile .app-session-list { flex: 1; justify-content: center; gap: 0.5rem; font-size: 0.75rem; line-height: 1rem; }
+.app-tile .app-session-list > div { display: flex; justify-content: space-between; gap: 0.5rem; padding-bottom: 0.375rem; border-bottom: 1px solid var(--line-subtle); }
+.app-tile .app-session-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.app-tile .app-session-list b { font-variant-numeric: tabular-nums; }
 .app-stats-page .pg-spark { height: 3rem; }
 .pg-spark svg path { fill: none; stroke-width: 1.7; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
 .pg-spark svg path.app-spark-fill { stroke: none; opacity: 0.22; }
-.app-axchart { display: block; width: 100%; height: 2.75rem; background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md); }
-.app-axchart path { fill: none; stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.app-axchart .ax-x { stroke: var(--axis-x); }
-.app-axchart .ax-y { stroke: var(--axis-y); }
-.app-axchart .ax-z { stroke: var(--axis-z); }
 #stats-3d-quad-wrap .pg-viewport__tag { z-index: 3; }
-.app-stats-page .pg-stat__head { gap: 0.375rem; min-width: 0; }
-.app-stats-page .pg-stat__head { align-items: flex-start; }
-.app-stats-page .pg-stat__head > span:first-child { min-width: 0; line-height: 1.15; font-size: 0.75rem; }
-.app-stats-page .pg-stat__head .pg-badge { flex: none; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.625rem; }
 
 /* The groups of the right column sit in one flex column with the design's gap (the wrapper div has none of its own). */
 .app-set-col-groups { display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }

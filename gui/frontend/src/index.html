@@ -323,256 +323,14 @@
                 </div>
 </div>
 
-              <!-- Metric Cards in 3-column .pg-stats grid, grouped by importance (A-E) -->
-              <div class="pg-stats">
-                <!-- ═══ GROUP A: Connection & Link Quality ═══ -->
-                <!-- 1. Link Quality (Hero tile across all 3 columns) -->
-                
-
-                <!-- 2. Frequency In (Hz) -->
-                <div class="pg-stat" id="stat-card-hz" data-i18n-title="live_debug.stats_in_hz_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_in_hz">Вход (Hz)</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-hz-badge">ok</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-hz-val">0.0</span><span class="pg-stat__unit">Hz</span>
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-hz-spark" style="stroke:var(--accent)"/>
-                    </svg>
-                  </div>
+              <!-- Three sections like LEGACY Live Debug: USB protocol (USB only), INPUT, OUTPUT. Charts lead every tile
+                   (drawn by js/screens/stats/charts.js into .app-chart hosts). -->
+              <section class="app-sec app-sec--usb">
+                <div class="app-sec__head">
+                  <div class="pg-overline app-sec__title"><span class="pg-ring"></span><span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span></div>
+                  <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
                 </div>
-
-                <!-- 3. Latency RTT (ms) -->
-                <div class="pg-stat" id="stat-card-latency" data-i18n-title="live_debug.stats_latency_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_latency">Задержка (мс)</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-lat-badge">ok</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-lat-val">0.0</span><span class="pg-stat__unit">ms</span>
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-lat-spark" style="stroke:var(--info)"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- 4. Jitter (ms) -->
-                <div class="pg-stat" id="stat-card-jitter" data-i18n-title="live_debug.stats_jitter_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_jitter">Дрожание (мс)</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-jitter-badge">ok</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-jitter-val">0.0</span><span class="pg-stat__unit">ms</span>
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-jitter-spark" style="stroke:var(--warn)"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- 5. Latency Tail (p95 / max / dt) -->
-                <div class="pg-stat" id="stat-card-tail" data-i18n-title="ui.stats_tail_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_tail_title">Хвост RTT</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-tail-badge">ok</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-tail-p95">—</span><span class="pg-stat__unit">ms (p95)</span>
-                  </div>
-                  <div style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);margin-top:0.25rem">
-                    max: <b id="stat-tail-max" style="color:var(--ink)">—</b> ms · Δt: <b id="stat-tail-dt" style="color:var(--ink)">—</b> ms
-                  </div>
-                </div>
-
-                <!-- 6. Loss / Merged -->
-                <div class="pg-stat" id="stat-card-loss" data-i18n-title="ui.stats_loss_merged_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_loss_merged_title">Потери / Merged</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-loss-badge">0%</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-loss-val">0</span><span class="pg-stat__unit" id="stat-loss-unit">(0.0%)</span>
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-loss-spark" style="stroke:var(--danger)"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- ═══ GROUP F: USB Protocol (shown only on USB mode, between A and B) ═══ -->
-                
-
-                <!-- ═══ GROUP B: Signal State (Drift, Noise, Gravity, Omega) ═══ -->
-
-                <!-- 7. Rest Drift -->
-                <div class="pg-stat" id="stat-card-drift" data-i18n-title="ui.stats_drift_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_drift_title">Дрейф в покое</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-drift-badge" data-i18n="ui.stats_drift_still">Покой</span>
-                  </div>
-                  <div class="pg-axis">
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="stat-drift-x">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="stat-drift-y">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="stat-drift-z">+0.00</span></div>
-                  </div>
-                </div>
-
-                <!-- 8. Rest Noise -->
-                <div class="pg-stat" id="stat-card-noise" data-i18n-title="ui.stats_noise_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_noise_title">Шум в покое</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-noise-badge">Стабильно</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-noise-val">0.00</span><span class="pg-stat__unit">°/s</span>
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-noise-spark" style="stroke:var(--accent)"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- 9. Gravity |a| -->
-                <div class="pg-stat" id="stat-card-gravity" data-i18n-title="ui.stats_gravity_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_gravity_title">Гравитация |a|</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-gravity-badge">1.00g</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-gravity-val">1.00</span><span class="pg-stat__unit">g</span>
-                  </div>
-                  <div style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);margin-top:0.25rem">
-                    Δ: <b id="stat-gravity-delta" style="color:var(--ink)">0.00</b> g
-                  </div>
-                </div>
-
-                <!-- 10. Angular Rate |ω| -->
-                <div class="pg-stat" id="stat-card-omega" data-i18n-title="ui.stats_omega_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_omega_title">Скорость |ω|</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-omega-badge">0.0</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-omega-val">0.0</span><span class="pg-stat__unit">°/s</span>
-                  </div>
-                  <div style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);margin-top:0.25rem">
-                    пик 1м: <b id="stat-omega-peak" style="color:var(--ink)">0.0</b> °/s
-                  </div>
-                </div>
-
-                <!-- ═══ GROUP C: Pipeline ═══ -->
-
-                <!-- 11. Pipeline Active Filters Chain (across all 3 columns) -->
-                
-
-                <!-- 12. DSU Output Rate & Pipeline Latency -->
-                <div class="pg-stat" id="stat-card-pipe" data-i18n-title="ui.stats_dsu_pipe_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_dsu_pipe_title">DSU / Пайплайн</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-pipe-badge">ok</span>
-                  </div>
-                  <div class="pg-stat__value">
-                    <span id="stat-pipe-val">0.0</span><span class="pg-stat__unit">ms</span>
-                  </div>
-                  <div style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);margin-top:0.25rem">
-                    Out: <b id="stat-out-hz-val" style="color:var(--ink)">0.0</b> Hz
-                  </div>
-                  <div class="pg-spark">
-                    <svg viewBox="0 0 100 32" preserveAspectRatio="none">
-                      <path id="stat-pipe-spark" style="stroke:var(--accent)"/>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- ═══ GROUP D: Raw & Output Data ═══ -->
-
-                <!-- 13. Raw Gyroscope -->
-                <div class="pg-stat" id="stat-card-raw-gyro" data-i18n-title="live_debug.stats_raw_gyro_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_raw_gyro">Сырой гироскоп</span>
-                    <span class="pg-stat__unit">°/s</span>
-                  </div>
-                  <div class="pg-axis">
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-raw-gx">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-gy">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-gz">+0.00</span></div>
-                  </div>
-                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="rawgyro"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
-
-                <!-- 14. Raw Accelerometer -->
-                <div class="pg-stat" id="stat-card-raw-accel" data-i18n-title="live_debug.stats_raw_accel_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_raw_accel">Сырой акселерометр</span>
-                    <span class="pg-stat__unit">g</span>
-                  </div>
-                  <div class="pg-axis">
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-raw-ax">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-raw-ay">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-raw-az">-1.00</span></div>
-                  </div>
-                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="rawaccel"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
-
-                <!-- 15. DSU Output Gyro -->
-                <div class="pg-stat" id="stat-card-out-gyro" data-i18n-title="live_debug.stats_out_gyro_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_out_gyro">DSU выход</span>
-                    <span class="pg-stat__unit">°/s</span>
-                  </div>
-                  <div class="pg-axis">
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--x">X</span><span id="tel-out-gx">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--y">Y</span><span id="tel-out-gy">+0.00</span></div>
-                    <div class="pg-axis__row"><span class="pg-axis__key pg-axis__key--z">Z</span><span id="tel-out-gz">+0.00</span></div>
-                  </div>
-                <svg class="app-axchart" viewBox="0 0 100 32" preserveAspectRatio="none" data-axchart="outgyro"><path class="ax-x"/><path class="ax-y"/><path class="ax-z"/></svg></div>
-
-                <!-- ═══ GROUP E: Clients & Session ═══ -->
-
-                <!-- 16. DSU Clients (across all 3 columns) -->
-                <div class="pg-stat" id="stat-card-dsu-clients" data-i18n-title="live_debug.stats_dsu_clients_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="live_debug.stats_dsu_clients">Клиенты DSU</span>
-                    <span class="pg-badge pg-badge--ok" id="stat-dsu-badge">0</span>
-                  </div>
-                  <div class="pg-stat__value app-dsu-clients-val">
-                    <span id="stat-dsu-count">0</span>
-                    <span class="pg-stat__unit" id="stat-dsu-label" data-i18n="live_debug.stats_dsu_clients_active">активных</span>
-                  </div>
-                  <div id="stat-dsu-client-name" style="font:400 0.6875rem/0.875rem var(--font-mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:0.25rem;display:none"></div>
-                </div>
-
-                <!-- 17. Session Stats -->
-                <div class="pg-stat" id="stat-card-session" data-i18n-title="ui.stats_session_tip">
-                  <div class="pg-stat__head">
-                    <span data-i18n="ui.stats_session_title">За сеанс</span>
-                    <span class="pg-badge" id="stat-sess-time">00:00:00</span>
-                  </div>
-                  <div class="app-session-list">
-                    <div>Пакетов: <b id="stat-sess-pkts">0</b></div>
-                    <div>Потерь: <b id="stat-sess-loss">0</b></div>
-                    <div>Объём: <b id="stat-sess-bytes">0 KB</b></div>
-                  </div>
-                </div>
-
-                <!-- 18. Process Resources -->
-                
-              <div class="pg-card app-stat-usb-card" id="stats-usb-card" data-i18n-title="ui.stats_usb_tip" hidden>
-                  <div class="app-cal-ring-corner app-cal-ring-corner--tr"></div>
-                  <div class="pg-card__head app-stat-usb-head">
-                    <div class="pg-card__title app-stat-usb-title">
-                      <span class="pg-status__dot" style="background:var(--info);width:0.5rem;height:0.5rem;border-radius:50%"></span>
-                      <span data-i18n="ui.stats_usb_title">USB-протокол PhoneGyro</span>
-                    </div>
-                    <span class="pg-badge pg-badge--ok" id="stats-usb-level-badge">L1–L5</span>
-                  </div>
+                <div class="pg-card app-stat-usb-card" id="stats-usb-card" data-i18n-title="ui.stats_usb_tip" hidden>
                   <div class="app-usb-rows">
                     <!-- L1 Transport -->
                     <div class="app-usb-row" id="stats-usb-row-l1" data-i18n-title="ui.stats_usb_l1_tip">
@@ -621,7 +379,128 @@
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
+
+              <section class="app-sec app-sec--in">
+                <div class="app-sec__head">
+                  <div class="pg-overline app-sec__title"><span class="pg-ring"></span><span data-i18n="live_debug.stats_input_header">Вход (Устройство)</span></div>
+                </div>
+                <div class="app-tiles">
+                  <div class="pg-stat app-tile" id="stat-card-hz" data-i18n-title="live_debug.stats_in_hz_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_in_hz">Частота (Hz)</span><span class="pg-badge pg-badge--ok" id="stat-hz-badge">ok</span></div>
+                    <div class="pg-stat__value"><span id="stat-hz-val">0.0</span><span class="pg-stat__unit">Hz</span></div>
+                    <div class="app-chart" data-chart="hz" style="--c:var(--accent)"></div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-latency" data-i18n-title="live_debug.stats_latency_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_latency">Задержка (мс)</span><span class="pg-badge pg-badge--ok" id="stat-lat-badge">ok</span></div>
+                    <div class="pg-stat__value"><span id="stat-lat-val">0.0</span><span class="pg-stat__unit">ms</span></div>
+                    <div class="app-chart" data-chart="lat" style="--c:var(--info)"></div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-jitter" data-i18n-title="live_debug.stats_jitter_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_jitter">Джиттер (мс)</span><span class="pg-badge pg-badge--ok" id="stat-jitter-badge">ok</span></div>
+                    <div class="pg-stat__value"><span id="stat-jitter-val">0.0</span><span class="pg-stat__unit">ms</span></div>
+                    <div class="app-chart app-chart--line" data-chart="jitter" style="--c:var(--viz-teal)"></div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-loss" data-i18n-title="ui.stats_loss_merged_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_loss_merged_title">Потери / Merged</span><span class="pg-badge pg-badge--ok" id="stat-loss-badge">0%</span></div>
+                    <div class="pg-stat__value"><span id="stat-loss-val">0</span><span class="pg-stat__unit" id="stat-loss-unit">(0.0%)</span></div>
+                    <div class="app-chart app-chart--line" data-chart="loss" style="--c:var(--danger)"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--wide app-tile--short" id="stat-card-tail" data-i18n-title="ui.stats_tail_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_tail_title">Хвост RTT</span><span class="pg-badge pg-badge--ok" id="stat-tail-badge">ok</span></div>
+                    <div class="pg-stat__value"><span><span id="stat-tail-p95">—</span><span class="pg-stat__unit"> ms (p95)</span></span><span class="app-tile__sub">max <b id="stat-tail-max">—</b> · Δt <b id="stat-tail-dt">—</b> ms</span></div>
+                    <div class="app-chart" data-chart="tail" style="--c:var(--warn)"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--wide app-tile--axes" id="stat-card-raw-gyro" data-i18n-title="live_debug.stats_raw_gyro_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_raw_gyro">Сырой гироскоп (°/s)</span><span class="app-axlegend"><i class="ax-x">X</i> / <i class="ax-y">Y</i> / <i class="ax-z">Z</i></span></div>
+                    <div class="app-axvals">
+                      <span><span class="pg-axis__key pg-axis__key--x">X</span><b id="tel-raw-gx">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--y">Y</span><b id="tel-raw-gy">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--z">Z</span><b id="tel-raw-gz">+0.00</b></span>
+                    </div>
+                    <div class="app-chart app-chart--axes" data-axchart="rawgyro"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--wide app-tile--axes" id="stat-card-raw-accel" data-i18n-title="live_debug.stats_raw_accel_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_raw_accel">Сырой акселерометр (g)</span><span class="app-axlegend"><i class="ax-x">X</i> / <i class="ax-y">Y</i> / <i class="ax-z">Z</i></span></div>
+                    <div class="app-axvals">
+                      <span><span class="pg-axis__key pg-axis__key--x">X</span><b id="tel-raw-ax">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--y">Y</span><b id="tel-raw-ay">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--z">Z</span><b id="tel-raw-az">-1.00</b></span>
+                    </div>
+                    <div class="app-chart app-chart--axes" data-axchart="rawaccel"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--mini" id="stat-card-drift" data-i18n-title="ui.stats_drift_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_drift_title">Дрейф в покое</span><span class="pg-badge pg-badge--ok" id="stat-drift-badge" data-i18n="ui.stats_drift_still">Покой</span></div>
+                    <div class="app-axvals app-axvals--mini">
+                      <span><span class="pg-axis__key pg-axis__key--x">X</span><b id="stat-drift-x">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--y">Y</span><b id="stat-drift-y">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--z">Z</span><b id="stat-drift-z">+0.00</b></span>
+                    </div>
+                    <div class="app-chart app-chart--axes" data-axchart="drift"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--mini" id="stat-card-noise" data-i18n-title="ui.stats_noise_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_noise_title">Шум в покое</span><span class="pg-badge pg-badge--ok" id="stat-noise-badge">—</span></div>
+                    <div class="pg-stat__value"><span id="stat-noise-val">0.00</span><span class="pg-stat__unit">°/s</span></div>
+                    <div class="app-chart app-chart--line" data-chart="noise" style="--c:var(--viz-amber)"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--mini" id="stat-card-gravity" data-i18n-title="ui.stats_gravity_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_gravity_title">Гравитация |a|</span><span class="pg-badge pg-badge--ok" id="stat-gravity-badge">ok</span></div>
+                    <div class="pg-stat__value"><span id="stat-gravity-val">1.00</span><span class="app-tile__sub">Δ <b id="stat-gravity-delta">0.00</b> g</span></div>
+                    <div class="app-chart app-chart--line" data-chart="gravity" style="--c:var(--viz-leaf)"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--mini" id="stat-card-omega" data-i18n-title="ui.stats_omega_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_omega_title">Скорость |ω|</span><span class="pg-badge pg-badge--ok" id="stat-omega-badge">0.0</span></div>
+                    <div class="pg-stat__value"><span id="stat-omega-val">0.0</span><span class="app-tile__sub"><span data-i18n="ui.stats_omega_peak">пик 1 мин</span> <b id="stat-omega-peak">0.0</b></span></div>
+                    <div class="app-chart" data-chart="omega" style="--c:var(--info)"></div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="app-sec app-sec--out">
+                <div class="app-sec__head">
+                  <div class="pg-overline app-sec__title"><span class="pg-ring"></span><span data-i18n="live_debug.stats_output_header">Выход (Эмулятор)</span></div>
+                </div>
+                <div class="app-tiles">
+                  <div class="pg-stat app-tile" id="stat-card-out-hz" data-i18n-title="live_debug.stats_out_hz_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_out_hz">Частота DSU (Hz)</span><span class="pg-badge pg-badge--ok" id="stat-out-hz-badge">DSU</span></div>
+                    <div class="pg-stat__value"><span id="stat-out-hz-val">0.0</span><span class="pg-stat__unit">Hz</span></div>
+                    <div class="app-chart" data-chart="outhz" style="--c:var(--viz-dusk)"></div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-pipe" data-i18n-title="live_debug.stats_pipe_latency_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_pipe_latency">Задержка пайплайна (мс)</span><span class="pg-badge pg-badge--ok" id="stat-pipe-badge">ok</span></div>
+                    <div class="pg-stat__value"><span id="stat-pipe-val">0.0</span><span class="pg-stat__unit">ms</span></div>
+                    <div class="app-chart app-chart--line" data-chart="pipe" style="--c:var(--viz-leaf)"></div>
+                  </div>
+                  <div class="pg-stat app-tile app-tile--wide app-tile--axes" id="stat-card-out-gyro" data-i18n-title="live_debug.stats_out_gyro_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_out_gyro">Выходной гироскоп (°/s)</span><span class="app-axlegend"><i class="ax-x">X</i> / <i class="ax-y">Y</i> / <i class="ax-z">Z</i></span></div>
+                    <div class="app-axvals">
+                      <span><span class="pg-axis__key pg-axis__key--x">X</span><b id="tel-out-gx">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--y">Y</span><b id="tel-out-gy">+0.00</b></span>
+                      <span><span class="pg-axis__key pg-axis__key--z">Z</span><b id="tel-out-gz">+0.00</b></span>
+                    </div>
+                    <div class="app-chart app-chart--axes" data-axchart="outgyro"></div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-dsu-clients" data-i18n-title="live_debug.stats_dsu_clients_tip">
+                    <div class="pg-stat__head"><span data-i18n="live_debug.stats_dsu_clients">Клиенты DSU</span><span class="pg-badge pg-badge--ok" id="stat-dsu-badge">0</span></div>
+                    <div class="pg-stat__value"><span id="stat-dsu-count">0</span><span class="pg-stat__unit" id="stat-dsu-label" data-i18n="live_debug.stats_dsu_clients_active">активных</span></div>
+                    <div class="app-dsu-box">
+                      <div id="stat-dsu-client-name" style="display:none"></div>
+                      <div class="app-dsu-box__idle" id="stat-dsu-idle">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12a4 4 0 0 1 4 4v1.5a3.5 3.5 0 0 1-6.3 2.1L14.5 15h-5l-1.2 1.6A3.5 3.5 0 0 1 2 14.5V13a4 4 0 0 1 4-4Z"/><path d="M7 11.5v3M5.5 13h3"/></svg>
+                        <span data-i18n="live_debug.stats_dsu_desc_waiting">Ожидание эмулятора</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="pg-stat app-tile" id="stat-card-session" data-i18n-title="ui.stats_session_tip">
+                    <div class="pg-stat__head"><span data-i18n="ui.stats_session_title">За сеанс</span><span class="pg-badge" id="stat-sess-time">00:00:00</span></div>
+                    <div class="app-session-list">
+                      <div><span data-i18n="ui.stats_sess_packets">Пакетов</span><b id="stat-sess-pkts">0</b></div>
+                      <div><span data-i18n="ui.stats_sess_loss">Потерь</span><b id="stat-sess-loss">0</b></div>
+                      <div><span data-i18n="ui.stats_sess_bytes">Объём</span><b id="stat-sess-bytes">0 KB</b></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </aside>
 
             <!-- Right column: Viewports container (ready for GyroScene in Step 3) -->
