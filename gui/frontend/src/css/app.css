@@ -687,4 +687,14 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-mix__desc { font-weight: 400; }
 .app-mix .pg-slider { width: 6.5rem; }
 
+/* ───────── Screens with no floating chrome (e.g. calibration) ───────── */
+.pg-shell.has-no-chrome .pg-shell__body {
+  padding: var(--pg-tb, 2rem) 0 0;
+}
+.pg-shell.has-no-chrome .pg-header,
+.pg-shell.has-no-chrome .pg-footer {
+  display: none !important;
+}
+
+
 
