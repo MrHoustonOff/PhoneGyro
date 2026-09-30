@@ -52,10 +52,16 @@ export function startZoom() {
     setZoom(z + (e.deltaY < 0 ? 0.1 : -0.1));
   }, { passive: false });
   on('font-scale-sync', (v) => setZoom(v, { save: false, quiet: true }));
-  call('GetFontScale').then((v) => setZoom(v || 1, { save: false, quiet: true }));
+  let noAZ = false;
+  try { noAZ = localStorage.getItem('pg-no-auto-zoom') === '1'; } catch (e) {}
+  if (noAZ) {
+    call('GetFontScale').then((v) => setZoom(v || 1, { save: false, quiet: true }));
+  } else {
+    call('SetFontScale', z);
+  }
 }
 
 /** Mirrors Go's noAutoZoom setting to localStorage for the next launch's head script. */
 export function syncAutoZoomSetting(noAutoZoom) {
-  try { localStorage.setItem('pg-no-auto-zoom', noAutoZoom ? '1' : '0'); } catch (e) { /* ignore */ }
+  try { localStorage.setItem('pg-no-auto-zoom', noAutoZoom ? '1' : '0'); } catch (e) {}
 }

@@ -39,8 +39,11 @@ export function startSplash() {
       // over once the growth ends (0.85 s) and the islands drop in right then.
       Promise.all([minTime, Promise.race([backendReady, maxTime])]).then(() => {
         el.classList.add('is-grown');
-        setTimeout(() => { html.classList.add('is-enter'); el.classList.add('is-app'); }, GROW_MS - 80);
-        setTimeout(() => { el.remove(); html.classList.remove('is-splash'); }, GROW_MS + 500);
+        setTimeout(() => {
+          el.remove();
+          html.classList.remove('is-splash');
+          window.dispatchEvent(new Event('resize'));
+        }, GROW_MS + 500);
         setTimeout(() => html.classList.remove('is-enter'), GROW_MS + 1300);
       });
     },

@@ -62,6 +62,7 @@ async function boot() {
   call('GetAppSettings').then((s) => { if (s) syncAutoZoomSetting(s.noAutoZoom); });
   startNotices();         // after the strings: they are shown in full
   debugBooted();
+  window.dispatchEvent(new Event('resize'));
 }
 
 const booted = boot().catch((e) => console.error('PhoneGyro UI start failed:', e));
