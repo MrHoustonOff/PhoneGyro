@@ -18,6 +18,7 @@ async function ensureTelemetryLoaded() {
   try {
     const { initTelemetry } = await import('./telemetry.js');
     telemetryController = initTelemetry($('screen-stats'));
+    window.__telemetryController = telemetryController;
   } catch (err) {
     console.error('Failed to lazy load telemetry:', err);
     telemetryLoaded = false;

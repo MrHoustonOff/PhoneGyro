@@ -51,7 +51,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
   PG.createScene = function (host, opts) {
     opts = opts || {};
     var T = opts.THREE || window.THREE, LEG = !T.SRGBColorSpace, root = document.documentElement;
-    var S = { mode: opts.model || 'gamepad', step: opts.step || 'idle', rec: 0, paused: false, q: null, tilt: [0, 0], geom: null, vis: true, t0: performance.now(), dead: false };
+    var S = { views: opts.views || 'single', mode: opts.model || 'gamepad', step: opts.step || 'idle', rec: 0, paused: false, q: null, tilt: [0, 0], geom: null, vis: true, t0: performance.now(), dead: false };
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     function tok(n) { return getComputedStyle(root).getPropertyValue('--' + n).trim() || '#888888'; }
     function col(n, mul) { var c = new T.Color(n.charAt(0) === '#' ? n : tok(n)); if (LEG) c.convertSRGBToLinear(); if (mul !== undefined) c.multiplyScalar(mul); return c; }
@@ -64,7 +64,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
     ren.domElement.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:block'; host.insertBefore(ren.domElement, host.firstChild);
     var scene = new T.Scene(), cam = new T.PerspectiveCamera(28, 1, .1, 60), world = new T.Group(), stage = new T.Group(), rig = new T.Group(), model = new T.Group(), guide = new T.Group();
     scene.add(world); world.add(stage); world.add(rig); rig.add(model); world.add(guide);
-    function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view);
+    var camFront = new T.PerspectiveCamera(28, 1, .1, 60); camFront.position.set(0, 0.4, 5.8); camFront.lookAt(0, -.12, 0); var camTop = new T.PerspectiveCamera(28, 1, .1, 60); camTop.position.set(0, 6.5, 0); camTop.up.set(0, 0, -1); camTop.lookAt(0, 0, 0); var camRight = new T.PerspectiveCamera(28, 1, .1, 60); camRight.position.set(6.2, 0.2, 0); camRight.lookAt(0, -.12, 0); var camIso = cam; function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view); function setViews(v) { S.views = v; } if (opts.views) setViews(opts.views);
     var FLOOR = -.95, dyn = { rings: [], dot: null, arcs: [], recMesh: null, shadow: null, ball: null, ballHome: null };
     function disposeTree(o) { o.traverse(function (m) { if (m.geometry) m.geometry.dispose(); if (m.material) { (Array.isArray(m.material) ? m.material : [m.material]).forEach(function (x) { if (x.map) x.map.dispose(); x.dispose(); }); } }); }
     function clear(g) { while (g.children.length) { var c = g.children[0]; g.remove(c); disposeTree(c); } }
@@ -140,7 +140,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
     }
     var W = 0, H = 0;
     function size() { var w = host.clientWidth || 300, h = host.clientHeight || 200; if (w === W && h === H) return; W = w; H = h; ren.setSize(w, h, false); cam.aspect = w / h; cam.fov = w / h < 1.15 ? 34 : 28; cam.updateProjectionMatrix(); }
-    function draw(now) { size(); update((now - S.t0) / 1000); ren.render(scene, cam); }
+    function draw(now) { size(); update((now - S.t0) / 1000); if (S.views === 'quad') { ren.setScissorTest(true); var hw = Math.floor(W / 2), hh = Math.floor(H / 2); var qd = [{ c: camFront, x: 0, y: hh, w: hw, h: H - hh }, { c: camTop, x: hw, y: hh, w: W - hw, h: H - hh }, { c: camRight, x: 0, y: 0, w: hw, h: hh }, { c: camIso, x: hw, y: 0, w: W - hw, h: hh }]; for (var i = 0; i < 4; i++) { var v = qd[i]; ren.setViewport(v.x, v.y, v.w, v.h); ren.setScissor(v.x, v.y, v.w, v.h); v.c.aspect = v.w / v.h; v.c.fov = v.w / v.h < 1.15 ? 36 : 28; v.c.updateProjectionMatrix(); ren.render(scene, v.c); } ren.setScissorTest(false); } else { ren.setScissorTest(false); ren.setViewport(0, 0, W, H); ren.render(scene, cam); } }
     var raf = 0; function loop(now) { raf = requestAnimationFrame(loop); if (S.paused || document.hidden || !S.vis) return; draw(now); }
     var ro = window.ResizeObserver ? new ResizeObserver(function () { size(); if (S.paused || reduce) draw(performance.now()); }) : null; if (ro) ro.observe(host);
     var io = window.IntersectionObserver ? new IntersectionObserver(function (e) { S.vis = e[0].isIntersecting; }) : null; if (io) io.observe(host);
@@ -152,7 +152,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
       setModel: function (m) { if (m !== S.mode) { S.mode = m; build(); } },
       setRecording: setRec, setTilt: function (x, z) { S.tilt = [x, z]; },
       setQuaternion: function (q) { S.q = q ? (q.isQuaternion ? q : new T.Quaternion().fromArray(q)) : null; },
-      setPaused: function (b) { S.paused = !!b; }, setView: setView, dispose: function () { S.dead = true; cancelAnimationFrame(raf); if (ro) ro.disconnect(); if (io) io.disconnect(); mo.disconnect(); clear(stage); clear(model); clear(guide); ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement); },
+      setPaused: function (b) { S.paused = !!b; }, setView: setView, setViews: setViews, getViews: function () { return S.views; }, dispose: function () { S.dead = true; cancelAnimationFrame(raf); if (ro) ro.disconnect(); if (io) io.disconnect(); mo.disconnect(); clear(stage); clear(model); clear(guide); try { var gl = ren.getContext(); if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext(); } catch (_) {} ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement); },
       render: function () { draw(performance.now()); }
     };
     if (opts.glb) { api.ready = PG.loadGLB(opts.glb).then(function (g) { S.geom = g; build(); }).catch(function () {}); }

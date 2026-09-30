@@ -1656,8 +1656,8 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-stat-hero__ring-wrap {
   position: relative;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 4.25rem;
+  height: 4.25rem;
   flex: none;
   display: flex;
   align-items: center;
@@ -1685,16 +1685,18 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   display: flex;
   align-items: baseline;
   justify-content: center;
+  gap: 0.0625rem;
   font-family: var(--font-display);
   font-weight: 800;
   line-height: 1;
 }
 .app-stat-hero__num {
-  font-size: 1.25rem;
+  font-size: 1.1875rem;
   color: var(--ink);
 }
 .app-stat-hero__unit {
-  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
   color: var(--ink-3);
   font-weight: 600;
 }
@@ -1719,6 +1721,12 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-stat-hero__spark {
   width: 6.25rem;
   flex: none;
+}
+.app-stat-hero__spark .pg-spark svg path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Pipeline active chips container */

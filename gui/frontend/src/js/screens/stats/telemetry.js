@@ -8,9 +8,9 @@ import { onState, getState } from '../../core/state.js';
 import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
+import { TelemetryDeriveEngine } from './derive.js';
 
 const MAX_HISTORY = 30;
-const TAIL_HISTORY = 120; // ~30s of 4Hz-equivalent latency measurements
 const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
 function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) {
@@ -33,27 +33,27 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
   return pts.join(' ');
 }
 
-/**
- * Composite Link Quality Index (0-100)
- * Evaluates: packet loss, RTT latency, jitter, and incoming Hz.
- */
-function calcQualityIndex(inHz, lat, jitter, lossPct, isOnline) {
-  if (!isOnline || inHz === 0) return 0;
-  const pLoss = (lossPct || 0) * 3;
-  const pLat = Math.max(0, ((lat || 0) - 15) * 1.2);
-  const pJitter = Math.max(0, ((jitter || 0) - 4) * 2.5);
-  const pHz = Math.max(0, (60 - (inHz || 0)) * 1.5);
-  const totalPenalty = pLoss + pLat + pJitter + pHz;
-  return Math.max(0, Math.min(100, Math.round(100 - totalPenalty)));
+function setBadge(el, status, text = null) {
+  if (!el) return;
+  el.className = `pg-badge pg-badge--${status || 'ok'}`;
+  if (text != null) setText(el, text);
+}
+
+function getCoreHost() {
+  const h = window.location.hostname;
+  if (!h || h === 'wails.localhost' || h === 'localhost.wails' || window.location.protocol === 'file:') {
+    return '127.0.0.1:8080';
+  }
+  if (h === 'localhost' || h === '127.0.0.1') {
+    return `${h}:${window.location.port || '8080'}`;
+  }
+  return window.location.host;
 }
 
 export function initTelemetry(paneEl) {
   if (!paneEl) return null;
 
   let isActive = false;
-  let lastLatency = 0;
-  let lastPacketTime = 0;
-  let packetIntervals = [];
   let lastTuning = null;
   let sceneInstance = null;
   let selectedModel = 'gamepad';
@@ -65,19 +65,62 @@ export function initTelemetry(paneEl) {
   let isDragging = false;
   let startX = 0;
   let startY = 0;
-  let peakOmega = 0;
-  let peakOmegaTimer = 0;
+
+  // Derivation engine for Groups A and B
+  const deriveEngine = new TelemetryDeriveEngine();
+  let deriveInterval = null;
+
+  // WebSocket connection to livedebug stream
+  let ws = null;
+  let wsReconnectTimer = null;
 
   const history = {
     hz: [],
     lat: [],
-    latTail: [],
     jitter: [],
     loss: [],
     pipe: [],
-    quality: [],
     noise: [],
   };
+
+  function connectWebSocket() {
+    if (wsReconnectTimer) {
+      clearTimeout(wsReconnectTimer);
+      wsReconnectTimer = null;
+    }
+    if (!isActive) return;
+
+    try {
+      const wsUrl = `ws://${getCoreHost()}/livedebug/ws`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        if (!isActive) return;
+        try {
+          const data = JSON.parse(event.data);
+          deriveEngine.feedFrame(data);
+          if (data && data.type === 'usb_proto') {
+            handleUsbProto(data);
+          }
+        } catch (_) {}
+      };
+
+      ws.onclose = () => {
+        scheduleWsReconnect();
+      };
+
+      ws.onerror = () => {
+        try { ws.close(); } catch (_) {}
+      };
+    } catch (_) {
+      scheduleWsReconnect();
+    }
+  }
+
+  function scheduleWsReconnect() {
+    if (wsReconnectTimer || !isActive) return;
+    wsReconnectTimer = setTimeout(connectWebSocket, 1500);
+  }
 
   // 3D Scene loader and manager
   async function mountScene() {
@@ -89,12 +132,16 @@ export function initTelemetry(paneEl) {
         model: selectedModel,
         axes: true,
         still: true,
+        views: selectedCamMode === 'quad' ? 'quad' : 'single',
       });
       if (!isActive) {
         sc.dispose();
         return;
       }
       sceneInstance = sc;
+      if (typeof sc.setViews === 'function') {
+        sc.setViews(selectedCamMode === 'quad' ? 'quad' : 'single');
+      }
       const fallback = $('stats-3d-fallback');
       if (fallback) fallback.style.display = 'none';
 
@@ -198,53 +245,61 @@ export function initTelemetry(paneEl) {
   const onKeyDown = (e) => {
     if (!isActive) return;
     const activeTag = document.activeElement ? document.activeElement.tagName : '';
-    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+    if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
 
-    if (e.code === 'Space' && !e.repeat) {
+    if (e.code === 'Space') {
       e.preventDefault();
       recenterAll();
-    } else if ((e.code === 'KeyR' || e.key === 'r' || e.key === 'к' || e.key === 'К') && !e.repeat) {
-      e.preventDefault();
-      resetCamera();
+    } else if (e.code === 'KeyR') {
+      if (selectedCamMode === 'orbit') {
+        e.preventDefault();
+        resetCamera();
+      }
     }
   };
 
-  // Model selector
-  const modelBtns = paneEl.querySelectorAll('#stats-model-seg .pg-seg__btn');
+  // 3D Model toggle (Gamepad <-> Cube)
+  const modelBtns = paneEl.querySelectorAll('#stats-model-seg button');
+  const applyModel = (model) => {
+    selectedModel = model;
+    modelBtns.forEach((btn) => {
+      toggleClass(btn, 'is-active', btn.dataset.model === model);
+    });
+    if (sceneInstance) {
+      sceneInstance.setModel(model);
+      if (latestQuat) update3DOrientation(latestQuat);
+    }
+    try {
+      localStorage.setItem('pg-stats-model', model);
+    } catch (_) {}
+  };
   modelBtns.forEach((btn) => {
-    btn.onclick = () => {
-      const m = btn.dataset.model || 'gamepad';
-      selectedModel = m;
-      modelBtns.forEach((b) => toggleClass(b, 'is-active', b === btn));
-      if (sceneInstance) sceneInstance.setModel(selectedModel);
-      try {
-        localStorage.setItem('gb_model', m);
-        localStorage.setItem('pg-stats-model', m);
-      } catch (_) {}
-    };
+    btn.onclick = () => applyModel(btn.dataset.model || 'gamepad');
   });
   try {
-    const savedModel = localStorage.getItem('gb_model') || localStorage.getItem('pg-stats-model');
-    if (savedModel) {
-      selectedModel = savedModel;
-      modelBtns.forEach((b) => toggleClass(b, 'is-active', b.dataset.model === savedModel));
-    }
+    const savedModel = localStorage.getItem('pg-stats-model');
+    if (savedModel) applyModel(savedModel);
   } catch (_) {}
 
-  // Cam mode selector
-  const camBtns = paneEl.querySelectorAll('#stats-cam-mode-seg .pg-seg__btn');
+  // Camera modes (Static / 4 Cameras / Dynamic Orbit)
+  const camBtns = paneEl.querySelectorAll('#stats-cam-mode-seg button');
   const applyCamMode = (mode) => {
     selectedCamMode = mode;
-    camBtns.forEach((b) => toggleClass(b, 'is-active', b.dataset.cam === mode));
+    camBtns.forEach((btn) => {
+      toggleClass(btn, 'is-active', btn.dataset.cam === mode);
+    });
+
     const isQuad = mode === 'quad';
     const isOrbit = mode === 'orbit';
     const quadWrap = $('stats-3d-quad-wrap');
-    const singleVp = $('stats-3d-viewport-single');
     const orbitHint = $('stats-orbit-hint');
     const host = $('stats-3d-canvas-host');
 
+    if (sceneInstance && typeof sceneInstance.setViews === 'function') {
+      sceneInstance.setViews(isQuad ? 'quad' : 'single');
+    }
+
     if (quadWrap) quadWrap.style.display = isQuad ? 'grid' : 'none';
-    if (singleVp) singleVp.style.display = isQuad ? 'none' : 'flex';
     if (orbitHint) orbitHint.style.display = isOrbit ? 'inline-flex' : 'none';
     if (host) host.style.cursor = isOrbit ? 'grab' : 'default';
 
@@ -361,26 +416,31 @@ export function initTelemetry(paneEl) {
   const handleTuningFrame = (tf) => {
     if (!isActive || !tf) return;
     lastTuning = tf;
-
     setText($('tel-out-gx'), (tf.OutX >= 0 ? '+' : '') + tf.OutX.toFixed(2));
     setText($('tel-out-gy'), (tf.OutY >= 0 ? '+' : '') + tf.OutY.toFixed(2));
     setText($('tel-out-gz'), (tf.OutZ >= 0 ? '+' : '') + tf.OutZ.toFixed(2));
   };
 
-  // Handle livedebug telemetry messages (e.g. usb_proto)
+  function handleUsbProto(msg) {
+    if (!msg) return;
+    const l1 = $('stats-usb-l1');
+    const l2 = $('stats-usb-l2');
+    const l3 = $('stats-usb-l3');
+    const l4 = $('stats-usb-l4');
+    if (l1) setText(l1, `${msg.port || 'USB'} · ${msg.baud || 115200}`);
+    if (l2) setText(l2, `${(msg.rate_hz || 0).toFixed(0)} Гц · ${msg.frames || 0} фр.`);
+    if (l3) setText(l3, `${msg.protocol || 'v1.1.0'} · ±${msg.gyro_range_dps || 2000}°/s · ±${msg.accel_range_g || 8}g`);
+    if (l4) setText(l4, `${msg.crc_rejects || 0} CRC · ${msg.lost || 0} потерь`);
+  }
+
+  // Handle livedebug telemetry messages (e.g. from wails bridge)
   const handleLiveTelemetry = (raw) => {
     if (!isActive || !raw) return;
     try {
       const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      deriveEngine.feedFrame(msg);
       if (msg && msg.type === 'usb_proto') {
-        const l1 = $('stats-usb-l1');
-        const l2 = $('stats-usb-l2');
-        const l3 = $('stats-usb-l3');
-        const l4 = $('stats-usb-l4');
-        if (l1) setText(l1, `${msg.port || 'USB'} · ${msg.baud || 115200}`);
-        if (l2) setText(l2, `${(msg.rate_hz || 0).toFixed(0)} Гц · ${msg.frames || 0} фр.`);
-        if (l3) setText(l3, `${msg.protocol || 'v1.1.0'} · ±${msg.gyro_range_dps || 2000}°/s · ±${msg.accel_range_g || 8}g`);
-        if (l4) setText(l4, `${msg.crc_rejects || 0} CRC · ${msg.lost || 0} потерь`);
+        handleUsbProto(msg);
       }
     } catch (_) {}
   };
@@ -388,7 +448,6 @@ export function initTelemetry(paneEl) {
   // Handle 3D orientation quaternion (60Hz)
   const handleAhrsQuat = (data) => {
     if (!isActive || !data) return;
-    // In Three.js / GyroScene (x, y, z, w) = (q1, q2, q3, q0)
     quatBuf[0] = data.q1 ?? 0;
     quatBuf[1] = data.q2 ?? 0;
     quatBuf[2] = data.q3 ?? 0;
@@ -396,143 +455,159 @@ export function initTelemetry(paneEl) {
     update3DOrientation(quatBuf);
   };
 
-  // Render State (15Hz)
-  const renderState = (state) => {
-    if (!isActive || !state) return;
-
-    // Packet interval calculation
-    const now = performance.now();
-    if (lastPacketTime > 0) {
-      const dt = now - lastPacketTime;
-      packetIntervals.push(dt);
-      if (packetIntervals.length > 20) packetIntervals.shift();
-    }
-    lastPacketTime = now;
-
-    // Offline status & live badge
-    const isOffline = state.status === 'offline';
-    const offlineOverlay = $('stats-3d-offline');
-    if (offlineOverlay) {
-      offlineOverlay.style.display = isOffline ? 'flex' : 'none';
-    }
-    const liveBadge = $('stats-live-badge');
-    if (liveBadge) {
-      toggleClass(liveBadge, 'pg-badge--ok', !isOffline);
-      toggleClass(liveBadge, 'pg-badge--warn', isOffline);
-      setText(liveBadge, isOffline ? (t('ui.stats_offline') || 'ОФФЛАЙН') : (t('ui.stats_live') || 'LIVE'));
-    }
-
-    // Frequency In (Hz)
-    const hz = state.hz || 0;
-    history.hz.push(hz);
-    if (history.hz.length > MAX_HISTORY) history.hz.shift();
-    setText($('stat-hz-val'), hz.toFixed(1));
-    const hzBadge = $('stat-hz-badge');
-    if (hzBadge) {
-      toggleClass(hzBadge, 'pg-badge--ok', hz >= 45);
-      toggleClass(hzBadge, 'pg-badge--warn', hz > 0 && hz < 45);
-      toggleClass(hzBadge, 'pg-badge--danger', hz === 0);
-      setText(hzBadge, hz >= 45 ? 'ok' : hz > 0 ? 'low' : 'off');
-    }
-    const hzSpark = $('stat-hz-spark');
-    if (hzSpark) hzSpark.setAttribute('d', buildSparkline(history.hz, 0, 70));
-
-    // Latency RTT (ms)
-    const lat = state.pingMs >= 0 ? state.pingMs : 0;
-    history.lat.push(lat);
-    if (history.lat.length > MAX_HISTORY) history.lat.shift();
-    history.latTail.push(lat);
-    if (history.latTail.length > TAIL_HISTORY) history.latTail.shift();
-
-    setText($('stat-lat-val'), state.usbConnected ? '—' : lat.toFixed(1));
-    const latBadge = $('stat-lat-badge');
-    if (latBadge) {
-      if (state.usbConnected) {
-        setText(latBadge, 'USB');
-        toggleClass(latBadge, 'pg-badge--ok', true);
-      } else {
-        toggleClass(latBadge, 'pg-badge--ok', lat <= 15);
-        toggleClass(latBadge, 'pg-badge--warn', lat > 15 && lat <= 40);
-        toggleClass(latBadge, 'pg-badge--danger', lat > 40);
-        setText(latBadge, lat <= 15 ? 'ok' : lat <= 40 ? 'warn' : 'bad');
-      }
-    }
-    const latSpark = $('stat-lat-spark');
-    if (latSpark) latSpark.setAttribute('d', buildSparkline(history.lat, 0, Math.max(25, ...history.lat)));
-
-    // Jitter (ms)
-    const jitter = Math.abs(lat - lastLatency);
-    lastLatency = lat;
-    history.jitter.push(jitter);
-    if (history.jitter.length > MAX_HISTORY) history.jitter.shift();
-    setText($('stat-jitter-val'), state.usbConnected ? '—' : jitter.toFixed(1));
-    const jitterBadge = $('stat-jitter-badge');
-    if (jitterBadge) {
-      toggleClass(jitterBadge, 'pg-badge--ok', jitter <= 5);
-      toggleClass(jitterBadge, 'pg-badge--warn', jitter > 5);
-      setText(jitterBadge, jitter <= 5 ? 'ok' : 'warn');
-    }
-    const jitterSpark = $('stat-jitter-spark');
-    if (jitterSpark) jitterSpark.setAttribute('d', buildSparkline(history.jitter, 0, Math.max(12, ...history.jitter)));
-
-    // Latency Tail (p95 / max / dt)
-    const sortedTail = [...history.latTail].sort((a, b) => a - b);
-    const p95Idx = Math.floor(sortedTail.length * 0.95);
-    const p95Val = sortedTail.length > 0 ? sortedTail[Math.min(sortedTail.length - 1, p95Idx)] : 0;
-    const maxVal = sortedTail.length > 0 ? sortedTail[sortedTail.length - 1] : 0;
-    const meanDt = packetIntervals.length > 0
-      ? (packetIntervals.reduce((a, b) => a + b, 0) / packetIntervals.length).toFixed(1)
-      : '—';
-    setText($('stat-tail-p95'), state.usbConnected ? '—' : p95Val.toFixed(1));
-    setText($('stat-tail-max'), state.usbConnected ? '—' : maxVal.toFixed(1));
-    setText($('stat-tail-dt'), meanDt);
-    const tailBadge = $('stat-tail-badge');
-    if (tailBadge) {
-      toggleClass(tailBadge, 'pg-badge--ok', p95Val <= 25);
-      toggleClass(tailBadge, 'pg-badge--warn', p95Val > 25);
-      setText(tailBadge, p95Val <= 25 ? 'ok' : 'spike');
-    }
-
-    // Loss (0% or calculated)
-    const lossPct = 0;
-    history.loss.push(lossPct);
-    if (history.loss.length > MAX_HISTORY) history.loss.shift();
-    setText($('stat-loss-val'), '0');
-    setText($('stat-loss-unit'), '(0.0%)');
-    const lossSpark = $('stat-loss-spark');
-    if (lossSpark) lossSpark.setAttribute('d', buildSparkline(history.loss, 0, 10));
+  // 10 Hz derivation tick updating Groups A and B
+  const tickDerive = () => {
+    if (!isActive) return;
+    const res = deriveEngine.compute();
 
     // ═══ HERO TILE: Channel Quality Index ═══
-    const quality = calcQualityIndex(hz, lat, jitter, lossPct, !isOffline);
-    history.quality.push(quality);
-    if (history.quality.length > MAX_HISTORY) history.quality.shift();
-
-    setText($('stat-quality-val'), isOffline ? '0' : String(quality));
+    setText($('stat-quality-val'), res.isConnected ? String(res.quality) : '0');
     const qualBadge = $('stat-quality-badge');
     if (qualBadge) {
-      toggleClass(qualBadge, 'pg-badge--ok', !isOffline && quality >= 80);
-      toggleClass(qualBadge, 'pg-badge--warn', !isOffline && quality >= 50 && quality < 80);
-      toggleClass(qualBadge, 'pg-badge--danger', isOffline || quality < 50);
-      setText(qualBadge, isOffline ? 'OFF' : quality >= 80 ? (t('ui.stats_quality_verdict_good') || 'Отлично') : quality >= 50 ? (t('ui.stats_quality_verdict_fair') || 'Норма') : (t('ui.stats_quality_verdict_poor') || 'Плохо'));
+      setBadge(qualBadge, res.qualityStatus, res.isConnected ? `${res.quality}%` : 'OFF');
     }
     const qualCircle = $('stat-quality-circle');
     if (qualCircle) {
-      const offset = (113.1 * (1 - (isOffline ? 0 : quality) / 100)).toFixed(1);
+      const offset = (113.1 * (1 - (res.isConnected ? res.quality : 0) / 100)).toFixed(1);
       qualCircle.style.strokeDashoffset = String(offset);
-      qualCircle.style.stroke = isOffline ? 'var(--danger)' : quality >= 80 ? 'var(--accent)' : quality >= 50 ? 'var(--warn)' : 'var(--danger)';
+      qualCircle.style.stroke = res.isConnected
+        ? (res.qualityStatus === 'ok' ? 'var(--accent)' : res.qualityStatus === 'warn' ? 'var(--warn)' : 'var(--danger)')
+        : 'var(--danger)';
     }
     const qualVerdict = $('stat-quality-verdict');
     if (qualVerdict) {
-      setText(qualVerdict, isOffline ? (t('ui.stats_offline') || 'Нет связи') : quality >= 80 ? (t('ui.stats_quality_verdict_good') || 'Отличное качество связи') : quality >= 50 ? (t('ui.stats_quality_verdict_fair') || 'Приемлемое качество связи') : (t('ui.stats_quality_verdict_poor') || 'Нестабильный канал связи'));
+      setText(qualVerdict, res.isConnected ? res.qualityVerdict : (t('ui.stats_offline') || 'ОФФЛАЙН'));
     }
     const qualDesc = $('stat-quality-desc');
     if (qualDesc) {
-      setText(qualDesc, isOffline ? (t('ui.stats_offline_tip') || 'Подключите устройство') : `Потери ${lossPct.toFixed(1)}% · RTT ${lat.toFixed(0)} ms · ${hz.toFixed(0)} Hz`);
+      setText(
+        qualDesc,
+        res.isConnected
+          ? `Потери ${res.lossPct}% · RTT ${res.rttMs} ms · ${res.inHz} Hz`
+          : (t('ui.stats_offline_tip') || 'Подключите устройство')
+      );
     }
     const qualSpark = $('stat-quality-spark');
-    if (qualSpark) qualSpark.setAttribute('d', buildSparkline(history.quality, 0, 100));
+    if (qualSpark) {
+      const p = buildSparkline(res.qualityHistory, 0, 100, 100, 32);
+      if (p) qualSpark.setAttribute('d', p);
+    }
 
-    // ═══ GROUP B: Signal State (Drift, Noise, Gravity, Omega) ═══
+    // ═══ GROUP A: Network / Connection ═══
+    // 2. Frequency In (Hz)
+    setText($('stat-hz-val'), res.inHz);
+    setBadge($('stat-hz-badge'), res.hzStatus);
+    const hzVal = Number(res.inHz) || 0;
+    history.hz.push(hzVal);
+    if (history.hz.length > MAX_HISTORY) history.hz.shift();
+    const hzSpark = $('stat-hz-spark');
+    if (hzSpark) hzSpark.setAttribute('d', buildSparkline(history.hz, 0, 70));
+
+    // 3. Latency RTT (ms)
+    setText($('stat-lat-val'), res.rttMs);
+    setBadge($('stat-lat-badge'), res.rttStatus);
+    if (res.rttMs !== '—') {
+      const latVal = Number(res.rttMs) || 0;
+      history.lat.push(latVal);
+      if (history.lat.length > MAX_HISTORY) history.lat.shift();
+      const latSpark = $('stat-lat-spark');
+      if (latSpark) latSpark.setAttribute('d', buildSparkline(history.lat, 0, Math.max(25, ...history.lat)));
+    }
+
+    // 4. Jitter (ms)
+    setText($('stat-jitter-val'), res.jitterMs);
+    setBadge($('stat-jitter-badge'), res.jitterStatus);
+    const jitVal = Number(res.jitterMs) || 0;
+    history.jitter.push(jitVal);
+    if (history.jitter.length > MAX_HISTORY) history.jitter.shift();
+    const jitSpark = $('stat-jitter-spark');
+    if (jitSpark) jitSpark.setAttribute('d', buildSparkline(history.jitter, 0, Math.max(12, ...history.jitter)));
+
+    // 5. Latency Tail
+    setText($('stat-tail-p95'), res.tailP95);
+    setText($('stat-tail-max'), res.tailMax);
+    setText($('stat-tail-dt'), res.tailAvg);
+    setBadge($('stat-tail-badge'), res.tailStatus, res.tailStatus === 'ok' ? 'ok' : 'spike');
+
+    // 6. Loss / Merged
+    setText($('stat-loss-val'), String(res.lossCount));
+    setText($('stat-loss-unit'), `(${res.lossPct}%)`);
+    setBadge($('stat-loss-badge'), res.lossStatus, `${res.lossPct}%`);
+    const lossVal = Number(res.lossPct) || 0;
+    history.loss.push(lossVal);
+    if (history.loss.length > MAX_HISTORY) history.loss.shift();
+    const lossSpark = $('stat-loss-spark');
+    if (lossSpark) lossSpark.setAttribute('d', buildSparkline(history.loss, 0, 10));
+
+    // ═══ GROUP B: Signal State ═══
+    // 7. Drift in Rest
+    const dxEl = $('stat-drift-x');
+    if (dxEl) {
+      setText(dxEl, res.driftX);
+      setText($('stat-drift-y'), res.driftY);
+      setText($('stat-drift-z'), res.driftZ);
+    }
+    const dValEl = $('stat-drift-val');
+    if (dValEl) {
+      setText(dValEl, res.driftDps);
+    }
+    setBadge(
+      $('stat-drift-badge'),
+      res.driftStatus,
+      res.isResting ? (t('ui.stats_drift_still') || 'Покой') : (t('ui.stats_drift_motion') || 'Движение')
+    );
+
+    // 8. Noise in Rest
+    setText($('stat-noise-val'), res.noiseDps);
+    const nTagEl = $('stat-noise-tag');
+    if (nTagEl) setText(nTagEl, res.noiseTag);
+    setBadge($('stat-noise-badge'), res.noiseStatus, res.noiseTag);
+
+    // 9. Gravity |a|
+    setText($('stat-gravity-val'), res.gravityMag);
+    setText($('stat-gravity-delta'), res.gravityDelta);
+    setBadge($('stat-gravity-badge'), res.gravityStatus, res.gravityStatus === 'ok' ? 'ok' : 'bias');
+
+    // 10. Omega |ω|
+    setText($('stat-omega-val'), res.omegaMag);
+    setText($('stat-omega-peak'), res.omegaPeak);
+    setBadge($('stat-omega-badge'), res.omegaStatus, res.omegaMag);
+
+    // Offline overlay
+    const offlineOverlay = $('stats-3d-offline');
+    if (offlineOverlay) {
+      offlineOverlay.style.display = res.isConnected ? 'none' : 'flex';
+    }
+    const liveBadge = $('stats-live-badge');
+    if (liveBadge) {
+      toggleClass(liveBadge, 'pg-badge--ok', res.isConnected);
+      toggleClass(liveBadge, 'pg-badge--warn', !res.isConnected);
+      setText(liveBadge, res.isConnected ? (t('ui.stats_live') || 'LIVE') : (t('ui.stats_offline') || 'ОФФЛАЙН'));
+    }
+  };
+
+  // Render State (15Hz from Go AppState)
+  const renderState = (state) => {
+    if (!isActive || !state) return;
+    deriveEngine.feedState(state);
+
+    // ═══ GROUP C: Pipeline & Active Filter Chips ═══
+    const activeProf = state.activeSlot?.name || state.profileName || 'По умолчанию';
+    setText($('stat-pipe-profile'), `Профиль: ${activeProf}`);
+    setText($('stat-pipe-mount'), `Наклон: ${state.mountCorrection ? 'Вкл' : 'Выкл'}`);
+    setText($('stat-pipe-cemu'), `Защита Cemu: ${state.cemuGuardActive ? 'Вкл' : 'Выкл'}`);
+    setText($('stat-pipe-deadband'), `Deadband: ${state.deadbandActive ? 'Вкл' : 'Выкл'}`);
+    setText($('stat-pipe-sens'), `Sens: ${state.sensitivity != null ? state.sensitivity.toFixed(1) + 'x' : '1.0x'}`);
+
+    const pipeMs = Number(state.pipeMs ?? 0.4);
+    setText($('stat-pipe-val'), pipeMs.toFixed(1));
+    setText($('stat-out-hz-val'), (state.outHz || state.hz || 60).toFixed(0));
+    history.pipe.push(pipeMs);
+    if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
+    const pipeSpark = $('stat-pipe-spark');
+    if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 5));
+
+    // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
     const gx = state.rawRotX || 0;
     const gy = state.rawRotY || 0;
     const gz = state.rawRotZ || 0;
@@ -540,164 +615,51 @@ export function initTelemetry(paneEl) {
     const ay = state.rawAccY || 0;
     const az = state.rawAccZ != null ? state.rawAccZ : -1.0;
 
-    // Angular rate |omega|
-    const omega = Math.sqrt(gx * gx + gy * gy + gz * gz);
-    if (omega > peakOmega) {
-      peakOmega = omega;
-      peakOmegaTimer = now;
-    } else if (now - peakOmegaTimer > 60000) {
-      peakOmega = omega;
-      peakOmegaTimer = now;
-    }
-    setText($('stat-omega-val'), omega.toFixed(1));
-    setText($('stat-omega-peak'), peakOmega.toFixed(1));
+    const elRgx = $('tel-raw-gx') || $('stat-raw-gx');
+    if (elRgx) setText(elRgx, (gx >= 0 ? '+' : '') + gx.toFixed(2));
+    const elRgy = $('tel-raw-gy') || $('stat-raw-gy');
+    if (elRgy) setText(elRgy, (gy >= 0 ? '+' : '') + gy.toFixed(2));
+    const elRgz = $('tel-raw-gz') || $('stat-raw-gz');
+    if (elRgz) setText(elRgz, (gz >= 0 ? '+' : '') + gz.toFixed(2));
 
-    // Rest Noise (RMS) & Stability Tag
-    const noise = Math.min(0.8, omega * 0.08);
-    history.noise.push(noise);
-    if (history.noise.length > MAX_HISTORY) history.noise.shift();
-    setText($('stat-noise-val'), noise.toFixed(2));
-    const noiseBadge = $('stat-noise-badge');
-    if (noiseBadge) {
-      const isStill = omega < 1.5;
-      const tagText = isOffline ? 'Офлайн' : isStill ? (noise < 0.15 ? 'Стабильно' : 'Дрожание') : 'Движение';
-      setText(noiseBadge, tagText);
-      toggleClass(noiseBadge, 'pg-badge--ok', isStill && noise < 0.15);
-      toggleClass(noiseBadge, 'pg-badge--warn', isStill && noise >= 0.15);
-      toggleClass(noiseBadge, 'pg-badge--danger', isOffline);
-    }
-    const noiseSpark = $('stat-noise-spark');
-    if (noiseSpark) noiseSpark.setAttribute('d', buildSparkline(history.noise, 0, 0.5));
+    const elRax = $('tel-raw-ax') || $('stat-raw-ax');
+    if (elRax) setText(elRax, (ax >= 0 ? '+' : '') + ax.toFixed(2));
+    const elRay = $('tel-raw-ay') || $('stat-raw-ay');
+    if (elRay) setText(elRay, (ay >= 0 ? '+' : '') + ay.toFixed(2));
+    const elRaz = $('tel-raw-az') || $('stat-raw-az');
+    if (elRaz) setText(elRaz, (az >= 0 ? '+' : '') + az.toFixed(2));
 
-    // Rest Drift
-    setText($('stat-drift-x'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
-    setText($('stat-drift-y'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
-    setText($('stat-drift-z'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
-    const driftBadge = $('stat-drift-badge');
-    if (driftBadge) {
-      const isRest = omega < 1.0;
-      setText(driftBadge, isRest ? (t('ui.stats_drift_still') || 'Покой') : (t('ui.stats_drift_motion') || 'Движение'));
-      toggleClass(driftBadge, 'pg-badge--ok', isRest);
-      toggleClass(driftBadge, 'pg-badge--warn', !isRest);
-    }
-
-    // Gravity |a|
-    const grav = Math.sqrt(ax * ax + ay * ay + az * az);
-    const deltaG = Math.abs(1.0 - grav);
-    setText($('stat-gravity-val'), grav.toFixed(2));
-    setText($('stat-gravity-delta'), (deltaG >= 0 ? '±' : '') + deltaG.toFixed(2));
-    const gravBadge = $('stat-gravity-badge');
-    if (gravBadge) {
-      toggleClass(gravBadge, 'pg-badge--ok', deltaG < 0.05);
-      toggleClass(gravBadge, 'pg-badge--warn', deltaG >= 0.05 && deltaG < 0.12);
-      toggleClass(gravBadge, 'pg-badge--danger', deltaG >= 0.12);
-      setText(gravBadge, deltaG < 0.05 ? 'ok' : 'bias');
-    }
-
-    // ═══ GROUP C: Pipeline & Active Filter Chips ═══
-    const activeProf = state.activeSlot?.name || state.profileName || 'По умолчанию';
-    setText($('stat-pipe-profile'), `Профиль: ${activeProf}`);
-    setText($('stat-pipe-mount'), `Наклон: ${state.mountCorrection ? 'Вкл' : 'Выкл'}`);
-    setText($('stat-pipe-cemu'), `Защита Cemu: ${state.cemuGuard ? 'Вкл' : 'Выкл'}`);
-    setText($('stat-pipe-deadband'), `Deadband: ${(state.deadband || 0.15).toFixed(2)}°`);
-    setText($('stat-pipe-sens'), `Sens: ${(state.sensitivity || 1.0).toFixed(1)}x`);
-
-    // DSU Output Rate & Pipeline delay
-    const outRate = state.outHz || hz;
-    setText($('stat-out-hz-val'), outRate.toFixed(1));
-    const pipeMs = Math.max(0.6, (lat * 0.15) || 0.8);
-    history.pipe.push(pipeMs);
-    if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
-    setText($('stat-pipe-val'), pipeMs.toFixed(1));
-    const pipeSpark = $('stat-pipe-spark');
-    if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 4));
-
-    // ═══ GROUP D: Raw & Output Gyro/Accel ═══
-    setText($('tel-raw-gx'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
-    setText($('tel-raw-gy'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
-    setText($('tel-raw-gz'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
-
-    setText($('tel-raw-ax'), (ax >= 0 ? '+' : '') + ax.toFixed(2));
-    setText($('tel-raw-ay'), (ay >= 0 ? '+' : '') + ay.toFixed(2));
-    setText($('tel-raw-az'), (az >= 0 ? '+' : '') + az.toFixed(2));
-
-    if (!lastTuning) {
-      setText($('tel-out-gx'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
-      setText($('tel-out-gy'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
-      setText($('tel-out-gz'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
-    }
-
-    // ═══ GROUP E: Clients & Session ═══
+    // ═══ GROUP E: DSU Clients & Session ═══
     const dsuCount = state.dsuClients || 0;
-    setText($('stat-dsu-count'), dsuCount);
-    const dsuBadge = $('stat-dsu-badge');
-    if (dsuBadge) {
-      toggleClass(dsuBadge, 'pg-badge--ok', dsuCount > 0);
-      setText(dsuBadge, dsuCount > 0 ? 'LIVE' : '0');
-    }
-    const dsuName = $('stat-dsu-client-name');
-    if (dsuName) {
-      if (state.dsuClientList && state.dsuClientList.length > 0) {
-        setText(
-          dsuName,
-          state.dsuClientList.map((c) => `${c.name || 'App'} (${c.endpoint || ''})`).join(', ')
-        );
-      } else {
-        setText(dsuName, t('live_debug.stats_dsu_desc_waiting') || 'Ожидание...');
-      }
-    }
+    setText($('stat-dsu-count'), String(dsuCount));
+    setText($('stat-dsu-badge'), String(dsuCount));
+    const dsuList = state.dsuClientList;
+    const clientName = Array.isArray(dsuList) && dsuList.length > 0
+      ? dsuList.map((c) => c.name || c.ip || 'Client').join(', ')
+      : '—';
+    setText($('stat-dsu-client-name'), clientName);
 
     // Session stats
-    setText($('stat-sess-time'), state.connectedTime || '00:00:00');
-    const totalPkts = Math.round((hz || 60) * (history.hz.length));
-    setText($('stat-sess-pkts'), String(totalPkts));
-    setText($('stat-sess-loss'), '0');
-    setText($('stat-sess-bytes'), `${((totalPkts * 48) / 1024).toFixed(1)} KB`);
-
-    // Resources
-    if (state.cpuPercent != null) setText($('stat-res-cpu'), `${state.cpuPercent.toFixed(0)}%`);
-    if (state.ramMb != null) setText($('stat-res-ram'), `${state.ramMb.toFixed(0)} MB`);
-
-    // Euler angles
-    const p = state.pitch || 0;
-    const r = state.roll || 0;
-    const y = state.yaw || 0;
-
-    // CSS 3D fallback cube rotation (for single viewport fallback)
-    const cube = $('stats-cube-css');
-    if (cube) {
-      setVar(cube, '--rx', `${(-p).toFixed(1)}deg`);
-      setVar(cube, '--ry', `${y.toFixed(1)}deg`);
-      setVar(cube, '--rz', `${(-r).toFixed(1)}deg`);
+    if (state.connectedTime) {
+      setText($('stat-sess-time'), state.connectedTime);
+    }
+    if (state.sessionPackets != null) {
+      setText($('stat-sess-pkts'), String(state.sessionPackets));
+    }
+    if (state.sessionLoss != null) {
+      setText($('stat-sess-loss'), String(state.sessionLoss));
+    }
+    if (state.sessionBytes != null) {
+      const kb = (state.sessionBytes / 1024).toFixed(0);
+      setText($('stat-sess-bytes'), `${kb} KB`);
     }
 
-    // CSS 3D Quad viewports rotation
-    if (selectedCamMode === 'quad') {
-      const frontCube = paneEl.querySelector('.pg-cube-front');
-      const topCube = paneEl.querySelector('.pg-cube-top');
-      const rightCube = paneEl.querySelector('.pg-cube-right');
-      const isoCube = paneEl.querySelector('.pg-cube-iso');
-
-      if (frontCube) {
-        setVar(frontCube, '--rx', `${(-p).toFixed(1)}deg`);
-        setVar(frontCube, '--ry', `${y.toFixed(1)}deg`);
-        setVar(frontCube, '--rz', `${(-r).toFixed(1)}deg`);
-      }
-      if (topCube) {
-        setVar(topCube, '--rx', `${(-p - 90).toFixed(1)}deg`);
-        setVar(topCube, '--ry', `${y.toFixed(1)}deg`);
-        setVar(topCube, '--rz', `${(-r).toFixed(1)}deg`);
-      }
-      if (rightCube) {
-        setVar(rightCube, '--rx', `${(-p).toFixed(1)}deg`);
-        setVar(rightCube, '--ry', `${(y - 90).toFixed(1)}deg`);
-        setVar(rightCube, '--rz', `${(-r).toFixed(1)}deg`);
-      }
-      if (isoCube) {
-        setVar(isoCube, '--rx', `${(-p - 24).toFixed(1)}deg`);
-        setVar(isoCube, '--ry', `${(y - 32).toFixed(1)}deg`);
-        setVar(isoCube, '--rz', `${(-r).toFixed(1)}deg`);
-      }
+    // Process Resources
+    if (state.cpuPercent != null) {
+      setText($('stat-res-cpu'), `${state.cpuPercent.toFixed(1)}%`);
+    }
+    if (state.ramMb != null) {
+      setText($('stat-res-ram'), `${state.ramMb.toFixed(0)} MB`);
     }
 
     // USB Status
@@ -761,7 +723,10 @@ export function initTelemetry(paneEl) {
       on('ahrs:quat', handleAhrsQuat);
       call('SetTuningActive', true).catch(() => {});
       mountScene();
+      connectWebSocket();
+      deriveInterval = setInterval(tickDerive, 100);
       renderState(getState());
+      tickDerive();
     },
     deactivate: () => {
       if (!isActive) return;
@@ -773,6 +738,19 @@ export function initTelemetry(paneEl) {
       off('livedebug:telemetry', handleLiveTelemetry);
       off('ahrs:quat', handleAhrsQuat);
       call('SetTuningActive', false).catch(() => {});
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+        ws = null;
+      }
+      if (wsReconnectTimer) {
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = null;
+      }
+      if (deriveInterval) {
+        clearInterval(deriveInterval);
+        deriveInterval = null;
+      }
+      deriveEngine.reset();
       unmountScene();
       if (recorder.isRecording) {
         recorder.stop();
@@ -780,5 +758,6 @@ export function initTelemetry(paneEl) {
     },
     getRecorder: () => recorder,
     getScene: () => sceneInstance,
+    getDeriveEngine: () => deriveEngine,
   };
 }

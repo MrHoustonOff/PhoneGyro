@@ -99,17 +99,33 @@ print("accent.js", (OUT / "js" / "vendor" / "accent.js").stat().st_size, "bytes"
 g0 = js.index("  /* ============ GyroScene: themed Three.js stage")
 g1 = js.index("  /* splash: PhoneGyro.playSplash")
 scene_code = js[g0:g1].rstrip()
-# App-side option `still` (not in the design's bundle): no floating bob and no idle sway, so a resting
-# or live model stays perfectly still; the calibration demo rotations (pitch/roll/axes) are unaffected.
+# App-side options:
+# 1. `still` (not in design bundle): no floating bob and no idle sway
+# 2. `view`: 'front' | 'iso'
+# 3. `views`: 'quad' (1 WebGLRenderer with 4 scissor viewports: Front, Top, Right, 3/4)
 _still = [
     ("bob = Math.sin(t * 1.5) * (st === 'rest' ? .008 : .045)", "bob = still ? 0 : Math.sin(t * 1.5) * (st === 'rest' ? .008 : .045)"),
     ("else if (st === 'rest') { y = .04 * Math.sin(t * .4); }", "else if (st === 'rest') { y = still ? 0 : .04 * Math.sin(t * .4); }"),
     ("else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }", "else if (still) { x = 0; y = 0; } else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }"),
     ("var eul = new T.Euler()", "var still = !!opts.still, eul = new T.Euler()"),
-    # app-side camera view: 'front' = straight in front and a little above (calibration check), default = design's 3/4 view
+    ("var S = { mode: opts.model || 'gamepad'", "var S = { views: opts.views || 'single', mode: opts.model || 'gamepad'"),
+    # app-side camera views and quad scissor setup
     ("cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0);",
-     "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view);"),
-    ("setPaused: function (b) { S.paused = !!b; },", "setPaused: function (b) { S.paused = !!b; }, setView: setView,"),
+     "var camFront = new T.PerspectiveCamera(28, 1, .1, 60); camFront.position.set(0, 0.4, 5.8); camFront.lookAt(0, -.12, 0); "
+     "var camTop = new T.PerspectiveCamera(28, 1, .1, 60); camTop.position.set(0, 6.5, 0); camTop.up.set(0, 0, -1); camTop.lookAt(0, 0, 0); "
+     "var camRight = new T.PerspectiveCamera(28, 1, .1, 60); camRight.position.set(6.2, 0.2, 0); camRight.lookAt(0, -.12, 0); "
+     "var camIso = cam; "
+     "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view); "
+     "function setViews(v) { S.views = v; } if (opts.views) setViews(opts.views);"),
+    ("function draw(now) { size(); update((now - S.t0) / 1000); ren.render(scene, cam); }",
+     "function draw(now) { size(); update((now - S.t0) / 1000); "
+     "if (S.views === 'quad') { ren.setScissorTest(true); var hw = Math.floor(W / 2), hh = Math.floor(H / 2); "
+     "var qd = [{ c: camFront, x: 0, y: hh, w: hw, h: H - hh }, { c: camTop, x: hw, y: hh, w: W - hw, h: H - hh }, { c: camRight, x: 0, y: 0, w: hw, h: hh }, { c: camIso, x: hw, y: 0, w: W - hw, h: hh }]; "
+     "for (var i = 0; i < 4; i++) { var v = qd[i]; ren.setViewport(v.x, v.y, v.w, v.h); ren.setScissor(v.x, v.y, v.w, v.h); v.c.aspect = v.w / v.h; v.c.fov = v.w / v.h < 1.15 ? 36 : 28; v.c.updateProjectionMatrix(); ren.render(scene, v.c); } "
+     "ren.setScissorTest(false); } else { ren.setScissorTest(false); ren.setViewport(0, 0, W, H); ren.render(scene, cam); } }"),
+    ("setPaused: function (b) { S.paused = !!b; },", "setPaused: function (b) { S.paused = !!b; }, setView: setView, setViews: setViews, getViews: function () { return S.views; },"),
+    ("ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement);",
+     "try { var gl = ren.getContext(); if (gl) gl.getExtension('WEBGL_lose_context')?.loseContext(); } catch (_) {} ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement);"),
 ]
 for _a, _b in _still:
     assert scene_code.count(_a) == 1, _a
