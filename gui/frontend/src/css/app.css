@@ -133,6 +133,22 @@ body { user-select: none; -webkit-user-select: none; }
 html:not(.is-splash) #splash { display: none; }
 .app-splash { position: fixed; inset: 0; z-index: 100; width: auto; height: auto; --sw: 100%; --sh: 100%; background: var(--bg); }
 .app-splash .pg-splash__mark { object-fit: contain; }
+/* Backing rings: the card's unroll repeated across the whole ground, much fainter
+   and counter-turning, so the centre stays the focus. Compositor-only motion. */
+.app-splash__bg { position: absolute; left: 50%; top: 50%; width: 2000px; height: 2000px; margin: -1000px 0 0 -1000px;
+  pointer-events: none; animation: app-bg-spin 90s linear infinite; transition: opacity .6s; }
+.app-splash__bg circle { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round;
+  stroke-dasharray: var(--c); stroke-dashoffset: calc(var(--c) * -1); opacity: 0; }
+.app-splash.is-run .app-splash__bg circle { animation: app-unroll-rev 1.9s cubic-bezier(.2,.75,.2,1) calc(.35s + var(--i) * .08s) forwards; }
+.app-splash.is-grown .app-splash__bg { opacity: 0; }
+@keyframes app-unroll-rev {
+  0% { stroke-dashoffset: calc(var(--c) * -1); opacity: 0; transform: rotate(200deg) scale(.7); }
+  15% { opacity: var(--o); }
+  100% { stroke-dashoffset: 0; opacity: var(--o); transform: none; }
+}
+@keyframes app-bg-spin { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-splash__bg, .app-splash__bg circle { animation: none !important; } }
+
 /* The app is under the grown window; the layer fades to hand it over. */
 .app-splash.is-app { opacity: 0; transition: opacity .35s ease-out .1s; pointer-events: none; }
 /* Keep the ring drift still until the hand-over, so the app's tile lines up with
