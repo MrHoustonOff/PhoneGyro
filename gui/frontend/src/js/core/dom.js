@@ -31,5 +31,8 @@ export function setVar(el, name, value) {
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ESC[c]);
 
-/** The locale strings' markup: `code` and **bold**, everything else escaped. */
-export const md = (s) => esc(s).replace(/`([^`]+)`/g, '<span class="pg-code">$1</span>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>');
+/** The locale strings' markup: `code`, **bold** and [links](https://…), everything else escaped. */
+export const md = (s) => esc(s)
+  .replace(/`([^`]+)`/g, '<span class="pg-code">$1</span>')
+  .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+  .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a class="pg-link" href="$2">$1</a>');

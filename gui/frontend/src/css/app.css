@@ -148,3 +148,17 @@ html.is-enter .pg-titlebar { animation: app-fade .5s ease-out both; }
 
 /* Copy button after a copy (ui/copy.js). */
 .pg-btn.is-copied { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+
+/* ── Settings ───────────────────────────────────────────────────────────── */
+#screen-settings { padding-top: 6px; }
+.app-mac { width: 170px; }
+.app-path { width: 210px; direction: rtl; text-overflow: ellipsis; }
+.app-kbd { margin-right: 4px; }
+.app-check { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.app-modal-text { color: var(--ink-2); font-size: 14px; line-height: 21px; }
+.app-modal-text p { margin: 0 0 10px; }
+.app-modal-text b { color: var(--ink); }
+.app-modal-text a { color: var(--accent-text); }
+.app-steps { margin: 0; padding: 10px 12px 10px 30px; border-radius: var(--radius-md); background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); }
+.app-overlay .pg-modal__head { padding-right: var(--space-6); }
+.app-modal-link { margin: 12px 0 0 !important; }

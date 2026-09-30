@@ -172,19 +172,17 @@
       </section>
     </main>
 
+    <!-- Settings (design: ScreenSettings): rows are built by js/screens/settings.js -->
+    <main class="pg-set app-screen" id="screen-settings" hidden>
+      <div class="pg-set__main" id="set-col-1"></div>
+      <div class="pg-set__main" id="set-col-2"></div>
+    </main>
+
     <!-- Screens that are still being moved over -->
     <main class="pg-page pg-page--center app-screen" id="screen-soon" hidden>
       <section class="pg-card pg-card--hero pg-rings-corner pg-conn">
         <div class="display-lg" id="soon-title"></div>
         <div class="body app-sub" data-i18n="ui.soon_desc"></div>
-        <div class="pg-group app-soon-set" id="soon-settings" hidden>
-          <div class="pg-group__list">
-            <div class="pg-row">
-              <div class="pg-row__label"><span data-i18n="ui.splash">Анимация запуска</span><button class="pg-info" type="button" aria-label="Info" data-i18n-title="ui.splash_tip">i</button></div>
-              <div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" id="set-splash" aria-label="splash"><span class="pg-toggle__track"></span></label></div>
-            </div>
-          </div>
-        </div>
       </section>
     </main>
   </div>

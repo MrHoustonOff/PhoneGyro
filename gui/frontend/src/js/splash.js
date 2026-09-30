@@ -43,15 +43,7 @@ export function startSplash() {
   };
 }
 
-/** The "Launch animation" toggle (Settings). */
-export function startSplashSetting() {
-  const box = $('set-splash');
-  call('GetSplash').then((on) => {
-    box.checked = !!on;
-    remember(!!on);
-  });
-  box.onchange = () => {
-    call('SetSplash', box.checked);
-    remember(box.checked);
-  };
+/** Mirrors Go's setting for the next launch's first paint (the toggle is in Settings). */
+export function syncSplashSetting() {
+  call('GetSplash').then((on) => remember(!!on));
 }
