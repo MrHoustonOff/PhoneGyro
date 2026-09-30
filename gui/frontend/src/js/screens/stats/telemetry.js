@@ -9,8 +9,8 @@ import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
 import { TelemetryDeriveEngine } from './derive.js';
+import { createSpark, createAxisChart, setChartsEnabled } from './charts.js';
 
-const MAX_HISTORY = 30;
 const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
 function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) {
@@ -45,32 +45,6 @@ function sparkSet(el, d) {
     el.parentNode.insertBefore(fill, el);
   }
   fill.setAttribute('d', d ? d + ' L 100 32 L 0 32 Z' : '');
-}
-
-// Three-axis live chart (X/Y/Z lines over ~90 samples, stepped scale so the picture does not breathe).
-const AXCHART_N = 90;
-const AXCHART_STEPS = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
-const axCharts = {};
-function axChartPush(key, vals) {
-  let c = axCharts[key];
-  if (!c) {
-    const svg = document.querySelector(`[data-axchart="${key}"]`);
-    if (!svg) return;
-    c = axCharts[key] = { svg, paths: svg.querySelectorAll('path'), buf: [[], [], []], scale: AXCHART_STEPS[3], calm: 0 };
-  }
-  for (let k = 0; k < 3; k++) { const b = c.buf[k]; b.push(Number(vals[k]) || 0); if (b.length > AXCHART_N) b.shift(); }
-  let peak = 0;
-  for (const b of c.buf) for (const v of b) if (Math.abs(v) > peak) peak = Math.abs(v);
-  let s = c.scale;
-  if (peak > s * 0.9) s = AXCHART_STEPS.find((x) => x * 0.9 >= peak) || AXCHART_STEPS[AXCHART_STEPS.length - 1];
-  else if (peak < s * 0.25 && s > AXCHART_STEPS[0]) { if (++c.calm > 30) { s = AXCHART_STEPS[Math.max(0, AXCHART_STEPS.indexOf(s) - 1)]; c.calm = 0; } } else c.calm = 0;
-  c.scale = s;
-  for (let k = 0; k < 3; k++) {
-    const b = c.buf[k];
-    if (b.length < 2) continue;
-    const step = 100 / (AXCHART_N - 1), off = (AXCHART_N - b.length) * step;
-    c.paths[k].setAttribute('d', b.map((v, i) => `${i ? 'L' : 'M'} ${(off + i * step).toFixed(1)} ${(16 - (v / s) * 14).toFixed(1)}`).join(' '));
-  }
 }
 
 function escapeHtml(s) {
@@ -145,13 +119,31 @@ export function initTelemetry(paneEl) {
   let ws = null;
   let wsReconnectTimer = null;
 
-  const history = {
-    hz: [],
-    lat: [],
-    jitter: [],
-    loss: [],
-    pipe: [],
-    noise: [],
+  // Live charts (js/screens/stats/charts.js). Lowest scale per chart, so a calm signal stays a calm line.
+  // mode 'level' draws around the value (rates, gravity), 'zero' from the floor up; minSpan keeps a calm signal calm.
+  const SPARK_OPT = {
+    hz: { mode: 'level', minSpan: 10 }, outhz: { mode: 'level', minSpan: 10 }, gravity: { mode: 'level', minSpan: 0.1 },
+    lat: { minSpan: 10 }, jitter: { minSpan: 2 }, loss: { minSpan: 1 }, tail: { minSpan: 20 },
+    noise: { minSpan: 0.2 }, omega: { minSpan: 20 }, pipe: { minSpan: 1 },
+  };
+  // Raw/output axes are fed from the stream at 20 Hz (AXIS_MS); drift from the 10 Hz derive tick.
+  const AXIS_MS = 50;
+  const AXIS_OPT = { rawgyro: { minScale: 20 }, rawaccel: { minScale: 1.2 }, outgyro: { minScale: 20 }, drift: { minScale: 0.3, n: 40, interval: 100 } };
+  const axisLive = { rawgyro: null, rawaccel: null, outgyro: null }; // latest stream values
+  let axisTimer = null;
+  const sparks = {};
+  const axes = {};
+  paneEl.querySelectorAll('[data-chart]').forEach((h) => {
+    const k = h.dataset.chart;
+    sparks[k] = createSpark(h, { area: !h.classList.contains('app-chart--line'), ...SPARK_OPT[k] });
+  });
+  paneEl.querySelectorAll('[data-axchart]').forEach((h) => {
+    const k = h.dataset.axchart;
+    axes[k] = createAxisChart(h, { interval: AXIS_MS, ...AXIS_OPT[k] });
+  });
+  const pushSpark = (k, v) => { if (v !== '—' && v != null) sparks[k]?.push(v); };
+  const pushAxes = (k, x, y, z) => {
+    if ([x, y, z].every((v) => Number.isFinite(parseFloat(v)))) axes[k]?.push([parseFloat(x), parseFloat(y), parseFloat(z)]);
   };
 
   let latestUsbProto = null;
@@ -255,6 +247,9 @@ export function initTelemetry(paneEl) {
       return;
     }
     deriveEngine.feedFrame(msg);
+    if (msg.raw_gx != null) axisLive.rawgyro = [msg.raw_gx, msg.raw_gy, msg.raw_gz];
+    if (msg.raw_ax != null) axisLive.rawaccel = [msg.raw_ax, msg.raw_ay, msg.raw_az];
+    if (msg.out_gx != null) axisLive.outgyro = [msg.out_gx, msg.out_gy, msg.out_gz];
     if (recorder.isRecording) {
       recorder.recordFrame({
         q0: msg.q0 ?? 1,
@@ -579,6 +574,21 @@ export function initTelemetry(paneEl) {
     };
   }
 
+  // Charts switch: off hides the chart wells and stops drawing them (numbers keep updating)
+  const chartsToggle = $('stats-charts-toggle');
+  if (chartsToggle) {
+    try { chartsToggle.checked = localStorage.getItem('pg-stats-charts') !== 'false'; } catch (_) {}
+    const applyCharts = () => {
+      toggleClass(paneEl, 'is-charts-off', !chartsToggle.checked);
+      setChartsEnabled(chartsToggle.checked);
+    };
+    chartsToggle.onchange = () => {
+      try { localStorage.setItem('pg-stats-charts', String(chartsToggle.checked)); } catch (_) {}
+      applyCharts();
+    };
+    applyCharts();
+  }
+
   const onWindowBlur = () => {
     if (!isActive) return;
     if (ecoToggle && ecoToggle.checked) {
@@ -599,6 +609,8 @@ export function initTelemetry(paneEl) {
   const handleTuningFrame = (tf) => {
     if (!isActive || !tf) return;
     lastTuning = tf;
+    axisLive.outgyro = [tf.OutX, tf.OutY, tf.OutZ];
+    axisLive.rawgyro = [tf.RawX, tf.RawY, tf.RawZ];
     deriveEngine.feedTuning(tf);
     setText($('tel-out-gx'), (tf.OutX >= 0 ? '+' : '') + tf.OutX.toFixed(2));
     setText($('tel-out-gy'), (tf.OutY >= 0 ? '+' : '') + tf.OutY.toFixed(2));
@@ -682,47 +694,30 @@ export function initTelemetry(paneEl) {
     // 2. Frequency In (Hz)
     setText($('stat-hz-val'), res.inHz);
     setBadge($('stat-hz-badge'), res.hzStatus);
-    const hzVal = Number(res.inHz) || 0;
-    history.hz.push(hzVal);
-    if (history.hz.length > MAX_HISTORY) history.hz.shift();
-    const hzSpark = $('stat-hz-spark');
-    if (hzSpark) sparkSet(hzSpark, buildSparkline(history.hz));
+    if (res.isConnected) pushSpark('hz', res.inHz);
 
     // 3. Latency RTT (ms)
     setText($('stat-lat-val'), res.rttMs);
     setBadge($('stat-lat-badge'), res.rttStatus);
-    if (res.rttMs !== '—') {
-      const latVal = Number(res.rttMs) || 0;
-      history.lat.push(latVal);
-      if (history.lat.length > MAX_HISTORY) history.lat.shift();
-      const latSpark = $('stat-lat-spark');
-      if (latSpark) sparkSet(latSpark, buildSparkline(history.lat));
-    }
+    pushSpark('lat', res.rttMs);
 
     // 4. Jitter (ms)
     setText($('stat-jitter-val'), res.jitterMs);
     setBadge($('stat-jitter-badge'), res.jitterStatus);
-    const jitVal = Number(res.jitterMs) || 0;
-    history.jitter.push(jitVal);
-    if (history.jitter.length > MAX_HISTORY) history.jitter.shift();
-    const jitSpark = $('stat-jitter-spark');
-    if (jitSpark) sparkSet(jitSpark, buildSparkline(history.jitter));
+    if (res.isConnected) pushSpark('jitter', res.jitterMs);
 
     // 5. Latency Tail
     setText($('stat-tail-p95'), res.tailP95);
     setText($('stat-tail-max'), res.tailMax);
     setText($('stat-tail-dt'), res.tailAvg);
     setBadge($('stat-tail-badge'), res.tailStatus, res.tailStatus === 'ok' ? 'ok' : 'spike');
+    pushSpark('tail', res.tailP95);
 
     // 6. Loss / Merged
     setText($('stat-loss-val'), String(res.lossCount));
     setText($('stat-loss-unit'), `(${res.lossPct}%)`);
     setBadge($('stat-loss-badge'), res.lossStatus, `${res.lossPct}%`);
-    const lossVal = Number(res.lossPct) || 0;
-    history.loss.push(lossVal);
-    if (history.loss.length > MAX_HISTORY) history.loss.shift();
-    const lossSpark = $('stat-loss-spark');
-    if (lossSpark) sparkSet(lossSpark, buildSparkline(history.loss));
+    if (res.isConnected) pushSpark('loss', res.lossPct);
 
     // ═══ GROUP B: Signal State ═══
     // 7. Drift in Rest
@@ -747,16 +742,20 @@ export function initTelemetry(paneEl) {
     const nTagEl = $('stat-noise-tag');
     if (nTagEl) setText(nTagEl, res.noiseTag);
     setBadge($('stat-noise-badge'), res.noiseStatus, res.noiseTag);
+    pushSpark('noise', res.noiseDps);
+    pushAxes('drift', res.driftX, res.driftY, res.driftZ);
 
     // 9. Gravity |a|
     setText($('stat-gravity-val'), res.gravityMag);
     setText($('stat-gravity-delta'), res.gravityDelta);
     setBadge($('stat-gravity-badge'), res.gravityStatus, res.gravityStatus === 'ok' ? 'ok' : 'bias');
+    pushSpark('gravity', res.gravityMag);
 
     // 10. Omega |ω|
     setText($('stat-omega-val'), res.omegaMag);
     setText($('stat-omega-peak'), res.omegaPeak);
     setBadge($('stat-omega-badge'), res.omegaStatus, res.omegaMag);
+    pushSpark('omega', res.omegaMag);
 
     // ═══ GROUP C: Pipeline & Active Filter Chips ═══
     setText($('stat-pipe-profile'), `Профиль: ${res.activeProfileName}`);
@@ -775,19 +774,11 @@ export function initTelemetry(paneEl) {
 
     setText($('stat-pipe-val'), res.pipeMs);
     setText($('stat-out-hz-val'), res.outHz);
-    setBadge($('stat-pipe-badge'), res.pipeStatus, res.pipeStatus === 'none' ? 'нет данных' : 'ok');
-    if (res.pipeMs !== '—') {
-      const pVal = Number(res.pipeMs) || 0;
-      history.pipe.push(pVal);
-      if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
-      const pipeSpark = $('stat-pipe-spark');
-      if (pipeSpark) sparkSet(pipeSpark, buildSparkline(history.pipe));
-    }
+    setBadge($('stat-pipe-badge'), res.pipeStatus, res.pipeStatus === 'none' ? t('ui.stats_no_data') : 'ok');
+    pushSpark('pipe', res.pipeMs);
+    if (res.isConnected) pushSpark('outhz', res.outHz);
 
     // ═══ GROUP D: Raw & Output Gyro/Accel (Numbers) ═══
-    axChartPush('rawgyro', [res.rawGx, res.rawGy, res.rawGz]);
-    axChartPush('rawaccel', [res.rawAx, res.rawAy, res.rawAz]);
-    axChartPush('outgyro', [res.outGx, res.outGy, res.outGz]);
     setText($('tel-raw-gx'), res.rawGx);
     setText($('tel-raw-gy'), res.rawGy);
     setText($('tel-raw-gz'), res.rawGz);
@@ -822,6 +813,8 @@ export function initTelemetry(paneEl) {
         dsuNameEl.style.display = 'none';
         dsuNameEl.innerHTML = '';
       }
+      const idle = $('stat-dsu-idle');
+      if (idle) show(idle, !(res.dsuList && res.dsuList.length > 0));
     }
 
     setText($('stat-sess-time'), res.connectedTime);
@@ -914,6 +907,9 @@ export function initTelemetry(paneEl) {
       mountScene();
       connectWebSocket();
       deriveInterval = setInterval(tickDerive, 100);
+      axisTimer = setInterval(() => {
+        for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
+      }, AXIS_MS);
       renderState(getState());
       tickDerive();
     },
@@ -943,6 +939,10 @@ export function initTelemetry(paneEl) {
         deriveInterval = null;
       }
       deriveEngine.reset();
+      if (axisTimer) { clearInterval(axisTimer); axisTimer = null; }
+      for (const k in axisLive) axisLive[k] = null;
+      for (const k in sparks) sparks[k].clear();
+      for (const k in axes) axes[k].clear();
       unmountScene();
       if (recorder.isRecording) {
         recorder.stop();

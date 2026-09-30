@@ -77,6 +77,12 @@ export class TelemetryDeriveEngine {
 
     // History of quality index for sparkline (last 20 points)
     this.qualityHistory = [];
+    // Link quality over a sliding window, not the whole session: loss counted from the counters'
+    // difference over the last QUALITY_LOSS_WIN_MS, the score averaged over the last QUALITY_AVG_MS.
+    this.QUALITY_LOSS_WIN_MS = 10000;
+    this.QUALITY_AVG_MS = 5000;
+    this.lossSnaps = [];    // { ts, total, lost }
+    this.qualitySnaps = []; // { ts, val }
 
     // State tracking
     this.lastRecvTs = 0;
@@ -109,6 +115,8 @@ export class TelemetryDeriveEngine {
     this.omegaHistory = [];
     this.peakOmega = 0;
     this.qualityHistory = [];
+    this.lossSnaps = [];
+    this.qualitySnaps = [];
     this.lastRecvTs = 0;
     this.lastFrameWallTime = 0;
     this.rollingInHzSum = 0;
@@ -316,6 +324,10 @@ export class TelemetryDeriveEngine {
     let qualityStatus = 'danger';
     let qualityVerdict = 'ОФФЛАЙН';
 
+    if (!hasLiveStream) {
+      this.lossSnaps.length = 0;
+      this.qualitySnaps.length = 0;
+    }
     if (!isConnected) {
       quality = 0;
       qualityStatus = 'danger';
@@ -325,10 +337,17 @@ export class TelemetryDeriveEngine {
       qualityStatus = 'none';
       qualityVerdict = 'НЕТ ДАННЫХ';
     } else {
-      // 1. Loss score (40%)
+      // 1. Loss score (40%): loss over the last 10 s only (counters' difference), so an old burst fades out
+      const snaps = this.lossSnaps;
+      const last = snaps[snaps.length - 1];
+      if (last && (lossTotal < last.total || lossLost < last.lost)) snaps.length = 0; // counters restarted
+      snaps.push({ ts: now, total: lossTotal, lost: lossLost });
+      while (snaps.length > 2 && now - snaps[0].ts > this.QUALITY_LOSS_WIN_MS) snaps.shift();
+      const dTotal = lossTotal - snaps[0].total;
+      const winLossPct = dTotal > 0 ? ((lossLost - snaps[0].lost) / dTotal) * 100 : 0;
       let sLoss = 1.0;
-      if (lossPct > 0) {
-        sLoss = Math.max(0.0, 1.0 - (lossPct / 5.0));
+      if (winLossPct > 0) {
+        sLoss = Math.max(0.0, 1.0 - (winLossPct / 5.0));
       }
 
       // 2. Tail score (25%)
@@ -366,7 +385,13 @@ export class TelemetryDeriveEngine {
       }
 
       const composite = 0.40 * sLoss + 0.25 * sTail + 0.20 * sJitter + 0.15 * sRate;
-      quality = Math.max(0, Math.min(100, Math.round(100 * composite)));
+      // Shown score = average over the last 5 s: one bad tick does not flip the verdict
+      const qs = this.qualitySnaps;
+      qs.push({ ts: now, val: 100 * composite });
+      while (qs.length > 1 && now - qs[0].ts > this.QUALITY_AVG_MS) qs.shift();
+      let qSum = 0;
+      for (const q of qs) qSum += q.val;
+      quality = Math.max(0, Math.min(100, Math.round(qSum / qs.length)));
 
       if (quality >= 80) {
         qualityStatus = 'ok';
