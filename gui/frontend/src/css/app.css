@@ -370,7 +370,15 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 }
 
 /* ── Calibration screen & card (design: Modal as full page card) ───────── */
+:root .app-calpage,
+[data-theme="light"] .app-calpage,
 .app-calpage {
+  --accent: #5b7c26;
+  --on-accent: #ffffff;
+  --accent-text: #4a651d;
+  --accent-soft: rgba(91, 124, 38, 0.13);
+  --accent-line: rgba(91, 124, 38, 0.40);
+  --axis-y: var(--accent);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -378,6 +386,26 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   min-height: 100%;
   padding: 1.5rem var(--space-4);
   box-sizing: border-box;
+}
+
+[data-theme="dark"] .app-calpage,
+.app-calpage[data-theme="dark"] {
+  --accent: #a3bc69;
+  --on-accent: #0b0b0b;
+  --accent-text: #a3bc69;
+  --accent-soft: rgba(163, 188, 105, 0.15);
+  --accent-line: rgba(163, 188, 105, 0.42);
+  --axis-y: var(--accent);
+}
+
+.app-calpage .pg-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.app-calpage .pg-btn--primary:hover:not([disabled]) {
+  filter: brightness(1.08);
+  background: var(--accent);
 }
 .app-cal-modal {
   width: 100%;

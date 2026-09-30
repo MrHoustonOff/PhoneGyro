@@ -499,7 +499,7 @@ function render() {
     } else if (S.phase === 'run') {
       panelHTML = `<div class="app-cal-run">
         <div class="app-cal-runrow">
-          <span class="pg-badge pg-badge--warn pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
+          <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
           <b id="cal-run-text">${esc(cfg.axes ? c('align_status_recording') : (cfg.rest ? c('status_recording_rest') : c('status_recording')))}</b>
           <span class="pg-badge" id="cal-run-count"></span>
         </div>

@@ -37,6 +37,33 @@ function ensureDependencies() {
   return loaderPromise;
 }
 
+let activeHost = null;
+
+if (typeof window !== 'undefined' && !window.__gyroSceneHooked) {
+  const origGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = function (el, pseudo) {
+    const cs = origGetComputedStyle.call(window, el, pseudo);
+    if (el === document.documentElement && activeHost && activeHost.isConnected) {
+      const hostCs = origGetComputedStyle.call(window, activeHost, pseudo);
+      return new Proxy(cs, {
+        get(target, prop) {
+          if (prop === 'getPropertyValue') {
+            return (varName) => {
+              const hostVal = hostCs.getPropertyValue(varName);
+              if (hostVal && hostVal.trim()) return hostVal;
+              return target.getPropertyValue(varName);
+            };
+          }
+          const val = target[prop];
+          return typeof val === 'function' ? val.bind(target) : val;
+        },
+      });
+    }
+    return cs;
+  };
+  window.__gyroSceneHooked = true;
+}
+
 /**
  * Creates and returns a GyroScene 3D stage in hostEl.
  * Lazily loads Three.js and vendor/gyroscene.js on first call.
@@ -44,7 +71,16 @@ function ensureDependencies() {
  */
 export async function createGyroScene(hostEl, opts = {}) {
   await ensureDependencies();
+  activeHost = hostEl;
   const defaultGlb = new URL('../../assets/gamepad.glb.txt', import.meta.url).href;
   const sceneOpts = { glb: defaultGlb, ...opts };
-  return window.PhoneGyro.createScene(hostEl, sceneOpts);
+  const scene = window.PhoneGyro.createScene(hostEl, sceneOpts);
+  if (scene && typeof scene.dispose === 'function') {
+    const origDispose = scene.dispose.bind(scene);
+    scene.dispose = function () {
+      if (activeHost === hostEl) activeHost = null;
+      origDispose();
+    };
+  }
+  return scene;
 }
