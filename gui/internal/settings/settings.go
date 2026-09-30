@@ -41,6 +41,7 @@ type Settings struct {
 	ActiveSlot            int            `json:"activeSlot"`
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
+	Splash                bool           `json:"splash"` // play the launch animation
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -77,6 +78,7 @@ func Defaults() Settings {
 		HTTPPort:              DefaultHTTPPort,
 		HTTPSPort:             DefaultHTTPSPort,
 		GyroDeadzone:          0.20,
+		Splash:                true,
 		StillnessHint:         true,
 		DisconnectAlert:       true,
 		SilenceDisconnect:     true,
@@ -177,6 +179,7 @@ type stored struct {
 	ActiveSlot            int            `json:"activeSlot"`
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
+	Splash                *bool          `json:"splash"`
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -225,6 +228,9 @@ func Load(dir string) (s Settings, found bool) {
 	}
 	s.FirstLaunchDone = r.FirstLaunchDone
 	s.HideAuthor = r.HideAuthor
+	if r.Splash != nil {
+		s.Splash = *r.Splash
+	}
 	if r.ActiveSlot >= 0 && r.ActiveSlot < 6 {
 		s.ActiveSlot = r.ActiveSlot
 	}

@@ -407,6 +407,7 @@ export namespace settings {
 	    activeSlot: number;
 	    firstLaunchDone: boolean;
 	    hideAuthor: boolean;
+	    splash: boolean;
 	    dsuPort: number;
 	    dsuMac: string;
 	    httpPort: number;
@@ -443,6 +444,7 @@ export namespace settings {
 	        this.activeSlot = source["activeSlot"];
 	        this.firstLaunchDone = source["firstLaunchDone"];
 	        this.hideAuthor = source["hideAuthor"];
+	        this.splash = source["splash"];
 	        this.dsuPort = source["dsuPort"];
 	        this.dsuMac = source["dsuMac"];
 	        this.httpPort = source["httpPort"];

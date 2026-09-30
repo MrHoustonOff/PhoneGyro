@@ -65,6 +65,7 @@ func (a *App) applySettings(s AppSettings) {
 	a.currentLang = s.Lang
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
+	a.splash.Store(s.Splash)
 	a.themeMu.Unlock()
 
 	if a.phoneBank != nil && s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
@@ -153,6 +154,7 @@ func (a *App) settingsSnapshot() AppSettings {
 		ActiveSlot:            slot,
 		FirstLaunchDone:       firstLaunch,
 		HideAuthor:            hideAuthor,
+		Splash:                a.splash.Load(),
 		DSUPort:               orDefault(a.dsuPort, def.DSUPort),
 		DSUMAC:                a.getDSUMAC(),
 		HTTPPort:              orDefault(a.httpPort, def.HTTPPort),
@@ -345,6 +347,16 @@ func (a *App) MarkFirstLaunchDone() {
 	a.saveSettings()
 }
 
+// GetSplash reports whether the launch animation plays (settings.json splash).
+func (a *App) GetSplash() bool { return a.splash.Load() }
+
+// SetSplash turns the launch animation on or off and saves it.
+func (a *App) SetSplash(on bool) {
+	if a.splash.Swap(on) != on {
+		a.saveSettings()
+	}
+}
+
 // GetHideAuthor returns whether the discreet author attribution should be hidden.
 func (a *App) GetHideAuthor() bool {
 	a.themeMu.RLock()
@@ -462,6 +474,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		a.gyroSensitivityBits.Store(math.Float64bits(s.GyroSensitivity))
 	}
 
+	a.splash.Store(s.Splash)
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)

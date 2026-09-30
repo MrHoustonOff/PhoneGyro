@@ -59,6 +59,8 @@ export function GetProfiles():Promise<Array<profiles.View>>;
 
 export function GetResourceStats():Promise<Record<string, any>>;
 
+export function GetSplash():Promise<boolean>;
+
 export function GetState():Promise<app.AppState>;
 
 export function GetTheme():Promise<string>;
@@ -110,6 +112,8 @@ export function SetInputMode(arg1:string):Promise<string>;
 export function SetLang(arg1:string):Promise<void>;
 
 export function SetProfileMountEnabled(arg1:number,arg2:boolean):Promise<string>;
+
+export function SetSplash(arg1:boolean):Promise<void>;
 
 export function SetTheme(arg1:string):Promise<void>;
 

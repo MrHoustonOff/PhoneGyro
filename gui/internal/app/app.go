@@ -67,6 +67,7 @@ type App struct {
 	currentLang     string
 	firstLaunchDone bool
 	hideAuthor      bool
+	splash          atomic.Bool // play the launch animation
 	// Process resource monitor (CPU / RAM)
 	stopResmon   func()
 	lastResStats atomic.Pointer[map[string]any]

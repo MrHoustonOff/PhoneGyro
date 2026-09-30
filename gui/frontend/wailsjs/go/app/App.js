@@ -106,6 +106,10 @@ export function GetResourceStats() {
   return window['go']['app']['App']['GetResourceStats']();
 }
 
+export function GetSplash() {
+  return window['go']['app']['App']['GetSplash']();
+}
+
 export function GetState() {
   return window['go']['app']['App']['GetState']();
 }
@@ -208,6 +212,10 @@ export function SetLang(arg1) {
 
 export function SetProfileMountEnabled(arg1, arg2) {
   return window['go']['app']['App']['SetProfileMountEnabled'](arg1, arg2);
+}
+
+export function SetSplash(arg1) {
+  return window['go']['app']['App']['SetSplash'](arg1);
 }
 
 export function SetTheme(arg1) {
