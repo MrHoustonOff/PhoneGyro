@@ -537,15 +537,107 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-chips .pg-badge b { font-weight: 700; color: var(--ink); }
 .app-cal-det { font-size: 0.8125rem; }
 
+.app-cal-verify-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+}
+.app-cal-verify-stats .pg-stat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+.app-cal-matrix-card {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.app-cal-matrix-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.app-cal-matrix-pre {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-sm);
+  font: 400 0.8125rem/1.4 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: pre;
+}
+
 /* ── Calibration Save Screen ────────────────────────────────────────────── */
 .app-cal-save {
   display: flex;
   flex-direction: column;
   gap: 0.625rem;
-  max-width: 32rem;
+  max-width: 56rem;
   margin: 0 auto;
   width: 100%;
   min-height: 31rem;
+}
+.app-cal-save-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.app-cal-save-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+.app-cal-save-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+.app-cal-preview-card {
+  padding: 1.125rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.app-cal-preview-profile {
+  width: 100%;
+}
+.app-cal-preview-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line-subtle);
+}
+.app-cal-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+}
+@container pgwin (max-width: 859px) {
+  .app-cal-save-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
 }
 .app-cal-modal:has(.app-cal-save) {
   min-height: 39rem;

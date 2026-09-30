@@ -263,9 +263,23 @@ function selectSaveIcon(iconKey) {
     card.classList.toggle('is-selected', isSel);
     card.setAttribute('aria-checked', String(isSel));
   });
-  // Update trigger button icon
+  // Update trigger button and preview card icon
   const trigIcon = $('cal-save-trigger-icon');
   if (trigIcon) trigIcon.innerHTML = profileIconSvg(iconKey);
+  const prevIcon = $('cal-preview-icon');
+  if (prevIcon) prevIcon.innerHTML = profileIconSvg(iconKey);
+}
+
+function formatMatrix(m) {
+  if (!m || !Array.isArray(m) || !m.length) {
+    return '[ +1.00  +0.00  +0.00 ]\n[ +0.00  +1.00  +0.00 ]\n[ +0.00  +0.00  −1.00 ]';
+  }
+  const fmt = (v) => {
+    const n = Number(v) || 0;
+    const s = Math.abs(n).toFixed(2);
+    return (n >= 0 ? '+' : '−') + s;
+  };
+  return m.map((row) => '[ ' + row.map(fmt).join('  ') + ' ]').join('\n');
 }
 
 function renderSaveScreen(st) {
@@ -346,59 +360,100 @@ function renderSaveScreen(st) {
     </div>
   `;
 
+  const res = S.result || {};
+
   body().innerHTML = `
-    <div class="app-cal-save">
-      <div class="app-cal-info">
-        <div class="display-md">${esc(c('save_slot_title'))}</div>
-        <p class="app-cal-desc">${esc(c('save_slot_hint'))}</p>
+    <div class="app-cal-save app-cal-save-grid">
+      <div class="app-cal-save-form">
+        <div class="app-cal-info">
+          <div class="display-md">${esc(c('save_slot_title'))}</div>
+          <p class="app-cal-desc">${esc(c('save_slot_hint'))}</p>
+        </div>
+
+        <div class="app-cal-field">
+          <div class="app-profwrap app-cal-slotwrap" id="cal-save-slotwrap">
+            <button type="button" class="pg-row app-profbtn app-cal-slot-trigger" id="cal-save-slot-trigger" data-act="toggle-slot-menu" aria-haspopup="listbox" aria-expanded="${S.slotDropdownOpen}">
+              <span class="app-menu__icon${isEmpty ? ' app-cal-icon--muted' : ''}" id="cal-save-trigger-icon">
+                ${profileIconSvg(triggerIcon)}
+              </span>
+              <span class="app-grow">
+                <span class="pg-profile__t" id="cal-save-trigger-title">${esc(triggerTitle)}</span>
+                <span class="pg-profile__s" id="cal-save-trigger-device">${esc(triggerDevice)}</span>
+              </span>
+              <span class="pg-badge app-cal-slotbadge" id="cal-save-trigger-badge">${esc(c('slot_label', { n: slot + 1 }))}</span>
+              <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <div class="app-menu app-cal-slotmenu" id="cal-save-slot-menu"${S.slotDropdownOpen ? '' : ' hidden'} role="listbox">
+              ${slotItemsHtml}
+            </div>
+          </div>
+        </div>
+
+        ${overwriteHtml}
+
+        <div class="app-cal-field">
+          <label class="app-cal-label" for="cal-name">${esc(c('save_name_title'))}</label>
+          <input class="pg-input app-cal-name" id="cal-name" data-slot="${slot}" maxlength="40" placeholder="${esc(c('save_name_placeholder'))}" value="${esc(nameValue)}">
+        </div>
+
+        <div class="app-cal-field">
+          <label class="app-cal-label">${esc(c('save_icon_title'))}</label>
+          <div class="app-cal-icons" role="radiogroup" aria-label="${esc(c('save_icon_title'))}">
+            ${iconsHtml}
+          </div>
+        </div>
+
+        ${deviceBadgeHtml}
       </div>
 
-      <div class="app-cal-field">
-        <div class="app-profwrap app-cal-slotwrap" id="cal-save-slotwrap">
-          <button type="button" class="pg-row app-profbtn app-cal-slot-trigger" id="cal-save-slot-trigger" data-act="toggle-slot-menu" aria-haspopup="listbox" aria-expanded="${S.slotDropdownOpen}">
-            <span class="app-menu__icon${isEmpty ? ' app-cal-icon--muted' : ''}" id="cal-save-trigger-icon">
-              ${profileIconSvg(triggerIcon)}
-            </span>
+      <div class="app-cal-save-preview">
+        <div class="pg-overline app-cal-preview-head">
+          <span class="pg-ring"></span>
+          <span>${esc(c('preview_title', 'Предпросмотр профиля'))}</span>
+        </div>
+        <div class="pg-card app-cal-preview-card">
+          <div class="pg-profile app-cal-preview-profile">
+            <span class="app-menu__icon" id="cal-preview-icon">${profileIconSvg(triggerIcon)}</span>
             <span class="app-grow">
-              <span class="pg-profile__t" id="cal-save-trigger-title">${esc(triggerTitle)}</span>
-              <span class="pg-profile__s" id="cal-save-trigger-device">${esc(triggerDevice)}</span>
+              <span class="pg-profile__t" id="cal-preview-name">${esc(nameValue || defaultName)}</span>
+              <span class="pg-profile__s" id="cal-preview-sub">${esc(c('slot_label', { n: slot + 1 }))} • ${esc(c('device_label', { device: currentDevice }))}</span>
             </span>
-            <span class="pg-badge app-cal-slotbadge" id="cal-save-trigger-badge">${esc(c('slot_label', { n: slot + 1 }))}</span>
-            <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-          </button>
-          <div class="app-menu app-cal-slotmenu" id="cal-save-slot-menu"${S.slotDropdownOpen ? '' : ' hidden'} role="listbox">
-            ${slotItemsHtml}
+            <span class="pg-badge pg-badge--info" id="cal-preview-slotbadge">${esc(c('slot_label', { n: slot + 1 }))}</span>
+          </div>
+
+          <div class="app-cal-preview-summary">
+            <div class="pg-overline">${esc(c('summary_saving', 'Что сохраняется'))}</div>
+            <div class="app-cal-chips">
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(res.pitchAxis || '+X')}</b></span>
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(res.yawAxis || '+Y')}</b></span>
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(res.rollAxis || '+Z')}</b></span>
+            </div>
+            <div class="app-cal-preview-meta">
+              <span class="pg-row__sub">${esc(c('calibrated_today', 'Калибровка: сегодня'))}</span>
+              ${isEmpty
+                ? `<span class="pg-badge pg-badge--ok">${esc(c('profile_new', 'Новый профиль'))}</span>`
+                : `<span class="pg-badge pg-badge--warn">${esc(c('profile_overwrites', { name: p.name }))}</span>`
+              }
+            </div>
           </div>
         </div>
       </div>
-
-      ${overwriteHtml}
-
-      <div class="app-cal-field">
-        <label class="app-cal-label" for="cal-name">${esc(c('save_name_title'))}</label>
-        <input class="pg-input app-cal-name" id="cal-name" data-slot="${slot}" maxlength="40" placeholder="${esc(c('save_name_placeholder'))}" value="${esc(nameValue)}">
-      </div>
-
-      <div class="app-cal-field">
-        <label class="app-cal-label">${esc(c('save_icon_title'))}</label>
-        <div class="app-cal-icons" role="radiogroup" aria-label="${esc(c('save_icon_title'))}">
-          ${iconsHtml}
-        </div>
-      </div>
-
-      ${deviceBadgeHtml}
     </div>
   `;
 
   foot().innerHTML = btn('toverify', c('btn_back')) + '<span class="app-grow"></span>' + btn('save', c('btn_save'), 'primary');
 
-  setTimeout(() => {
-    const inp = $('cal-name');
-    if (inp) {
+  const inp = $('cal-name');
+  if (inp) {
+    inp.oninput = () => {
+      const liveVal = inp.value.trim() || defaultName;
+      setText($('cal-preview-name'), liveVal);
+    };
+    setTimeout(() => {
       inp.focus();
       inp.select();
-    }
-  }, 30);
+    }, 30);
+  }
 }
 
 function render() {
@@ -444,20 +499,45 @@ function render() {
           <div class="display-md">${esc(c('confirm_title'))}</div>
           <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
         </div>
-        <div class="app-cal-panel app-cal-panel--verify">
-          <div class="pg-notice ${isOk ? 'pg-notice--ok' : 'pg-notice--danger'} app-cal-matrix-box">
-            <div class="app-grow">
-              <b>${esc(c('axes_determined', 'Оси определены:'))}</b>
-              <div class="app-cal-chips" style="margin-top: 0.375rem">
-                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '+X')}</b></span>
-                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '+Y')}</b></span>
-                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '+Z')}</b></span>
-              </div>
-              <div class="body-sm app-cal-det" style="margin-top: 0.375rem">${esc(detText)}</div>
+        <div class="app-cal-stats pg-stats app-cal-verify-stats" id="cal-verify-stats">
+          <div class="pg-stat">
+            <div class="pg-stat__head">
+              <span class="pg-axis__key pg-axis__key--x">Pitch</span>
+              <span class="pg-badge">${esc(r.pitchAxis || '+X')}</span>
             </div>
+            <div class="mono app-cal-stat-val" id="cal-verify-pitch">+0°</div>
           </div>
-          <div id="cal-mount"></div>
+          <div class="pg-stat">
+            <div class="pg-stat__head">
+              <span class="pg-axis__key pg-axis__key--y">Yaw</span>
+              <span class="pg-badge">${esc(r.yawAxis || '+Y')}</span>
+            </div>
+            <div class="mono app-cal-stat-val" id="cal-verify-yaw">+0°</div>
+          </div>
+          <div class="pg-stat">
+            <div class="pg-stat__head">
+              <span class="pg-axis__key pg-axis__key--z">Roll</span>
+              <span class="pg-badge">${esc(r.rollAxis || '+Z')}</span>
+            </div>
+            <div class="mono app-cal-stat-val" id="cal-verify-roll">+0°</div>
+          </div>
         </div>
+        <div class="pg-card app-cal-matrix-card app-cal-matrix-box">
+          <div class="pg-row app-cal-matrix-head">
+            <div class="pg-overline">
+              <span class="pg-ring"></span>
+              <b>${esc(c('axes_determined', 'Оси определены:'))} ${esc(c('matrix_title', 'Вычисленная матрица'))}</b>
+            </div>
+            <span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det: ${(det || -1).toFixed(2)}</span>
+          </div>
+          <div class="app-cal-chips" style="margin: 0.25rem 0">
+            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '+X')}</b></span>
+            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '+Y')}</b></span>
+            <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '+Z')}</b></span>
+          </div>
+          <pre class="mono app-cal-matrix-pre">${esc(formatMatrix(S.matrix))}</pre>
+        </div>
+        <div id="cal-mount"></div>
       `;
     }
 
@@ -583,12 +663,18 @@ function updateLiveRates(st) {
     setText($('cal-val-y'), (vy >= 0 ? '+' : '') + vy + '°/s');
     setText($('cal-val-z'), (vz >= 0 ? '+' : '') + vz + '°/s');
   } else if (S.phase === 'verify') {
-    const f = (v) => (v >= 0 ? '+' : '') + (v || 0).toFixed(0) + '°';
+    const f = (v) => (v >= 0 ? '+' : '−') + Math.round(Math.abs(v || 0)) + '°';
+    const pEl = $('cal-verify-pitch');
+    const yEl = $('cal-verify-yaw');
+    const rEl = $('cal-verify-roll');
+    const pTxt = f(st.pitch);
+    const yTxt = f(st.yaw);
+    const rTxt = f(st.roll);
+    if (pEl && pEl.textContent !== pTxt) setText(pEl, pTxt);
+    if (yEl && yEl.textContent !== yTxt) setText(yEl, yTxt);
+    if (rEl && rEl.textContent !== rTxt) setText(rEl, rTxt);
     const liveEl = $('cal-live');
-    if (liveEl) {
-      const text = `PITCH ${f(st.pitch)} · ROLL ${f(st.roll)} · YAW ${f(st.yaw)}`;
-      if (liveEl.textContent !== text) setText(liveEl, text);
-    }
+    if (liveEl && liveEl.textContent) setText(liveEl, '');
     // Fallback if no ahrs:quat event received within 500ms
     if (S.scene && performance.now() - lastAhrsTs > 500) {
       if (st.ahrsQ0 !== undefined && st.ahrsQ1 !== undefined) {
