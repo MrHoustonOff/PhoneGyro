@@ -379,19 +379,29 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-axcards .app-cal-mcards { gap: 0.5rem; }
 
 /* ── Calibration screen & card (design: Modal as full page card) ───────── */
-:root .app-calpage,
-[data-theme="light"] .app-calpage,
-.app-calpage {
+html.is-calibrating,
+html.is-calibrating[data-theme="light"],
+html.is-calibrating[data-accent],
+html.is-calibrating[data-theme="light"][data-accent] {
   --accent: #5b7c26;
   --on-accent: #ffffff;
   --accent-text: #4a651d;
   --accent-soft: rgba(91, 124, 38, 0.13);
   --accent-line: rgba(91, 124, 38, 0.40);
   --axis-y: var(--accent);
-  /* Tiles: one step off the card surface so blocks read as blocks, not just as shadows. */
-  --tile: #f1f0ec;
-  --tile-hi: #e7e6e1;
-  --tile-line: rgba(0, 0, 0, 0.11);
+}
+
+html.is-calibrating[data-theme="dark"],
+html.is-calibrating[data-theme="dark"][data-accent] {
+  --accent: #a3bc69;
+  --on-accent: #0b0b0b;
+  --accent-text: #a3bc69;
+  --accent-soft: rgba(163, 188, 105, 0.15);
+  --accent-line: rgba(163, 188, 105, 0.42);
+  --axis-y: var(--accent);
+}
+
+.app-calpage {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -400,19 +410,6 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   min-height: 0;
   padding: 1.5rem var(--space-4);
   box-sizing: border-box;
-}
-
-[data-theme="dark"] .app-calpage,
-.app-calpage[data-theme="dark"] {
-  --accent: #a3bc69;
-  --on-accent: #0b0b0b;
-  --accent-text: #a3bc69;
-  --accent-soft: rgba(163, 188, 105, 0.15);
-  --accent-line: rgba(163, 188, 105, 0.42);
-  --axis-y: var(--accent);
-  --tile: #262626;
-  --tile-hi: #2f2f2f;
-  --tile-line: rgba(255, 255, 255, 0.11);
 }
 
 .app-calpage .pg-btn--primary {

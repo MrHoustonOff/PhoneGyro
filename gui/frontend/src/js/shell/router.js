@@ -75,6 +75,7 @@ export function go(screen, tabOrOpts = null, maybeOpts = {}) {
     if (shellEl) {
       toggleClass(shellEl, 'has-no-chrome', !nextChrome.header && !nextChrome.footer);
     }
+    toggleClass(document.documentElement, 'is-calibrating', targetScreen === 'calibration');
     if (headerEl) show(headerEl, !!nextChrome.header);
     if (footerEl) show(footerEl, !!nextChrome.footer);
 

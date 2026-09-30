@@ -37,33 +37,6 @@ function ensureDependencies() {
   return loaderPromise;
 }
 
-let activeHost = null;
-
-if (typeof window !== 'undefined' && !window.__gyroSceneHooked) {
-  const origGetComputedStyle = window.getComputedStyle;
-  window.getComputedStyle = function (el, pseudo) {
-    const cs = origGetComputedStyle.call(window, el, pseudo);
-    if (el === document.documentElement && activeHost && activeHost.isConnected) {
-      const hostCs = origGetComputedStyle.call(window, activeHost, pseudo);
-      return new Proxy(cs, {
-        get(target, prop) {
-          if (prop === 'getPropertyValue') {
-            return (varName) => {
-              const hostVal = hostCs.getPropertyValue(varName);
-              if (hostVal && hostVal.trim()) return hostVal;
-              return target.getPropertyValue(varName);
-            };
-          }
-          const val = target[prop];
-          return typeof val === 'function' ? val.bind(target) : val;
-        },
-      });
-    }
-    return cs;
-  };
-  window.__gyroSceneHooked = true;
-}
-
 /**
  * Creates and returns a GyroScene 3D stage in hostEl.
  * Lazily loads Three.js and vendor/gyroscene.js on first call.
@@ -71,7 +44,6 @@ if (typeof window !== 'undefined' && !window.__gyroSceneHooked) {
  */
 export async function createGyroScene(hostEl, opts = {}) {
   await ensureDependencies();
-  activeHost = hostEl;
   const defaultGlb = new URL('../../assets/gamepad.glb.txt', import.meta.url).href;
   // `still`: no floating bob / idle sway (app option, see tools/design-css/build.py)
   const sceneOpts = { glb: defaultGlb, still: true, ...opts };
@@ -79,7 +51,13 @@ export async function createGyroScene(hostEl, opts = {}) {
   if (scene && typeof scene.dispose === 'function') {
     const origDispose = scene.dispose.bind(scene);
     scene.dispose = function () {
-      if (activeHost === hostEl) activeHost = null;
+      const canvas = hostEl ? hostEl.querySelector('canvas') : null;
+      if (canvas) {
+        try {
+          const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') || canvas.getContext('experimental-webgl');
+          gl?.getExtension('WEBGL_lose_context')?.loseContext();
+        } catch (_) {}
+      }
       origDispose();
     };
   }
