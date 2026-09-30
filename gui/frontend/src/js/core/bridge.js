@@ -21,18 +21,62 @@ export async function call(method, ...args) {
   return fn ? fn(...args) : undefined;
 }
 
-/** Subscribes to a Go event. */
+const eventRegistry = new Map();
+
+function dispatchEvent(event, ...args) {
+  const set = eventRegistry.get(event);
+  if (!set) return;
+  for (const fn of set) {
+    try {
+      fn(...args);
+    } catch (err) {
+      console.error(`Error in event listener for "${event}":`, err);
+    }
+  }
+}
+
 export function on(event, fn) {
-  ready.then(() => window.runtime.EventsOn(event, fn), () => {});
+  if (typeof fn !== 'function') return;
+  let set = eventRegistry.get(event);
+  if (!set) {
+    set = new Set();
+    eventRegistry.set(event, set);
+    if (window.runtime && window.runtime.EventsOn) {
+      window.runtime.EventsOn(event, (...args) => dispatchEvent(event, ...args));
+    } else {
+      ready.then(() => {
+        if (window.runtime && window.runtime.EventsOn) {
+          window.runtime.EventsOn(event, (...args) => dispatchEvent(event, ...args));
+        }
+      }, () => {});
+    }
+  }
+  set.add(fn);
 }
 
 /** Unsubscribes from a Go event. */
-export function off(event, ...args) {
-  ready.then(() => {
+export function off(event, fn) {
+  const set = eventRegistry.get(event);
+  if (!set) return;
+
+  if (typeof fn === 'function') {
+    set.delete(fn);
+  } else {
+    set.clear();
+  }
+
+  if (set.size === 0) {
+    eventRegistry.delete(event);
     if (window.runtime && window.runtime.EventsOff) {
-      window.runtime.EventsOff(event, ...args);
+      window.runtime.EventsOff(event);
+    } else {
+      ready.then(() => {
+        if (window.runtime && window.runtime.EventsOff) {
+          window.runtime.EventsOff(event);
+        }
+      }, () => {});
     }
-  }, () => {});
+  }
 }
 
 /** The Wails runtime (window controls, BrowserOpenURL); only after `ready`. */

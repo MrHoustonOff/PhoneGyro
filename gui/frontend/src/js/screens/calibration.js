@@ -43,6 +43,7 @@ const S = {
   selectedIcon: 'default',
   slotDropdownOpen: false,
   hasRecorded: false,
+  steps: [null, null, null, null],
 };
 
 let quatListenerActive = false;
@@ -443,14 +444,17 @@ function render() {
           <div class="display-md">${esc(c('confirm_title'))}</div>
           <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
         </div>
-        <div class="app-cal-panel">
+        <div class="app-cal-panel app-cal-panel--verify">
           <div class="pg-notice ${isOk ? 'pg-notice--ok' : 'pg-notice--danger'} app-cal-matrix-box">
-            <div class="app-cal-chips">
-              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '?')}</b></span>
-              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '?')}</b></span>
-              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '?')}</b></span>
+            <div class="app-grow">
+              <b>${esc(c('axes_determined', 'Оси определены:'))}</b>
+              <div class="app-cal-chips" style="margin-top: 0.375rem">
+                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '+X')}</b></span>
+                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '+Y')}</b></span>
+                <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '+Z')}</b></span>
+              </div>
+              <div class="body-sm app-cal-det" style="margin-top: 0.375rem">${esc(detText)}</div>
             </div>
-            <div class="body-sm app-cal-det">${esc(detText)}</div>
           </div>
           <div id="cal-mount"></div>
         </div>
@@ -505,21 +509,22 @@ function render() {
         </button>
       </div>`;
     } else if (S.phase === 'done') {
-      panelHTML = `<div class="pg-notice pg-notice--ok">
-        <span>
+      panelHTML = `<div class="pg-notice pg-notice--ok app-cal-success-notice">
+        <svg class="app-cal-ok-ico" viewBox="0 0 20 20" fill="none"><path d="M4 10.5l4 4 8-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="app-grow">
           <b>${esc(cfg.axes ? c('align_success_title') : c('capture_success_title'))}</b>
-          <span class="pg-notice__sub">${md(S.doneText || '')}</span>
-        </span>
+          ${S.doneText ? `<span class="pg-notice__sub">${md(S.doneText)}</span>` : ''}
+        </div>
       </div>
-      <button type="button" class="pg-btn pg-btn--block" data-act="capture">
+      <button type="button" class="pg-btn pg-btn--block" data-act="retry">
         ${esc(cfg.axes ? c('btn_recalibrate_align') : c('btn_retry'))}
       </button>`;
     } else if (S.phase === 'fail') {
       panelHTML = `<div class="pg-notice pg-notice--danger">
-        <span>
+        <div class="app-grow">
           <b>${esc(cfg.axes ? c('align_fail_title') : c('capture_fail_title'))}</b>
           <span class="pg-notice__sub">${md(S.failText || '')}</span>
-        </span>
+        </div>
       </div>
       <button type="button" class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block" data-act="capture">
         ${esc(c('btn_retry'))}
@@ -527,10 +532,6 @@ function render() {
     }
 
     leftCol.innerHTML = `
-      <div class="app-cal-info">
-        <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
-        <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
-      </div>
       ${showStats ? `<div class="app-cal-stats pg-stats" id="cal-stats">
         <div class="pg-stat">
           <div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span></div>
@@ -545,6 +546,10 @@ function render() {
           <div class="mono app-cal-stat-val" id="cal-val-z">+0°/s</div>
         </div>
       </div>` : ''}
+      <div class="app-cal-info">
+        <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
+        <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
+      </div>
       <div class="app-cal-panel">${panelHTML}</div>
     `;
   }
@@ -557,7 +562,8 @@ function render() {
   const backLabel = n === 0 ? c('btn_cancel') : c('btn_back');
   const backBtn = btn('back', backLabel, '', S.phase === 'run');
   const nextLabel = n === STEPS.length - 1 || (n === 2 && S.result) ? c('btn_to_confirm') : c('btn_next_step');
-  const nextBtn = btn('next', nextLabel, S.phase === 'done' ? 'primary' : '', S.phase !== 'done');
+  const isDone = S.phase === 'done' || !!(S.steps[n] && S.steps[n].done);
+  const nextBtn = btn('next', nextLabel, isDone ? 'primary' : '', !isDone || S.phase === 'run');
   foot().innerHTML = backBtn + '<span class="app-grow"></span>' + nextBtn;
 
   // Live rates update
@@ -650,7 +656,13 @@ async function capture() {
   }
   S.vectors[S.step] = res.vector;
   const detail = c('res_gesture', { axis: res.axisName, pct: Math.round((res.confidence || 0) * 100), spd: Math.round(res.peakSpeed || 0) });
-  if (S.step === 2) {
+  if (S.step === 1 && S.vectors[2]) {
+    const v = await call('ValidateCalibration', S.vectors[1], S.vectors[2]);
+    if (v && v.success) {
+      S.matrix = v.matrix;
+      S.result = v;
+    }
+  } else if (S.step === 2 && S.vectors[1]) {
     const v = await call('ValidateCalibration', S.vectors[1], S.vectors[2]);
     if (!v || !v.success) return fail(v && (c(v.errorCode) || v.errorMsg) || c('err_axes_inconsistent'));
     S.matrix = v.matrix;
@@ -700,6 +712,7 @@ function stopPoll() {
 function done(text) {
   S.phase = 'done';
   S.doneText = text;
+  S.steps[S.step] = { done: true, text, vector: S.vectors[S.step] || null };
   if (S.scene) S.scene.setRecording(0);
   render();
 }
@@ -728,6 +741,7 @@ async function renderMount() {
 function startFlow(slot) {
   S.slot = slot;
   S.step = 0;
+  S.steps = [null, null, null, null];
   S.vectors = [];
   S.matrix = null;
   S.result = null;
@@ -792,12 +806,36 @@ export async function close(opts = {}) {
 async function act(a, target) {
   if (a === 'close') return requestClose();
   if (a === 'capture') return capture();
+  if (a === 'retry') {
+    S.phase = 'ready';
+    S.failText = '';
+    render();
+    return;
+  }
   if (a === 'back') {
     if (S.timer) { clearInterval(S.timer); S.timer = 0; }
     stopPoll();
+    if (S.phase === 'verify') {
+      stopQuatListener();
+      disposeScene();
+      S.step = 3;
+      if (S.steps[3] && S.steps[3].done) {
+        S.phase = 'done';
+        S.doneText = S.steps[3].text;
+      } else {
+        S.phase = 'ready';
+      }
+      render();
+      return;
+    }
     if (S.step > 0) {
       S.step--;
-      S.phase = 'ready';
+      if (S.steps[S.step] && S.steps[S.step].done) {
+        S.phase = 'done';
+        S.doneText = S.steps[S.step].text;
+      } else {
+        S.phase = 'ready';
+      }
       render();
     } else {
       requestClose();
@@ -807,7 +845,12 @@ async function act(a, target) {
   if (a === 'next') {
     if (S.step < STEPS.length - 1) {
       S.step++;
-      S.phase = 'ready';
+      if (S.steps[S.step] && S.steps[S.step].done) {
+        S.phase = 'done';
+        S.doneText = S.steps[S.step].text;
+      } else {
+        S.phase = 'ready';
+      }
       render();
       return;
     }

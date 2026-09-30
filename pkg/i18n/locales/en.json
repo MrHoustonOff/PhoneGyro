@@ -18,6 +18,7 @@
     "axis_up": "Up",
     "axis_waiting": "Waiting...",
     "axis_yaw": "Yaw",
+    "axes_determined": "Axes determined:",
     "btn_back": "← Back",
     "btn_calibrate": "Calibrate",
     "btn_calibrate_short": "Calibrate",

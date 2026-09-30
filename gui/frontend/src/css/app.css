@@ -382,12 +382,18 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-modal {
   width: 100%;
   max-width: 65rem;
+  min-height: 35rem;
   box-shadow: var(--shadow-pop);
   position: relative;
   display: flex;
   flex-direction: column;
 }
-.app-cal-modal .pg-modal__body { overflow-y: auto; flex: 1; min-height: 0; }
+.app-cal-modal .pg-modal__body {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  flex: 1;
+  min-height: 0;
+}
 .app-cal-modal .pg-modal__foot { flex: none; justify-content: space-between; }
 .app-cal-modal .pg-modal__foot .pg-btn[data-act="next"] { min-width: 11rem; }
 
@@ -398,11 +404,18 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   }
   .app-cal-modal {
     max-width: 100%;
+    min-height: auto;
   }
 }
 .app-cal-stepper { margin-bottom: 1.25rem; }
 .app-cal-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: start; }
-.app-cal-left { display: flex; flex-direction: column; gap: 0.875rem; }
+.app-cal-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 22.5rem;
+  height: 100%;
+}
 .app-cal-right { display: flex; flex-direction: column; gap: 0.5rem; }
 .app-cal-stage { height: 18.75rem; }
 .app-cal-stage .pg-stage__cap {
@@ -418,10 +431,69 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
 .app-cal-stats .pg-stat { padding: 0.5rem 0.625rem; }
 .app-cal-stat-val { font-size: 1rem; font-weight: 600; color: var(--ink); }
-.app-cal-info { display: flex; flex-direction: column; gap: 0.375rem; }
+
+/* Axis chips readability */
+.app-cal-modal .pg-axis__key {
+  width: 1.25rem;
+  height: 1.125rem;
+  border-radius: 0.25rem;
+  font-weight: 800;
+  border-width: 1px;
+  border-style: solid;
+}
+.app-cal-modal .pg-axis__key--x {
+  background: color-mix(in srgb, var(--axis-x) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-x) 65%, transparent);
+  color: var(--axis-x);
+}
+.app-cal-modal .pg-axis__key--y {
+  background: color-mix(in srgb, var(--axis-y) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-y) 65%, transparent);
+  color: var(--axis-y);
+}
+.app-cal-modal .pg-axis__key--z {
+  background: color-mix(in srgb, var(--axis-z) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-z) 65%, transparent);
+  color: var(--axis-z);
+}
+[data-theme="light"] .app-cal-modal .pg-axis__key--x { color: var(--danger-text, #b03a27); }
+[data-theme="light"] .app-cal-modal .pg-axis__key--y { color: var(--accent-text, #4a651d); }
+[data-theme="light"] .app-cal-modal .pg-axis__key--z { color: var(--info-text, #2f5f6d); }
+
+.app-cal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-height: 6.5rem;
+}
 .app-cal-desc { margin: 0; color: var(--ink-2); font-size: 0.9375rem; line-height: 1.45; }
 .app-cal-desc b { color: var(--ink); }
-.app-cal-panel { display: flex; flex-direction: column; gap: 0.625rem; }
+
+.app-cal-panel {
+  margin-top: auto;
+  min-height: 7.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+.app-cal-panel--verify {
+  min-height: auto;
+  justify-content: flex-start;
+}
+
+/* Success notice with SVG checkmark */
+.app-cal-success-notice::before {
+  display: none !important;
+}
+.app-cal-ok-ico {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--accent);
+  flex: none;
+  margin-top: 0.125rem;
+}
+
 .app-cal-action-box { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 1rem; }
 .app-cal-run { display: flex; flex-direction: column; gap: 0.625rem; padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: var(--surface-inset); box-shadow: var(--shadow-inset); }
 .app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
@@ -445,6 +517,10 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   max-width: 32rem;
   margin: 0 auto;
   width: 100%;
+  min-height: 31rem;
+}
+.app-cal-modal:has(.app-cal-save) {
+  min-height: 39rem;
 }
 .app-cal-slotwrap {
   position: relative;
@@ -487,7 +563,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   top: calc(100% + 0.375rem);
   bottom: auto;
   z-index: 50;
-  max-height: 17rem;
+  max-height: min(23rem, calc(100vh - 12rem));
   overflow-y: auto;
   padding: 0.375rem;
   border-radius: var(--radius-lg);
@@ -497,6 +573,10 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
+}
+.app-cal-slotmenu .app-menu__item {
+  padding: 0.375rem 0.5rem 0.375rem 0.625rem;
+  min-height: 2.75rem;
 }
 .app-cal-icon--muted {
   opacity: 0.45;
