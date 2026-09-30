@@ -60,10 +60,11 @@ async function ensureSubtabsLoaded() {
   try {
     const { initTelemetry } = await import('./telemetry.js');
     const { initGames } = await import('./games.js');
+    const { initBench } = await import('./bench.js');
     subtabControllers = {
       telemetry: initTelemetry($('pane-telemetry')),
       games: initGames($('pane-games')),
-      bench: null,
+      bench: initBench($('pane-bench')),
     };
   } catch (err) {
     console.error('Failed to lazy load stats subtabs:', err);

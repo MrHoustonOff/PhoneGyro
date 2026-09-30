@@ -627,7 +627,89 @@
         </div>
 
         <!-- Subtab 3: Стенд отклика -->
-        <div class="app-subtab-pane" id="pane-bench" role="tabpanel" hidden></div>
+        <div class="app-subtab-pane" id="pane-bench" role="tabpanel" hidden>
+          <div class="app-subtab-bench">
+            <!-- Bench Header Bar -->
+            <header class="app-bench-head">
+              <div class="app-bench-head__left">
+                <span class="pg-card__title" data-i18n="ui.bench_signal_source">Источник сигнала:</span>
+                <div class="pg-seg" id="bench-source-seg">
+                  <button class="pg-seg__btn is-active" data-source="dsu" type="button" data-i18n="ui.game_source_dsu">DSU с фильтром</button>
+                  <button class="pg-seg__btn" data-source="raw" type="button" data-i18n="ui.game_source_raw">Сырой гироскоп</button>
+                </div>
+                <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-bench-recenter" type="button" title="[Space] Center">
+                  <kbd style="font-size:0.6875rem;padding:0.125rem 0.3125rem;border-radius:var(--radius-sm);background:var(--surface-inset);border:1px solid var(--line-subtle)">Space</kbd>
+                  <span data-i18n="ui.center_btn">Центрировать</span>
+                </button>
+              </div>
+
+              <div class="app-bench-head__right">
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_status">Статус:</span>
+                  <span class="pg-badge pg-badge--ok pg-badge--dot" id="bench-stability-badge" data-i18n="ui.bench_status_still">Покой</span>
+                </div>
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_noise">Шум:</span>
+                  <b id="bench-noise-val" style="font-family:var(--font-mono);color:var(--ink)">--%</b>
+                </div>
+                <div class="app-bench-meta-item">
+                  <span class="pg-dim" data-i18n="ui.bench_rate">Частота:</span>
+                  <b id="bench-rate-val" style="font-family:var(--font-mono);color:var(--info)">-- Hz</b>
+                </div>
+              </div>
+            </header>
+
+            <!-- Central Oscilloscope Card -->
+            <section class="pg-card app-bench-osc-card">
+              <div class="app-bench-osc-head">
+                <div class="app-bench-osc-title-wrap">
+                  <span class="pg-card__title" data-i18n="ui.bench_osc_title">Осциллограф реального времени</span>
+                  <span class="pg-dim" style="font-size:0.8125rem" data-i18n="ui.bench_osc_frames">(140 кадров истории)</span>
+                </div>
+                <div class="pg-seg" id="bench-axis-seg">
+                  <button class="pg-seg__btn" data-axis="x" type="button" data-i18n="ui.bench_axis_pitch">Pitch (X)</button>
+                  <button class="pg-seg__btn" data-axis="y" type="button" data-i18n="ui.bench_axis_yaw">Yaw (Y)</button>
+                  <button class="pg-seg__btn" data-axis="z" type="button" data-i18n="ui.bench_axis_roll">Roll (Z)</button>
+                  <button class="pg-seg__btn is-active" data-axis="all" type="button" data-i18n="ui.bench_axis_all">Все 3 оси</button>
+                </div>
+              </div>
+
+              <!-- Oscilloscope Canvas Wrap -->
+              <div class="app-bench-osc-wrap" id="bench-osc-wrap">
+                <canvas id="bench-oscilloscope-canvas"></canvas>
+              </div>
+
+              <!-- Legend -->
+              <footer class="app-bench-legend">
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#ef4444"></span> <span data-i18n="ui.bench_legend_pitch">Pitch (Тангаж)</span></span>
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#10b981"></span> <span data-i18n="ui.bench_legend_yaw">Yaw (Рыскание)</span></span>
+                <span class="app-legend-item"><span class="app-legend-dot" style="background:#06b6d4"></span> <span data-i18n="ui.bench_legend_roll">Roll (Крен)</span></span>
+                <span class="app-legend-note" data-i18n="ui.bench_legend_note">Тонкая линия — сырые датчики; Сплошная — после фильтрации DSU</span>
+              </footer>
+            </section>
+
+            <!-- Tuning Sliders Controls -->
+            <section class="app-bench-controls">
+              <div class="pg-card app-bench-slider-card">
+                <div class="app-bench-slider-head">
+                  <span data-i18n="ui.bench_deadband">Порог дрожи (Deadband)</span>
+                  <b id="bench-deadband-val">0.12 °/s</b>
+                </div>
+                <input type="range" id="bench-deadband-slider" min="0" max="0.5" step="0.01" value="0.12" class="pg-range">
+                <span class="pg-card__desc" data-i18n="ui.bench_deadband_desc">Срезает микродрожание рук и сенсорный шум в покое</span>
+              </div>
+
+              <div class="pg-card app-bench-slider-card">
+                <div class="app-bench-slider-head">
+                  <span data-i18n="ui.bench_sensitivity">Чувствительность (Sensitivity)</span>
+                  <b id="bench-sens-val">1.00x</b>
+                </div>
+                <input type="range" id="bench-sens-slider" min="0.25" max="3.0" step="0.05" value="1.00" class="pg-range">
+                <span class="pg-card__desc" data-i18n="ui.bench_sens_desc">Масштабирует угловую скорость перед отправкой в DSU</span>
+              </div>
+            </section>
+          </div>
+        </div>
       </div>
     </main>
 
