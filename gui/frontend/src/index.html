@@ -214,6 +214,28 @@
       <nav class="pg-toc" id="docs-toc"></nav>
     </main>
 
+    <!-- Stats & 3D screen: telemetry, mini-games, response bench -->
+    <main class="pg-page app-screen app-stats-page" id="screen-stats" hidden>
+      <div class="app-stats-subnav-bar">
+        <nav class="pg-seg app-stats-subnav" id="stats-subnav" role="tablist">
+          <button class="pg-seg__btn is-active" type="button" role="tab" data-subtab="telemetry" id="subtab-btn-telemetry" data-i18n="ui.stats_tab_telemetry">3D и телеметрия</button>
+          <button class="pg-seg__btn" type="button" role="tab" data-subtab="games" id="subtab-btn-games" data-i18n="ui.stats_tab_games">Мини-игры</button>
+          <button class="pg-seg__btn" type="button" role="tab" data-subtab="bench" id="subtab-btn-bench" data-i18n="ui.stats_tab_bench">Стенд отклика</button>
+        </nav>
+      </div>
+
+      <div class="app-stats-container" id="stats-container">
+        <!-- Subtab 1: 3D и телеметрия -->
+        <div class="app-subtab-pane is-active" id="pane-telemetry" role="tabpanel"></div>
+
+        <!-- Subtab 2: Мини-игры -->
+        <div class="app-subtab-pane" id="pane-games" role="tabpanel" hidden></div>
+
+        <!-- Subtab 3: Стенд отклика -->
+        <div class="app-subtab-pane" id="pane-bench" role="tabpanel" hidden></div>
+      </div>
+    </main>
+
     <!-- Screens that are still being moved over -->
     <main class="pg-page pg-page--center app-screen" id="screen-soon" hidden>
       <section class="pg-card pg-card--hero pg-rings-corner pg-conn">

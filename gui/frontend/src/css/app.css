@@ -1359,3 +1359,44 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-inset);
   border-color: var(--accent-line);
 }
+
+/* ───────── Stats & 3D screen shell ───────── */
+.app-stats-page {
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.app-stats-subnav-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.375rem 0 0.5rem;
+  flex: none;
+  z-index: 5;
+}
+
+.app-stats-container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+}
+
+.app-subtab-pane {
+  display: none;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.app-subtab-pane.is-active {
+  display: flex;
+}
