@@ -75,6 +75,11 @@ export function backendStub({ fontScale } = {}) {
   window.runtime = new Proxy({
     EventsOn(n, cb) { (reg[n] = reg[n] || []).push(cb); return noop; },
     EventsOnMultiple(n, cb) { (reg[n] = reg[n] || []).push(cb); return noop; },
+    EventsOff(n, cb) {
+      if (!reg[n]) return;
+      if (!cb) { reg[n] = []; return; }
+      reg[n] = reg[n].filter((f) => f !== cb);
+    },
   }, { get: (t, k) => (k in t ? t[k] : noop) });
   const emit = (n, d) => (reg[n] || []).forEach(cb => { try { cb(d); } catch (e) { window.__bench.errors.push(String(e && e.stack || e)); } });
   window.__emit = emit;
@@ -107,7 +112,7 @@ export function backendStub({ fontScale } = {}) {
     GetCloseAction: () => 'ask', GetAxisAlignStatus: () => ({ pairs: 8, minPairs: 8, known: true, mapping: ['+X -> Pitch', '+Y -> Yaw', '+Z -> Roll'] }), GetWizardMount: () => null,
     StartCapture: () => 'ok',
     StopCapture: (step) => ({ success: true, vector: [step === 1 ? 1 : 0, step === 0 ? 1 : 0, step === 2 ? 1 : 0], axisName: step === 1 ? 'Pitch' : step === 2 ? 'Roll' : 'Rest', confidence: 0.95, peakSpeed: 120 }),
-    ValidateCalibration: () => ({ success: true, matrix: [1,0,0,0,1,0,0,0,1], pitchAxis: '+X', yawAxis: '+Y', rollAxis: '+Z' }),
+    ValidateCalibration: () => ({ success: true, matrix: [[1,0,0],[0,1,0],[0,0,-1]], det: -1.0, pitchAxis: '+X', yawAxis: '+Y', rollAxis: '-Z' }),
     StartAxisAlign: () => 'ok',
     PreviewMatrix: () => 'ok', ClearPreview: () => 'ok', ResetAHRS: () => 'ok',
     SaveProfile: () => 'ok', SetActiveProfile: () => 'ok',

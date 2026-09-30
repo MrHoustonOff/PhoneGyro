@@ -6,7 +6,7 @@
 // and the 3D GyroScene stage on the right.
 
 import { $, esc, md, setText, setHTML } from '../core/dom.js';
-import { call } from '../core/bridge.js';
+import { call, on, off } from '../core/bridge.js';
 import { t } from '../core/i18n.js';
 import { getState, onState } from '../core/state.js';
 import { toast } from '../ui/toast.js';
@@ -38,6 +38,61 @@ const S = {
   isDisconnectAlertActive: false,
   wasInterruptedByDisconnect: false,
 };
+
+let quatListenerActive = false;
+let lastAhrsTs = 0;
+const liveQuat = [0, 0, 0, 1];
+
+function handleAhrsQuat(q) {
+  if (!S.open || S.phase !== 'verify') return;
+  if (!q) return;
+  lastAhrsTs = performance.now();
+  // Loops.go emits q0=w, q1=x, q2=y, q3=z.
+  // In Three.js / GyroScene (x, y, z, w) = (q1, q2, q3, q0).
+  liveQuat[0] = q.q1;
+  liveQuat[1] = q.q2;
+  liveQuat[2] = q.q3;
+  liveQuat[3] = q.q0;
+  if (S.scene) {
+    S.scene.setQuaternion(liveQuat);
+  }
+}
+
+function startQuatListener() {
+  if (quatListenerActive) return;
+  quatListenerActive = true;
+  on('ahrs:quat', handleAhrsQuat);
+}
+
+function stopQuatListener() {
+  if (!quatListenerActive) return;
+  quatListenerActive = false;
+  off('ahrs:quat', handleAhrsQuat);
+}
+
+function recenter() {
+  call('ResetAHRS');
+  liveQuat[0] = 0;
+  liveQuat[1] = 0;
+  liveQuat[2] = 0;
+  liveQuat[3] = 1;
+  if (S.scene) S.scene.setQuaternion(null);
+}
+
+function det3(m) {
+  if (!m) return 0;
+  if (Array.isArray(m[0])) {
+    return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+         - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+         + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  }
+  if (m.length >= 9) {
+    return m[0] * (m[4] * m[8] - m[5] * m[7])
+         - m[1] * (m[3] * m[8] - m[5] * m[6])
+         + m[2] * (m[3] * m[7] - m[4] * m[6]);
+  }
+  return 0;
+}
 
 let disconnectAlertEnabled = true;
 
@@ -148,12 +203,12 @@ async function ensureScene(stepKey) {
     S.sceneLoading = true;
     try {
       const sc = await createGyroScene(stageEl, { step: stepKey });
-      if (!S.open || S.phase === 'verify' || S.phase === 'save') {
+      if (!S.open || S.phase === 'save') {
         sc.dispose();
         return;
       }
       S.scene = sc;
-      const currentStepKey = STEPS[S.step] ? STEPS[S.step].key : stepKey;
+      const currentStepKey = S.phase === 'verify' ? 'live' : (STEPS[S.step] ? STEPS[S.step].key : stepKey);
       S.scene.setStep(currentStepKey);
     } catch (err) {
       console.error('Failed to create GyroScene:', err);
@@ -177,24 +232,9 @@ function render() {
   const st = getState() || {};
   $('cal-sub').textContent = device() ? c('subtitle_device', { device: device() }) : c('subtitle');
 
-  if (S.phase === 'verify') {
-    disposeScene();
-    const r = S.result || {};
-    body().innerHTML = stepper() + `<div class="app-cal-main">
-      <div class="display-md">${esc(c('confirm_title'))}</div>
-      <p class="app-cal-desc">${esc(t('ui.cal_verify_hint'))}</p>
-      <div class="pg-notice pg-notice--ok"><span>${md(c('res_all_done', { p: r.pitchAxis || '?', y: r.yawAxis || '?', r: r.rollAxis || '?' }))}</span></div>
-      <div id="cal-mount"></div>
-      <div class="app-cal-live"><span class="pg-dial__label" id="cal-live"></span></div>
-    </div>`;
-    foot().innerHTML = btn('restart', c('confirm_restart')) + btn('recenter', c('confirm_recenter').replace(/\s*\(.*\)$/, '')) + btn('tosave', c('confirm_yes'), 'primary');
-    renderMount();
-    updateLiveRates(st);
-    return;
-  }
-
   if (S.phase === 'save') {
     disposeScene();
+    stopQuatListener();
     const profiles = st.profiles || [];
     const old = profiles[S.slot];
     body().innerHTML = `<div class="app-cal-main">
@@ -207,11 +247,7 @@ function render() {
     return;
   }
 
-  // Steps 1–4 (Rest, Pitch, Roll, Axes)
-  const cfg = STEPS[S.step];
-  const n = S.step;
-  const stepKey = cfg.key;
-
+  // Common 2-column grid for Steps 1–4 and Step 5 (Verify)
   let grid = $('cal-grid');
   if (!grid) {
     body().innerHTML = stepper() + `<div class="app-cal-grid" id="cal-grid">
@@ -219,9 +255,11 @@ function render() {
       <div class="app-cal-right">
         <div class="pg-stage app-cal-stage" id="cal-stage">
           <span class="pg-viewport__tag">GAMEPAD</span>
+          <div class="pg-stage__tools" id="cal-stage-tools"></div>
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
         <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer'))}</div>
+        <div class="app-cal-live mono"><span id="cal-live"></span></div>
       </div>
     </div>`;
   } else {
@@ -229,8 +267,58 @@ function render() {
     if (stepperBox) setHTML(stepperBox, stepper().replace(/^<div class="[^"]*">/, '').replace(/<\/div>$/, ''));
   }
 
-  // Render left column
   const leftCol = $('cal-left');
+  const toolsEl = $('cal-stage-tools');
+
+  if (S.phase === 'verify') {
+    const r = S.result || {};
+    const det = r.det != null ? r.det : det3(S.matrix);
+    const isOk = Math.abs(det + 1.0) < 0.05;
+    const detText = isOk ? c('matrix_det_ok') : c('matrix_det_err');
+
+    if (leftCol) {
+      leftCol.innerHTML = `
+        <div class="app-cal-info">
+          <div class="display-md">${esc(c('confirm_title'))}</div>
+          <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
+        </div>
+        <div class="app-cal-panel">
+          <div class="pg-notice ${isOk ? 'pg-notice--ok' : 'pg-notice--danger'} app-cal-matrix-box">
+            <div class="app-cal-chips">
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(r.pitchAxis || '?')}</b></span>
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(r.yawAxis || '?')}</b></span>
+              <span class="pg-badge"><span class="pg-axis__key pg-axis__key--z">R</span> Roll: <b>${esc(r.rollAxis || '?')}</b></span>
+            </div>
+            <div class="body-sm app-cal-det">${esc(detText)}</div>
+          </div>
+          <div id="cal-mount"></div>
+        </div>
+      `;
+    }
+
+    if (toolsEl) {
+      toolsEl.innerHTML = `<button type="button" class="pg-btn pg-btn--sm" data-act="recenter">${esc(c('confirm_recenter'))}</button>`;
+    }
+    setText($('cal-stage-cap'), c('confirm_caption'));
+    foot().innerHTML = btn('restart', c('confirm_restart')) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
+
+    renderMount();
+    updateLiveRates(st);
+    ensureScene('live');
+    startQuatListener();
+    return;
+  }
+
+  // Steps 1–4
+  stopQuatListener();
+  if (toolsEl) toolsEl.innerHTML = '';
+  setText($('cal-live'), '');
+
+  const cfg = STEPS[S.step];
+  const n = S.step;
+  const stepKey = cfg.key;
+
+  // Render left column
   if (leftCol) {
     const showStats = n <= 2;
     let panelHTML = '';
@@ -329,7 +417,27 @@ function updateLiveRates(st) {
     setText($('cal-val-z'), (vz >= 0 ? '+' : '') + vz + '°/s');
   } else if (S.phase === 'verify') {
     const f = (v) => (v >= 0 ? '+' : '') + (v || 0).toFixed(0) + '°';
-    setText($('cal-live'), `PITCH ${f(st.pitch)} · ROLL ${f(st.roll)} · YAW ${f(st.yaw)}`);
+    const liveEl = $('cal-live');
+    if (liveEl) {
+      const text = `PITCH ${f(st.pitch)} · ROLL ${f(st.roll)} · YAW ${f(st.yaw)}`;
+      if (liveEl.textContent !== text) setText(liveEl, text);
+    }
+    // Fallback if no ahrs:quat event received within 500ms
+    if (S.scene && performance.now() - lastAhrsTs > 500) {
+      if (st.ahrsQ0 !== undefined && st.ahrsQ1 !== undefined) {
+        liveQuat[0] = st.ahrsQ1;
+        liveQuat[1] = st.ahrsQ2;
+        liveQuat[2] = st.ahrsQ3;
+        liveQuat[3] = st.ahrsQ0;
+        S.scene.setQuaternion(liveQuat);
+      } else if (st.qx !== undefined && st.qw !== undefined) {
+        liveQuat[0] = st.qx;
+        liveQuat[1] = st.qy;
+        liveQuat[2] = st.qz;
+        liveQuat[3] = st.qw;
+        S.scene.setQuaternion(liveQuat);
+      }
+    }
   }
 }
 
@@ -491,13 +599,23 @@ async function act(a, target) {
     }
     S.phase = 'verify';
     await call('PreviewMatrix', S.matrix);
-    call('ResetAHRS');
+    recenter();
     render();
     return;
   }
-  if (a === 'recenter') return call('ResetAHRS');
-  if (a === 'restart') return startFlow(S.slot);
-  if (a === 'tosave') { S.phase = 'save'; render(); return; }
+  if (a === 'recenter') return recenter();
+  if (a === 'restart') {
+    stopQuatListener();
+    disposeScene();
+    return startFlow(S.slot);
+  }
+  if (a === 'tosave') {
+    stopQuatListener();
+    disposeScene();
+    S.phase = 'save';
+    render();
+    return;
+  }
   if (a === 'toverify') { S.phase = 'verify'; render(); return; }
   if (a === 'save') {
     if (S.busy) return;
@@ -541,6 +659,7 @@ function close() {
   if (S.phase === 'run') call('StopCapture', S.step).catch(() => {});
   if (S.timer) { clearInterval(S.timer); S.timer = 0; }
   stopPoll();
+  stopQuatListener();
   disposeScene();
   S.open = false;
   el().hidden = true;
@@ -561,7 +680,13 @@ export function startCalibration() {
     if (!S.open) return;
     if (e.key === 'Escape') close();
     else if (e.key === 'Enter' && S.phase === 'save') act('save');
-    else if (e.code === 'Space' && S.phase === 'verify') { e.preventDefault(); call('ResetAHRS'); }
+    else if (e.code === 'Space' && S.phase === 'verify') {
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (activeTag !== 'input' && activeTag !== 'textarea') {
+        e.preventDefault();
+        recenter();
+      }
+    }
   });
 
   onState((st) => {

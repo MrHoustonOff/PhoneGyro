@@ -26,6 +26,15 @@ export function on(event, fn) {
   ready.then(() => window.runtime.EventsOn(event, fn), () => {});
 }
 
+/** Unsubscribes from a Go event. */
+export function off(event, ...args) {
+  ready.then(() => {
+    if (window.runtime && window.runtime.EventsOff) {
+      window.runtime.EventsOff(event, ...args);
+    }
+  }, () => {});
+}
+
 /** The Wails runtime (window controls, BrowserOpenURL); only after `ready`. */
 export const runtime = () => window.runtime;
 
