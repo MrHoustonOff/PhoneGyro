@@ -1439,8 +1439,8 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-bench-canvas-wrap {
   position: relative;
   width: 100%;
-  height: 9.375rem;
-  min-height: 7.5rem;
+  height: 15rem;
+  min-height: 10rem;
   background: var(--surface-inset);
   border: 1px solid var(--line-subtle);
   border-radius: var(--radius-md);

@@ -23,18 +23,18 @@ const deadbandOptions = (vals) => vals.map((v) => [v, dbKey(v)]);
 // label/tip are i18n keys (tip defaults to label + "_tip").
 const COLUMNS = [
   [
+    { title: 'settings_modal.group_motion', note: 'settings_modal.filter_live_hint', rows: [
+      { key: 'gyroDeadband', type: 'select', num: true, label: 'settings_modal.gyro_deadband', options: deadbandOptions(DEADBAND) },
+      { key: 'gyroDeadbandUsb', type: 'select', num: true, label: 'settings_modal.gyro_deadband_usb', options: deadbandOptions(DEADBAND.filter((v) => v !== '0.05')) },
+      { key: 'gyroSensitivity', type: 'slider', min: 0.25, max: 3, step: 0.05, fmt: (v) => v.toFixed(2) + 'x', label: 'settings_modal.gyro_sensitivity' },
+      { key: 'cemuDriftGuard', type: 'toggle', label: 'settings_modal.cemu_drift_guard' },
+    ] },
     { title: 'settings_modal.group_network', rows: [
       { type: 'firewall', label: 'firewall.label', tip: 'firewall.tip' },
       { key: 'dsuPort', type: 'port', label: 'settings_modal.dsu_port' },
       { key: 'dsuMac', type: 'mac', label: 'settings_modal.dsu_mac' },
       { key: 'httpPort', type: 'port', label: 'settings_modal.http_port' },
       { key: 'httpsPort', type: 'port', label: 'settings_modal.https_port' },
-    ] },
-    { title: 'settings_modal.group_motion', note: 'settings_modal.filter_live_hint', rows: [
-      { key: 'gyroDeadband', type: 'select', num: true, label: 'settings_modal.gyro_deadband', options: deadbandOptions(DEADBAND) },
-      { key: 'gyroDeadbandUsb', type: 'select', num: true, label: 'settings_modal.gyro_deadband_usb', options: deadbandOptions(DEADBAND.filter((v) => v !== '0.05')) },
-      { key: 'gyroSensitivity', type: 'slider', min: 0.25, max: 3, step: 0.05, fmt: (v) => v.toFixed(2) + 'x', label: 'settings_modal.gyro_sensitivity' },
-      { key: 'cemuDriftGuard', type: 'toggle', label: 'settings_modal.cemu_drift_guard' },
     ] },
   ],
   [
