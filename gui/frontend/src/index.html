@@ -6,11 +6,12 @@
 <meta name="color-scheme" content="light dark">
 <title>PhoneGyro</title>
 <script>
-  // First paint: theme and "play the launch animation" from the last run, so
+  // First paint: theme, interface scale and "play the launch animation" from the last run, so
   // nothing flips once the backend answers (js/main.js keeps them in sync).
   (function () {
-    var d = document.documentElement, t = null, s = null;
-    try { t = localStorage.getItem('pg-theme'); s = localStorage.getItem('pg-splash'); } catch (e) {}
+    var d = document.documentElement, t = null, s = null, z = null;
+    try { t = localStorage.getItem('pg-theme'); s = localStorage.getItem('pg-splash'); z = parseFloat(localStorage.getItem('pg-zoom')); } catch (e) {}
+    if (z >= 0.5 && z <= 3) d.style.setProperty('--pg-zoom', String(z));
     if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
     if (s !== '0' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) d.classList.add('is-splash');
   })();

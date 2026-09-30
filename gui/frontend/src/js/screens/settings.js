@@ -11,6 +11,7 @@ import { onScreen } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { enhanceSelects } from '../ui/select.js';
+import { setZoom, onZoom } from '../ui/zoom.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -45,6 +46,10 @@ const COLUMNS = [
       { key: 'soundVolume', type: 'slider', min: 0, max: 3, step: 1, fmt: (v) => v + 'x', label: 'settings_modal.sound_volume' },
       { key: 'checkUpdates', type: 'toggle', label: 'settings_modal.check_updates' },
       { type: 'datadir', label: 'settings_modal.data_dir' },
+    ] },
+    { title: 'settings_modal.group_appearance', rows: [
+      { key: 'fontScale', type: 'slider', min: 0.5, max: 3, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %',
+        label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
     ] },
     { title: 'ui.group_performance', rows: [
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
@@ -172,7 +177,7 @@ function onInput(e) {
     el.style.setProperty('--fill', ((v - r.min) / (r.max - r.min)) * 100 + '%');
     setText($(el.id + '-v'), r.fmt(v));
     cur[r.key] = v;
-    if (e.type === 'change') { mark(rowEl, r); save(); }
+    if (e.type === 'change') { if (r.after) r.after(v); mark(rowEl, r); save(); }
     return;
   }
   if (e.type !== 'change') return;
@@ -245,5 +250,7 @@ export function startSettings() {
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
   });
   onScreen((s) => { if (s === 'settings') load(); });
+  // Ctrl +/− while Settings is open: keep the slider's value in step.
+  onZoom((v) => { if (cur && !screen.hidden && Math.abs((cur.fontScale || 1) - v) > 1e-6) { cur.fontScale = v; render(); } });
   onLang(() => { if (!screen.hidden) render(); });
 }
