@@ -119,8 +119,12 @@ function control(r, i) {
   }
 }
 
+let benchCardEl = null; // the response graph card; kept by reference because re-rendering the column wipes its children
+
 function render() {
   if (!cur) return;
+  if (!benchCardEl) benchCardEl = $('set-bench-card');
+  if (benchCardEl && benchCardEl.parentNode) benchCardEl.remove();
   let i = 0;
   COLUMNS.forEach((groups, c) => {
     const target = c === 0 ? $('set-col-1') : ($('set-col-2-groups') || $('set-col-2'));
@@ -137,8 +141,8 @@ function render() {
       + (c === COLUMNS.length - 1 ? `<div class="app-set-foot"><button class="pg-btn" type="button" id="set-reset-all">${esc(t('settings_modal.btn_reset'))}</button></div>` : '');
   });
   // The response graph lives in the left column, right under the Motion group it tunes.
-  const benchCard = $('set-bench-card'), col1 = $('set-col-1');
-  if (benchCard && col1) col1.appendChild(benchCard);
+  const col1 = $('set-col-1');
+  if (benchCardEl && col1) col1.appendChild(benchCardEl);
   enhanceSelects($('screen-settings'));
   refreshFirewall();
   call('GetDataDir').then((d) => { const el = $('set-datadir'); if (el && d) { el.value = d; el.dataset.tip = d; } });
