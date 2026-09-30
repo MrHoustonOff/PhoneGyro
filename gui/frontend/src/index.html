@@ -12,6 +12,8 @@
     var d = document.documentElement, t = null, s = null, z = null;
     try { t = localStorage.getItem('pg-theme'); s = localStorage.getItem('pg-splash'); z = parseFloat(localStorage.getItem('pg-zoom')); } catch (e) {}
     if (z >= 0.5 && z <= 3) d.style.setProperty('--pg-zoom', String(z));
+    var a = null; try { a = localStorage.getItem('pg-accent'); } catch (e) {}
+    d.setAttribute('data-accent', a || 'gold');
     if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
     if (s !== '0' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) d.classList.add('is-splash');
   })();

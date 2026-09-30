@@ -176,6 +176,12 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "accent": "Accent colour",
+    "accent_tip": "The colour of toggles, highlights, active tabs and indicators.",
+    "accent_gold": "Gold",
+    "accent_green": "Green",
+    "accent_blue": "Blue",
+    "accent_pink": "Pink",
     "cal_verify_hint": "Turn and tilt the device: the angles below should move the same way. If one goes backwards, start the calibration again.",
     "docs_search": "Search the guide",
     "docs_source": "Source code · GitHub",

@@ -12,6 +12,7 @@ import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
+import { applyAccent } from '../ui/accent.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -44,10 +45,13 @@ const COLUMNS = [
       { key: 'soundMode', type: 'select', label: 'settings_modal.sound_mode',
         options: [['cute', 'settings_modal.sound_cute'], ['windows', 'settings_modal.sound_windows'], ['off', 'settings_modal.sound_off']] },
       { key: 'soundVolume', type: 'slider', min: 0, max: 3, step: 1, fmt: (v) => v + 'x', label: 'settings_modal.sound_volume' },
+      { type: 'mixer', label: 'settings_modal.sound_details_toggle', tip: 'settings_modal.sound_details_desc' },
       { key: 'checkUpdates', type: 'toggle', label: 'settings_modal.check_updates' },
       { type: 'datadir', label: 'settings_modal.data_dir' },
     ] },
     { title: 'settings_modal.group_appearance', rows: [
+      { key: 'accent', type: 'select', label: 'ui.accent', tip: 'ui.accent_tip', after: applyAccent,
+        options: [['gold', 'ui.accent_gold'], ['green', 'ui.accent_green'], ['blue', 'ui.accent_blue'], ['pink', 'ui.accent_pink']] },
       { key: 'fontScale', type: 'slider', min: 0.5, max: 3, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %',
         label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
     ] },
@@ -63,6 +67,25 @@ const COLUMNS = [
 let cur = null;      // AppSettings as Go last returned them
 let def = null;      // a first launch's settings: the "changed" marks and resets
 let saveTimer = 0;
+let mixOpen = false;  // the per-sound mixer is folded out
+
+// Per-event volumes (settings.json soundVolumes, 0..3, 1 by default).
+const SOUNDS = [
+  ['connect', 'sound_phone_connect'], ['disconnect', 'sound_phone_disconnect'], ['loss', 'sound_link_loss'],
+  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'], ['goal', 'sound_bench_goal'], ['defeat', 'sound_bench_defeat'],
+];
+const vol = (k) => { const v = cur.soundVolumes && cur.soundVolumes[k]; return v == null ? 1 : v; };
+const CHEV = '<svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>';
+
+function mixRows() {
+  return SOUNDS.map(([k, label]) => {
+    const v = vol(k);
+    const mod = v !== 1;
+    return `<div class="pg-row app-mix${mod ? ' is-modified' : ''}" data-mix="${k}"${mixOpen ? '' : ' hidden'}>${mod ? resetBtn() : ''}
+      <div class="pg-row__label"><span class="app-mix__name">${esc(t('settings_modal.' + label))}</span><span class="pg-row__sub app-mix__desc">${esc(t('settings_modal.' + label + '_desc'))}</span></div>
+      <div class="pg-row__control"><input class="pg-slider" type="range" min="0" max="3" step="1" value="${v}" style="--fill:${(v / 3) * 100}%"><span class="pg-value">${v}x</span></div></div>`;
+  }).join('');
+}
 
 const INFO = (tip) => (t(tip) ? `<button class="pg-info" type="button" aria-label="Info" data-tip="${esc(t(tip))}">i</button>` : '');
 const REGEN = '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>';
@@ -83,6 +106,7 @@ function control(r, i) {
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
     case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
+    case 'mixer': return `<button class="pg-btn pg-btn--sm app-mixbtn" type="button" data-mixer aria-expanded="${mixOpen}">${esc(t('settings_modal.sound_details_btn'))}${CHEV}</button>`;
     case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" data-tip="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
     default: return '';
   }
@@ -98,7 +122,8 @@ function render() {
       <div class="pg-group__list">${g.rows.map((r) => {
         r._i = i++;
         const mod = modified(r);
-        return `<div class="pg-row${mod ? ' is-modified' : ''}" data-i="${r._i}">${mod ? resetBtn() : ''}<div class="pg-row__label">${esc(t(r.label))}${INFO(r.tip || r.label + '_tip')}</div><div class="pg-row__control">${control(r, r._i)}</div></div>`;
+        return `<div class="pg-row${mod ? ' is-modified' : ''}" data-i="${r._i}">${mod ? resetBtn() : ''}<div class="pg-row__label">${esc(t(r.label))}${INFO(r.tip || r.label + '_tip')}</div><div class="pg-row__control">${control(r, r._i)}</div></div>`
+          + (r.type === 'mixer' ? mixRows() : '');
       }).join('')}</div></div>`).join('')
       + (c === COLUMNS.length - 1 ? `<div class="app-set-foot"><button class="pg-btn" type="button" id="set-reset-all">${esc(t('settings_modal.btn_reset'))}</button></div>` : '');
   });
@@ -127,6 +152,12 @@ function mark(rowEl, r) {
 }
 
 function resetRow(rowEl) {
+  if (rowEl.dataset.mix) {
+    cur.soundVolumes = Object.assign({}, cur.soundVolumes, { [rowEl.dataset.mix]: 1 });
+    render();
+    save(true);
+    return;
+  }
   const r = rows()[+rowEl.dataset.i];
   if (!r || !r.key) return;
   cur[r.key] = def[r.key];
@@ -147,6 +178,7 @@ function resetAll() {
           cur[r.key] = def[r.key];
           if (r.after) r.after(cur[r.key]);
         }
+        cur.soundVolumes = Object.fromEntries(SOUNDS.map(([k]) => [k, 1]));
         render();
         save(true);
       } },
@@ -169,6 +201,19 @@ function save(now = false) {
 function onInput(e) {
   const rowEl = e.target.closest('.pg-row');
   if (!rowEl) return;
+  if (rowEl.dataset.mix) {
+    const v = Number(e.target.value);
+    e.target.style.setProperty('--fill', (v / 3) * 100 + '%');
+    setText(rowEl.querySelector('.pg-value'), v + 'x');
+    if (e.type !== 'change') return;
+    cur.soundVolumes = Object.assign({}, cur.soundVolumes, { [rowEl.dataset.mix]: v });
+    rowEl.classList.toggle('is-modified', v !== 1);
+    const b = rowEl.querySelector(':scope > .app-reset');
+    if (v !== 1 && !b) rowEl.insertAdjacentHTML('afterbegin', resetBtn());
+    if (v === 1 && b) b.remove();
+    save();
+    return;
+  }
   const r = rows()[+rowEl.dataset.i];
   if (!r || !r.key) return;
   const el = e.target;
@@ -244,6 +289,11 @@ export function startSettings() {
   screen.addEventListener('change', onInput);
   screen.addEventListener('click', (e) => {
     if (e.target.closest('[data-reset]')) resetRow(e.target.closest('.pg-row'));
+    else if (e.target.closest('[data-mixer]')) {
+      mixOpen = !mixOpen;
+      e.target.closest('[data-mixer]').setAttribute('aria-expanded', String(mixOpen));
+      screen.querySelectorAll('.app-mix').forEach((r) => { r.hidden = !mixOpen; });
+    }
     else if (e.target.closest('#set-reset-all')) resetAll();
     else if (e.target.closest('[data-regen]')) regenMac();
     else if (e.target.closest('#fw-allow')) allowFirewall(e.target.closest('#fw-allow'));

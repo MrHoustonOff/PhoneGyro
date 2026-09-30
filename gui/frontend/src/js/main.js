@@ -12,6 +12,7 @@ import { startCopy } from './ui/copy.js';
 import { startTooltips } from './ui/tooltip.js';
 import { startSelects } from './ui/select.js';
 import { startZoom } from './ui/zoom.js';
+import { startAccent } from './ui/accent.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
@@ -49,6 +50,7 @@ async function boot() {
   await Promise.all([startHeader(), startState()]);
   startFooter();
   startZoom();
+  startAccent();
   syncSplashSetting();
   startNotices();         // after the strings: they are shown in full
 }
