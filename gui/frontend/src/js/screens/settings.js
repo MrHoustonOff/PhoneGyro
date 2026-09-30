@@ -13,6 +13,7 @@ import { toast } from '../ui/toast.js';
 import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
 import { applyAccent } from '../ui/accent.js';
+import { setDebugPanel } from '../debug/toggle.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -50,12 +51,13 @@ const COLUMNS = [
       { type: 'datadir', label: 'settings_modal.data_dir' },
     ] },
     { title: 'settings_modal.group_appearance', rows: [
-      { key: 'accent', type: 'select', label: 'ui.accent', tip: 'ui.accent_tip', after: applyAccent,
-        options: [['gold', 'ui.accent_gold'], ['green', 'ui.accent_green'], ['blue', 'ui.accent_blue'], ['pink', 'ui.accent_pink']] },
+      { key: 'accent', type: 'swatches', label: 'ui.accent', tip: 'ui.accent_tip', after: applyAccent, options: ['gold', 'green', 'blue', 'pink'] },
       { key: 'fontScale', type: 'slider', min: 0.5, max: 3, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %',
         label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
     ] },
     { title: 'ui.group_performance', rows: [
+      { key: 'debugPanel', type: 'toggle', label: 'ui.debug_panel', tip: 'ui.debug_panel_tip', after: setDebugPanel },
+      { key: 'debugLog', type: 'toggle', label: 'ui.debug_log', tip: 'ui.debug_log_tip' },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
     { title: 'settings_modal.group_hotkeys', rows: [
@@ -106,6 +108,8 @@ function control(r, i) {
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
     case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
+    case 'swatches': return `<div class="app-swatches" role="radiogroup">${r.options.map((o) =>
+      `<button type="button" class="app-swatch${v === o ? ' is-active' : ''}" data-swatch="${o}" role="radio" aria-checked="${v === o}" aria-label="${esc(t('ui.accent_' + o))}" data-tip="${esc(t('ui.accent_' + o))}"></button>`).join('')}</div>`;
     case 'mixer': return `<button class="pg-btn pg-btn--sm app-mixbtn" type="button" data-mixer aria-expanded="${mixOpen}">${esc(t('settings_modal.sound_details_btn'))}${CHEV}</button>`;
     case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" data-tip="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
     default: return '';
@@ -288,6 +292,20 @@ export function startSettings() {
   screen.addEventListener('input', onInput);
   screen.addEventListener('change', onInput);
   screen.addEventListener('click', (e) => {
+    const sw = e.target.closest('[data-swatch]');
+    if (sw) {
+      const rowEl = sw.closest('.pg-row');
+      const r = rows()[+rowEl.dataset.i];
+      cur[r.key] = sw.dataset.swatch;
+      rowEl.querySelectorAll('[data-swatch]').forEach((b) => {
+        b.classList.toggle('is-active', b === sw);
+        b.setAttribute('aria-checked', String(b === sw));
+      });
+      r.after(cur[r.key]);
+      mark(rowEl, r);
+      save();
+      return;
+    }
     if (e.target.closest('[data-reset]')) resetRow(e.target.closest('.pg-row'));
     else if (e.target.closest('[data-mixer]')) {
       mixOpen = !mixOpen;

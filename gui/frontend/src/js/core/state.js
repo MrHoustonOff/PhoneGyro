@@ -4,6 +4,8 @@
 import { call, on } from './bridge.js';
 
 let current = null;
+/** How many states arrived (the debug panel's events per second). */
+export const stateStats = { count: 0 };
 const subs = [];
 
 /** Calls fn(state, prev) now (if the state is known) and on every change. */
@@ -17,6 +19,7 @@ export const getState = () => current;
 /** Applies a full state from Go (events, or a method that returns one). */
 export function setState(st) {
   if (!st) return;
+  stateStats.count++;
   const prev = current;
   current = st;
   for (const fn of subs) fn(st, prev);

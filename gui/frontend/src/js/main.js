@@ -13,6 +13,7 @@ import { startTooltips } from './ui/tooltip.js';
 import { startSelects } from './ui/select.js';
 import { startZoom } from './ui/zoom.js';
 import { startAccent } from './ui/accent.js';
+import { startDebug } from './debug/toggle.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
@@ -51,6 +52,7 @@ async function boot() {
   startFooter();
   startZoom();
   startAccent();
+  startDebug();
   syncSplashSetting();
   startNotices();         // after the strings: they are shown in full
 }
