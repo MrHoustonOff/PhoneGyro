@@ -1,14 +1,30 @@
 // Live device card (design: ScreenUsb, left column), for the phone and the USB
 // controller alike: name, link badges, the level dial, connection time, recenter.
 
-import { $, setText, show, toggleClass } from '../../core/dom.js';
+import { $, setText, show, toggleClass, setVar } from '../../core/dom.js';
 import { call } from '../../core/bridge.js';
 import { t, onLang } from '../../core/i18n.js';
-import { createDeviceLevel } from '../../ui/level.js';
 import { onState, getState } from '../../core/state.js';
 import { toast } from '../../ui/toast.js';
 
-let level = null;
+const REM_PER_DEG = 0.125;  // bubble travel (2 px per degree at 16 px)
+const MAX_REM = 3.625;      // design: clamp to ±58 px
+const LEVEL_DEG = 1;        // design: under 1° the bubble turns accent
+
+// Level dial (design: Dial): roll moves the bubble sideways, pitch up and down.
+// Past 90 degrees the device is upside down: the label says so.
+function renderLevel({ pitch = 0, roll = 0 }) {
+  const clamp = (v) => Math.max(-MAX_REM, Math.min(MAX_REM, v * REM_PER_DEG));
+  const dial = $('dial');
+  setVar(dial, '--bx', clamp(roll).toFixed(3) + 'rem');
+  setVar(dial, '--by', clamp(-pitch).toFixed(3) + 'rem');
+  const level = Math.abs(roll) < LEVEL_DEG && Math.abs(pitch) < LEVEL_DEG;
+  toggleClass($('dial-bubble'), 'is-level', level);
+  const flipped = Math.abs(roll) > 90 || Math.abs(pitch) > 90;
+  const big = Math.abs(roll) >= Math.abs(pitch) ? ['ROLL', roll] : ['PITCH', pitch];
+  setText($('dial-label'), level ? t('ui.level_level') : flipped ? t('ui.level_down')
+    : `${big[0]} ${big[1] >= 0 ? '+' : ''}${big[1].toFixed(0)}°`);
+}
 
 function badge(el, cls, text) {
   const c = 'pg-badge' + cls;
@@ -30,7 +46,7 @@ function render(st) {
   setText($('dev-link'), usb ? t('usb_mode.direct_connection') : t('ui.wifi_link'));
   setText($('dev-timer'), st.connectedTime || '00:00:00');
 
-  level.update(st);
+  renderLevel(st);
 
   const pause = $('btn-pause');
   toggleClass(pause, 'is-paused', !!st.isPaused);
@@ -38,10 +54,6 @@ function render(st) {
 }
 
 export function startDevice() {
-  level = createDeviceLevel($('level'), $('dial-label'));
-  // Level model: Settings → Performance (Go settings.json "level3d", 3D by default).
-  call('GetAppSettings').then((s) => level.setMode(s && s.level3d === false ? 'flat' : '3d'));
-  addEventListener('pg:settings', (e) => level.setMode(e.detail.level3d === false ? 'flat' : '3d'));
   $('btn-recenter').onclick = async () => {
     await call('ResetAHRS');
     toast(t('status.horizon_recenter'));

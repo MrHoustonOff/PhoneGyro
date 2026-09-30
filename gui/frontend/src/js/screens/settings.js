@@ -46,8 +46,6 @@ const COLUMNS = [
       { type: 'datadir', label: 'settings_modal.data_dir' },
     ] },
     { title: 'ui.group_performance', rows: [
-      { key: 'level3d', type: 'select', bool: true, label: 'ui.level_model', tip: 'ui.level_model_tip',
-        options: [['true', 'ui.level_3d'], ['false', 'ui.level_flat']] },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
     { title: 'settings_modal.group_hotkeys', rows: [
@@ -106,7 +104,6 @@ function save(now = false) {
   saveTimer = setTimeout(async () => {
     try {
       await call('SaveAppSettings', cur);
-      dispatchEvent(new CustomEvent('pg:settings', { detail: cur })); // live settings (e.g. the level model)
     } catch (e) {
       toast(String(e && e.message || e));
       load();

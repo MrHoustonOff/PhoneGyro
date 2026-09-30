@@ -66,7 +66,6 @@ func (a *App) applySettings(s AppSettings) {
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
 	a.splash.Store(s.Splash)
-	a.level3D.Store(s.Level3D)
 	a.themeMu.Unlock()
 
 	if a.phoneBank != nil && s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
@@ -156,7 +155,6 @@ func (a *App) settingsSnapshot() AppSettings {
 		FirstLaunchDone:       firstLaunch,
 		HideAuthor:            hideAuthor,
 		Splash:                a.splash.Load(),
-		Level3D:               a.level3D.Load(),
 		DSUPort:               orDefault(a.dsuPort, def.DSUPort),
 		DSUMAC:                a.getDSUMAC(),
 		HTTPPort:              orDefault(a.httpPort, def.HTTPPort),
@@ -477,7 +475,6 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 
 	a.splash.Store(s.Splash)
-	a.level3D.Store(s.Level3D)
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
