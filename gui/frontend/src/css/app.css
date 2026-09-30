@@ -1342,8 +1342,8 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-cal-axis.is-locked { background: color-mix(in srgb, var(--accent) 15%, var(--tile)); }
 
-/* Control profiles: the current-profile button and the list bubbles use the tile look. */
-#prof-current, #prof-menu .app-menu__item {
+/* Control profiles: the list bubbles use the tile look (the current-profile button keeps the design's dark inset). */
+#prof-menu .app-menu__item {
   background: var(--tile-lift) var(--tile);
   border: 1px solid var(--tile-line);
   box-shadow: var(--tile-bevel);
@@ -1355,5 +1355,4 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   background: color-mix(in srgb, var(--accent) 15%, var(--tile));
   border-color: var(--accent-line);
 }
-#prof-menu .app-menu__icon, #prof-current .app-menu__icon { background: var(--tile-hi); border-color: var(--tile-line); }
-#prof-current:hover { border-color: var(--line-control); }
+#prof-menu .app-menu__icon { background: var(--tile-hi); border-color: var(--tile-line); }
