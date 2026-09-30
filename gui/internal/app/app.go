@@ -64,6 +64,7 @@ type App struct {
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
+	accent          string // UI accent colour (settings.json accent), guarded by themeMu
 	currentLang     string
 	firstLaunchDone bool
 	hideAuthor      bool

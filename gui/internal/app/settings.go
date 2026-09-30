@@ -62,6 +62,7 @@ func (a *App) loadSettings() {
 func (a *App) applySettings(s AppSettings) {
 	a.themeMu.Lock()
 	a.currentTheme = s.Theme
+	a.accent = s.Accent
 	a.currentLang = s.Lang
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
@@ -110,6 +111,7 @@ func (a *App) settingsSnapshot() AppSettings {
 
 	a.themeMu.RLock()
 	theme := a.currentTheme
+	accent := a.accent
 	lang := a.currentLang
 	firstLaunch := a.firstLaunchDone
 	hideAuthor := a.hideAuthor
@@ -148,7 +150,13 @@ func (a *App) settingsSnapshot() AppSettings {
 	closeAction := a.GetCloseAction()
 
 	return AppSettings{
-		Theme:                 theme,
+		Theme: theme,
+		Accent: func() string {
+			if settings.ValidAccent(accent) {
+				return accent
+			}
+			return def.Accent
+		}(),
 		Lang:                  lang,
 		FontScale:             a.GetFontScale(),
 		ActiveSlot:            slot,
@@ -467,6 +475,11 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 
 	if s.GyroDeadzone >= 0 {
 		a.gyroDeadzoneBits.Store(math.Float64bits(s.GyroDeadzone))
+	}
+	if settings.ValidAccent(s.Accent) {
+		a.themeMu.Lock()
+		a.accent = s.Accent
+		a.themeMu.Unlock()
 	}
 	if s.GyroDeadband >= 0 && s.GyroDeadband <= 1.0 {
 		a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadband))

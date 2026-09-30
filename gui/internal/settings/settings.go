@@ -36,6 +36,7 @@ const (
 // Settings holds configurable parameters exposed in the settings window.
 type Settings struct {
 	Theme                 string         `json:"theme"`
+	Accent                string         `json:"accent"`
 	Lang                  string         `json:"lang"`
 	FontScale             float64        `json:"fontScale"`
 	ActiveSlot            int            `json:"activeSlot"`
@@ -67,10 +68,16 @@ type Settings struct {
 	InputMode             string         `json:"inputMode,omitempty"`
 }
 
+// ValidAccent reports whether a is one of the UI accent colours.
+func ValidAccent(a string) bool {
+	return a == "gold" || a == "green" || a == "blue" || a == "pink"
+}
+
 // Defaults is a first launch's settings (DSUMAC is left empty: Load makes one).
 func Defaults() Settings {
 	return Settings{
 		Theme:                 "dark",
+		Accent:                "gold",
 		Lang:                  "ru",
 		FontScale:             1.00,
 		ActiveSlot:            -1,
@@ -175,6 +182,7 @@ func RandomMAC() string {
 // which for some fields depends on other fields (see Load).
 type stored struct {
 	Theme                 string         `json:"theme"`
+	Accent                string         `json:"accent"`
 	Lang                  string         `json:"lang"`
 	ActiveSlot            int            `json:"activeSlot"`
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
@@ -222,6 +230,9 @@ func Load(dir string) (s Settings, found bool) {
 
 	if r.Theme == "dark" || r.Theme == "light" {
 		s.Theme = r.Theme
+	}
+	if ValidAccent(r.Accent) {
+		s.Accent = r.Accent
 	}
 	if r.Lang == "ru" || r.Lang == "en" {
 		s.Lang = r.Lang
