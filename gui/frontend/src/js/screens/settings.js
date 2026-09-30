@@ -115,11 +115,14 @@ function control(r, i) {
   }
 }
 
+let gamesBtnEl = null; // kept by reference too: a re-render of the column would otherwise wipe it
 let benchCardEl = null; // the response graph card; kept by reference because re-rendering the column wipes its children
 
 function render() {
   if (!cur) return;
   if (!benchCardEl) benchCardEl = $('set-bench-card');
+  if (!gamesBtnEl) gamesBtnEl = $('btn-open-games');
+  if (gamesBtnEl && gamesBtnEl.parentNode) gamesBtnEl.remove();
   if (benchCardEl && benchCardEl.parentNode) benchCardEl.remove();
   let i = 0;
   COLUMNS.forEach((groups, c) => {
@@ -138,8 +141,7 @@ function render() {
   });
   // The response graph lives in the left column, right under the Motion group it tunes.
   const col1 = $('set-col-1');
-  const gamesBtn = $('btn-open-games');
-  if (gamesBtn && col1) col1.appendChild(gamesBtn); // the mini-games entry sits right above the response card
+  if (gamesBtnEl && col1) col1.appendChild(gamesBtnEl); // the mini-games entry sits right above the response card
   if (benchCardEl && col1) col1.appendChild(benchCardEl);
   enhanceSelects($('screen-settings'));
   refreshFirewall();
