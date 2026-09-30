@@ -7,7 +7,7 @@
 
 import { $, esc, md, setText, setHTML } from '../core/dom.js';
 import { call, on, off } from '../core/bridge.js';
-import { t } from '../core/i18n.js';
+import { t, onLang } from '../core/i18n.js';
 import { getState, onState } from '../core/state.js';
 import { toast } from '../ui/toast.js';
 import { createGyroScene } from '../ui/scene.js';
@@ -366,7 +366,11 @@ function renderSaveScreen(st) {
     <div class="app-cal-save app-cal-save-grid">
       <div class="app-cal-save-form">
         <div class="app-cal-info">
-          <div class="display-md">${esc(c('save_slot_title'))}</div>
+          <div class="pg-overline app-cal-overline">
+            <span class="pg-ring"></span>
+            <span>${esc(c('save_slot_title', 'Слот сохранения'))}</span>
+          </div>
+          <div class="display-md">${esc(c('save_name_title', 'Название профиля'))}</div>
           <p class="app-cal-desc">${esc(c('save_slot_hint'))}</p>
         </div>
 
@@ -411,7 +415,7 @@ function renderSaveScreen(st) {
           <span class="pg-ring"></span>
           <span>${esc(c('preview_title', 'Предпросмотр профиля'))}</span>
         </div>
-        <div class="pg-card app-cal-preview-card">
+        <div class="pg-card app-cal-preview-card app-cal-ring-corner app-cal-ring-corner--br">
           <div class="pg-profile app-cal-preview-profile">
             <span class="app-menu__icon" id="cal-preview-icon">${profileIconSvg(triggerIcon)}</span>
             <span class="app-grow">
@@ -422,7 +426,7 @@ function renderSaveScreen(st) {
           </div>
 
           <div class="app-cal-preview-summary">
-            <div class="pg-overline">${esc(c('summary_saving', 'Что сохраняется'))}</div>
+            <div class="pg-overline"><span class="pg-ring"></span><span>${esc(c('summary_saving', 'Что сохраняется'))}</span></div>
             <div class="app-cal-chips">
               <span class="pg-badge"><span class="pg-axis__key pg-axis__key--x">P</span> Pitch: <b>${esc(res.pitchAxis || '+X')}</b></span>
               <span class="pg-badge"><span class="pg-axis__key pg-axis__key--y">Y</span> Yaw: <b>${esc(res.yawAxis || '+Y')}</b></span>
@@ -475,6 +479,11 @@ function render() {
           <div class="pg-stage__tools" id="cal-stage-tools"></div>
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
+        <div class="app-cal-legend" id="cal-legend">
+          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--x">X</span> <span>Pitch</span></span>
+          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--y">Y</span> <span>Yaw</span></span>
+          <span class="app-cal-legend-item"><span class="pg-axis__key pg-axis__key--z">Z</span> <span>Roll</span></span>
+        </div>
         <div class="body-sm app-cal-disclaimer">${esc(c('view_disclaimer'))}</div>
         <div class="app-cal-live mono"><span id="cal-live"></span></div>
       </div>
@@ -496,6 +505,10 @@ function render() {
     if (leftCol) {
       leftCol.innerHTML = `
         <div class="app-cal-info">
+          <div class="pg-overline app-cal-overline">
+            <span class="pg-ring"></span>
+            <span>${esc(t('step_x_of_y', { x: 5, y: 5 }) || 'Шаг 5 из 5')} · ${esc(c('step_pill_confirm'))}</span>
+          </div>
           <div class="display-md">${esc(c('confirm_title'))}</div>
           <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
         </div>
@@ -522,11 +535,11 @@ function render() {
             <div class="mono app-cal-stat-val" id="cal-verify-roll">+0°</div>
           </div>
         </div>
-        <div class="pg-card app-cal-matrix-card app-cal-matrix-box">
+        <div class="pg-card app-cal-matrix-card app-cal-matrix-box app-cal-ring-corner app-cal-ring-corner--tr">
           <div class="pg-row app-cal-matrix-head">
             <div class="pg-overline">
               <span class="pg-ring"></span>
-              <b>${esc(c('axes_determined', 'Оси определены:'))} ${esc(c('matrix_title', 'Вычисленная матрица'))}</b>
+              <b>${esc(c('axes_determined') || 'Оси определены:')} ${esc(c('matrix_title'))}</b>
             </div>
             <span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det: ${(det || -1).toFixed(2)}</span>
           </div>
@@ -562,6 +575,12 @@ function render() {
   const cfg = STEPS[S.step];
   const n = S.step;
   const stepKey = cfg.key;
+  const CORNER_CLASSES = [
+    'app-cal-ring-corner--br',
+    'app-cal-ring-corner--tr',
+    'app-cal-ring-corner--bl',
+    'app-cal-ring-corner--tl',
+  ];
 
   // Render left column
   if (leftCol) {
@@ -627,10 +646,14 @@ function render() {
         </div>
       </div>` : ''}
       <div class="app-cal-info">
+        <div class="pg-overline app-cal-overline">
+          <span class="pg-ring"></span>
+          <span>${esc(t('step_x_of_y', { x: n + 1, y: 4 }) || `Шаг ${n + 1} из 4`)} · ${esc(c(cfg.pill))}</span>
+        </div>
         <div class="display-md">${md(c(`step${n}_title`).replace(/^[^:]*:\s*/, ''))}</div>
         <p class="app-cal-desc">${md(c(`step${n}_desc`))}</p>
       </div>
-      <div class="app-cal-panel">${panelHTML}</div>
+      <div class="app-cal-panel app-cal-ring-corner ${CORNER_CLASSES[n]}">${panelHTML}</div>
     `;
   }
 
@@ -1095,6 +1118,10 @@ export function startCalibration() {
     } else if (S.isDisconnectAlertActive) {
       hideDisconnectAlert();
     }
+  });
+
+  onLang(() => {
+    if (S.open) render();
   });
 
   syncDisconnectSetting();

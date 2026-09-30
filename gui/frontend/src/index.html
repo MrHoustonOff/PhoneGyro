@@ -224,7 +224,7 @@
 
     <!-- Calibration screen (design: Modal card inside #body), js/screens/calibration.js -->
     <main class="pg-page pg-page--center app-screen app-calpage" id="screen-calibration" hidden>
-      <div class="pg-modal app-cal-modal" id="cal-card" role="region" aria-labelledby="cal-title">
+      <div class="pg-modal app-cal-modal pg-rings-corner has-diag-rings" id="cal-card" role="region" aria-labelledby="cal-title">
         <div class="pg-modal__head">
           <div><div class="pg-modal__title" id="cal-title" data-i18n="calibration.title">Калибровка осей</div><div class="pg-modal__sub" id="cal-sub"></div></div>
           <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -236,7 +236,7 @@
 
         <!-- Calibration Disconnect Modal Card Alert & Blur -->
         <div id="cal-disconnect-overlay" class="app-cal-disconnect" role="alertdialog" aria-modal="true" hidden>
-          <div class="app-cal-disconnect-card">
+          <div class="app-cal-disconnect-card pg-rings-corner">
             <div class="app-cal-disconnect-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="5" y="2" width="14" height="20" rx="3"></rect>

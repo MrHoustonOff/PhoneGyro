@@ -415,6 +415,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   position: relative;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 .app-cal-modal .pg-modal__body {
   overflow-y: auto;
@@ -642,6 +643,99 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-modal:has(.app-cal-save) {
   min-height: 39rem;
 }
+
+/* ── Corner Ring Decorations & Overlines (Task 4F) ──────────────────────── */
+.app-cal-modal.has-diag-rings::before {
+  content: "";
+  position: absolute;
+  left: -5.5rem;
+  bottom: -5.5rem;
+  width: 15rem;
+  height: 15rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 0.875rem, var(--accent-soft) 0.875rem 1.125rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  z-index: 0;
+  opacity: 0.65;
+}
+
+.app-cal-ring-corner {
+  position: relative;
+  overflow: hidden;
+}
+.app-cal-ring-corner > * {
+  position: relative;
+  z-index: 1;
+}
+.app-cal-ring-corner::after {
+  content: "";
+  position: absolute;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 0.75rem, var(--accent-soft) 0.75rem 0.9375rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  z-index: 0;
+  opacity: 0.55;
+}
+.app-cal-ring-corner--tr::after {
+  right: -3.25rem;
+  top: -3.25rem;
+}
+.app-cal-ring-corner--br::after {
+  right: -3.25rem;
+  bottom: -3.25rem;
+}
+.app-cal-ring-corner--bl::after {
+  left: -3.25rem;
+  bottom: -3.25rem;
+}
+.app-cal-ring-corner--tl::after {
+  left: -3.25rem;
+  top: -3.25rem;
+}
+
+.app-cal-overline {
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.app-cal-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.375rem 0 0.125rem;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.app-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 500;
+}
+.app-cal-legend-item .pg-axis__key {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.6875rem;
+}
+
+.app-cal-stats .pg-stat,
+.app-cal-matrix-card,
+.app-cal-mount,
+.app-cal-preview-card {
+  background: var(--surface) var(--tex-grain);
+}
+.app-cal-panel {
+  background: var(--surface-inset) var(--tex-grain);
+}
 .app-cal-slotwrap {
   position: relative;
   width: 100%;
@@ -802,10 +896,14 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   .app-cal-left, .app-cal-right { display: contents; }
   .app-cal-grid .app-cal-info { order: 1; }
   .app-cal-stage { order: 2; height: 11.5rem; width: 100%; }
-  .app-cal-panel { order: 3; }
-  .app-cal-stats { order: 4; }
-  .app-cal-disclaimer { order: 5; }
-  .app-cal-live { order: 6; }
+  .app-cal-legend { order: 3; }
+  .app-cal-panel { order: 4; }
+  .app-cal-stats { order: 5; }
+  .app-cal-verify-stats { order: 4; }
+  .app-cal-matrix-card { order: 5; }
+  #cal-mount { order: 6; }
+  .app-cal-disclaimer { order: 7; }
+  .app-cal-live { order: 8; }
 }
 
 /* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
