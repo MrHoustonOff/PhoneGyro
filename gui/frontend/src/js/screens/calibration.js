@@ -248,6 +248,7 @@ async function ensureScene(stepKey) {
       S.scene = sc;
       const currentStepKey = S.phase === 'verify' ? 'live' : (STEPS[S.step] ? STEPS[S.step].key : stepKey);
       S.scene.setStep(currentStepKey);
+      if (S.scene.setView) S.scene.setView(currentStepKey === 'live' ? 'front' : '');
     } catch (err) {
       console.error('Failed to create GyroScene:', err);
     } finally {
@@ -255,6 +256,7 @@ async function ensureScene(stepKey) {
     }
   } else if (S.scene) {
     S.scene.setStep(stepKey);
+    if (S.scene.setView) S.scene.setView(stepKey === 'live' ? 'front' : '');
   }
 }
 

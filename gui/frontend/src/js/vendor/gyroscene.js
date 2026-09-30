@@ -64,7 +64,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
     ren.domElement.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;display:block'; host.insertBefore(ren.domElement, host.firstChild);
     var scene = new T.Scene(), cam = new T.PerspectiveCamera(28, 1, .1, 60), world = new T.Group(), stage = new T.Group(), rig = new T.Group(), model = new T.Group(), guide = new T.Group();
     scene.add(world); world.add(stage); world.add(rig); rig.add(model); world.add(guide);
-    cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0);
+    function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view);
     var FLOOR = -.95, dyn = { rings: [], dot: null, arcs: [], recMesh: null, shadow: null, ball: null, ballHome: null };
     function disposeTree(o) { o.traverse(function (m) { if (m.geometry) m.geometry.dispose(); if (m.material) { (Array.isArray(m.material) ? m.material : [m.material]).forEach(function (x) { if (x.map) x.map.dispose(); x.dispose(); }); } }); }
     function clear(g) { while (g.children.length) { var c = g.children[0]; g.remove(c); disposeTree(c); } }
@@ -152,7 +152,7 @@ const PG = rootScope.PhoneGyro = rootScope.PhoneGyro || {};
       setModel: function (m) { if (m !== S.mode) { S.mode = m; build(); } },
       setRecording: setRec, setTilt: function (x, z) { S.tilt = [x, z]; },
       setQuaternion: function (q) { S.q = q ? (q.isQuaternion ? q : new T.Quaternion().fromArray(q)) : null; },
-      setPaused: function (b) { S.paused = !!b; }, dispose: function () { S.dead = true; cancelAnimationFrame(raf); if (ro) ro.disconnect(); if (io) io.disconnect(); mo.disconnect(); clear(stage); clear(model); clear(guide); ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement); },
+      setPaused: function (b) { S.paused = !!b; }, setView: setView, dispose: function () { S.dead = true; cancelAnimationFrame(raf); if (ro) ro.disconnect(); if (io) io.disconnect(); mo.disconnect(); clear(stage); clear(model); clear(guide); ren.dispose(); if (ren.domElement.parentNode) ren.domElement.parentNode.removeChild(ren.domElement); },
       render: function () { draw(performance.now()); }
     };
     if (opts.glb) { api.ready = PG.loadGLB(opts.glb).then(function (g) { S.geom = g; build(); }).catch(function () {}); }

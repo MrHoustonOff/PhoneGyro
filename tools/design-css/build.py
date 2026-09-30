@@ -106,6 +106,10 @@ _still = [
     ("else if (st === 'rest') { y = .04 * Math.sin(t * .4); }", "else if (st === 'rest') { y = still ? 0 : .04 * Math.sin(t * .4); }"),
     ("else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }", "else if (still) { x = 0; y = 0; } else { y = .42 * Math.sin(t * .5); x = -.08 + .05 * Math.sin(t * .8); }"),
     ("var eul = new T.Euler()", "var still = !!opts.still, eul = new T.Euler()"),
+    # app-side camera view: 'front' = straight in front and a little above (calibration check), default = design's 3/4 view
+    ("cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0);",
+     "function setView(v) { if (v === 'front') cam.position.set(0, 2.15, 5.7); else cam.position.set(2.5, 2.4, 7.1); cam.lookAt(0, -.12, 0); } setView(opts.view);"),
+    ("setPaused: function (b) { S.paused = !!b; },", "setPaused: function (b) { S.paused = !!b; }, setView: setView,"),
 ]
 for _a, _b in _still:
     assert scene_code.count(_a) == 1, _a
