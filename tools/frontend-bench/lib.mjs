@@ -79,6 +79,7 @@ export function backendStub({ fontScale } = {}) {
   const emit = (n, d) => (reg[n] || []).forEach(cb => { try { cb(d); } catch (e) { window.__bench.errors.push(String(e && e.stack || e)); } });
   window.__emit = emit;
   window.__STATE = STATE;
+  window.__SETTINGS = SETTINGS;
   const dsu = (scen, t) => scen === 'dsu' ? [
     { address: '127.0.0.1:50001', ip: '127.0.0.1', port: 50001, lastSeenMs: t % 1000, active: true, connectedAtMs: 1, cemuBias: [Math.sin(t) * 0.01, 0, 0], cemuSamples: t | 0, cemuGuard: true, process: 'Cemu', pid: 42 },
     { address: '127.0.0.1:50002', ip: '127.0.0.1', port: 50002, lastSeenMs: (t * 7) % 1000, active: true, connectedAtMs: 1, cemuBias: null, cemuSamples: 0, cemuGuard: false, process: 'PadTest', pid: 43 },
@@ -97,7 +98,7 @@ export function backendStub({ fontScale } = {}) {
   window.__stateAt = stateAt;
   const results = {
     GetState: () => stateAt('offline', 0),
-    GetAppSettings: () => SETTINGS, GetTranslations: (l) => LOCALES[l] || '{}',
+    GetAppSettings: () => window.__SETTINGS || SETTINGS, GetTranslations: (l) => LOCALES[l] || '{}',
     GetLanguages: () => ['ru', 'en'], GetLang: () => 'ru', GetTheme: () => 'dark', GetFontScale: () => SETTINGS.fontScale || 1,
     IsFirstLaunch: () => false, GetHideAuthor: () => false, GetInputMode: () => 'phone',
     GetProfiles: () => STATE.profiles, GetDSUStatus: () => ({ count: 0, clients: [], kicked: [] }),
@@ -113,7 +114,7 @@ export function backendStub({ fontScale } = {}) {
     GetFirewallStatus: () => ({ state: 'allowed', network: 'private' }),
     GetDataDir: () => 'C:/Users/user/AppData/Roaming/phonegyro'.split('/').join(String.fromCharCode(92)),
   };
-  const App = new Proxy({}, { get: (t, k) => (...a) => Promise.resolve(results[k] ? results[k](...a) : null) });
+  const App = new Proxy({}, { get: (t, k) => (...a) => Promise.resolve((k in t ? t[k] : results[k]) ? (k in t ? t[k] : results[k])(...a) : null) });
   window.go = { app: { App, LiveDebugApp: App } };
   window.__benchStart = (scen) => {
     const t0 = performance.now();

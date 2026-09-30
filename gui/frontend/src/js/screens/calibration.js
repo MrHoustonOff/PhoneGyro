@@ -35,7 +35,76 @@ const S = {
   busy: false,
   scene: null,
   sceneLoading: false,
+  isDisconnectAlertActive: false,
+  wasInterruptedByDisconnect: false,
 };
+
+let disconnectAlertEnabled = true;
+
+async function syncDisconnectSetting() {
+  try {
+    const s = await call('GetAppSettings');
+    if (s && typeof s.disconnectAlert === 'boolean') {
+      disconnectAlertEnabled = s.disconnectAlert;
+    }
+  } catch (_) {}
+}
+
+export function showDisconnectAlert() {
+  if (!S.open || S.isDisconnectAlertActive || !disconnectAlertEnabled) return;
+  S.isDisconnectAlertActive = true;
+
+  const modalEl = el().querySelector('.app-cal-modal');
+  if (modalEl) {
+    modalEl.classList.add('is-disconnected');
+    modalEl.scrollTop = 0;
+  }
+
+  // If capture was running, abort countdown/recording safely
+  if (S.phase === 'run') {
+    S.wasInterruptedByDisconnect = true;
+    if (S.timer) { clearInterval(S.timer); S.timer = 0; }
+    stopPoll();
+    call('StopCapture', S.step).catch(() => {});
+    if (S.scene) S.scene.setRecording(0);
+    S.phase = 'ready';
+    render();
+  }
+
+  const alertOverlay = $('cal-disconnect-overlay');
+  if (alertOverlay) {
+    alertOverlay.hidden = false;
+  }
+
+  // TODO: playSound('disconnect')
+}
+
+export function hideDisconnectAlert(opts = {}) {
+  if (!S.isDisconnectAlertActive) return;
+  S.isDisconnectAlertActive = false;
+
+  const modalEl = el().querySelector('.app-cal-modal');
+  if (modalEl) {
+    modalEl.classList.remove('is-disconnected');
+  }
+
+  const alertOverlay = $('cal-disconnect-overlay');
+  if (alertOverlay) {
+    alertOverlay.hidden = true;
+  }
+
+  if (!opts.silent) {
+    // TODO: playSound('connect')
+    toast(c('disconnect_reconnected_toast') || 'Телефон подключен. Нажмите «Запись», чтобы повторить шаг.');
+  }
+
+  if (S.wasInterruptedByDisconnect) {
+    S.wasInterruptedByDisconnect = false;
+    render();
+  }
+}
+
+export const isDisconnectAlertActive = () => S.isDisconnectAlertActive;
 
 const c = (k, vars) => t('calibration.' + k, vars);
 const el = () => $('cal');
@@ -91,7 +160,6 @@ function disposeScene() {
 function render() {
   const st = getState() || {};
   $('cal-sub').textContent = device() ? c('subtitle_device', { device: device() }) : c('subtitle');
-  $('cal-offline').hidden = st.status === 'online' || st.status === 'paused' || S.phase === 'save';
 
   if (S.phase === 'verify') {
     disposeScene();
@@ -267,9 +335,19 @@ async function capture() {
   }
   if (txt) txt.textContent = cfg.rest ? c('status_recording_rest') : c('status_recording');
   await call('StartCapture');
+  if (!S.open || S.phase !== 'run') {
+    call('StopCapture', S.step).catch(() => {});
+    return;
+  }
   const t0 = performance.now();
   await new Promise((resolve) => {
     S.timer = setInterval(() => {
+      if (!S.open || S.phase !== 'run') {
+        clearInterval(S.timer);
+        S.timer = 0;
+        resolve();
+        return;
+      }
       const el2 = $('cal-bar');
       const p = Math.min(1, (performance.now() - t0) / cfg.ms);
       if (el2) el2.style.setProperty('--p', (p * 100).toFixed(1) + '%');
@@ -428,10 +506,26 @@ export function openCalibration(slot = null) {
   el().hidden = false;
   const targetSlot = slot == null ? (getState()?.activeSlot ?? 0) : slot;
   startFlow(targetSlot);
+  const st = getState();
+  if (st && st.status === 'offline') {
+    showDisconnectAlert();
+  }
+  syncDisconnectSetting().then(() => {
+    if (S.open) {
+      const curSt = getState();
+      if (curSt && curSt.status === 'offline') {
+        showDisconnectAlert();
+      } else if (S.isDisconnectAlertActive) {
+        hideDisconnectAlert();
+      }
+    }
+  });
 }
 
 function close() {
   if (!S.open) return;
+  S.wasInterruptedByDisconnect = false;
+  hideDisconnectAlert({ silent: true });
   if (S.phase === 'run') call('StopCapture', S.step).catch(() => {});
   if (S.timer) { clearInterval(S.timer); S.timer = 0; }
   stopPoll();
@@ -448,6 +542,9 @@ export function startCalibration() {
     else if (e.target === el()) close();
   });
   $('cal-x').onclick = close;
+  const cancelBtn = $('btn-cancel-cal-disconnect');
+  if (cancelBtn) cancelBtn.onclick = close;
+
   addEventListener('keydown', (e) => {
     if (!S.open) return;
     if (e.key === 'Escape') close();
@@ -458,5 +555,12 @@ export function startCalibration() {
   onState((st) => {
     if (!S.open || !st) return;
     updateLiveRates(st);
+    if (st.status === 'offline') {
+      showDisconnectAlert();
+    } else if (S.isDisconnectAlertActive) {
+      hideDisconnectAlert();
+    }
   });
+
+  syncDisconnectSetting();
 }

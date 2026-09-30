@@ -277,10 +277,30 @@
       <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="pg-modal__body">
-      <div class="pg-notice pg-notice--danger app-cal-off" id="cal-offline" hidden><span><b data-i18n="calibration.disconnect_alert_title">Телефон отключен</b></span></div>
       <div id="cal-body"></div>
     </div>
     <div class="pg-modal__foot" id="cal-foot"></div>
+
+    <!-- Calibration Disconnect Modal Blur Overlay -->
+    <div id="cal-disconnect-overlay" class="app-cal-disconnect" role="alertdialog" aria-modal="true" hidden>
+      <div class="app-cal-disconnect-card">
+        <div class="app-cal-disconnect-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            <line x1="2" y1="2" x2="22" y2="22" stroke="var(--danger)" stroke-width="2.5"></line>
+          </svg>
+        </div>
+        <div class="display-sm app-cal-disconnect-title" data-i18n="calibration.disconnect_alert_title">Телефон отключен</div>
+        <p class="app-cal-disconnect-desc" data-i18n="calibration.disconnect_alert_desc">Экран телефона выключился или заблокирован. Разблокируйте смартфон и держите экран включенным во время калибровки.</p>
+        <div class="pg-badge pg-badge--danger pg-badge--dot app-cal-disconnect-badge">
+          <span data-i18n="calibration.disconnect_waiting">Ожидание переподключения...</span>
+        </div>
+        <div class="app-cal-disconnect-actions">
+          <button type="button" class="pg-btn" id="btn-cancel-cal-disconnect" data-act="close" data-i18n="calibration.disconnect_btn_cancel">Отменить калибровку</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

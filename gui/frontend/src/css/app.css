@@ -394,12 +394,95 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-cal-run { display: flex; flex-direction: column; gap: 0.625rem; padding: 0.875rem 1rem; border-radius: var(--radius-lg); background: var(--surface-inset); box-shadow: var(--shadow-inset); }
 .app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
 .app-cal-run .pg-progress > i { transition: width .05s linear; }
-.app-cal-off { margin-bottom: 0.75rem; }
 .app-cal-main { display: flex; flex-direction: column; gap: 0.875rem; min-height: 16rem; }
 .app-cal-label { font-weight: 600; font-size: 0.875rem; }
 .app-cal-name { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
 .app-cal-live { display: flex; justify-content: center; padding-top: 0.5rem; }
 .app-cal-mount .pg-row { min-height: 0; }
+
+/* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
+.app-cal-modal.is-disconnected {
+  border-color: var(--danger);
+  box-shadow: var(--shadow-pop), 0 0 1.75rem var(--danger-soft);
+}
+.app-cal-disconnect {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--overlay);
+  backdrop-filter: blur(1.25rem);
+  -webkit-backdrop-filter: blur(1.25rem);
+  border-radius: inherit;
+}
+.app-cal-disconnect-card {
+  max-width: 23.75rem;
+  width: 100%;
+  background: var(--surface-raised);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-pop), 0 0 2rem var(--danger-soft);
+}
+.app-cal-disconnect-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+.app-cal-disconnect-icon svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+.app-cal-disconnect-title {
+  margin: 0 0 0.5rem 0;
+  color: var(--ink);
+}
+.app-cal-disconnect-desc {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin: 0 0 1.125rem 0;
+  max-width: 20rem;
+}
+.app-cal-disconnect-badge {
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: normal;
+  height: 1.5rem;
+  padding: 0 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.app-cal-disconnect-badge::before {
+  animation: app-cal-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes app-cal-dot-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.app-cal-disconnect-actions {
+  display: flex;
+  gap: 0.625rem;
+  width: 100%;
+  justify-content: center;
+}
+.app-cal-disconnect-actions .pg-btn {
+  min-width: 10rem;
+}
 
 /* Setup wizard in compact windows (and at a big interface scale): the design
    drops the phone screenshot; the owner wants it, so it goes under the text. */
