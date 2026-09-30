@@ -12,6 +12,8 @@
 
 import { t } from '../../core/i18n.js';
 
+import { chartsGloballyOff, onChartsFlag } from '../../core/charts-flag.js';
+
 const NS = 'http://www.w3.org/2000/svg';
 const W = 100, H = 40, PAD = 4;
 const EASE = 0.18; // share of the way to the target range per push
@@ -27,7 +29,7 @@ function flush() {
 }
 let enabled = true; // the "Charts" switch on the stats page: off = no drawing at all, samples still recorded
 function schedule(c) {
-  if (!enabled || !c.visible || document.hidden) { c.stale = true; return; }
+  if (!enabled || chartsGloballyOff() || !c.visible || document.hidden) { c.stale = true; return; }
   dirty.add(c);
   if (!raf) raf = requestAnimationFrame(flush);
 }
@@ -54,6 +56,7 @@ export function setChartsEnabled(on) {
   enabled = !!on;
   if (enabled) for (const c of live) if (c.stale) schedule(c);
 }
+onChartsFlag((off) => { if (!off) for (const c of live) if (c.stale) schedule(c); });
 function watch(host, c) {
   c.visible = !io;
   byHost.set(host, c);

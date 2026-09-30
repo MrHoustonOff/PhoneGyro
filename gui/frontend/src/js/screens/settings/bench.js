@@ -9,6 +9,7 @@ import { $, toggleClass } from '../../core/dom.js';
 import { on, off, call } from '../../core/bridge.js';
 import { getState } from '../../core/state.js';
 import { t } from '../../core/i18n.js';
+import { chartsGloballyOff, onChartsFlag } from '../../core/charts-flag.js';
 
 const WINDOW_MS = 3500;                 // what the graph shows, regardless of the device's rate
 const MIN_SCALE = 4; // °/s: the smallest full scale (a still device stays a calm line)
@@ -136,7 +137,7 @@ export function initBench(container, options = {}) {
 
   // ── drawing ──────────────────────────────────────────────────────────────
   function queueDraw() {
-    if (drawQueued || !isActive || !isConnected) return;
+    if (drawQueued || !isActive || !isConnected || chartsGloballyOff()) return;
     drawQueued = true;
     requestAnimationFrame(() => { drawQueued = false; if (isActive && isConnected) draw(); });
   }
@@ -245,6 +246,8 @@ export function initBench(container, options = {}) {
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     } else queueDraw();
   }
+
+  onChartsFlag((off) => { if (!off) queueDraw(); else if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); });
 
   async function activate() {
     if (isActive) return;

@@ -187,6 +187,8 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "charts_off": "Turn off all chart rendering",
+    "charts_off_tip": "Switches every chart off: the stats page and the filter response. The stats page cannot turn them back on while this is set. Numbers keep updating.",
     "stats_orbit_hint_rot": "rotate",
     "stats_orbit_hint_pan": "pan",
     "stats_orbit_hint_zoom": "zoom",
