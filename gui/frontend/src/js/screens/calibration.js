@@ -14,6 +14,7 @@ import { createGyroScene } from '../ui/scene.js';
 import { profileIconSvg, ICON_KEYS } from '../ui/profile-icons.js';
 import { go, onScreen } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
+import { axisCardsHTML, matrixRows, mappingRows } from '../ui/axis-grids.js';
 
 const STEPS = [
   { key: 'rest', pill: 'step_pill_rest', ms: 1600, rest: true },
@@ -351,31 +352,6 @@ function updateSegs(pairs, min) {
   }
 }
 
-const GAME_AXES = [['x', 'P'], ['y', 'Y'], ['z', 'R']]; // Pitch, Yaw, Roll rows (colour key + letter)
-
-// One signed sensor axis per game axis: from the 3x3 gyro matrix ...
-function matrixRows(m) {
-  return (m || []).slice(0, 3).map((row) => {
-    let col = -1; let sign = 1;
-    (row || []).forEach((v, k) => { if (col < 0 && Math.abs(v) > 0.5) { col = k; sign = v > 0 ? 1 : -1; } });
-    return { col, sign };
-  });
-}
-// ... and from the accelerometer's ['+Y', '+Z', '+X'].
-function accelRows(map) {
-  return (map || []).slice(0, 3).map((e) => {
-    const mt = String(e || '').match(/([+-])?\s*([XYZ])/i);
-    return mt ? { col: 'XYZ'.indexOf(mt[2].toUpperCase()), sign: mt[1] === '-' ? -1 : 1 } : { col: -1, sign: 1 };
-  });
-}
-// Rows = game axes (P Y R), columns = the sensor's X Y Z; a lit cell is the axis (and sign) that feeds it.
-function axisGridHTML(rows) {
-  const head = 'XYZ'.split('').map((l, k) => `<span class="pg-axis__key pg-axis__key--${'xyz'[k]}">${l}</span>`).join('');
-  const body = rows.map((r, i) => `<span class="pg-axis__key pg-axis__key--${GAME_AXES[i][0]}">${GAME_AXES[i][1]}</span>`
-    + [0, 1, 2].map((k) => (r.col === k ? `<span class="app-cal-mcell is-on">${r.sign > 0 ? '+' : '\u2212'}1</span>` : '<span class="app-cal-mcell">\u00b7</span>')).join('')).join('');
-  return `<div class="app-cal-mgrid"><span></span>${head}${body}</div>`;
-}
-
 function formatMatrix(m) {
   if (!m || !Array.isArray(m) || !m.length) {
     return '[ +1.00  +0.00  +0.00 ]\n[ +0.00  +1.00  +0.00 ]\n[ +0.00  +0.00  −1.00 ]';
@@ -631,19 +607,7 @@ function render() {
     setText($('cal-stage-cap'), c('confirm_caption'));
     foot().innerHTML = ringHost(btn('restart', c('confirm_restart'))) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
 
-    const extraHTML = `
-      <div class="app-cal-mcards">
-        <div class="app-cal-mcard">
-          <div class="app-cal-mcard__t"><span>${esc(t('ui.cal_gyro_title'))}</span><span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det ${det >= 0 ? '+' : '\u2212'}${Math.abs(det || 1).toFixed(0)}</span></div>
-          ${axisGridHTML(matrixRows(S.matrix))}
-        </div>
-        <div class="app-cal-mcard">
-          <div class="app-cal-mcard__t"><span>${esc(c('accel_axes_label'))}</span></div>
-          ${S.accelMap.length ? axisGridHTML(accelRows(S.accelMap)) : `<span class="app-cal-mnote">${esc(c('accel_axes_unset'))}</span>`}
-        </div>
-      </div>
-      <p class="app-cal-mnote">${esc(t('ui.cal_matrix_note'))}</p>
-    `;
+    const extraHTML = axisCardsHTML({ gyro: matrixRows(S.matrix), accel: mappingRows(S.accelMap), det, detOk: isOk, note: t('ui.cal_matrix_note') });
     for (const id of ['cal-extra-l', 'cal-extra-r']) { const x = $(id); if (x) x.innerHTML = extraHTML; }
     renderMount();
     updateLiveRates(st);

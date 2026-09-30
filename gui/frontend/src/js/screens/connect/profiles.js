@@ -11,6 +11,7 @@ import { openModal } from '../../ui/modal.js';
 import { openCalibration } from '../calibration.js';
 import { toast } from '../../ui/toast.js';
 import { profileIconSvg } from '../../ui/profile-icons.js';
+import { axisCardsHTML, matrixRows } from '../../ui/axis-grids.js';
 
 const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 let lastKey = '';
@@ -31,16 +32,6 @@ function calDate(p) {
 }
 
 // A signed-permutation matrix row by row: which raw axis, which sign.
-function axisLabels(m) {
-  return [0, 1, 2].map((r) => {
-    for (let c = 0; c < 3; c++) {
-      if (m[r][c] > 0.5) return '+' + 'XYZ'[c];
-      if (m[r][c] < -0.5) return '−' + 'XYZ'[c];
-    }
-    return '?';
-  });
-}
-
 function render(st) {
   const profiles = st.profiles || [];
   const slot = st.activeSlot;
@@ -70,13 +61,8 @@ function render(st) {
   }
 
   const m = (st.activeMatrix && st.activeMatrix.length === 3) ? st.activeMatrix : [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-  const [p, y, r] = axisLabels(m);
-  let acc = t('calibration.accel_axes_unset');
-  if (has && active.sensorFrame && active.sensorFrame.q) {
-    const [ap, ay, ar] = axisLabels(active.sensorFrame.q);
-    acc = `Pitch ${ap} · Yaw ${ay} · Roll ${ar}`;
-  }
-  setHTML($('prof-axes'), `<b>${esc(t('calibration.axes_label'))}:</b> Pitch ${p} · Yaw ${y} · Roll ${r}<br><b>${esc(t('calibration.accel_axes_label'))}:</b> ${esc(acc)}`);
+  const accel = has && active.sensorFrame && active.sensorFrame.q ? matrixRows(active.sensorFrame.q) : null;
+  setHTML($('prof-axes'), axisCardsHTML({ gyro: matrixRows(m), accel }));
 
   // The list: only filled slots. Empty slots are not shown in the dropdown.
   const items = profiles.map((pr, i) => {
