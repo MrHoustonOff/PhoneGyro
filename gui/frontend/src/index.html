@@ -201,75 +201,38 @@
       <div class="pg-set__main" id="set-col-1"></div>
       <div class="pg-set__main" id="set-col-2">
         <!-- Response Bench Card (oscilloscope right next to Motion settings) -->
-        <section class="pg-card app-bench-card" id="set-bench-card">
-          <!-- Card Header: Title + Legend + Axis Seg -->
+        <section class="app-bench-card" id="set-bench-card">
           <header class="app-bench-card__head">
-            <div class="app-bench-card__title-row">
-              <div class="pg-overline">
-                <span class="pg-ring"></span>
-                <span data-i18n="ui.bench_title">Отклик</span>
-              </div>
-              <div class="app-bench-legend">
-                <span class="app-legend-item"><span class="app-legend-dot app-legend-dot--raw"></span><span data-i18n="ui.bench_feed_raw">Сырой</span></span>
-                <span class="app-legend-item"><span class="app-legend-dot app-legend-dot--filt"></span><span data-i18n="ui.bench_feed_dsu">DSU</span></span>
-              </div>
-            </div>
-            <div class="pg-seg" id="bench-axis-seg">
-              <button class="pg-seg__btn" data-axis="x" type="button" data-i18n="ui.bench_axis_pitch">Pitch</button>
-              <button class="pg-seg__btn" data-axis="y" type="button" data-i18n="ui.bench_axis_yaw">Yaw</button>
-              <button class="pg-seg__btn" data-axis="z" type="button" data-i18n="ui.bench_axis_roll">Roll</button>
-              <button class="pg-seg__btn is-active" data-axis="all" type="button" data-i18n="ui.bench_axis_all">Все</button>
+            <div class="pg-overline"><span class="pg-ring"></span><span data-i18n="ui.bench_title">Отклик фильтра</span></div>
+            <div class="pg-seg pg-seg--sm" id="bench-axis-seg">
+              <button class="pg-seg__btn" data-axis="x" type="button" data-i18n="ui.bench_axis_pitch_s">Pitch</button>
+              <button class="pg-seg__btn" data-axis="y" type="button" data-i18n="ui.bench_axis_yaw_s">Yaw</button>
+              <button class="pg-seg__btn" data-axis="z" type="button" data-i18n="ui.bench_axis_roll_s">Roll</button>
+              <button class="pg-seg__btn is-active" data-axis="all" type="button" data-i18n="ui.bench_axis_all_s">Все</button>
             </div>
           </header>
-
-          <!-- Oscilloscope Viewport with Canvas & Offline Blur Overlay -->
+          <div class="app-bench-legend">
+            <span class="app-legend-item"><i class="app-legend-dot app-legend-dot--raw"></i><span data-i18n="ui.bench_legend_raw">Сырой сигнал датчика</span></span>
+            <span class="app-legend-item"><i class="app-legend-dot app-legend-dot--filt"></i><span data-i18n="ui.bench_legend_filt">После фильтра (то, что уходит в DSU)</span></span>
+            <span class="app-legend-item"><i class="app-legend-dot app-legend-dot--diff"></i><span data-i18n="ui.bench_legend_diff">Разница (что срезал фильтр)</span></span>
+          </div>
           <div class="app-bench-canvas-wrap" id="bench-osc-wrap">
-            <canvas id="bench-oscilloscope-canvas" width="340" height="150"></canvas>
-
-            <!-- Offline Blur Overlay -->
+            <canvas id="bench-oscilloscope-canvas"></canvas>
             <div class="app-bench-offline-overlay" id="bench-offline-overlay" hidden>
               <div class="app-bench-offline-card pg-rings-corner">
                 <div class="app-bench-offline-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="5" y="2" width="14" height="20" rx="3"></rect>
-                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                    <line x1="2" y1="2" x2="22" y2="22" stroke="var(--danger)" stroke-width="2.5"></line>
-                  </svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line><line x1="2" y1="2" x2="22" y2="22" stroke="var(--danger)" stroke-width="2.5"></line></svg>
                 </div>
-                <div class="app-bench-offline-title" id="bench-offline-title" data-i18n="ui.bench_offline_title">Нет подключённого устройства</div>
-                <div class="app-bench-offline-desc" id="bench-offline-desc" data-i18n="ui.bench_offline_desc">Подключите устройство, чтобы видеть отклик в реальном времени</div>
+                <div class="app-bench-offline-title" data-i18n="ui.bench_offline_title">Нет подключённого устройства</div>
+                <div class="app-bench-offline-desc" data-i18n="ui.bench_offline_desc">Подключите устройство, чтобы видеть отклик в реальном времени</div>
               </div>
             </div>
           </div>
-
-          <!-- Card Footer: Metrics + Source Seg + Recenter -->
-          <footer class="app-bench-card__foot">
-            <div class="app-bench-metrics">
-              <div class="app-bench-metric" title="Подавление шума">
-                <span class="pg-dim" data-i18n="ui.bench_noise">Шум:</span>
-                <b id="bench-noise-val" class="pg-font-mono">--%</b>
-              </div>
-              <div class="app-bench-metric" title="Частота пакетов">
-                <b id="bench-rate-val" class="pg-font-mono">-- Hz</b>
-              </div>
-              <div class="app-bench-metric app-bench-ping-wrap" title="Задержка сети (Ping / Jitter)">
-                <span class="pg-dim" data-i18n="ui.bench_ping">Пинг:</span>
-                <b id="bench-ping-val" class="pg-font-mono">-- ms</b>
-                <canvas id="bench-net-spark-canvas" width="48" height="14" class="app-bench-spark"></canvas>
-              </div>
-              <span class="pg-badge pg-badge--ok pg-badge--dot" id="bench-stability-badge" data-i18n="ui.bench_status_still">Покой</span>
-            </div>
-
-            <div class="app-bench-actions">
-              <div class="pg-seg pg-seg--sm" id="bench-source-seg">
-                <button class="pg-seg__btn is-active" data-source="dsu" type="button" data-i18n="ui.bench_feed_dsu">DSU</button>
-                <button class="pg-seg__btn" data-source="raw" type="button" data-i18n="ui.bench_feed_raw">Сырой</button>
-              </div>
-              <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-bench-recenter" type="button" title="[Space] Center">
-                <kbd class="pg-kbd">Space</kbd>
-                <span data-i18n="ui.bench_recenter">Центр</span>
-              </button>
-            </div>
+          <footer class="app-bench-stats">
+            <div class="app-bench-stat"><span class="pg-dim" data-i18n="ui.bench_noise">Подавление шума</span><b id="bench-noise-val">—</b></div>
+            <div class="app-bench-stat"><span class="pg-dim" data-i18n="ui.bench_rate">Частота</span><b id="bench-rate-val">— Hz</b></div>
+            <div class="app-bench-stat"><span class="pg-dim" data-i18n="ui.bench_ping_l">Задержка</span><b id="bench-ping-val">—</b></div>
+            <div class="app-bench-stat"><span class="pg-dim" data-i18n="ui.bench_state">Состояние</span><span class="pg-badge pg-badge--dot" id="bench-stability-badge">—</span></div>
           </footer>
         </section>
         <div id="set-col-2-groups" class="app-set-col-groups"></div>

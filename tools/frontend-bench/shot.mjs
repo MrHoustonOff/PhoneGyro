@@ -6,6 +6,7 @@
 //   --state online|move|offline (fixture state, default online)   --wait 1200 (ms after opening)
 //   --click "#selector"   (repeatable via commas: "#a,#b", clicked in order, 400 ms apart)
 //   --eval "js"            run JS in the page before the shot (e.g. emit events: window.__emit('tuning:frame', {...}))
+//   --after 500            ms to wait after --eval before the shot
 //   --name file            output tools/frontend-bench/out/<name>.png (default shot_<screen>_<theme>)
 import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,7 @@ const tab = { settings: '#nav [data-tab="settings"]', stats: '#nav [data-tab="st
 if (tab) await ev(`document.querySelector('${tab}').click()`);
 await sleep(+(opt.wait || 1200));
 for (const sel of String(opt.click || '').split(',').filter(Boolean)) { await ev(`document.querySelector('${sel}')?.click()`); await sleep(400); }
-if (opt.eval) { await ev(String(opt.eval)); await sleep(500); }
+if (opt.eval) { await ev(String(opt.eval)); await sleep(+(opt.after || 500)); }
 const name = opt.name || `shot_${screen}_${theme}`;
 writeFileSync(path.join(out, name + '.png'), await p.screenshot());
 console.log(path.join(out, name + '.png'));
