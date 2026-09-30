@@ -1,14 +1,14 @@
 // Response Test Bench & Real-Time Motion Oscilloscope
 // Provides real-time waveform tracking (Raw vs Filtered DSU),
 // stability classification, noise suppression analysis,
-// and live parameter tuning (Deadband and Sensitivity).
+// and live parameter tuning (Deadband and Sensitivity) synchronized with Settings.
 
 import { $, toggleClass } from '../../core/dom.js';
 import { on, off, call } from '../../core/bridge.js';
 import { t } from '../../core/i18n.js';
 
-export function initBench(container) {
-  if (!container) return { activate: () => {}, deactivate: () => {} };
+export function initBench(container, options = {}) {
+  if (!container) return { activate: () => {}, deactivate: () => {}, setParams: () => {} };
 
   // DOM Elements
   const canvas = $('bench-oscilloscope-canvas');
@@ -19,10 +19,12 @@ export function initBench(container) {
   const stabilityBadge = $('bench-stability-badge');
   const noiseValEl = $('bench-noise-val');
   const rateValEl = $('bench-rate-val');
+  const pingValEl = $('bench-ping-val');
   const deadbandSlider = $('bench-deadband-slider');
   const deadbandValEl = $('bench-deadband-val');
   const sensSlider = $('bench-sens-slider');
   const sensValEl = $('bench-sens-val');
+  const saveBtn = $('btn-bench-save');
 
   // State
   const MAX_HISTORY = 140;
@@ -33,7 +35,7 @@ export function initBench(container) {
   let lastFrameTs = 0;
   let lastDomUpdateTs = 0;
   let lastSpeed = 0;
-  let saveTimer = null;
+  let deadbandUsb = 0.50;
 
   // History Buffers
   const historyRaw = {
@@ -48,6 +50,32 @@ export function initBench(container) {
   };
   const recentRawDev = [];
   const recentFiltDev = [];
+
+  // Theme Tokens Reader
+  function getThemeColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const axisX = cs.getPropertyValue('--axis-x').trim() || (isLight ? '#c2432f' : '#f29b88');
+    const axisY = cs.getPropertyValue('--axis-y').trim() || (isLight ? '#5b7c26' : '#a3bc69');
+    const axisZ = cs.getPropertyValue('--axis-z').trim() || (isLight ? '#3f7583' : '#87aab5');
+    const warn = cs.getPropertyValue('--warn').trim() || (isLight ? '#b07c0c' : '#f2cc85');
+    const ink = cs.getPropertyValue('--ink').trim() || (isLight ? '#0b0b0b' : '#f4f4f4');
+
+    return {
+      isLight,
+      axisX,
+      axisY,
+      axisZ,
+      warn,
+      gridSeparator: isLight ? 'rgba(0, 0, 0, 0.10)' : 'rgba(255, 255, 255, 0.08)',
+      gridCenter: isLight ? 'rgba(0, 0, 0, 0.24)' : 'rgba(255, 255, 255, 0.18)',
+      gridBounds: isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.06)',
+      badgeBg: isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.10)',
+      textColor: ink,
+      rawColorSingle: isLight ? 'rgba(176, 124, 12, 0.55)' : 'rgba(242, 204, 133, 0.55)',
+      rawColorAll: isLight ? 'rgba(176, 124, 12, 0.45)' : 'rgba(242, 204, 133, 0.45)',
+    };
+  }
 
   // Initialize UI Selections
   function syncUI() {
@@ -64,6 +92,41 @@ export function initBench(container) {
     if (oscWrap) {
       toggleClass(oscWrap, 'mode-single', activeAxis !== 'all');
     }
+  }
+
+  function updateSliderFill(slider, min, max) {
+    if (!slider) return;
+    const v = parseFloat(slider.value);
+    const fill = Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+    slider.style.setProperty('--fill', `${fill}%`);
+  }
+
+  function updateDeadbandUI(val) {
+    const v = Number(val);
+    if (deadbandSlider) {
+      deadbandSlider.value = v;
+      updateSliderFill(deadbandSlider, 0, 0.5);
+    }
+    if (deadbandValEl) {
+      deadbandValEl.textContent = `${v.toFixed(2)} °/s`;
+    }
+  }
+
+  function updateSensUI(val) {
+    const v = Number(val);
+    if (sensSlider) {
+      sensSlider.value = v;
+      updateSliderFill(sensSlider, 0.25, 3.0);
+    }
+    if (sensValEl) {
+      sensValEl.textContent = `${v.toFixed(2)}x`;
+    }
+  }
+
+  function applyTuningParams() {
+    const deadband = parseFloat(deadbandSlider?.value || 0.10);
+    const sensitivity = parseFloat(sensSlider?.value || 1.0);
+    call('SetTuningFilterParams', deadband, deadbandUsb, sensitivity);
   }
 
   // Event Listeners for UI Controls
@@ -99,31 +162,39 @@ export function initBench(container) {
     recenterBtn.addEventListener('click', handleRecenter);
   }
 
-  // Parameter Sliders with Debounced Backend Update
-  function applyTuningParams() {
-    const deadband = parseFloat(deadbandSlider?.value || 0.12);
-    const sensitivity = parseFloat(sensSlider?.value || 1.0);
-    call('SetTuningFilterParams', deadband, deadband, sensitivity);
-  }
-
-  function scheduleSave() {
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(applyTuningParams, 150);
-  }
-
   if (deadbandSlider) {
     deadbandSlider.addEventListener('input', () => {
       const val = parseFloat(deadbandSlider.value);
-      if (deadbandValEl) deadbandValEl.textContent = `${val.toFixed(2)} °/s`;
-      scheduleSave();
+      updateDeadbandUI(val);
+      applyTuningParams();
+      if (options.onParamChange) {
+        options.onParamChange({
+          deadband: val,
+          sensitivity: parseFloat(sensSlider?.value || 1.0),
+        });
+      }
     });
   }
 
   if (sensSlider) {
     sensSlider.addEventListener('input', () => {
       const val = parseFloat(sensSlider.value);
-      if (sensValEl) sensValEl.textContent = `${val.toFixed(2)}x`;
-      scheduleSave();
+      updateSensUI(val);
+      applyTuningParams();
+      if (options.onParamChange) {
+        options.onParamChange({
+          deadband: parseFloat(deadbandSlider?.value || 0.10),
+          sensitivity: val,
+        });
+      }
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      if (options.onSave) {
+        await options.onSave();
+      }
     });
   }
 
@@ -184,6 +255,16 @@ export function initBench(container) {
     }
   }
 
+  function handleState(s) {
+    if (!isActive || !s) return;
+    if (s.pingMs !== undefined && pingValEl) {
+      pingValEl.textContent = `${Math.round(s.pingMs)} ms`;
+    }
+    if (s.status === 'offline') {
+      handleDisconnect();
+    }
+  }
+
   function updateDOM(hz) {
     if (rateValEl) {
       rateValEl.textContent = `${Math.round(hz)} Hz`;
@@ -237,6 +318,7 @@ export function initBench(container) {
     }
     if (rateValEl) rateValEl.textContent = '-- Hz';
     if (noiseValEl) noiseValEl.textContent = '--%';
+    if (pingValEl) pingValEl.textContent = '-- ms';
   }
 
   function handleConnect() {
@@ -271,12 +353,7 @@ export function initBench(container) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const gridSeparator = isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.08)';
-    const gridCenter = isLight ? 'rgba(0, 0, 0, 0.28)' : 'rgba(255, 255, 255, 0.18)';
-    const gridBounds = isLight ? 'rgba(0, 0, 0, 0.10)' : 'rgba(255, 255, 255, 0.06)';
-    const badgeBg = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.10)';
-    const textColor = isLight ? '#1e293b' : '#f8fafc';
+    const colors = getThemeColors();
 
     if (activeAxis === 'all') {
       // 3 Stacked Axes Mode (Pitch, Yaw, Roll)
@@ -287,13 +364,9 @@ export function initBench(container) {
         'Yaw (Y)',
         'Roll (Z)',
       ];
-      // Colors per axis
-      const filtColors = isLight
-        ? ['#dc2626', '#059669', '#0284c7']
-        : ['#ef4444', '#10b981', '#06b6d4'];
-      const rawColors = isLight
-        ? ['rgba(220, 38, 38, 0.35)', 'rgba(5, 150, 105, 0.35)', 'rgba(2, 132, 199, 0.35)']
-        : ['rgba(239, 68, 68, 0.4)', 'rgba(16, 185, 129, 0.4)', 'rgba(6, 182, 212, 0.4)'];
+      // Colors per axis from tokens
+      const filtColors = [colors.axisX, colors.axisY, colors.axisZ];
+      const rawColor = colors.rawColorAll;
 
       for (let k = 0; k < 3; k++) {
         const axis = axes[k];
@@ -303,7 +376,7 @@ export function initBench(container) {
         // Track Separator
         if (k > 0) {
           ctx.beginPath();
-          ctx.strokeStyle = gridSeparator;
+          ctx.strokeStyle = colors.gridSeparator;
           ctx.lineWidth = 1;
           ctx.moveTo(0, topY);
           ctx.lineTo(w, topY);
@@ -312,7 +385,7 @@ export function initBench(container) {
 
         // Track Center Zero Dashed Line
         ctx.beginPath();
-        ctx.strokeStyle = gridCenter;
+        ctx.strokeStyle = colors.gridCenter;
         ctx.setLineDash([3, 3]);
         ctx.lineWidth = 1;
         ctx.moveTo(0, centerY);
@@ -332,7 +405,7 @@ export function initBench(container) {
         const badgeX = 8;
         const badgeY = topY + 5;
 
-        ctx.fillStyle = badgeBg;
+        ctx.fillStyle = colors.badgeBg;
         if (ctx.roundRect) {
           ctx.beginPath();
           ctx.roundRect(badgeX, badgeY, titleW, badgeH, 4);
@@ -341,7 +414,7 @@ export function initBench(container) {
           ctx.fillRect(badgeX, badgeY, titleW, badgeH);
         }
 
-        ctx.fillStyle = textColor;
+        ctx.fillStyle = colors.textColor;
         ctx.fillText(title, badgeX + 6, badgeY + 13);
 
         // Numeric Readout on right
@@ -369,9 +442,9 @@ export function initBench(container) {
         const dx = w / (MAX_HISTORY - 1);
         const startX = w - (n - 1) * dx;
 
-        // 1. Raw trace (thin line)
+        // 1. Raw trace (thin line using warn token)
         ctx.beginPath();
-        ctx.strokeStyle = rawColors[k];
+        ctx.strokeStyle = rawColor;
         ctx.lineWidth = 1.2;
         for (let i = 0; i < n; i++) {
           const x = startX + i * dx;
@@ -381,7 +454,7 @@ export function initBench(container) {
         }
         ctx.stroke();
 
-        // 2. Filtered DSU trace (solid smooth line)
+        // 2. Filtered DSU trace (solid smooth line using axis token)
         ctx.beginPath();
         ctx.strokeStyle = filtColors[k];
         ctx.lineWidth = 2.0;
@@ -399,7 +472,7 @@ export function initBench(container) {
 
       // Center Reference Zero Line
       ctx.beginPath();
-      ctx.strokeStyle = gridCenter;
+      ctx.strokeStyle = colors.gridCenter;
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
       ctx.moveTo(0, centerY);
@@ -408,7 +481,7 @@ export function initBench(container) {
 
       // Top and Bottom Boundary Guides
       ctx.beginPath();
-      ctx.strokeStyle = gridBounds;
+      ctx.strokeStyle = colors.gridBounds;
       ctx.setLineDash([2, 4]);
       ctx.moveTo(0, centerY - h * 0.35);
       ctx.lineTo(w, centerY - h * 0.35);
@@ -422,13 +495,15 @@ export function initBench(container) {
       const n = rawArr.length;
 
       const title = activeAxis === 'y' ? 'Yaw (Y)' : activeAxis === 'z' ? 'Roll (Z)' : 'Pitch (X)';
+      const activeColor = activeAxis === 'y' ? colors.axisY : activeAxis === 'z' ? colors.axisZ : colors.axisX;
+
       ctx.font = '600 12px system-ui, -apple-system, sans-serif';
       const titleW = ctx.measureText(title).width + 12;
       const badgeH = 20;
       const badgeX = 8;
       const badgeY = 8;
 
-      ctx.fillStyle = badgeBg;
+      ctx.fillStyle = colors.badgeBg;
       if (ctx.roundRect) {
         ctx.beginPath();
         ctx.roundRect(badgeX, badgeY, titleW, badgeH, 4);
@@ -437,7 +512,7 @@ export function initBench(container) {
         ctx.fillRect(badgeX, badgeY, titleW, badgeH);
       }
 
-      ctx.fillStyle = textColor;
+      ctx.fillStyle = colors.textColor;
       ctx.fillText(title, badgeX + 6, badgeY + 14);
 
       // Numeric Readout on right
@@ -447,7 +522,7 @@ export function initBench(container) {
       const readoutText = `${dataFeed.toUpperCase()}: ${(readoutVal >= 0 ? '+' : '')}${readoutVal.toFixed(1)}°/s`;
 
       ctx.font = '600 12px ui-monospace, SFMono-Regular, monospace';
-      ctx.fillStyle = isLight ? '#0284c7' : '#38bdf8';
+      ctx.fillStyle = activeColor;
       const readoutW = ctx.measureText(readoutText).width;
       ctx.fillText(readoutText, w - readoutW - 8, badgeY + 14);
 
@@ -463,9 +538,9 @@ export function initBench(container) {
         const dx = w / (MAX_HISTORY - 1);
         const startX = w - (n - 1) * dx;
 
-        // 1. Raw trace (Orange thin spike line)
+        // 1. Raw trace (thin line using warn token)
         ctx.beginPath();
-        ctx.strokeStyle = isLight ? 'rgba(234, 88, 12, 0.45)' : 'rgba(249, 115, 22, 0.5)';
+        ctx.strokeStyle = colors.rawColorSingle;
         ctx.lineWidth = 1.4;
         for (let i = 0; i < n; i++) {
           const x = startX + i * dx;
@@ -475,9 +550,9 @@ export function initBench(container) {
         }
         ctx.stroke();
 
-        // 2. Filtered DSU trace (Cyan/Blue solid line)
+        // 2. Filtered DSU trace (solid smooth line using active axis token)
         ctx.beginPath();
-        ctx.strokeStyle = isLight ? '#0284c7' : '#38bdf8';
+        ctx.strokeStyle = activeColor;
         ctx.lineWidth = 2.4;
         for (let i = 0; i < n; i++) {
           const x = startX + i * dx;
@@ -502,6 +577,14 @@ export function initBench(container) {
     rafId = requestAnimationFrame(loop);
   }
 
+  // Set parameters externally (e.g. from Settings screen sync)
+  function setParams({ deadband, sensitivity, deadbandUsb: dbUsb }) {
+    if (deadband !== undefined) updateDeadbandUI(deadband);
+    if (sensitivity !== undefined) updateSensUI(sensitivity);
+    if (dbUsb !== undefined) deadbandUsb = dbUsb;
+    applyTuningParams();
+  }
+
   // Lifecycle
   async function activate() {
     if (isActive) return;
@@ -517,26 +600,32 @@ export function initBench(container) {
     recentFiltDev.length = 0;
     lastFrameTs = 0;
 
-    // Load initial settings
-    try {
-      const s = await call('GetAppSettings');
-      if (s) {
-        if (s.GyroDeadband !== undefined && deadbandSlider && deadbandValEl) {
-          deadbandSlider.value = s.GyroDeadband;
-          deadbandValEl.textContent = `${s.GyroDeadband.toFixed(2)} °/s`;
-        }
-        if (s.GyroSensitivity !== undefined && sensSlider && sensValEl) {
-          sensSlider.value = s.GyroSensitivity;
-          sensValEl.textContent = `${s.GyroSensitivity.toFixed(2)}x`;
-        }
+    // Load initial parameters from settings or options
+    if (options.getInitialParams) {
+      const p = options.getInitialParams();
+      if (p) {
+        if (p.deadband !== undefined) updateDeadbandUI(p.deadband);
+        if (p.sensitivity !== undefined) updateSensUI(p.sensitivity);
+        if (p.deadbandUsb !== undefined) deadbandUsb = p.deadbandUsb;
       }
-    } catch (_) {}
+    } else {
+      try {
+        const s = await call('GetAppSettings');
+        if (s) {
+          if (s.GyroDeadband !== undefined) updateDeadbandUI(s.GyroDeadband);
+          if (s.GyroSensitivity !== undefined) updateSensUI(s.GyroSensitivity);
+          if (s.GyroDeadbandUsb !== undefined) deadbandUsb = s.GyroDeadbandUsb;
+        }
+      } catch (_) {}
+    }
 
-    // Enable high-frequency streaming on Go backend
+    // Enable live high-frequency streaming on Go backend
     call('SetTuningActive', true);
+    applyTuningParams();
 
     // Subscribe to events
     on('tuning:frame', handleFrame);
+    on('state:change', handleState);
     on('device:disconnected', handleDisconnect);
     on('device:connected', handleConnect);
     window.addEventListener('keydown', handleKeyDown);
@@ -561,6 +650,7 @@ export function initBench(container) {
 
     // Unsubscribe from events
     off('tuning:frame', handleFrame);
+    off('state:change', handleState);
     off('device:disconnected', handleDisconnect);
     off('device:connected', handleConnect);
     window.removeEventListener('keydown', handleKeyDown);
@@ -569,5 +659,6 @@ export function initBench(container) {
   return {
     activate,
     deactivate,
+    setParams,
   };
 }

@@ -1889,7 +1889,39 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   font-family: var(--font-mono);
   color: var(--accent);
 }
+.app-legend-dot--x { background: var(--axis-x); }
+.app-legend-dot--y { background: var(--axis-y); }
+.app-legend-dot--z { background: var(--axis-z); }
 
+.app-bench-foot {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0.125rem 0;
+  flex-wrap: wrap;
+}
+#btn-bench-save svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  flex: none;
+}
 
-
-
+@container pgwin (max-width: 859px) {
+  .app-bench-controls {
+    grid-template-columns: 1fr;
+  }
+  .app-bench-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.625rem;
+  }
+  .app-bench-foot .pg-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

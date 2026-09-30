@@ -230,12 +230,22 @@ function onInput(e) {
     el.style.setProperty('--fill', ((v - r.min) / (r.max - r.min)) * 100 + '%');
     setText($(el.id + '-v'), r.fmt(v));
     cur[r.key] = v;
+    if (r.key === 'gyroSensitivity') {
+      benchController?.setParams({ sensitivity: v });
+    }
     if (e.type === 'change') { if (r.after) r.after(v); mark(rowEl, r); save(); }
     return;
   }
   if (e.type !== 'change') return;
   if (r.type === 'toggle') cur[r.key] = el.checked;
-  else if (r.type === 'select') cur[r.key] = r.num ? Number(el.value) : r.bool ? el.value === 'true' : el.value;
+  else if (r.type === 'select') {
+    cur[r.key] = r.num ? Number(el.value) : r.bool ? el.value === 'true' : el.value;
+    if (r.key === 'gyroDeadband') {
+      benchController?.setParams({ deadband: Number(cur.gyroDeadband) });
+    } else if (r.key === 'gyroDeadbandUsb') {
+      benchController?.setParams({ deadbandUsb: Number(cur.gyroDeadbandUsb) });
+    }
+  }
   else if (r.type === 'port') {
     const v = Number(el.value);
     const others = ['dsuPort', 'httpPort', 'httpsPort'].filter((k) => k !== r.key).map((k) => cur[k]);
@@ -289,6 +299,13 @@ async function regenMac() {
 async function load() {
   [cur, def] = await Promise.all([call('GetAppSettings'), call('GetDefaultAppSettings')]);
   render();
+  if (benchController && cur) {
+    benchController.setParams({
+      deadband: cur.gyroDeadband,
+      sensitivity: cur.gyroSensitivity,
+      deadbandUsb: cur.gyroDeadbandUsb,
+    });
+  }
 }
 
 export function startSettings() {
@@ -318,7 +335,13 @@ export function startSettings() {
     else if (e.target.closest('#fw-allow')) allowFirewall(e.target.closest('#fw-allow'));
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
   });
-  onScreen((s) => { if (s === 'settings') load(); });
+  onScreen((s) => {
+    if (s === 'settings') load();
+    syncBenchActive();
+  });
+  document.addEventListener('visibilitychange', () => {
+    syncBenchActive();
+  });
   // Changed elsewhere (the debug panel's cross): show it if this screen is open.
   addEventListener('pg:settings-changed', () => { if (!screen.hidden) load(); });
   // Ctrl +/− while Settings is open: keep the slider's value in step.
@@ -331,6 +354,7 @@ export function startSettings() {
     benchTab = localStorage.getItem('pg-settings-bench-tab') || 'bench';
   } catch (_) {}
   syncBenchSection();
+  syncBenchActive();
 
   const benchToggle = $('set-bench-toggle');
   if (benchToggle) {
@@ -340,6 +364,7 @@ export function startSettings() {
         localStorage.setItem('pg-settings-bench-open', benchOpen ? '1' : '0');
       } catch (_) {}
       syncBenchSection();
+      syncBenchActive();
     });
   }
 
@@ -353,12 +378,109 @@ export function startSettings() {
         localStorage.setItem('pg-settings-bench-tab', benchTab);
       } catch (_) {}
       syncBenchSection();
+      syncBenchActive();
     });
   }
 }
 
 let benchOpen = false;
 let benchTab = 'bench';
+let benchLoaded = false;
+let benchController = null;
+
+function findRowByKey(key) {
+  const allRows = rows();
+  const idx = allRows.findIndex((r) => r.key === key);
+  if (idx < 0) return { r: null, el: null };
+  const el = document.querySelector(`#screen-settings .pg-row[data-i="${idx}"]`);
+  return { r: allRows[idx], el };
+}
+
+function onBenchParamChange({ deadband, sensitivity }) {
+  if (deadband !== undefined && cur) {
+    cur.gyroDeadband = deadband;
+    const { r, el } = findRowByKey('gyroDeadband');
+    if (el && r) {
+      const select = el.querySelector('select');
+      if (select) {
+        const targetVal = deadband.toFixed(2);
+        const match = Array.from(select.options).find((opt) => opt.value === targetVal);
+        if (match) {
+          select.value = targetVal;
+        }
+      }
+      mark(el, r);
+    }
+  }
+
+  if (sensitivity !== undefined && cur) {
+    cur.gyroSensitivity = sensitivity;
+    const { r, el } = findRowByKey('gyroSensitivity');
+    if (el && r) {
+      const slider = el.querySelector('input[type="range"]');
+      if (slider) {
+        slider.value = sensitivity;
+        const fill = ((sensitivity - r.min) / (r.max - r.min)) * 100;
+        slider.style.setProperty('--fill', `${fill}%`);
+        setText($(slider.id + '-v'), r.fmt(sensitivity));
+      }
+      mark(el, r);
+    }
+  }
+}
+
+async function onBenchSave() {
+  if (!cur) return;
+  try {
+    await call('SaveAppSettings', cur);
+    toast(t('ui.bench_saved_toast') || 'Значения фильтра сохранены в настройки');
+  } catch (err) {
+    toast(String(err && err.message || err));
+  }
+}
+
+async function ensureBenchLoaded() {
+  if (benchLoaded) return;
+  benchLoaded = true;
+  try {
+    const { initBench } = await import('./settings/bench.js');
+    benchController = initBench($('set-pane-bench'), {
+      onParamChange: onBenchParamChange,
+      onSave: onBenchSave,
+      getInitialParams: () => ({
+        deadband: cur?.gyroDeadband,
+        sensitivity: cur?.gyroSensitivity,
+        deadbandUsb: cur?.gyroDeadbandUsb,
+      }),
+    });
+  } catch (err) {
+    console.error('Failed to load settings bench:', err);
+    benchLoaded = false;
+  }
+}
+
+async function syncBenchActive() {
+  const isSettingsScreen = !$('screen-settings')?.hidden;
+  const shouldBeActive = isSettingsScreen && benchOpen && benchTab === 'bench' && !document.hidden;
+
+  if (shouldBeActive) {
+    await ensureBenchLoaded();
+    if (benchController?.activate) {
+      if (cur) {
+        benchController.setParams({
+          deadband: cur.gyroDeadband,
+          sensitivity: cur.gyroSensitivity,
+          deadbandUsb: cur.gyroDeadbandUsb,
+        });
+      }
+      benchController.activate();
+    }
+  } else {
+    if (benchController?.deactivate) {
+      benchController.deactivate();
+    }
+  }
+}
 
 function syncBenchSection() {
   const toggleBtn = $('set-bench-toggle');
@@ -386,3 +508,4 @@ function syncBenchSection() {
     paneGames.classList.toggle('is-active', benchTab === 'games');
   }
 }
+
