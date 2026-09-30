@@ -1342,17 +1342,16 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-cal-axis.is-locked { background: color-mix(in srgb, var(--accent) 15%, var(--tile)); }
 
-/* Control profiles: the list bubbles use the tile look (the current-profile button keeps the design's dark inset). */
+/* Control profiles: the list keeps the card grain; its bubbles are dark insets, like the current-profile button. */
+#prof-menu { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem; background: var(--surface-raised) var(--tex-grain); }
 #prof-menu .app-menu__item {
-  background: var(--tile-lift) var(--tile);
-  border: 1px solid var(--tile-line);
-  box-shadow: var(--tile-bevel);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-inset);
 }
-#prof-menu { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem; background: var(--surface-raised); }
-#prof-menu .app-menu__item { border-radius: var(--radius-lg); }
-#prof-menu .app-menu__item:hover { background: var(--tile-lift) var(--tile-hi); border-color: var(--line-control); }
+#prof-menu .app-menu__item:hover { border-color: var(--line-control); background: var(--surface-inset); }
 #prof-menu .app-menu__item.is-active {
-  background: color-mix(in srgb, var(--accent) 15%, var(--tile));
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-inset);
   border-color: var(--accent-line);
 }
-#prof-menu .app-menu__icon { background: var(--tile-hi); border-color: var(--tile-line); }
