@@ -176,6 +176,7 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
+    "cal_verify_hint": "Turn and tilt the device: the angles below should move the same way. If one goes backwards, start the calibration again.",
     "docs_search": "Search the guide",
     "docs_source": "Source code · GitHub",
     "docs_nothing": "Nothing found",

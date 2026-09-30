@@ -8,6 +8,7 @@ import { call } from '../../core/bridge.js';
 import { t, getLang, onLang } from '../../core/i18n.js';
 import { onState, getState } from '../../core/state.js';
 import { openModal } from '../../ui/modal.js';
+import { openCalibration } from '../calibration.js';
 import { toast } from '../../ui/toast.js';
 
 const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
@@ -132,7 +133,7 @@ export function startProfiles() {
     const res = await call('SetProfileMountEnabled', getState().activeSlot, want);
     if (res !== 'ok') e.target.checked = !want;
   };
-  $('btn-calibrate').onclick = () => openModal({ title: t('ui.calibrate'), text: t('ui.calib_soon'), actions: [{ label: t('ui.close'), kind: 'primary' }] });
+  $('btn-calibrate').onclick = () => openCalibration(); // the slot list; each slot calibrates or recalibrates
 
   onState((st) => {
     const key = JSON.stringify([st.profiles, st.activeSlot, st.activeMatrix]);

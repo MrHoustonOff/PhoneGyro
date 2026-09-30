@@ -246,6 +246,21 @@
   </div>
 </div>
 
+<!-- Calibration wizard (design: Modal + stepper), js/screens/calibration.js -->
+<div class="pg-overlay app-overlay app-cal" id="cal" hidden>
+  <div class="pg-modal app-cal-modal" role="dialog" aria-modal="true" aria-labelledby="cal-title">
+    <div class="pg-modal__head">
+      <div><div class="pg-modal__title" id="cal-title" data-i18n="calibration.title">Калибровка осей</div><div class="pg-modal__sub" id="cal-sub"></div></div>
+      <button class="pg-btn-icon" type="button" id="cal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="pg-modal__body">
+      <div class="pg-notice pg-notice--danger app-cal-off" id="cal-offline" hidden><span><b data-i18n="calibration.disconnect_alert_title">Телефон отключен</b></span></div>
+      <div id="cal-body"></div>
+    </div>
+    <div class="pg-modal__foot" id="cal-foot"></div>
+  </div>
+</div>
+
 <div class="app-toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
