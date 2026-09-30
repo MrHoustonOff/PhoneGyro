@@ -107,6 +107,8 @@ export function ResetAHRS():Promise<void>;
 
 export function SaveAppSettings(arg1:settings.Settings):Promise<Record<string, any>>;
 
+export function SaveCSVFile(arg1:string,arg2:string):Promise<string>;
+
 export function SaveProfile(arg1:number,arg2:string,arg3:string,arg4:string,arg5:any):Promise<string>;
 
 export function SetActiveProfile(arg1:number):Promise<string>;
