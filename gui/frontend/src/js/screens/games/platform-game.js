@@ -504,14 +504,17 @@ export const PlatformGame = {
     const vp = document.getElementById('bench-platform-viewport');
     const card = document.querySelector('.app-games-card');
     const btn = document.getElementById('btn-bench-platform-fullscreen');
+    const fsHud = document.getElementById('bench-fullscreen-hud');
     if (!vp) return;
 
     if (this.isFullscreen) {
       vp.classList.add('fullscreen');
       card?.classList.add('is-fs');
+      if (fsHud) fsHud.hidden = false;
     } else {
       vp.classList.remove('fullscreen');
       card?.classList.remove('is-fs');
+      if (fsHud) fsHud.hidden = true;
     }
 
     if (btn) {

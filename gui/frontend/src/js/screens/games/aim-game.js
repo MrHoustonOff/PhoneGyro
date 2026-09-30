@@ -95,11 +95,17 @@ export const AimGame = {
     const h = vp ? (vp.clientHeight || 500) : (window.innerHeight || 500);
     const halfW = Math.floor(w / 2);
     const halfH = Math.floor(h / 2);
+    // HUD clearances:
+    //   top      = fullscreen score bar when is-fs; also the fullscreen-toggle button (top:1rem right:1rem ~40px)
+    //   right    = telemetry badge (right:1rem bottom:0.75rem, ~90px wide)
+    //   bottom   = bottom telemetry badge height
+    // Reserve 100px on the right edge and 60px extra top so targets never overlap the toggle btn or badge.
+    const rightMargin = Math.min(100, Math.floor(w * 0.12));
     return {
-      boundX: Math.max(100, halfW - 140),
-      boundYTop: Math.max(60, halfH - 160),     // Clearance for top HUD
-      boundYBottom: Math.max(60, halfH - 100),
-      maxReticleX: Math.max(160, halfW - 50),
+      boundX: Math.max(100, halfW - 140 - Math.floor(rightMargin / 2)),
+      boundYTop: Math.max(80, halfH - 140),      // Clearance for top FS-HUD + fullscreen btn
+      boundYBottom: Math.max(60, halfH - 100),   // Clearance for bottom telemetry
+      maxReticleX: Math.max(160, halfW - 50 - Math.floor(rightMargin / 2)),
       maxReticleY: Math.max(100, halfH - 50)
     };
   },
@@ -127,14 +133,17 @@ export const AimGame = {
     const vp = this.vpEl || document.getElementById('bench-aim-viewport');
     const card = document.querySelector('.app-games-card');
     const btn = document.getElementById('btn-bench-aim-fullscreen');
+    const fsHud = document.getElementById('bench-aim-fs-hud');
     if (!vp) return;
 
     if (this.isFullscreen) {
       vp.classList.add('fullscreen');
       card?.classList.add('is-fs');
+      if (fsHud) fsHud.hidden = false;
     } else {
       vp.classList.remove('fullscreen');
       card?.classList.remove('is-fs');
+      if (fsHud) fsHud.hidden = true;
     }
 
     if (btn) {
