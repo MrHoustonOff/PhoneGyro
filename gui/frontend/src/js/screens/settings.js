@@ -138,6 +138,8 @@ function render() {
   });
   // The response graph lives in the left column, right under the Motion group it tunes.
   const col1 = $('set-col-1');
+  const gamesBtn = $('btn-open-games');
+  if (gamesBtn && col1) col1.appendChild(gamesBtn); // the mini-games entry sits right above the response card
   if (benchCardEl && col1) col1.appendChild(benchCardEl);
   enhanceSelects($('screen-settings'));
   refreshFirewall();
@@ -344,7 +346,8 @@ export function startSettings() {
     else if (e.target.closest('#btn-open-games')) go('games');
   });
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#bench-fold')) return;
+    // the whole top strip of the card folds/unfolds it (not only the arrow); the axis switch keeps its own clicks
+    if (!e.target.closest('.app-bench-card__head') || e.target.closest('.pg-seg')) return;
     try { localStorage.setItem('pg-bench-open', benchOpen() ? '0' : '1'); } catch (_) { /* session only */ }
     applyBenchFold();
     syncBenchActive();

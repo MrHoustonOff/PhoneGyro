@@ -2377,3 +2377,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-bench-card.is-collapsed > :not(.app-bench-card__head) { display: none; }
 .app-bench-card.is-collapsed .pg-seg { display: none; }
 .app-bench-card.is-collapsed { padding-bottom: 0.875rem; }
+.app-bench-card__head { cursor: pointer; }
+.app-bench-fold { pointer-events: none; }
+.app-bench-card__head .pg-seg { cursor: default; }
