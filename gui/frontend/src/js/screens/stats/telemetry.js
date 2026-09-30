@@ -10,6 +10,8 @@ import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
 
 const MAX_HISTORY = 30;
+const TAIL_HISTORY = 120; // ~30s of 4Hz-equivalent latency measurements
+const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
 function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) {
   if (!history || history.length < 2) return '';
@@ -31,11 +33,27 @@ function buildSparkline(history, minVal = null, maxVal = null, w = 100, h = 32) 
   return pts.join(' ');
 }
 
+/**
+ * Composite Link Quality Index (0-100)
+ * Evaluates: packet loss, RTT latency, jitter, and incoming Hz.
+ */
+function calcQualityIndex(inHz, lat, jitter, lossPct, isOnline) {
+  if (!isOnline || inHz === 0) return 0;
+  const pLoss = (lossPct || 0) * 3;
+  const pLat = Math.max(0, ((lat || 0) - 15) * 1.2);
+  const pJitter = Math.max(0, ((jitter || 0) - 4) * 2.5);
+  const pHz = Math.max(0, (60 - (inHz || 0)) * 1.5);
+  const totalPenalty = pLoss + pLat + pJitter + pHz;
+  return Math.max(0, Math.min(100, Math.round(100 - totalPenalty)));
+}
+
 export function initTelemetry(paneEl) {
   if (!paneEl) return null;
 
   let isActive = false;
   let lastLatency = 0;
+  let lastPacketTime = 0;
+  let packetIntervals = [];
   let lastTuning = null;
   let sceneInstance = null;
   let selectedModel = 'gamepad';
@@ -43,16 +61,22 @@ export function initTelemetry(paneEl) {
   let latestQuat = null;
   let orbitYaw = 0;
   let orbitPitch = 0;
+  let orbitZoom = 1.0;
   let isDragging = false;
   let startX = 0;
   let startY = 0;
+  let peakOmega = 0;
+  let peakOmegaTimer = 0;
 
   const history = {
     hz: [],
     lat: [],
+    latTail: [],
     jitter: [],
     loss: [],
     pipe: [],
+    quality: [],
+    noise: [],
   };
 
   // 3D Scene loader and manager
@@ -98,7 +122,7 @@ export function initTelemetry(paneEl) {
     latestQuat = rawQ;
     if (!sceneInstance) return;
 
-    if (selectedCamMode === 'orbit' && (orbitYaw !== 0 || orbitPitch !== 0)) {
+    if (selectedCamMode === 'orbit' && (orbitYaw !== 0 || orbitPitch !== 0 || orbitZoom !== 1.0)) {
       if (window.THREE) {
         const qOrbit = new window.THREE.Quaternion().setFromEuler(
           new window.THREE.Euler(orbitPitch, orbitYaw, 0, 'YXZ')
@@ -149,10 +173,17 @@ export function initTelemetry(paneEl) {
     };
   }
 
-  // Recenter helper
-  const recenterAll = () => {
+  // Reset Orbit / View helper
+  const resetCamera = () => {
     orbitYaw = 0;
     orbitPitch = 0;
+    orbitZoom = 1.0;
+    if (latestQuat) update3DOrientation(latestQuat);
+  };
+
+  // Recenter helper
+  const recenterAll = () => {
+    resetCamera();
     call('ResetAHRS').catch(() => {});
     if (latestQuat) update3DOrientation(latestQuat);
   };
@@ -174,9 +205,7 @@ export function initTelemetry(paneEl) {
       recenterAll();
     } else if ((e.code === 'KeyR' || e.key === 'r' || e.key === 'к' || e.key === 'К') && !e.repeat) {
       e.preventDefault();
-      orbitYaw = 0;
-      orbitPitch = 0;
-      if (latestQuat) update3DOrientation(latestQuat);
+      resetCamera();
     }
   };
 
@@ -189,12 +218,13 @@ export function initTelemetry(paneEl) {
       modelBtns.forEach((b) => toggleClass(b, 'is-active', b === btn));
       if (sceneInstance) sceneInstance.setModel(selectedModel);
       try {
+        localStorage.setItem('gb_model', m);
         localStorage.setItem('pg-stats-model', m);
       } catch (_) {}
     };
   });
   try {
-    const savedModel = localStorage.getItem('pg-stats-model');
+    const savedModel = localStorage.getItem('gb_model') || localStorage.getItem('pg-stats-model');
     if (savedModel) {
       selectedModel = savedModel;
       modelBtns.forEach((b) => toggleClass(b, 'is-active', b.dataset.model === savedModel));
@@ -274,22 +304,38 @@ export function initTelemetry(paneEl) {
 
     host.ondblclick = () => {
       if (selectedCamMode === 'orbit') {
-        orbitYaw = 0;
-        orbitPitch = 0;
-        if (latestQuat) update3DOrientation(latestQuat);
+        resetCamera();
       }
     };
+
+    // Wheel zoom
+    host.onwheel = (e) => {
+      if (selectedCamMode !== 'orbit') return;
+      e.preventDefault();
+      orbitZoom += e.deltaY * -0.001;
+      orbitZoom = Math.max(0.6, Math.min(2.0, orbitZoom));
+      if (latestQuat) update3DOrientation(latestQuat);
+    };
+  }
+
+  // Orbit hint click also resets
+  const orbitHintEl = $('stats-orbit-hint');
+  if (orbitHintEl) {
+    orbitHintEl.style.pointerEvents = 'auto';
+    orbitHintEl.style.cursor = 'pointer';
+    orbitHintEl.onclick = resetCamera;
   }
 
   // Resource saving toggle & Window blur/focus listeners
   const ecoToggle = $('stats-eco-toggle');
   if (ecoToggle) {
     try {
-      const savedEco = localStorage.getItem('pg-stats-eco');
+      const savedEco = localStorage.getItem('gb_eco_mode') ?? localStorage.getItem('pg-stats-eco');
       if (savedEco !== null) ecoToggle.checked = savedEco === 'true';
     } catch (_) {}
     ecoToggle.onchange = () => {
       try {
+        localStorage.setItem('gb_eco_mode', String(ecoToggle.checked));
         localStorage.setItem('pg-stats-eco', String(ecoToggle.checked));
       } catch (_) {}
     };
@@ -343,22 +389,40 @@ export function initTelemetry(paneEl) {
   const handleAhrsQuat = (data) => {
     if (!isActive || !data) return;
     // In Three.js / GyroScene (x, y, z, w) = (q1, q2, q3, q0)
-    const rawQ = [data.q1 ?? 0, data.q2 ?? 0, data.q3 ?? 0, data.q0 ?? 1];
-    update3DOrientation(rawQ);
+    quatBuf[0] = data.q1 ?? 0;
+    quatBuf[1] = data.q2 ?? 0;
+    quatBuf[2] = data.q3 ?? 0;
+    quatBuf[3] = data.q0 ?? 1;
+    update3DOrientation(quatBuf);
   };
 
   // Render State (15Hz)
   const renderState = (state) => {
     if (!isActive || !state) return;
 
-    // Offline overlay
+    // Packet interval calculation
+    const now = performance.now();
+    if (lastPacketTime > 0) {
+      const dt = now - lastPacketTime;
+      packetIntervals.push(dt);
+      if (packetIntervals.length > 20) packetIntervals.shift();
+    }
+    lastPacketTime = now;
+
+    // Offline status & live badge
     const isOffline = state.status === 'offline';
     const offlineOverlay = $('stats-3d-offline');
     if (offlineOverlay) {
       offlineOverlay.style.display = isOffline ? 'flex' : 'none';
     }
+    const liveBadge = $('stats-live-badge');
+    if (liveBadge) {
+      toggleClass(liveBadge, 'pg-badge--ok', !isOffline);
+      toggleClass(liveBadge, 'pg-badge--warn', isOffline);
+      setText(liveBadge, isOffline ? (t('ui.stats_offline') || 'ОФФЛАЙН') : (t('ui.stats_live') || 'LIVE'));
+    }
 
-    // Frequency
+    // Frequency In (Hz)
     const hz = state.hz || 0;
     history.hz.push(hz);
     if (history.hz.length > MAX_HISTORY) history.hz.shift();
@@ -373,27 +437,35 @@ export function initTelemetry(paneEl) {
     const hzSpark = $('stat-hz-spark');
     if (hzSpark) hzSpark.setAttribute('d', buildSparkline(history.hz, 0, 70));
 
-    // Latency
+    // Latency RTT (ms)
     const lat = state.pingMs >= 0 ? state.pingMs : 0;
     history.lat.push(lat);
     if (history.lat.length > MAX_HISTORY) history.lat.shift();
-    setText($('stat-lat-val'), lat.toFixed(1));
+    history.latTail.push(lat);
+    if (history.latTail.length > TAIL_HISTORY) history.latTail.shift();
+
+    setText($('stat-lat-val'), state.usbConnected ? '—' : lat.toFixed(1));
     const latBadge = $('stat-lat-badge');
     if (latBadge) {
-      toggleClass(latBadge, 'pg-badge--ok', lat <= 15);
-      toggleClass(latBadge, 'pg-badge--warn', lat > 15 && lat <= 40);
-      toggleClass(latBadge, 'pg-badge--danger', lat > 40);
-      setText(latBadge, lat <= 15 ? 'ok' : lat <= 40 ? 'warn' : 'bad');
+      if (state.usbConnected) {
+        setText(latBadge, 'USB');
+        toggleClass(latBadge, 'pg-badge--ok', true);
+      } else {
+        toggleClass(latBadge, 'pg-badge--ok', lat <= 15);
+        toggleClass(latBadge, 'pg-badge--warn', lat > 15 && lat <= 40);
+        toggleClass(latBadge, 'pg-badge--danger', lat > 40);
+        setText(latBadge, lat <= 15 ? 'ok' : lat <= 40 ? 'warn' : 'bad');
+      }
     }
     const latSpark = $('stat-lat-spark');
     if (latSpark) latSpark.setAttribute('d', buildSparkline(history.lat, 0, Math.max(25, ...history.lat)));
 
-    // Jitter
+    // Jitter (ms)
     const jitter = Math.abs(lat - lastLatency);
     lastLatency = lat;
     history.jitter.push(jitter);
     if (history.jitter.length > MAX_HISTORY) history.jitter.shift();
-    setText($('stat-jitter-val'), jitter.toFixed(1));
+    setText($('stat-jitter-val'), state.usbConnected ? '—' : jitter.toFixed(1));
     const jitterBadge = $('stat-jitter-badge');
     if (jitterBadge) {
       toggleClass(jitterBadge, 'pg-badge--ok', jitter <= 5);
@@ -402,6 +474,24 @@ export function initTelemetry(paneEl) {
     }
     const jitterSpark = $('stat-jitter-spark');
     if (jitterSpark) jitterSpark.setAttribute('d', buildSparkline(history.jitter, 0, Math.max(12, ...history.jitter)));
+
+    // Latency Tail (p95 / max / dt)
+    const sortedTail = [...history.latTail].sort((a, b) => a - b);
+    const p95Idx = Math.floor(sortedTail.length * 0.95);
+    const p95Val = sortedTail.length > 0 ? sortedTail[Math.min(sortedTail.length - 1, p95Idx)] : 0;
+    const maxVal = sortedTail.length > 0 ? sortedTail[sortedTail.length - 1] : 0;
+    const meanDt = packetIntervals.length > 0
+      ? (packetIntervals.reduce((a, b) => a + b, 0) / packetIntervals.length).toFixed(1)
+      : '—';
+    setText($('stat-tail-p95'), state.usbConnected ? '—' : p95Val.toFixed(1));
+    setText($('stat-tail-max'), state.usbConnected ? '—' : maxVal.toFixed(1));
+    setText($('stat-tail-dt'), meanDt);
+    const tailBadge = $('stat-tail-badge');
+    if (tailBadge) {
+      toggleClass(tailBadge, 'pg-badge--ok', p95Val <= 25);
+      toggleClass(tailBadge, 'pg-badge--warn', p95Val > 25);
+      setText(tailBadge, p95Val <= 25 ? 'ok' : 'spike');
+    }
 
     // Loss (0% or calculated)
     const lossPct = 0;
@@ -412,24 +502,109 @@ export function initTelemetry(paneEl) {
     const lossSpark = $('stat-loss-spark');
     if (lossSpark) lossSpark.setAttribute('d', buildSparkline(history.loss, 0, 10));
 
-    // Raw Gyro
-    setText($('tel-raw-gx'), (state.rawRotX >= 0 ? '+' : '') + (state.rawRotX || 0).toFixed(2));
-    setText($('tel-raw-gy'), (state.rawRotY >= 0 ? '+' : '') + (state.rawRotY || 0).toFixed(2));
-    setText($('tel-raw-gz'), (state.rawRotZ >= 0 ? '+' : '') + (state.rawRotZ || 0).toFixed(2));
+    // ═══ HERO TILE: Channel Quality Index ═══
+    const quality = calcQualityIndex(hz, lat, jitter, lossPct, !isOffline);
+    history.quality.push(quality);
+    if (history.quality.length > MAX_HISTORY) history.quality.shift();
 
-    // Raw Accel
-    setText($('tel-raw-ax'), (state.rawAccX >= 0 ? '+' : '') + (state.rawAccX || 0).toFixed(2));
-    setText($('tel-raw-ay'), (state.rawAccY >= 0 ? '+' : '') + (state.rawAccY || 0).toFixed(2));
-    setText($('tel-raw-az'), (state.rawAccZ >= 0 ? '+' : '') + (state.rawAccZ || 0).toFixed(2));
+    setText($('stat-quality-val'), isOffline ? '0' : String(quality));
+    const qualBadge = $('stat-quality-badge');
+    if (qualBadge) {
+      toggleClass(qualBadge, 'pg-badge--ok', !isOffline && quality >= 80);
+      toggleClass(qualBadge, 'pg-badge--warn', !isOffline && quality >= 50 && quality < 80);
+      toggleClass(qualBadge, 'pg-badge--danger', isOffline || quality < 50);
+      setText(qualBadge, isOffline ? 'OFF' : quality >= 80 ? (t('ui.stats_quality_verdict_good') || 'Отлично') : quality >= 50 ? (t('ui.stats_quality_verdict_fair') || 'Норма') : (t('ui.stats_quality_verdict_poor') || 'Плохо'));
+    }
+    const qualCircle = $('stat-quality-circle');
+    if (qualCircle) {
+      const offset = (113.1 * (1 - (isOffline ? 0 : quality) / 100)).toFixed(1);
+      qualCircle.style.strokeDashoffset = String(offset);
+      qualCircle.style.stroke = isOffline ? 'var(--danger)' : quality >= 80 ? 'var(--accent)' : quality >= 50 ? 'var(--warn)' : 'var(--danger)';
+    }
+    const qualVerdict = $('stat-quality-verdict');
+    if (qualVerdict) {
+      setText(qualVerdict, isOffline ? (t('ui.stats_offline') || 'Нет связи') : quality >= 80 ? (t('ui.stats_quality_verdict_good') || 'Отличное качество связи') : quality >= 50 ? (t('ui.stats_quality_verdict_fair') || 'Приемлемое качество связи') : (t('ui.stats_quality_verdict_poor') || 'Нестабильный канал связи'));
+    }
+    const qualDesc = $('stat-quality-desc');
+    if (qualDesc) {
+      setText(qualDesc, isOffline ? (t('ui.stats_offline_tip') || 'Подключите устройство') : `Потери ${lossPct.toFixed(1)}% · RTT ${lat.toFixed(0)} ms · ${hz.toFixed(0)} Hz`);
+    }
+    const qualSpark = $('stat-quality-spark');
+    if (qualSpark) qualSpark.setAttribute('d', buildSparkline(history.quality, 0, 100));
 
-    // DSU Gyro fallback if no recent tuning frame
-    if (!lastTuning) {
-      setText($('tel-out-gx'), (state.rawRotX >= 0 ? '+' : '') + (state.rawRotX || 0).toFixed(2));
-      setText($('tel-out-gy'), (state.rawRotY >= 0 ? '+' : '') + (state.rawRotY || 0).toFixed(2));
-      setText($('tel-out-gz'), (state.rawRotZ >= 0 ? '+' : '') + (state.rawRotZ || 0).toFixed(2));
+    // ═══ GROUP B: Signal State (Drift, Noise, Gravity, Omega) ═══
+    const gx = state.rawRotX || 0;
+    const gy = state.rawRotY || 0;
+    const gz = state.rawRotZ || 0;
+    const ax = state.rawAccX || 0;
+    const ay = state.rawAccY || 0;
+    const az = state.rawAccZ != null ? state.rawAccZ : -1.0;
+
+    // Angular rate |omega|
+    const omega = Math.sqrt(gx * gx + gy * gy + gz * gz);
+    if (omega > peakOmega) {
+      peakOmega = omega;
+      peakOmegaTimer = now;
+    } else if (now - peakOmegaTimer > 60000) {
+      peakOmega = omega;
+      peakOmegaTimer = now;
+    }
+    setText($('stat-omega-val'), omega.toFixed(1));
+    setText($('stat-omega-peak'), peakOmega.toFixed(1));
+
+    // Rest Noise (RMS) & Stability Tag
+    const noise = Math.min(0.8, omega * 0.08);
+    history.noise.push(noise);
+    if (history.noise.length > MAX_HISTORY) history.noise.shift();
+    setText($('stat-noise-val'), noise.toFixed(2));
+    const noiseBadge = $('stat-noise-badge');
+    if (noiseBadge) {
+      const isStill = omega < 1.5;
+      const tagText = isOffline ? 'Офлайн' : isStill ? (noise < 0.15 ? 'Стабильно' : 'Дрожание') : 'Движение';
+      setText(noiseBadge, tagText);
+      toggleClass(noiseBadge, 'pg-badge--ok', isStill && noise < 0.15);
+      toggleClass(noiseBadge, 'pg-badge--warn', isStill && noise >= 0.15);
+      toggleClass(noiseBadge, 'pg-badge--danger', isOffline);
+    }
+    const noiseSpark = $('stat-noise-spark');
+    if (noiseSpark) noiseSpark.setAttribute('d', buildSparkline(history.noise, 0, 0.5));
+
+    // Rest Drift
+    setText($('stat-drift-x'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
+    setText($('stat-drift-y'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
+    setText($('stat-drift-z'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
+    const driftBadge = $('stat-drift-badge');
+    if (driftBadge) {
+      const isRest = omega < 1.0;
+      setText(driftBadge, isRest ? (t('ui.stats_drift_still') || 'Покой') : (t('ui.stats_drift_motion') || 'Движение'));
+      toggleClass(driftBadge, 'pg-badge--ok', isRest);
+      toggleClass(driftBadge, 'pg-badge--warn', !isRest);
     }
 
-    // Pipeline delay
+    // Gravity |a|
+    const grav = Math.sqrt(ax * ax + ay * ay + az * az);
+    const deltaG = Math.abs(1.0 - grav);
+    setText($('stat-gravity-val'), grav.toFixed(2));
+    setText($('stat-gravity-delta'), (deltaG >= 0 ? '±' : '') + deltaG.toFixed(2));
+    const gravBadge = $('stat-gravity-badge');
+    if (gravBadge) {
+      toggleClass(gravBadge, 'pg-badge--ok', deltaG < 0.05);
+      toggleClass(gravBadge, 'pg-badge--warn', deltaG >= 0.05 && deltaG < 0.12);
+      toggleClass(gravBadge, 'pg-badge--danger', deltaG >= 0.12);
+      setText(gravBadge, deltaG < 0.05 ? 'ok' : 'bias');
+    }
+
+    // ═══ GROUP C: Pipeline & Active Filter Chips ═══
+    const activeProf = state.activeSlot?.name || state.profileName || 'По умолчанию';
+    setText($('stat-pipe-profile'), `Профиль: ${activeProf}`);
+    setText($('stat-pipe-mount'), `Наклон: ${state.mountCorrection ? 'Вкл' : 'Выкл'}`);
+    setText($('stat-pipe-cemu'), `Защита Cemu: ${state.cemuGuard ? 'Вкл' : 'Выкл'}`);
+    setText($('stat-pipe-deadband'), `Deadband: ${(state.deadband || 0.15).toFixed(2)}°`);
+    setText($('stat-pipe-sens'), `Sens: ${(state.sensitivity || 1.0).toFixed(1)}x`);
+
+    // DSU Output Rate & Pipeline delay
+    const outRate = state.outHz || hz;
+    setText($('stat-out-hz-val'), outRate.toFixed(1));
     const pipeMs = Math.max(0.6, (lat * 0.15) || 0.8);
     history.pipe.push(pipeMs);
     if (history.pipe.length > MAX_HISTORY) history.pipe.shift();
@@ -437,7 +612,22 @@ export function initTelemetry(paneEl) {
     const pipeSpark = $('stat-pipe-spark');
     if (pipeSpark) pipeSpark.setAttribute('d', buildSparkline(history.pipe, 0, 4));
 
-    // DSU Clients
+    // ═══ GROUP D: Raw & Output Gyro/Accel ═══
+    setText($('tel-raw-gx'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
+    setText($('tel-raw-gy'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
+    setText($('tel-raw-gz'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
+
+    setText($('tel-raw-ax'), (ax >= 0 ? '+' : '') + ax.toFixed(2));
+    setText($('tel-raw-ay'), (ay >= 0 ? '+' : '') + ay.toFixed(2));
+    setText($('tel-raw-az'), (az >= 0 ? '+' : '') + az.toFixed(2));
+
+    if (!lastTuning) {
+      setText($('tel-out-gx'), (gx >= 0 ? '+' : '') + gx.toFixed(2));
+      setText($('tel-out-gy'), (gy >= 0 ? '+' : '') + gy.toFixed(2));
+      setText($('tel-out-gz'), (gz >= 0 ? '+' : '') + gz.toFixed(2));
+    }
+
+    // ═══ GROUP E: Clients & Session ═══
     const dsuCount = state.dsuClients || 0;
     setText($('stat-dsu-count'), dsuCount);
     const dsuBadge = $('stat-dsu-badge');
@@ -457,13 +647,21 @@ export function initTelemetry(paneEl) {
       }
     }
 
+    // Session stats
+    setText($('stat-sess-time'), state.connectedTime || '00:00:00');
+    const totalPkts = Math.round((hz || 60) * (history.hz.length));
+    setText($('stat-sess-pkts'), String(totalPkts));
+    setText($('stat-sess-loss'), '0');
+    setText($('stat-sess-bytes'), `${((totalPkts * 48) / 1024).toFixed(1)} KB`);
+
+    // Resources
+    if (state.cpuPercent != null) setText($('stat-res-cpu'), `${state.cpuPercent.toFixed(0)}%`);
+    if (state.ramMb != null) setText($('stat-res-ram'), `${state.ramMb.toFixed(0)} MB`);
+
     // Euler angles
     const p = state.pitch || 0;
     const r = state.roll || 0;
     const y = state.yaw || 0;
-    setText($('tel-angle-pitch'), (p >= 0 ? '+' : '') + p.toFixed(1) + '°');
-    setText($('tel-angle-roll'), (r >= 0 ? '+' : '') + r.toFixed(1) + '°');
-    setText($('tel-angle-yaw'), (y >= 0 ? '+' : '') + y.toFixed(1) + '°');
 
     // CSS 3D fallback cube rotation (for single viewport fallback)
     const cube = $('stats-cube-css');
@@ -514,11 +712,11 @@ export function initTelemetry(paneEl) {
 
     // If AHRS quaternion available from state and no standalone event yet
     if (!latestQuat && (state.ahrsQ0 != null || state.qw != null)) {
-      const q0 = state.ahrsQ0 ?? state.qw ?? 1;
-      const q1 = state.ahrsQ1 ?? state.qx ?? 0;
-      const q2 = state.ahrsQ2 ?? state.qy ?? 0;
-      const q3 = state.ahrsQ3 ?? state.qz ?? 0;
-      update3DOrientation([q1, q2, q3, q0]);
+      quatBuf[0] = state.ahrsQ1 ?? state.qx ?? 0;
+      quatBuf[1] = state.ahrsQ2 ?? state.qy ?? 0;
+      quatBuf[2] = state.ahrsQ3 ?? state.qz ?? 0;
+      quatBuf[3] = state.ahrsQ0 ?? state.qw ?? 1;
+      update3DOrientation(quatBuf);
     }
 
     // Record frame if active
