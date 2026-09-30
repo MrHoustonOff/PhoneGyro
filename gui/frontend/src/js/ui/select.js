@@ -74,6 +74,7 @@ export function enhanceSelects(root) {
 export function startSelects() {
   document.addEventListener('click', (e) => { if (open && !open.menu.contains(e.target)) close(); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  addEventListener('scroll', close, true);
+  // a scroll inside the open list (it scrolls its active item into view) must not close it
+  addEventListener('scroll', (e) => { if (open && e.target instanceof Node && open.menu.contains(e.target)) return; close(); }, true);
   addEventListener('resize', close);
 }
