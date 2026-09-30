@@ -68,6 +68,7 @@ type App struct {
 	firstLaunchDone bool
 	hideAuthor      bool
 	splash          atomic.Bool // play the launch animation
+	level3D         atomic.Bool // 3D bubble level in the UI
 	// Process resource monitor (CPU / RAM)
 	stopResmon   func()
 	lastResStats atomic.Pointer[map[string]any]

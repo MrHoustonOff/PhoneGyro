@@ -41,7 +41,8 @@ type Settings struct {
 	ActiveSlot            int            `json:"activeSlot"`
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
-	Splash                bool           `json:"splash"` // play the launch animation
+	Splash                bool           `json:"splash"`  // play the launch animation
+	Level3D               bool           `json:"level3d"` // 3D bubble level (off: the flat CSS dial)
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -79,6 +80,7 @@ func Defaults() Settings {
 		HTTPSPort:             DefaultHTTPSPort,
 		GyroDeadzone:          0.20,
 		Splash:                true,
+		Level3D:               true,
 		StillnessHint:         true,
 		DisconnectAlert:       true,
 		SilenceDisconnect:     true,
@@ -180,6 +182,7 @@ type stored struct {
 	FirstLaunchDone       bool           `json:"firstLaunchDone"`
 	HideAuthor            bool           `json:"hideAuthor"`
 	Splash                *bool          `json:"splash"`
+	Level3D               *bool          `json:"level3d"`
 	DSUPort               int            `json:"dsuPort"`
 	DSUMAC                string         `json:"dsuMac"`
 	HTTPPort              int            `json:"httpPort"`
@@ -230,6 +233,9 @@ func Load(dir string) (s Settings, found bool) {
 	s.HideAuthor = r.HideAuthor
 	if r.Splash != nil {
 		s.Splash = *r.Splash
+	}
+	if r.Level3D != nil {
+		s.Level3D = *r.Level3D
 	}
 	if r.ActiveSlot >= 0 && r.ActiveSlot < 6 {
 		s.ActiveSlot = r.ActiveSlot
