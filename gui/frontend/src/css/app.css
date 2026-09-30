@@ -1359,3 +1359,11 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-inset);
   border-color: var(--accent-line);
 }
+
+/* "Reset to defaults": red like the calibration close button (tinted, not a solid danger button). */
+#set-reset-all {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 24%, var(--tile-hi));
+  border: 1px solid var(--danger);
+}
+#set-reset-all:hover:not([disabled]) { background: color-mix(in srgb, var(--danger) 34%, var(--tile-hi)); }
