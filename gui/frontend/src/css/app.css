@@ -1,0 +1,150 @@
+/* App styles on top of the design system (pg.css is generated, do not edit it).
+   Only what the design system does not cover: the window frame, app-specific
+   pieces built from its classes, and the launch/entrance motion. */
+
+/* ── Window ─────────────────────────────────────────────────────────────── */
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+body { user-select: none; -webkit-user-select: none; }
+#shell { position: fixed; inset: 0; }
+/* The ring tile drifts slower than the design's 120 s: calmer (owner's call). */
+.pg-drift::before { animation-duration: 192s; }
+
+.app-logo { display: block; flex: none; }
+.pg-wc .wc-restore, .is-max .pg-wc .wc-max { display: none; }
+.is-max .pg-wc .wc-restore { display: block; }
+
+.app-grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-center { text-align: center; }
+.app-sub { color: var(--ink-2); text-align: center; }
+.app-row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.app-row-flat { padding: 0; min-height: 0; border: 0; }
+.app-wide { min-width: 240px; }
+
+/* ── Connect ────────────────────────────────────────────────────────────── */
+.pg-conn .app-sub { margin-top: -8px; }
+.app-qr { display: block; image-rendering: pixelated; border-radius: 2px; }
+.app-qr:not([src]) { visibility: hidden; }
+.pg-qr .app-qr { background: #fff; }
+.app-dsu-slot { width: 100%; display: flex; flex-direction: column; }
+.app-chip-lg { width: 64px; height: 64px; }
+.app-chip-lg svg { width: 30px; height: 30px; }
+.app-scan::before { animation: app-blink 1.2s ease-in-out infinite; }
+@keyframes app-blink { 50% { opacity: .25; } }
+
+/* DSU clients inside the notice (the program behind each client). */
+.app-dsu { width: 100%; }
+.app-dsu__body { flex: 1; min-width: 0; }
+.app-dsu__list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.app-dsu__list:empty { display: none; }
+.app-client { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; padding: 0 4px 0 10px;
+  border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--line-subtle); }
+.app-client.is-app { cursor: pointer; }
+.app-client.is-app:hover { border-color: var(--line); background: var(--surface-hover); }
+.app-client__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.app-client.is-idle .app-client__dot { background: var(--warn); }
+.app-client.is-off { opacity: .6; }
+.app-client.is-off .app-client__dot { background: var(--ink-3); }
+.app-client__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 12.5px/1 var(--font-mono); }
+.app-client .pg-badge { height: 18px; font-size: 10px; padding: 0 6px; }
+.app-client .pg-btn-icon { width: 24px; height: 24px; }
+.app-client .pg-btn-icon svg { width: 12px; height: 12px; }
+
+/* Device dashboard (phone online or USB connected). */
+.app-devcard { display: flex; flex-direction: column; gap: 6px; padding: 18px 22px; }
+.pg-dev__chip .app-ico-usb, #dev-chip.is-usb .app-ico-phone { display: none; }
+#dev-chip.is-usb .app-ico-usb { display: block; }
+.app-dialwrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.app-devfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 4px; flex-wrap: wrap; }
+.app-linkbadge { height: 28px; }
+#btn-recenter { margin-top: 8px; }
+.app-pause { letter-spacing: .14em; }
+.app-pause.is-paused { background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--surface); border-color: var(--warn-line); color: var(--warn-text); }
+
+/* Profiles: the current one is a button that opens the list. */
+.app-profiles { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; }
+.app-profwrap { position: relative; }
+.app-profbtn { width: 100%; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.app-profbtn:hover { border-color: var(--line-control); }
+.app-profbtn .chev { transition: transform .15s; }
+.app-profbtn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.app-menu { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; max-height: 300px; overflow: auto;
+  padding: 6px; border-radius: var(--radius-lg); background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--line); box-shadow: var(--shadow-pop); }
+.app-menu__item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 8px 8px 10px; border: 1px solid transparent;
+  border-radius: var(--radius-md); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.app-menu__item:hover { background: var(--surface-hover); }
+.app-menu__item.is-active { background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface); border-color: var(--accent-line); }
+.app-menu__item .pg-btn-icon { width: 26px; height: 26px; flex: none; }
+.app-menu__item .pg-btn-icon:hover { color: var(--danger-text); background: var(--danger-soft); }
+.app-menu__item .pg-btn-icon svg { width: 12px; height: 12px; }
+.app-menu__empty { padding: 10px; color: var(--ink-2); font-size: 13px; }
+.pg-profile__t, .pg-profile__s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Initial setup ──────────────────────────────────────────────────────── */
+.app-wiz { position: relative; flex: 1; }
+/* The wizard fits the window (design: pg-fit): the screenshot shrinks, nothing scrolls. */
+#screen-setup { height: 100%; min-height: 0; padding-bottom: 6px; }
+#screen-setup .app-wiz { min-height: 0; overflow: hidden; }
+.app-wiz-ios .pg-wiz__grid { min-height: 0; }
+.app-wiz-ios .pg-wiz__shot { height: 100%; }
+.app-wiz-close { position: absolute; top: 14px; right: 14px; z-index: 2; }
+.app-wiz-title { font-size: 34px; line-height: 38px; margin-top: 8px; text-align: center; }
+.app-wiz-pick, .app-wiz-android { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+.app-wiz-ios { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.app-platforms { display: grid; grid-template-columns: repeat(2, minmax(0, 240px)); gap: 16px; margin-top: 8px; }
+.app-platform { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; cursor: pointer; font: inherit; color: var(--ink); transition: border-color .15s, background .15s; }
+.app-platform:hover { border-color: var(--accent-line); background: var(--surface-hover) var(--tex-grain); }
+.app-platform svg { width: 40px; height: 40px; stroke: var(--accent-text); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.app-wiz-text { font-size: 19px; line-height: 29px; font-weight: 500; max-width: 640px; }
+.app-wiz-android .app-wiz-text { font-size: 16px; line-height: 25px; }
+#wiz-step1-extra { display: flex; flex-direction: column; gap: 14px; }
+.app-qr-sm { align-self: flex-start; padding: 12px; border-radius: var(--radius-lg); }
+#wiz-step1-extra .pg-url { align-self: flex-start; }
+.app-stepbadge { align-self: flex-start; height: auto; min-height: 28px; padding: 4px 12px; white-space: normal; line-height: 1.5; }
+.app-wiz-back { min-width: 120px; min-height: 44px; }
+.app-wiz-next { min-width: 300px; min-height: 48px; }
+.pg-disclosure__body p { margin: 0 0 8px; }
+
+/* ── Modal, toast ───────────────────────────────────────────────────────── */
+.app-overlay { position: fixed; inset: 0; z-index: 60; animation: app-fade .15s ease-out; }
+.app-overlay .pg-modal { max-width: 460px; animation: app-pop .18s cubic-bezier(.2,.8,.2,1); }
+.app-overlay .pg-modal__foot { justify-content: flex-end; }
+@keyframes app-fade { from { opacity: 0; } }
+@keyframes app-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+.app-toast { position: fixed; left: 50%; bottom: 56px; z-index: 70; transform: translateX(-50%); display: inline-flex; align-items: center;
+  height: 38px; padding: 0 18px; border-radius: var(--radius-pill); background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--line); box-shadow: var(--shadow-pop); font: 600 13px/1 var(--font-sans); color: var(--ink);
+  white-space: nowrap; transition: opacity .18s, transform .18s; }
+.app-toast.is-off { opacity: 0; transform: translateX(-50%) translateY(8px); }
+
+/* ── Footer bits ────────────────────────────────────────────────────────── */
+.app-chan { height: 16px; font-size: 10px; padding: 0 6px; }
+.app-sep { height: 14px; margin: 0 2px; }
+.app-gh { display: inline-flex; width: 14px; height: 14px; }
+.app-soon-set { width: 100%; margin-top: 8px; }
+
+/* ── Launch animation (design Splash, compositor-only hand-over) ────────── */
+html:not(.is-splash) #splash { display: none; }
+.app-splash { position: fixed; inset: 0; z-index: 100; --sw: 100%; --sh: 100%; width: auto; height: auto; background: var(--bg);
+  transition: opacity .55s cubic-bezier(.4,0,.2,1); }
+.app-splash .pg-splash__mark { object-fit: contain; }
+/* The entrance keyframes own the card's transform, so the exit uses the separate
+   scale property; the whole layer fades. */
+.app-splash .pg-splash__win { transition: scale .8s cubic-bezier(.7,0,.15,1); }
+/* Hand-over: instead of animating the card's width and height (a layout every
+   frame), it scales up and fades while the rings fly out; only transform and
+   opacity move, so the compositor does all of it. */
+.app-splash.is-out { opacity: 0; pointer-events: none; transition-delay: .25s; }
+.app-splash.is-out .pg-splash__win { scale: 1.5; }
+.app-splash.is-out .pg-splash__rings { transform: scale(2.6); opacity: 0; }
+/* The app enters under it: islands drop and rise, the screen pops. */
+html.is-enter .pg-header > * { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) both; }
+html.is-enter .pg-header > *:nth-child(2) { animation-delay: .07s; }
+html.is-enter .pg-footer > * { animation: pg-rise .6s cubic-bezier(.2,.8,.2,1) .2s both; }
+html.is-enter .pg-footer > *:nth-child(2) { animation-delay: .27s; }
+html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,.8,.2,1) .12s both; }
+html.is-enter .pg-titlebar { animation: app-fade .5s ease-out both; }
+
+/* Copy button after a copy (ui/copy.js). */
+.pg-btn.is-copied { background: var(--accent); border-color: transparent; color: var(--on-accent); }

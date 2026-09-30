@@ -175,6 +175,34 @@
     "delete_profile_tip": "Delete profile",
     "profile_deleted": "Profile “{name}” deleted"
   },
+  "ui": {
+    "docs": "Docs",
+    "scan_title": "Scan with phone camera",
+    "scan_sub": "Both devices on the same Wi‑Fi. Safari or Chrome opens the controller.",
+    "dsu_active": "active",
+    "dsu_idle": "idle",
+    "dsu_off": "off",
+    "wifi_link": "Wi‑Fi · LAN",
+    "profiles_title": "Control profiles",
+    "slot_active": "Slot {n} · Active",
+    "no_profile": "No profile selected",
+    "no_profiles": "No saved profiles yet. Calibrate the device.",
+    "calibrate": "Calibrate",
+    "calib_soon": "The calibration wizard moves to the new interface next. It is not available yet.",
+    "soon_title": "Coming soon",
+    "soon_desc": "This section is moving to the new interface.",
+    "close": "Close",
+    "splash": "Launch animation",
+    "splash_tip": "A short intro when PhoneGyro starts (about 3 seconds). Turn it off to open the window at once.",
+    "setup_android_url": "Address for the phone",
+    "usb_waiting": "Waiting for the USB controller"
+  },
+  "splash": {
+    "starting": "Starting…",
+    "profiles": "Loading profiles",
+    "server": "Starting DSU server",
+    "ready": "Ready"
+  },
   "firewall": {
     "label": "Windows Firewall",
     "tip": "The phone connects to the PC over Wi‑Fi, so Windows Firewall has to let incoming connections to PhoneGyro through. Windows asks once, on the first launch. If that window was closed or cancelled, the phone cannot connect and Windows never asks again; you can fix it here. The permission belongs to the file: a new PhoneGyro.exe in another folder is asked about again. The USB controller does not need it.",
