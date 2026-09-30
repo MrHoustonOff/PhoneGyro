@@ -324,4 +324,65 @@ export function startSettings() {
   // Ctrl +/− while Settings is open: keep the slider's value in step.
   onZoom((v) => { if (cur && !screen.hidden && Math.abs((cur.fontScale || 1) - v) > 1e-6) { cur.fontScale = v; render(); } });
   onLang(() => { if (!screen.hidden) render(); });
+
+  // Bench & Mini-games collapsible section state
+  try {
+    benchOpen = localStorage.getItem('pg-settings-bench-open') === '1';
+    benchTab = localStorage.getItem('pg-settings-bench-tab') || 'bench';
+  } catch (_) {}
+  syncBenchSection();
+
+  const benchToggle = $('set-bench-toggle');
+  if (benchToggle) {
+    benchToggle.addEventListener('click', () => {
+      benchOpen = !benchOpen;
+      try {
+        localStorage.setItem('pg-settings-bench-open', benchOpen ? '1' : '0');
+      } catch (_) {}
+      syncBenchSection();
+    });
+  }
+
+  const benchSeg = $('set-bench-seg');
+  if (benchSeg) {
+    benchSeg.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-bench-tab]');
+      if (!btn) return;
+      benchTab = btn.dataset.benchTab || 'bench';
+      try {
+        localStorage.setItem('pg-settings-bench-tab', benchTab);
+      } catch (_) {}
+      syncBenchSection();
+    });
+  }
+}
+
+let benchOpen = false;
+let benchTab = 'bench';
+
+function syncBenchSection() {
+  const toggleBtn = $('set-bench-toggle');
+  const group = $('set-bench-group');
+  const body = $('set-bench-body');
+  if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(benchOpen));
+  if (group) group.classList.toggle('is-open', benchOpen);
+  if (body) body.hidden = !benchOpen;
+
+  // Sync subtab
+  const seg = $('set-bench-seg');
+  if (seg) {
+    seg.querySelectorAll('.pg-seg__btn').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.benchTab === benchTab);
+    });
+  }
+  const paneBench = $('set-pane-bench');
+  const paneGames = $('set-pane-games');
+  if (paneBench) {
+    paneBench.hidden = benchTab !== 'bench';
+    paneBench.classList.toggle('is-active', benchTab === 'bench');
+  }
+  if (paneGames) {
+    paneGames.hidden = benchTab !== 'games';
+    paneGames.classList.toggle('is-active', benchTab === 'games');
+  }
 }
