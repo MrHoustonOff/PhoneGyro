@@ -118,6 +118,8 @@ type App struct {
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
+	// Auto-zoom on launch (settings.json noAutoZoom, default false = auto on)
+	noAutoZoom atomic.Bool
 }
 
 // NewApp creates a new App application struct

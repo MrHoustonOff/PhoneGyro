@@ -108,6 +108,7 @@ func (a *App) applySettings(s AppSettings) {
 	a.inputModeMu.Lock()
 	a.inputMode = s.InputMode
 	a.inputModeMu.Unlock()
+	a.noAutoZoom.Store(s.NoAutoZoom)
 }
 
 // settingsSnapshot is the live settings; unset values (an App not built by
@@ -194,6 +195,7 @@ func (a *App) settingsSnapshot() AppSettings {
 		HotkeyRecenterEnabled: a.hotkeyRecenterEnabled.Load(),
 		HotkeyRecenterKey:     a.getHotkeyRecenterKey(),
 		InputMode:             a.GetInputMode(),
+		NoAutoZoom:            a.noAutoZoom.Load(),
 	}
 }
 
@@ -551,6 +553,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	if a.trayMgr != nil {
 		a.trayMgr.UpdateHotkey(false, a.getHotkeyRecenterKey())
 	}
+	a.noAutoZoom.Store(s.NoAutoZoom)
 
 	curScale := math.Float64frombits(a.fontScaleBits.Load())
 	a.broadcastLiveDebugJSON(map[string]any{

@@ -382,11 +382,14 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 @keyframes app-swap-back { from { opacity: 0; transform: translateX(-0.75rem); } }
 @media (prefers-reduced-motion: reduce) { .is-swap { animation: none; } }
 
-/* Interface scale (ui/zoom.js, design: Zoom): the window root is zoomed and
-   divided by the zoom so it still fills the window. */
-#shell { zoom: var(--pg-zoom, 1); width: calc(100vw / var(--pg-zoom, 1)); height: calc(100vh / var(--pg-zoom, 1)); right: auto; bottom: auto; }
-/* Dialogs live in <body>, outside #shell, so they need the same interface scale (else at 200 % they stay tiny). */
-.app-overlay { zoom: var(--pg-zoom, 1); width: calc(100vw / var(--pg-zoom, 1)); height: calc(100vh / var(--pg-zoom, 1)); right: auto; bottom: auto; }
+/* Interface scale (ui/zoom.js, design: Zoom): zoom shrinks/grows the UI;
+   position:fixed+inset:0 anchors to the viewport without reading vw/vh at
+   paint time (fixes the "squashed on first paint" bug: vw/vh were stale
+   before WindowCenter in OnDomReady; now the browser measures from the
+   physical viewport every time). Container queries see the zoomed size. */
+#shell { zoom: var(--pg-zoom, 1); position: fixed; inset: 0; width: auto; height: auto; }
+/* Dialogs live in <body>, outside #shell: same zoom, same viewport anchor. */
+.app-overlay { zoom: var(--pg-zoom, 1); position: fixed; inset: 0; width: auto; height: auto; }
 
 /* ── Docs (design: ScreenDocs) ──────────────────────────────────────────── */
 #screen-docs { padding-top: 0.375rem; }

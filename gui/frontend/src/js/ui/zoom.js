@@ -54,3 +54,8 @@ export function startZoom() {
   on('font-scale-sync', (v) => setZoom(v, { save: false, quiet: true }));
   call('GetFontScale').then((v) => setZoom(v || 1, { save: false, quiet: true }));
 }
+
+/** Mirrors Go's noAutoZoom setting to localStorage for the next launch's head script. */
+export function syncAutoZoomSetting(noAutoZoom) {
+  try { localStorage.setItem('pg-no-auto-zoom', noAutoZoom ? '1' : '0'); } catch (e) { /* ignore */ }
+}

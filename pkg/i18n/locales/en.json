@@ -753,6 +753,8 @@
     "font_scale_tip": "Global font and interface scaling factor (default: 1.00x). You can also press Ctrl + and Ctrl - to adjust scale, Ctrl 0 to reset, or scroll the mouse wheel while holding Ctrl.",
     "font_scale_hotkeys": "Ctrl + / Ctrl - (zoom) • Ctrl 0 (reset)",
     "font_scale_hud": "Scale",
+    "auto_zoom": "Do not auto-scale on launch",
+    "auto_zoom_tip": "On — always use the saved scale. Off (default) — pick a scale automatically to fit the screen on every launch.",
     "group_hotkeys": "Global Hotkeys (Windows)",
     "hotkey_recenter": "Recenter 3D View",
     "hotkey_recenter_desc": "Global shortcut to reset the in-app 3D view neutral",

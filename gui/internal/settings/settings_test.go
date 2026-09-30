@@ -133,3 +133,33 @@ func TestCheckPorts(t *testing.T) {
 		}
 	}
 }
+
+// TestNoAutoZoom: default is false (auto-zoom on); round-trips correctly.
+func TestNoAutoZoom(t *testing.T) {
+	d := Defaults()
+	if d.NoAutoZoom {
+		t.Fatal("default NoAutoZoom must be false (auto-zoom enabled)")
+	}
+
+	// Round-trip with noAutoZoom=true
+	dir := t.TempDir()
+	s := Defaults()
+	s.DSUMAC = "AA:BB:CC:DD:EE:02"
+	s.NoAutoZoom = true
+	if err := Save(dir, s); err != nil {
+		t.Fatal(err)
+	}
+	got, found := Load(dir)
+	if !found {
+		t.Fatal("not found after save")
+	}
+	if !got.NoAutoZoom {
+		t.Fatal("NoAutoZoom not persisted")
+	}
+
+	// Missing field (old file) → default false
+	s2, _ := Load(write(t, `{}`))
+	if s2.NoAutoZoom {
+		t.Fatal("missing noAutoZoom field must default to false")
+	}
+}

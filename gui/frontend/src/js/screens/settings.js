@@ -55,6 +55,8 @@ const COLUMNS = [
       { key: 'accent', type: 'swatches', label: 'ui.accent', tip: 'ui.accent_tip', options: ACCENTS, reset: (v) => applyAccent(v) },
       { key: 'fontScale', type: 'slider', min: 0.5, max: 3, step: 0.05, fmt: (v) => Math.round(v * 100) + ' %',
         label: 'settings_modal.font_scale', tip: 'settings_modal.font_scale_hotkeys', after: (v) => setZoom(v, { save: false, quiet: true }) },
+      { key: 'noAutoZoom', type: 'toggle', label: 'settings_modal.auto_zoom',
+        after: (v) => { try { localStorage.setItem('pg-no-auto-zoom', v ? '1' : '0'); } catch (e) { /* ignore */ } } },
     ] },
     { title: 'ui.group_performance', rows: [
       { key: 'debugPanel', type: 'toggle', label: 'ui.debug_panel', tip: 'ui.debug_panel_tip', after: setDebugPanel },
