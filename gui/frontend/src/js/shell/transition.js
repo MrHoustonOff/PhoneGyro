@@ -118,8 +118,8 @@ export function focusScreen(screenEl) {
  * @param {HTMLElement[]} options.elementsIn - Elements to fade in
  * @param {Function} options.onSwitch - Called between fade-out and fade-in
  * @param {boolean} [options.instant=false] - Skip animations if true
- * @param {number} [options.outDuration=160] - Fade-out duration in ms
- * @param {number} [options.inDuration=210] - Fade-in duration in ms
+ * @param {number} [options.outDuration=320] - Fade-out duration in ms
+ * @param {number} [options.inDuration=420] - Fade-in duration in ms
  * @returns {Promise<void>}
  */
 export async function runTransition({
@@ -127,8 +127,8 @@ export async function runTransition({
   elementsIn = [],
   onSwitch,
   instant = false,
-  outDuration = 160,
-  inDuration = 210,
+  outDuration = 320,
+  inDuration = 420,
 }) {
   const token = ++activeToken;
   runningTransitions++;
@@ -220,8 +220,8 @@ export async function transitionScreens({
   footerEl,
   onSwitch,
   instant = false,
-  outDuration = 160,
-  inDuration = 210,
+  outDuration = 320,
+  inDuration = 420,
 }) {
   const headerChanges = prevChrome.header !== nextChrome.header;
   const footerChanges = prevChrome.footer !== nextChrome.footer;
