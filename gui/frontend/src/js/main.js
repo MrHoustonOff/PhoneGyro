@@ -22,6 +22,7 @@ import { startSettings } from './screens/settings.js';
 import { startDocs } from './screens/docs.js';
 import { startCalibration } from './screens/calibration.js';
 import { startStats } from './screens/stats/stats.js';
+import { startGames } from './screens/games/games.js';
 import { startSplash, syncSplashSetting } from './splash.js';
 
 startDebug();              // first: with the setting on, the debug panel sees the start too
@@ -47,6 +48,7 @@ startSettings();
 startDocs();
 startCalibration();
 startStats();
+startGames();
 
 async function boot() {
   await ready;

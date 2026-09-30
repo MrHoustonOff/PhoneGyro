@@ -17,6 +17,7 @@ export const SCREEN_CONFIG = {
   stats:       { chrome: { header: true,  footer: true  } },
   soon:        { chrome: { header: true,  footer: true  } },
   calibration: { chrome: { header: false, footer: false } },
+  games:       { chrome: { header: false, footer: false } },
 };
 
 export function getScreenChrome(screen) {

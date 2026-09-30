@@ -272,6 +272,14 @@
             </div>
           </footer>
         </section>
+        <!-- Mini-games entry button under Response Bench -->
+        <button class="pg-btn app-bench-games-btn" id="btn-open-games" type="button">
+          <span class="app-bench-games-label">
+            <svg class="app-bench-games-icon" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="10" rx="5"/><path d="M8 10.5v4M6 12.5h4M16 11.5h.01M18 13.5h.01"/></svg>
+            <span data-i18n="ui.bench_try_games">Опробовать в наших мини-играх</span>
+          </span>
+          <svg class="app-bench-games-arrow" viewBox="0 0 12 12"><path d="M4 2.5l3.5 3.5L4 9.5"/></svg>
+        </button>
         <div id="set-col-2-groups" class="app-set-col-groups"></div>
       </div>
     </main>
@@ -762,6 +770,87 @@
         <div class="display-lg" id="soon-title"></div>
         <div class="body app-sub" data-i18n="ui.soon_desc"></div>
       </section>
+    </main>
+
+    <!-- Games screen (Aim & Platform mini-games), js/screens/games/games.js -->
+    <main class="pg-page app-screen app-gamespage" id="screen-games" hidden>
+      <div class="app-games-card pg-card">
+        <!-- Top Toolbar -->
+        <header class="app-games-bar">
+          <div class="app-games-bar__left">
+            <button class="pg-btn pg-btn--ghost app-games-back" id="btn-games-back" type="button">
+              <svg viewBox="0 0 12 12" style="width:0.75rem;height:0.75rem;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round"><path d="M8 2.5l-3.5 3.5L8 9.5"/></svg>
+              <span data-i18n="ui.back">Назад</span>
+            </button>
+          </div>
+
+          <div class="app-games-bar__center">
+            <div class="pg-seg" id="game-picker-seg" role="radiogroup">
+              <button class="pg-seg__btn is-active" data-game="aim" type="button" role="radio" data-i18n="ui.game_aim">Прицел</button>
+              <button class="pg-seg__btn" data-game="platform" type="button" role="radio" data-i18n="ui.game_platform">Платформа</button>
+            </div>
+          </div>
+
+          <div class="app-games-bar__right">
+            <div class="app-games-hud">
+              <span class="pg-badge pg-badge--ok" id="games-hud-score"><span data-i18n="ui.game_score">Счёт:</span> <b id="game-score">0</b></span>
+              <span class="pg-badge" id="games-hud-record"><span data-i18n="ui.game_record">Рекорд:</span> <b id="game-record">0</b></span>
+              <span class="pg-badge" id="games-hud-metric"><span id="game-label-timer" data-i18n="ui.games_aim_time">Время:</span> <b id="game-val-timer">30.0 с</b></span>
+              
+              <button class="pg-btn pg-btn--ghost pg-btn--sm" id="btn-game-recenter" type="button" title="[Space] Center">
+                <kbd class="pg-kbd">Space</kbd>
+                <span data-i18n="ui.recenter">Центрировать</span>
+              </button>
+              <button class="pg-btn pg-btn--primary pg-btn--sm" id="btn-game-start" type="button">
+                <span id="game-start-label" data-i18n="ui.game_start">Старт</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <!-- Stage Container (styled after GyroScene / Viewport) -->
+        <div class="pg-stage app-games-stage" id="game-stage">
+          <!-- Aim Reticle Game View -->
+          <div class="app-game-view" id="game-aim-view">
+            <div class="pg-bench app-game-aim-bench" id="game-aim-bench">
+              <div class="pg-rings-floor" style="--fx:70deg;--fy:2.5rem"></div>
+              <div class="pg-cross" style="opacity:0.65"></div>
+              <div class="app-game-aim-targets" id="game-aim-targets"></div>
+              <div class="app-game-aim-reticle" id="game-aim-reticle">
+                <div class="app-sheikah-reticle">
+                  <div class="app-reticle-ring"></div>
+                  <div class="app-reticle-dot"></div>
+                </div>
+              </div>
+              <div class="app-game-aim-fx" id="game-aim-fx"></div>
+              
+              <!-- Game Over Overlay -->
+              <div class="app-game-aim-gameover" id="game-aim-gameover" style="display:none">
+                <div class="app-game-over-box">
+                  <h3 class="display-sm" data-i18n="ui.game_over">Время вышло!</h3>
+                  <div class="app-game-over-stats">
+                    <div><span data-i18n="ui.game_final_score">Итоговый счёт:</span> <b id="game-aim-final-score">0</b></div>
+                    <div><span data-i18n="ui.game_final_record">Ваш рекорд:</span> <b id="game-aim-final-record">0</b></div>
+                  </div>
+                  <button class="pg-btn pg-btn--primary" id="btn-aim-restart" type="button" data-i18n="ui.game_again">Играть снова</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Platform Tilt Game View -->
+          <div class="app-game-view" id="game-platform-view" style="display:none">
+            <div class="app-game-platform-host" id="game-platform-canvas-host">
+              <canvas id="game-platform-canvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hint Footer -->
+        <div class="app-games-hint">
+          <span data-i18n="ui.games_hint">Наклоняйте и вращайте контроллер или телефон. Нажмите Space для центровки.</span>
+        </div>
+      </div>
     </main>
 
     <!-- Calibration screen (design: Modal card inside #body), js/screens/calibration.js -->
