@@ -347,6 +347,10 @@ func (a *App) MarkFirstLaunchDone() {
 	a.saveSettings()
 }
 
+// GetDefaultAppSettings is a first launch's settings: the settings screen marks
+// what differs from them and resets to them.
+func (a *App) GetDefaultAppSettings() AppSettings { return settings.Defaults() }
+
 // GetSplash reports whether the launch animation plays (settings.json splash).
 func (a *App) GetSplash() bool { return a.splash.Load() }
 
