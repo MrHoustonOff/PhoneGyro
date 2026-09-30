@@ -11,6 +11,7 @@ import { t } from '../core/i18n.js';
 import { getState, onState } from '../core/state.js';
 import { toast } from '../ui/toast.js';
 import { createGyroScene } from '../ui/scene.js';
+import { profileIconSvg, ICON_KEYS } from '../ui/profile-icons.js';
 
 const STEPS = [
   { key: 'rest', pill: 'step_pill_rest', ms: 1600, rest: true },
@@ -37,6 +38,8 @@ const S = {
   sceneLoading: false,
   isDisconnectAlertActive: false,
   wasInterruptedByDisconnect: false,
+  selectedIcon: 'default',
+  slotDropdownOpen: false,
 };
 
 let quatListenerActive = false;
@@ -228,23 +231,178 @@ function disposeScene() {
   S.sceneLoading = false;
 }
 
+function toggleSlotDropdown(open) {
+  S.slotDropdownOpen = open !== undefined ? open : !S.slotDropdownOpen;
+  const m = $('cal-save-slot-menu');
+  const t = $('cal-save-slot-trigger');
+  if (m) m.hidden = !S.slotDropdownOpen;
+  if (t) t.setAttribute('aria-expanded', String(S.slotDropdownOpen));
+}
+
+function selectSaveSlot(slotIdx) {
+  S.slot = slotIdx;
+  const st = getState() || {};
+  const profiles = st.profiles || [];
+  const p = profiles[slotIdx];
+  // Requirement 3: Auto-select icon on slot change
+  S.selectedIcon = (p && p.icon) ? p.icon : 'default';
+  toggleSlotDropdown(false);
+  render();
+}
+
+function selectSaveIcon(iconKey) {
+  S.selectedIcon = iconKey;
+  // Update icon card elements
+  const cards = el().querySelectorAll('.app-cal-icon-card');
+  cards.forEach((card) => {
+    const isSel = card.dataset.icon === iconKey;
+    card.classList.toggle('is-selected', isSel);
+    card.setAttribute('aria-checked', String(isSel));
+  });
+  // Update trigger button icon
+  const trigIcon = $('cal-save-trigger-icon');
+  if (trigIcon) trigIcon.innerHTML = profileIconSvg(iconKey);
+}
+
+function renderSaveScreen(st) {
+  disposeScene();
+  stopQuatListener();
+
+  const profiles = st.profiles || [];
+  const slot = S.slot;
+  const p = profiles[slot];
+  const isEmpty = !p || !p.name;
+  const currentDevice = device() || (p && p.device && p.device !== 'Unknown' ? p.device : 'iPhone');
+
+  if (!S.selectedIcon) {
+    S.selectedIcon = (p && p.icon) ? p.icon : 'default';
+  }
+
+  const triggerTitle = isEmpty
+    ? `${c('slot_label', { n: slot + 1 })} — ${c('slot_empty')}`
+    : p.name;
+  const triggerDevice = isEmpty
+    ? c('device_label_preview', { device: currentDevice })
+    : `${c('slot_label', { n: slot + 1 })} • ${c('device_label', { device: p.device || c('device_unknown') })}`;
+  const triggerIcon = S.selectedIcon || (p && p.icon ? p.icon : 'default');
+
+  const defaultName = (p && p.name && !p.name.startsWith('Слот') && !p.name.startsWith('Slot'))
+    ? p.name
+    : `${currentDevice} ${slot + 1}`;
+
+  const existingInput = $('cal-name');
+  const nameValue = (existingInput && existingInput.dataset.slot === String(slot))
+    ? existingInput.value
+    : defaultName;
+
+  const slotItemsHtml = Array.from({ length: 6 }, (_, i) => {
+    const sp = profiles[i];
+    const sEmpty = !sp || !sp.name;
+    const sDev = device() || (sp && sp.device && sp.device !== 'Unknown' ? sp.device : 'iPhone');
+    const sTitle = sEmpty
+      ? `${c('slot_label', { n: i + 1 })} — ${c('slot_empty')}`
+      : sp.name;
+    const sSub = sEmpty
+      ? c('device_label_preview', { device: sDev })
+      : c('device_label', { device: sp.device || c('device_unknown') });
+    const sIcon = (sp && sp.icon) ? sp.icon : 'default';
+    const isActive = i === slot;
+
+    return `<button type="button" class="app-menu__item${isActive ? ' is-active' : ''}${sEmpty ? ' app-cal-menu-item--empty' : ''}" role="option" data-act="select-slot" data-slot="${i}" aria-selected="${isActive}">
+      <span class="app-menu__icon${sEmpty ? ' app-cal-icon--muted' : ''}">${profileIconSvg(sIcon)}</span>
+      <span class="app-grow">
+        <span class="pg-profile__t">${esc(sTitle)}</span>
+        <span class="pg-profile__s">${esc(c('slot_label', { n: i + 1 }))} • ${esc(sSub)}</span>
+      </span>
+      ${sp && sp.outdated ? `<span class="pg-badge pg-badge--danger">${esc(c('outdated_badge'))}</span>` : ''}
+      ${isActive ? '<span class="app-menu__check">✓</span>' : ''}
+    </button>`;
+  }).join('');
+
+  const showOverwrite = !isEmpty && p && p.name;
+  const overwriteHtml = showOverwrite
+    ? `<div class="pg-notice pg-notice--warn app-cal-warn">
+        <span>${esc(c('save_overwrite_warn', { slot: slot + 1, name: p.name }))}</span>
+      </div>`
+    : '';
+
+  const iconsHtml = ICON_KEYS.map((k) => `
+    <button type="button" class="app-cal-icon-card${S.selectedIcon === k ? ' is-selected' : ''}" role="radio" aria-checked="${S.selectedIcon === k}" data-act="select-icon" data-icon="${k}">
+      <span class="app-cal-icon-svg">${profileIconSvg(k)}</span>
+      <span class="app-cal-icon-title">${esc(c('icon_' + k))}</span>
+    </button>
+  `).join('');
+
+  const deviceBadgeHtml = `
+    <div class="app-cal-device-row">
+      <span class="pg-badge app-cal-device-badge">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="3"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span>${esc(c('device_label', { device: currentDevice }))}</span>
+      </span>
+    </div>
+  `;
+
+  body().innerHTML = `
+    <div class="app-cal-save">
+      <div class="app-cal-info">
+        <div class="display-md">${esc(c('save_slot_title'))}</div>
+        <p class="app-cal-desc">${esc(c('save_slot_hint'))}</p>
+      </div>
+
+      <div class="app-cal-field">
+        <div class="app-profwrap app-cal-slotwrap" id="cal-save-slotwrap">
+          <button type="button" class="pg-row app-profbtn app-cal-slot-trigger" id="cal-save-slot-trigger" data-act="toggle-slot-menu" aria-haspopup="listbox" aria-expanded="${S.slotDropdownOpen}">
+            <span class="app-menu__icon${isEmpty ? ' app-cal-icon--muted' : ''}" id="cal-save-trigger-icon">
+              ${profileIconSvg(triggerIcon)}
+            </span>
+            <span class="app-grow">
+              <span class="pg-profile__t" id="cal-save-trigger-title">${esc(triggerTitle)}</span>
+              <span class="pg-profile__s" id="cal-save-trigger-device">${esc(triggerDevice)}</span>
+            </span>
+            <span class="pg-badge app-cal-slotbadge" id="cal-save-trigger-badge">${esc(c('slot_label', { n: slot + 1 }))}</span>
+            <svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <div class="app-menu app-cal-slotmenu" id="cal-save-slot-menu"${S.slotDropdownOpen ? '' : ' hidden'} role="listbox">
+            ${slotItemsHtml}
+          </div>
+        </div>
+      </div>
+
+      ${overwriteHtml}
+
+      <div class="app-cal-field">
+        <label class="app-cal-label" for="cal-name">${esc(c('save_name_title'))}</label>
+        <input class="pg-input app-cal-name" id="cal-name" data-slot="${slot}" maxlength="40" placeholder="${esc(c('save_name_placeholder'))}" value="${esc(nameValue)}">
+      </div>
+
+      <div class="app-cal-field">
+        <label class="app-cal-label">${esc(c('save_icon_title'))}</label>
+        <div class="app-cal-icons" role="radiogroup" aria-label="${esc(c('save_icon_title'))}">
+          ${iconsHtml}
+        </div>
+      </div>
+
+      ${deviceBadgeHtml}
+    </div>
+  `;
+
+  foot().innerHTML = btn('toverify', c('btn_back')) + '<span class="app-grow"></span>' + btn('save', c('btn_save'), 'primary');
+
+  setTimeout(() => {
+    const inp = $('cal-name');
+    if (inp) {
+      inp.focus();
+      inp.select();
+    }
+  }, 30);
+}
+
 function render() {
   const st = getState() || {};
   $('cal-sub').textContent = device() ? c('subtitle_device', { device: device() }) : c('subtitle');
 
   if (S.phase === 'save') {
-    disposeScene();
-    stopQuatListener();
-    const profiles = st.profiles || [];
-    const old = profiles[S.slot];
-    body().innerHTML = `<div class="app-cal-main">
-      <label class="app-cal-label" for="cal-name">${esc(c('save_name_title'))}</label>
-      <input class="pg-input app-cal-name" id="cal-name" maxlength="40" placeholder="${esc(c('save_name_placeholder'))}" value="${esc(old && old.name ? old.name : c('slot_label', { n: S.slot + 1 }))}">
-      ${old && old.name ? `<div class="pg-notice pg-notice--warn"><span>${esc(c('save_overwrite_warn', { slot: S.slot + 1, name: old.name }))}</span></div>` : ''}
-    </div>`;
-    foot().innerHTML = btn('toverify', c('btn_back')) + btn('save', c('btn_save'), 'primary');
-    setTimeout(() => { const i = $('cal-name'); if (i) { i.focus(); i.select(); } }, 30);
-    return;
+    return renderSaveScreen(st);
   }
 
   // Common 2-column grid for Steps 1–4 and Step 5 (Verify)
@@ -571,6 +729,8 @@ function startFlow(slot) {
   S.doneText = '';
   S.failText = '';
   S.phase = 'ready';
+  S.selectedIcon = 'default';
+  S.slotDropdownOpen = false;
   call('StartAxisAlign', true); // recalibrating never reuses an old axis mapping
   render();
 }
@@ -613,15 +773,49 @@ async function act(a, target) {
     stopQuatListener();
     disposeScene();
     S.phase = 'save';
+    S.slotDropdownOpen = false;
+    const st = getState() || {};
+    const p = (st.profiles || [])[S.slot];
+    S.selectedIcon = (p && p.icon) ? p.icon : 'default';
     render();
     return;
   }
-  if (a === 'toverify') { S.phase = 'verify'; render(); return; }
+  if (a === 'toverify') {
+    S.phase = 'verify';
+    S.slotDropdownOpen = false;
+    recenter();
+    render();
+    return;
+  }
+  if (a === 'toggle-slot-menu') {
+    toggleSlotDropdown();
+    return;
+  }
+  if (a === 'select-slot') {
+    const slotIdx = Number(target.dataset.slot);
+    selectSaveSlot(slotIdx);
+    return;
+  }
+  if (a === 'select-icon') {
+    const iconKey = target.dataset.icon;
+    selectSaveIcon(iconKey);
+    return;
+  }
   if (a === 'save') {
     if (S.busy) return;
     S.busy = true;
-    const name = ($('cal-name').value || '').trim() || c('slot_label', { n: S.slot + 1 });
-    const res = await call('SaveProfile', S.slot, name, device(), 'default', S.matrix);
+    const nameInput = $('cal-name');
+    const inputVal = (nameInput ? nameInput.value : '').trim();
+    const st = getState() || {};
+    const profiles = st.profiles || [];
+    const p = profiles[S.slot];
+    const dev = device() || (p && p.device && p.device !== 'Unknown' ? p.device : 'iPhone');
+    const defaultName = `${dev} ${S.slot + 1}`;
+    const name = inputVal || defaultName;
+    const icon = S.selectedIcon || (p && p.icon ? p.icon : 'default');
+    const matrix = S.matrix || [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+
+    const res = await call('SaveProfile', S.slot, name, dev, icon, matrix);
     S.busy = false;
     if (res !== 'ok') { toast(res || 'error'); return; }
     await call('SetActiveProfile', S.slot);
@@ -662,6 +856,7 @@ function close() {
   stopQuatListener();
   disposeScene();
   S.open = false;
+  S.slotDropdownOpen = false;
   el().hidden = true;
   call('ClearPreview').catch(() => {});
 }
@@ -676,10 +871,32 @@ export function startCalibration() {
   const cancelBtn = $('btn-cancel-cal-disconnect');
   if (cancelBtn) cancelBtn.onclick = close;
 
+  document.addEventListener('click', (e) => {
+    if (!S.open || S.phase !== 'save' || !S.slotDropdownOpen) return;
+    const wrap = $('cal-save-slotwrap');
+    if (wrap && !wrap.contains(e.target)) {
+      toggleSlotDropdown(false);
+    }
+  });
+
   addEventListener('keydown', (e) => {
     if (!S.open) return;
-    if (e.key === 'Escape') close();
-    else if (e.key === 'Enter' && S.phase === 'save') act('save');
+    if (e.key === 'Escape') {
+      if (S.phase === 'save' && S.slotDropdownOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSlotDropdown(false);
+        return;
+      }
+      close();
+    }
+    else if (e.key === 'Enter' && S.phase === 'save') {
+      if (S.slotDropdownOpen) {
+        toggleSlotDropdown(false);
+      } else {
+        act('save');
+      }
+    }
     else if (e.code === 'Space' && S.phase === 'verify') {
       const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
       if (activeTag !== 'input' && activeTag !== 'textarea') {
