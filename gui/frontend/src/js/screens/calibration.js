@@ -44,6 +44,7 @@ const S = {
   slotDropdownOpen: false,
   hasRecorded: false,
   steps: [null, null, null, null],
+  accelMap: [], // accelerometer axis for Pitch/Yaw/Roll, e.g. ['+Y', '+Z', '+X'] (from the axes step)
   axes: [null, null, null], // locked sensor axes: { role: 'pitch'|'roll'|'yaw', name: '+X', confidence }
 };
 
@@ -203,9 +204,12 @@ function device() {
 function stepper() {
   const pills = [...STEPS.map((s) => s.pill), 'step_pill_confirm'];
   const at = S.phase === 'verify' || S.phase === 'save' ? 4 : S.step;
-  return '<div class="pg-stepper app-cal-stepper pg-scroll--x">' + pills.map((p, i) =>
-    (i ? `<span class="pg-step__link${i <= at ? ' is-done' : ''}"></span>` : '')
-    + `<span class="pg-step${i === at ? ' is-active' : i < at ? ' is-done' : ''}"><span class="pg-step__num">${i + 1}</span>${esc(c(p))}</span>`).join('') + '</div>';
+  return '<div class="pg-stepper app-cal-stepper pg-scroll--x">' + pills.map((p, i) => {
+    const isDone = i < at;
+    const go = isDone && S.phase !== 'run' ? ` data-act="goto" data-step="${i}" role="button" tabindex="0"` : '';
+    return (i ? `<span class="pg-step__link${i <= at ? ' is-done' : ''}"></span>` : '')
+      + `<span class="pg-step${i === at ? ' is-active' : isDone ? ' is-done' : ''}"${go}><span class="pg-step__num">${i + 1}</span>${esc(c(p))}</span>`;
+  }).join('') + '</div>';
 }
 
 const btn = (id, label, kind = '', dis = false) => `<button type="button" class="pg-btn${kind ? ' pg-btn--' + kind : ''}" data-act="${id}"${dis ? ' disabled' : ''}>${esc(label)}</button>`;
@@ -326,6 +330,31 @@ function updateSegs(pairs, min) {
     const on = i < pairs;
     if (box.children[i].classList.contains('is-on') !== on) box.children[i].classList.toggle('is-on', on);
   }
+}
+
+const GAME_AXES = [['x', 'P'], ['y', 'Y'], ['z', 'R']]; // Pitch, Yaw, Roll rows (colour key + letter)
+
+// One signed sensor axis per game axis: from the 3x3 gyro matrix ...
+function matrixRows(m) {
+  return (m || []).slice(0, 3).map((row) => {
+    let col = -1; let sign = 1;
+    (row || []).forEach((v, k) => { if (col < 0 && Math.abs(v) > 0.5) { col = k; sign = v > 0 ? 1 : -1; } });
+    return { col, sign };
+  });
+}
+// ... and from the accelerometer's ['+Y', '+Z', '+X'].
+function accelRows(map) {
+  return (map || []).slice(0, 3).map((e) => {
+    const mt = String(e || '').match(/([+-])?\s*([XYZ])/i);
+    return mt ? { col: 'XYZ'.indexOf(mt[2].toUpperCase()), sign: mt[1] === '-' ? -1 : 1 } : { col: -1, sign: 1 };
+  });
+}
+// Rows = game axes (P Y R), columns = the sensor's X Y Z; a lit cell is the axis (and sign) that feeds it.
+function axisGridHTML(rows) {
+  const head = 'XYZ'.split('').map((l, k) => `<span class="pg-axis__key pg-axis__key--${'xyz'[k]}">${l}</span>`).join('');
+  const body = rows.map((r, i) => `<span class="pg-axis__key pg-axis__key--${GAME_AXES[i][0]}">${GAME_AXES[i][1]}</span>`
+    + [0, 1, 2].map((k) => (r.col === k ? `<span class="app-cal-mcell is-on">${r.sign > 0 ? '+' : '\u2212'}1</span>` : '<span class="app-cal-mcell">\u00b7</span>')).join('')).join('');
+  return `<div class="app-cal-mgrid"><span></span>${head}${body}</div>`;
 }
 
 function formatMatrix(m) {
@@ -564,7 +593,6 @@ function render() {
           </div>
           <div class="display-md">${esc(c('confirm_title'))}</div>
           <p class="app-cal-desc">${esc(c('confirm_hint'))}</p>
-          <span class="app-cal-keyhint">${esc(t('ui.cal_recenter_hint'))}</span>
         </div>
         <div class="app-cal-verify-stats" id="cal-verify-stats">
           ${[['x', 'P', 'Pitch', r.pitchAxis || '+X', 'pitch'], ['y', 'Y', 'Yaw', r.yawAxis || '+Y', 'yaw'], ['z', 'R', 'Roll', r.rollAxis || '+Z', 'roll']].map((a) => `
@@ -585,13 +613,17 @@ function render() {
 
     const extra = $('cal-right-extra');
     if (extra) extra.innerHTML = `
-        <div class="app-cal-matrix-card app-cal-ring-corner app-cal-ring-corner--tr">
-          <div class="app-cal-matrix-head">
-            <div class="pg-overline"><span class="pg-ring"></span><b>${esc(c('matrix_title'))}</b></div>
-            <span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det ${(det || -1).toFixed(2)}</span>
-          </div>
-          <pre class="mono app-cal-matrix-pre">${esc(formatMatrix(S.matrix))}</pre>
+      <div class="app-cal-mcards">
+        <div class="app-cal-mcard">
+          <div class="app-cal-mcard__t"><span>${esc(t('ui.cal_gyro_title'))}</span><span class="pg-badge ${isOk ? 'pg-badge--ok' : 'pg-badge--danger'}">det ${det >= 0 ? '+' : '\u2212'}${Math.abs(det || 1).toFixed(0)}</span></div>
+          ${axisGridHTML(matrixRows(S.matrix))}
         </div>
+        <div class="app-cal-mcard">
+          <div class="app-cal-mcard__t"><span>${esc(c('accel_axes_label'))}</span></div>
+          ${S.accelMap.length ? axisGridHTML(accelRows(S.accelMap)) : `<span class="app-cal-mnote">${esc(c('accel_axes_unset'))}</span>`}
+        </div>
+      </div>
+      <p class="app-cal-mnote">${esc(t('ui.cal_matrix_note'))}</p>
     `;
     renderMount();
     updateLiveRates(st);
@@ -632,7 +664,7 @@ function render() {
         ? `<div class="app-cal-run">
             <div class="app-cal-runrow">
               <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
-              <span class="pg-badge" id="cal-run-count"></span>
+              <span class="pg-badge" id="cal-run-count">0/6</span>
             </div>
             <div class="app-cal-segs" id="cal-segs"></div>
             <span class="app-cal-runtext app-cal-runtext--soft" id="cal-run-text">${esc(c('align_status_recording'))}</span>
@@ -640,7 +672,7 @@ function render() {
         : `<div class="app-cal-run">
             <div class="app-cal-runrow">
               <span class="pg-badge pg-badge--ok pg-badge--dot">${esc(t('ui.cal_recording_badge'))}</span>
-              <span class="pg-badge" id="cal-run-count"></span>
+              <span class="pg-badge" id="cal-run-count">0°/s</span>
             </div>
             <b class="app-cal-runtext" id="cal-run-text">${esc(cfg.rest ? c('status_recording_rest') : c('status_recording'))}</b>
             <div class="app-cal-bar"><i id="cal-bar"></i></div>
@@ -832,6 +864,7 @@ async function listenAxes() {
     if (st.known) {
       stopPoll();
       if (S.scene) S.scene.setRecording(0);
+      S.accelMap = (st.mapping || []).slice(0, 3);
       done(c('align_success_desc', { mapping: (st.mapping || []).join(', ') }));
     } else if (performance.now() - t0 > AXES_TIMEOUT_MS) {
       stopPoll();
@@ -882,6 +915,7 @@ function startFlow(slot) {
   S.step = 0;
   S.steps = [null, null, null, null];
   S.axes = [null, null, null];
+  S.accelMap = [];
   S.vectors = [];
   S.matrix = null;
   S.result = null;
@@ -1000,7 +1034,24 @@ async function act(a, target) {
     render();
     return;
   }
-  if (a === 'recenter') return recenter();
+  if (a === 'goto') {
+    const k = Number(target.dataset.step);
+    if (S.phase === 'run' || !(k >= 0 && k < STEPS.length)) return;
+    if (S.timer) { clearInterval(S.timer); S.timer = 0; }
+    stopPoll();
+    stopQuatListener();
+    if (S.phase === 'verify' || S.phase === 'save') disposeScene();
+    S.slotDropdownOpen = false;
+    S.step = k;
+    if (S.steps[k] && S.steps[k].done) {
+      S.phase = 'done';
+      S.doneText = S.steps[k].text;
+    } else {
+      S.phase = 'ready';
+    }
+    render();
+    return;
+  }
   if (a === 'restart') {
     stopQuatListener();
     disposeScene();
@@ -1124,13 +1175,12 @@ export function startCalibration() {
         act('save');
       }
     }
-    else if (e.code === 'Space' && S.phase === 'verify') {
-      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-      if (activeTag !== 'input' && activeTag !== 'textarea') {
-        e.preventDefault();
-        recenter();
-      }
-    }
+  });
+
+  // Completed step pills are keyboard-reachable buttons.
+  el().addEventListener('keydown', (e) => {
+    const b = e.target.closest && e.target.closest('.pg-step[data-act]');
+    if (b && (e.key === 'Enter' || e.code === 'Space')) { e.preventDefault(); act(b.dataset.act, b); }
   });
 
   onScreen((screen) => {

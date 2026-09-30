@@ -237,8 +237,9 @@
     "splash_tip": "Короткая заставка при запуске PhoneGyro (около 3 секунд). Выключите, чтобы окно открывалось сразу.",
     "setup_android_url": "Адрес для телефона",
     "usb_waiting": "Ожидание USB-контроллера",
-    "cal_recenter_hint": "Пробел — центрировать вид",
     "cal_save_step": "Сохранение",
+    "cal_gyro_title": "Гироскоп",
+    "cal_matrix_note": "Как оси датчика (столбцы X, Y, Z) стали осями игры: строки P — Pitch, Y — Yaw, R — Roll.",
     "cal_slot_free": "Свободен",
     "cal_ready_badge": "Готово к записи",
     "cal_recording_badge": "Идёт запись"

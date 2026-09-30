@@ -151,6 +151,9 @@ body { user-select: none; -webkit-user-select: none; }
 .app-overlay { position: fixed; inset: 0; z-index: 60; animation: app-fade .15s ease-out; }
 .app-overlay .pg-modal { max-width: 28.75rem; animation: app-pop .18s cubic-bezier(.2,.8,.2,1); }
 .app-overlay .pg-modal__foot { justify-content: flex-end; }
+.app-overlay .pg-modal { position: relative; overflow: hidden; }
+.app-overlay .pg-modal.pg-rings-corner::after { right: auto; top: auto; left: -4.375rem; bottom: -4.375rem; }
+.app-overlay .pg-modal > * { position: relative; z-index: 1; }
 @keyframes app-fade { from { opacity: 0; } }
 @keyframes app-pop { from { opacity: 0; transform: translateY(0.5rem) scale(.98); } }
 
@@ -446,7 +449,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   }
 }
 .app-cal-stepper { margin-bottom: 1.25rem; }
-.app-cal-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: start; }
+.app-cal-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: stretch; }
 .app-cal-left {
   display: flex;
   flex-direction: column;
@@ -454,8 +457,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   min-height: 22.5rem;
   height: 100%;
 }
-.app-cal-right { display: flex; flex-direction: column; gap: 0.5rem; }
-.app-cal-stage { height: 18.75rem; }
+.app-cal-right { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+.app-cal-stage { flex: 1 1 auto; min-height: 18.75rem; }
 .app-cal-stage .pg-stage__cap {
   white-space: normal;
   text-align: center;
@@ -868,7 +871,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   .app-cal-grid { display: flex; flex-direction: column; gap: 0.875rem; align-items: stretch; }
   .app-cal-left, .app-cal-right { display: contents; }
   .app-cal-grid .app-cal-info { order: 1; }
-  .app-cal-stage { order: 2; height: 11.5rem; width: 100%; }
+  .app-cal-stage { order: 2; flex: none; min-height: 0; height: 11.5rem; width: 100%; }
   .app-cal-panel { order: 4; }
   .app-cal-stats { order: 0; }
   .app-cal-verify-stats { order: 4; }
@@ -1011,8 +1014,59 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 
 /* Verify */
 .app-cal-verify-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
-.app-cal-keyhint { font: 500 0.75rem/1.2 var(--font-mono); color: var(--ink-3); margin-top: 0.125rem; }
 .app-cal-matrix-pre { text-align: center; }
+
+.app-cal-mcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
+.app-cal-mcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.5rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile) var(--tex-grain);
+  border: 1px solid var(--tile-line);
+  min-width: 0;
+}
+.app-cal-mcard__t {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.app-cal-mgrid {
+  display: grid;
+  grid-template-columns: auto repeat(3, 2.125rem);
+  gap: 0.25rem;
+  align-items: center;
+  justify-items: center;
+}
+.app-cal-mcell {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  font: 600 0.8125rem/1 var(--font-mono);
+  color: var(--ink-3);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.app-cal-mcell.is-on {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.app-cal-mnote { margin: 0; text-align: center; font-size: 0.75rem; line-height: 1.4; color: var(--ink-3); }
+
+/* Completed steps of the stepper jump back to their step. */
+.app-cal-stepper .pg-step[data-act] { cursor: pointer; }
+.app-cal-stepper .pg-step[data-act]:hover { filter: brightness(1.25); }
+.app-cal-stepper .pg-step[data-act]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Save */
 .app-cal-preview-profile {
@@ -1043,7 +1097,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 @container pgwin (max-height: 859px) {
   .app-calpage { padding-top: 0.75rem; padding-bottom: 0.75rem; }
   .app-cal-stepper { margin-bottom: 0.75rem; }
-  .app-cal-stage { height: 14.5rem; }
+  .app-cal-stage { min-height: 12rem; }
   .app-cal-disclaimer { display: none; }
   .app-cal-info { min-height: 0; }
   .app-cal-left { min-height: 0; gap: 0.625rem; }
@@ -1053,8 +1107,8 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 
 /* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
 .app-cal-modal.is-disconnected {
-  border: 2px solid var(--danger);
-  box-shadow: var(--shadow-pop), 0 0 1.75rem var(--danger-soft);
+  border-color: var(--danger);
+  box-shadow: 0 0 0 0.1875rem var(--danger), var(--shadow-pop), 0 0 1.75rem var(--danger-soft);
 }
 .app-cal-disconnect {
   position: absolute;
@@ -1067,7 +1121,7 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
   background: var(--overlay);
   backdrop-filter: blur(1.25rem);
   -webkit-backdrop-filter: blur(1.25rem);
-  border-radius: inherit;
+  border-radius: 0;
   overflow: hidden;
 }
 .app-cal-disconnect-card {

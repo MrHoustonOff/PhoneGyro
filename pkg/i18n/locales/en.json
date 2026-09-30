@@ -237,8 +237,9 @@
     "splash_tip": "A short intro when PhoneGyro starts (about 3 seconds). Turn it off to open the window at once.",
     "setup_android_url": "Address for the phone",
     "usb_waiting": "Waiting for the USB controller",
-    "cal_recenter_hint": "Space — recenter the view",
     "cal_save_step": "Save",
+    "cal_gyro_title": "Gyroscope",
+    "cal_matrix_note": "How the sensor axes (columns X, Y, Z) became the game axes: rows P — Pitch, Y — Yaw, R — Roll.",
     "cal_slot_free": "Free",
     "cal_ready_badge": "Ready to capture",
     "cal_recording_badge": "Recording"
