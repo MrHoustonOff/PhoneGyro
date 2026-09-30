@@ -1,0 +1,812 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   Games Screen (.app-gamespage) & Mini-Games (Aim & 3D Platform)
+   Faithful transfer from LEGACY with full design system tokenization.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.app-gamespage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.app-games-card {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--surface) var(--tex-grain);
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Compact Top Toolbar */
+.app-games-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.875rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-inset);
+  flex-shrink: 0;
+  z-index: 10;
+  min-height: 2.75rem;
+  box-sizing: border-box;
+}
+
+.app-games-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.app-games-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+@container pgwin (max-width: 56.25rem) {
+  .app-games-bar {
+    padding: 0.375rem 0.5rem;
+    gap: 0.375rem;
+  }
+  .app-games-bar__left {
+    gap: 0.5rem;
+  }
+  .app-games-bar__right {
+    gap: 0.25rem;
+  }
+  .app-games-hud {
+    gap: 0.25rem;
+  }
+  .app-games-hud .pg-badge {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.6875rem;
+  }
+  .bench-btn-feed,
+  .bench-btn-invert {
+    padding: 0 0.375rem;
+    font-size: 0.6875rem;
+    height: 1.75rem;
+  }
+  #btn-game-recenter,
+  #btn-game-start {
+    padding: 0 0.375rem;
+    font-size: 0.6875rem;
+    height: 1.75rem;
+  }
+  #btn-game-recenter .pg-kbd {
+    display: none;
+  }
+}
+
+@container pgwin (max-width: 53.75rem) {
+  #games-hud-score,
+  #games-hud-record,
+  #games-hud-metric {
+    display: none;
+  }
+}
+
+.app-games-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.app-games-back:hover {
+  color: var(--ink);
+}
+
+.app-games-hud {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.app-games-hud .pg-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.1875rem 0.5rem;
+}
+
+.app-games-hud .pg-badge b {
+  color: var(--accent);
+  font-weight: 700;
+  margin-left: 0.25rem;
+}
+
+/* Stage Area (takes entire remaining window) */
+.app-games-stage {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+}
+
+/* Game Views (Aim vs Platform) */
+.bench-game-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.bench-game-view[hidden] {
+  display: none !important;
+}
+
+/* ── Feed & Invert & Recenter Action Buttons ────────────────────────────── */
+.bench-btn-feed,
+.bench-btn-invert,
+.bench-btn-recenter {
+  height: 1.875rem;
+  padding: 0 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.bench-btn-feed:hover,
+.bench-btn-invert:hover,
+.bench-btn-recenter:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+  border-color: var(--line-control);
+}
+
+.bench-btn-feed.raw,
+.bench-btn-invert.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.bench-btn-feed:active,
+.bench-btn-invert:active,
+.bench-btn-recenter:active {
+  transform: scale(0.96);
+}
+
+/* ── Aim Reticle Viewport ─────────────────────────────────────────────────── */
+.bench-target-viewport {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, var(--surface-inset) 0%, var(--bg) 100%);
+  border: none;
+  box-shadow: inset 0 0.125rem 0.625rem rgba(0, 0, 0, 0.25);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+[data-theme="light"] .bench-target-viewport {
+  background: radial-gradient(circle at 50% 50%, var(--surface) 0%, var(--surface-inset) 100%);
+}
+
+/* Sheikah Slate Viewfinder Corner L-Brackets */
+.bench-target-corner {
+  position: absolute;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-color: var(--accent-line);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.bench-target-corner.tl {
+  top: 1rem;
+  left: 1rem;
+  border-width: 0.125rem 0 0 0.125rem;
+  border-top-left-radius: 0.1875rem;
+}
+
+.bench-target-corner.tr {
+  top: 1rem;
+  right: 1rem;
+  border-width: 0.125rem 0.125rem 0 0;
+  border-top-right-radius: 0.1875rem;
+}
+
+.bench-target-corner.bl {
+  bottom: 1rem;
+  left: 1rem;
+  border-width: 0 0 0.125rem 0.125rem;
+  border-bottom-left-radius: 0.1875rem;
+}
+
+.bench-target-corner.br {
+  bottom: 1rem;
+  right: 1rem;
+  border-width: 0 0.125rem 0.125rem 0;
+  border-bottom-right-radius: 0.1875rem;
+}
+
+/* Center Reference Ticks and Rings */
+.bench-target-cross-v {
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 0%, var(--accent-line) 30%, var(--accent-line) 70%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.bench-target-cross-h {
+  position: absolute;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent 0%, var(--accent-line) 30%, var(--accent-line) 70%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.bench-target-ring.r-outer {
+  position: absolute;
+  width: 6.75rem;
+  height: 6.75rem;
+  border-radius: 50%;
+  border: 1px dashed var(--accent-line);
+  pointer-events: none;
+}
+
+.bench-target-ring.r-inner {
+  position: absolute;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  border: 1px solid var(--accent-line);
+  pointer-events: none;
+}
+
+.bench-target-center {
+  position: absolute;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+/* Moving Zelda Bow Aim Reticle */
+.bench-reticle-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: -0.875rem;
+  margin-left: -0.875rem;
+  pointer-events: none;
+  will-change: transform;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transform: translate(0, 0);
+  transition: transform 0.04s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.bench-reticle-circle {
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  border: 0.0938rem solid var(--accent);
+  box-shadow: 0 0 0.625rem var(--accent), inset 0 0 0.375rem var(--accent-soft);
+}
+
+.bench-reticle-sight {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0.375rem var(--danger);
+  position: absolute;
+  z-index: 2;
+}
+
+.bench-reticle-tick {
+  position: absolute;
+  background: var(--accent);
+}
+
+.bench-reticle-tick.top {
+  top: 0;
+  width: 0.0938rem;
+  height: 0.25rem;
+}
+
+.bench-reticle-tick.bl {
+  bottom: 0.125rem;
+  left: 0.125rem;
+  width: 0.25rem;
+  height: 0.0938rem;
+  transform: rotate(45deg);
+}
+
+.bench-reticle-tick.br {
+  bottom: 0.125rem;
+  right: 0.125rem;
+  width: 0.25rem;
+  height: 0.0938rem;
+  transform: rotate(-45deg);
+}
+
+/* Shot Flash Effect */
+.bench-reticle-dot.shot-flash .bench-reticle-circle {
+  border-color: #ffffff;
+  box-shadow: 0 0 1.5rem var(--accent), inset 0 0 0.75rem #ffffff !important;
+  transform: scale(1.35);
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+
+.bench-reticle-dot.shot-flash .bench-reticle-sight {
+  background: #ffffff !important;
+  box-shadow: 0 0 0.875rem #ffffff !important;
+  transform: scale(1.8);
+  transition: transform 0.08s ease;
+}
+
+/* Viewport Telemetry HUD (Bottom-Right) */
+.bench-target-hud {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  backdrop-filter: blur(0.5rem);
+  -webkit-backdrop-filter: blur(0.5rem);
+  z-index: 6;
+}
+
+/* Target Layers */
+.bench-aim-targets-layer,
+.bench-aim-fx-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 4;
+}
+
+/* Target Sheikah / Archery Sphere Design */
+.bench-aim-target {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3.75rem;
+  height: 3.75rem;
+  margin-top: -1.875rem;
+  margin-left: -1.875rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: targetSpawn 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+@keyframes targetSpawn {
+  0% { transform: scale(0.2); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.bench-aim-target .target-ring.outer {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--warn-soft) 0%, var(--danger-soft) 100%);
+  border: 0.125rem solid var(--warn);
+  box-shadow: 0 0 1.125rem var(--warn-line), inset 0 0 0.625rem var(--danger-line);
+  animation: targetPulseRing 1.8s infinite alternate ease-in-out;
+}
+
+@keyframes targetPulseRing {
+  0% { transform: scale(0.96); opacity: 0.85; }
+  100% { transform: scale(1.04); opacity: 1; box-shadow: 0 0 1.5rem var(--warn), inset 0 0 0.875rem var(--danger); }
+}
+
+.bench-aim-target .target-ring.middle {
+  position: absolute;
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  border: 0.125rem solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.bench-aim-target .target-ring.inner {
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0.625rem var(--danger);
+}
+
+.bench-aim-target .target-bullseye {
+  position: absolute;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 0.5rem #ffffff;
+}
+
+/* Hit Explosion Animation */
+.bench-aim-target.hit {
+  animation: targetExplode 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes targetExplode {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  40% { transform: scale(1.4); opacity: 0.9; filter: brightness(2.5); }
+  100% { transform: scale(1.8); opacity: 0; filter: brightness(3); }
+}
+
+/* Floating +1 Popups */
+.target-floating-score {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -1rem;
+  margin-left: -1rem;
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--warn);
+  text-shadow: 0 0 0.625rem var(--warn), 0 0.125rem 0.25rem rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  animation: floatScore 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 10;
+}
+
+@keyframes floatScore {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  30% { transform: translateY(-0.75rem) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-2.375rem) scale(1); opacity: 0; }
+}
+
+/* Fullscreen Mode Top HUD (for both Aim and Platform) */
+.bench-fullscreen-hud {
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 25;
+  pointer-events: none;
+}
+
+.bench-fullscreen-hud[hidden] {
+  display: none !important;
+}
+
+.bench-fs-score-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.bench-fs-score-pill,
+.bench-fs-record-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 1rem;
+  border-radius: 1.875rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(0.875rem);
+  -webkit-backdrop-filter: blur(0.875rem);
+  box-shadow: var(--shadow-card);
+}
+
+.bench-fs-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: -0.01em;
+}
+
+.bench-fs-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.bench-fs-record-pill .bench-fs-val {
+  color: var(--warn);
+}
+
+.bench-fs-hint {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  opacity: 0.9;
+  text-shadow: 0 1px 0.125rem rgba(0, 0, 0, 0.4);
+}
+
+/* Urgent pulsating timer pill */
+#bench-aim-time-pill.urgent {
+  background: var(--danger-soft) !important;
+  border-color: var(--danger-line);
+  animation: urgentTimerPulse 0.5s infinite alternate ease-in-out;
+}
+#bench-aim-time-pill.urgent .bench-fs-val {
+  color: var(--danger);
+}
+
+@keyframes urgentTimerPulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.08); box-shadow: 0 0 1rem var(--danger-line); }
+}
+
+/* Fullscreen Toggle Action Button */
+.bench-viewport-action-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 20;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(0.5rem);
+  -webkit-backdrop-filter: blur(0.5rem);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.bench-viewport-action-btn:hover {
+  background: var(--surface-hover);
+  transform: scale(1.05);
+}
+
+/* Game Over Modal */
+.bench-aim-gameover-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: var(--overlay);
+  backdrop-filter: blur(1.125rem);
+  -webkit-backdrop-filter: blur(1.125rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeInModal 0.25s ease;
+}
+
+.bench-aim-gameover-overlay[hidden] {
+  display: none !important;
+}
+
+.bench-aim-gameover-card {
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 22.5rem;
+  width: 100%;
+  box-shadow: var(--shadow-pop);
+  animation: scaleInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.bench-aim-gameover-badge {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border: 1px solid var(--warn-line);
+  padding: 0.1875rem 0.75rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 0 0.75rem var(--warn-soft);
+}
+
+.bench-aim-gameover-badge[hidden] {
+  display: none !important;
+}
+
+.bench-aim-gameover-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+
+.bench-aim-gameover-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  width: 100%;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  box-sizing: border-box;
+}
+
+.bench-aim-gameover-stats .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.bench-aim-gameover-stats .stat-label {
+  font-size: 0.6875rem;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.bench-aim-gameover-stats .stat-val {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.bench-aim-gameover-actions {
+  display: flex;
+  gap: 0.625rem;
+  width: 100%;
+  justify-content: center;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleInModal {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ── Platform Viewport ────────────────────────────────────────────────────── */
+.bench-platform-viewport {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 40%, var(--surface-inset) 0%, var(--bg) 100%);
+  border: none;
+  box-sizing: border-box;
+}
+
+[data-theme="light"] .bench-platform-viewport {
+  background: radial-gradient(circle at 50% 40%, var(--surface) 0%, var(--surface-inset) 100%);
+}
+
+#bench-platform-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bench-platform-hud {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.375rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  backdrop-filter: blur(0.5rem);
+  -webkit-backdrop-filter: blur(0.5rem);
+  z-index: 6;
+}
+
+.bench-hud-record {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+/* Animations for score update & drop reset */
+@keyframes scoreDropShake {
+  0% { transform: scale(1); }
+  20% { transform: translateX(-0.3125rem) scale(1.15); color: var(--danger) !important; }
+  40% { transform: translateX(0.3125rem) scale(1.15); color: var(--danger) !important; }
+  60% { transform: translateX(-0.1875rem) scale(1.1); color: var(--danger) !important; }
+  80% { transform: translateX(0.1875rem) scale(1.05); color: var(--danger) !important; }
+  100% { transform: scale(1); }
+}
+
+@keyframes scoreGoalPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.28); color: var(--accent) !important; }
+  100% { transform: scale(1); }
+}
+
+.bench-score-lost {
+  animation: scoreDropShake 0.48s ease;
+}
+
+.bench-score-up {
+  animation: scoreGoalPop 0.36s ease;
+}
+
+/* Fullscreen mode (hide top bar to make viewport take 100% edge-to-edge under window buttons) */
+.app-games-card.is-fs .app-games-bar {
+  display: none;
+}

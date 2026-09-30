@@ -1,252 +1,440 @@
-// Zelda Sheikah Aim Reticle Mini-Game (30-Sec Target Shoot)
-// Fast, responsive, center-anchored targets, sheikah reticle styling.
+// ── Zelda Target Aim Reticle Mini-Game (30-Sec Target Shoot) ────────────────
+// Direct transfer from LEGACY/frontend/js/aim-game.js adapted to ES module.
 
-import { $, setText } from '../../core/dom.js';
+import { t } from '../../core/i18n.js';
 
-export class AimGame {
-  constructor(options = {}) {
-    this.options = options;
-    this.isActive = false;
-    this.gameState = 'idle'; // 'idle' | 'playing' | 'gameover'
-    this.score = 0;
-    this.record = parseInt(localStorage.getItem('pg_game_aim_record') || '0', 10);
-    this.timeLeft = 30.0;
-    this.timerStartTs = 0;
-    this.timerId = null;
-
-    this.reticleX = 0;
-    this.reticleY = 0;
-    this.activeTarget = null;
-
-    // Technical parameter defaults
-    this.sensitivity = 1.0;
-    this.invertX = false;
-    this.invertY = false;
-    this.source = 'dsu';
-
-    this.onScoreUpdate = options.onScoreUpdate || (() => {});
-    this.onTimerUpdate = options.onTimerUpdate || (() => {});
-    this.onGameOver = options.onGameOver || (() => {});
-  }
+export const AimGame = {
+  initialized: false,
+  isFullscreen: false,
+  _placeholder: null,
+  gameState: 'ready', // 'idle' | 'ready' | 'playing' | 'gameover'
+  score: 0,
+  record: parseInt(localStorage.getItem('gb_aim_record') || '0', 10),
+  timeLeft: 30.0,
+  timerStartTs: 0,
+  cachedW: 0,
+  cachedH: 0,
+  activeTarget: null,
+  lastReticleX: 0,
+  lastReticleY: 0,
+  audioCtx: null,
+  vpEl: null,
+  targetsLayerEl: null,
+  fxLayerEl: null,
+  timePillEl: null,
+  timerEl: null,
+  scoreEl: null,
+  recordEl: null,
+  hintEl: null,
+  gameoverEl: null,
+  finalScoreEl: null,
+  finalRecordEl: null,
+  recordBadgeEl: null,
+  rafId: null,
 
   init() {
-    this.vpEl = $('game-aim-bench') || $('game-aim-view');
-    this.targetsLayerEl = $('game-aim-targets');
-    this.reticleEl = $('game-aim-reticle');
-    this.fxLayerEl = $('game-aim-fx');
-    this.gameoverEl = $('game-aim-gameover');
+    this.vpEl = document.getElementById('bench-aim-viewport');
+    this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
+    this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
+    this.timePillEl = document.getElementById('bench-aim-time-pill');
+    this.timerEl = document.getElementById('bench-aim-timer');
+    this.scoreEl = document.getElementById('bench-aim-score');
+    this.recordEl = document.getElementById('bench-aim-record');
+    this.hintEl = document.getElementById('bench-aim-fs-hint');
+    this.gameoverEl = document.getElementById('bench-aim-gameover');
+    this.finalScoreEl = document.getElementById('bench-aim-final-score');
+    this.finalRecordEl = document.getElementById('bench-aim-final-record');
+    this.recordBadgeEl = document.getElementById('bench-aim-record-badge');
 
-    const restartBtn = $('btn-aim-restart');
-    if (restartBtn) {
-      restartBtn.onclick = () => this.start();
+    if (this.recordEl) this.recordEl.textContent = this.record.toString();
+    const barRecord = document.getElementById('game-record');
+    if (barRecord) barRecord.textContent = this.record.toString();
+
+    if (this.initialized) {
+      this.syncState();
+      return;
     }
+    this.initialized = true;
 
-    this.updateHUD();
-  }
+    // Fullscreen toggle button
+    document.getElementById('btn-bench-aim-fullscreen')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleFullscreen();
+    });
 
-  start() {
-    this.cleanupTargets();
-    this.score = 0;
-    this.timeLeft = 30.0;
-    this.timerStartTs = performance.now();
-    this.gameState = 'playing';
+    // Double-click on viewport to toggle fullscreen
+    this.vpEl?.addEventListener('dblclick', (e) => {
+      if (e.target.closest('button') || e.target.closest('.bench-aim-gameover-card')) return;
+      this.toggleFullscreen();
+    });
 
-    if (this.gameoverEl) this.gameoverEl.style.display = 'none';
+    // Play again and exit buttons
+    document.getElementById('btn-aim-play-again')?.addEventListener('click', () => {
+      this.resetGame();
+    });
 
-    this.updateHUD();
-    this.spawnTarget();
-
-    if (this.timerId) clearInterval(this.timerId);
-    this.timerId = setInterval(() => {
-      if (!this.isActive || this.gameState !== 'playing') return;
-      const elapsed = (performance.now() - this.timerStartTs) / 1000;
-      this.timeLeft = Math.max(0, 30.0 - elapsed);
-      this.onTimerUpdate(`${this.timeLeft.toFixed(1)} с`);
-      if (this.timeLeft <= 0) {
-        this.gameOver();
+    document.getElementById('btn-aim-exit')?.addEventListener('click', () => {
+      if (this.isFullscreen) {
+        this.setFullscreen(false);
       }
-    }, 100);
-  }
+      this.resetGame();
+    });
 
-  stop() {
-    this.gameState = 'idle';
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
-    this.cleanupTargets();
-  }
+    // Window resize and visibility listeners: guarantee target never disappears
+    window.addEventListener('resize', () => {
+      this.syncState();
+    });
 
-  gameOver() {
-    this.gameState = 'gameover';
-    if (this.timerId) {
-      clearInterval(this.timerId);
-      this.timerId = null;
-    }
-
-    if (this.gameoverEl) {
-      setText($('game-aim-final-score'), String(this.score));
-      setText($('game-aim-final-record'), String(this.record));
-      this.gameoverEl.style.display = 'flex';
-    }
-    this.onGameOver(this.score, this.record);
-  }
-
-  recenter() {
-    this.reticleX = 0;
-    this.reticleY = 0;
-    this.updateReticleDOM();
-  }
-
-  cleanupTargets() {
-    if (this.targetsLayerEl) this.targetsLayerEl.innerHTML = '';
-    if (this.fxLayerEl) this.fxLayerEl.innerHTML = '';
-    this.activeTarget = null;
-  }
+    // Initial target spawn
+    this.resetGame();
+  },
 
   getBounds() {
-    const vp = this.vpEl || $('game-stage');
-    const w = vp ? (vp.clientWidth || 600) : 600;
-    const h = vp ? (vp.clientHeight || 400) : 400;
+    const vp = this.vpEl || document.getElementById('bench-aim-viewport');
+    const w = vp ? (vp.clientWidth || 800) : (window.innerWidth || 800);
+    const h = vp ? (vp.clientHeight || 500) : (window.innerHeight || 500);
     const halfW = Math.floor(w / 2);
     const halfH = Math.floor(h / 2);
     return {
-      boundX: Math.max(80, halfW - 60),
-      boundY: Math.max(60, halfH - 60),
-      maxReticleX: Math.max(100, halfW - 30),
-      maxReticleY: Math.max(70, halfH - 30),
+      boundX: Math.max(100, halfW - 140),
+      boundYTop: Math.max(60, halfH - 160),     // Clearance for top HUD
+      boundYBottom: Math.max(60, halfH - 100),
+      maxReticleX: Math.max(160, halfW - 50),
+      maxReticleY: Math.max(100, halfH - 50)
     };
-  }
+  },
+
+  syncState() {
+    // Re-bind DOM elements if disconnected
+    if (!this.targetsLayerEl || !this.targetsLayerEl.isConnected) {
+      this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
+    }
+    if (!this.fxLayerEl || !this.fxLayerEl.isConnected) {
+      this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
+    }
+    // If there is no active target or it was lost, spawn one immediately
+    if (!this.activeTarget || !this.activeTarget.el || !this.activeTarget.el.isConnected) {
+      this.spawnTarget();
+    }
+  },
+
+  toggleFullscreen() {
+    this.setFullscreen(!this.isFullscreen);
+  },
+
+  setFullscreen(enable) {
+    this.isFullscreen = !!enable;
+    const vp = this.vpEl || document.getElementById('bench-aim-viewport');
+    const card = document.querySelector('.app-games-card');
+    const btn = document.getElementById('btn-bench-aim-fullscreen');
+    if (!vp) return;
+
+    if (this.isFullscreen) {
+      vp.classList.add('fullscreen');
+      card?.classList.add('is-fs');
+    } else {
+      vp.classList.remove('fullscreen');
+      card?.classList.remove('is-fs');
+    }
+
+    if (btn) {
+      const iconExpand = btn.querySelector('.icon-expand');
+      const iconCollapse = btn.querySelector('.icon-collapse');
+      if (iconExpand) iconExpand.hidden = this.isFullscreen;
+      if (iconCollapse) iconCollapse.hidden = !this.isFullscreen;
+      btn.title = this.isFullscreen
+        ? (t('settings_modal.bench_exit_fullscreen') || 'Свернуть')
+        : (t('settings_modal.bench_fullscreen') || 'На весь экран');
+    }
+  },
+
+  startLoop() {
+    if (this.rafId) return;
+    const loop = (now) => {
+      this.update(now);
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  },
+
+  stopLoop() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  },
+
+  resetGame() {
+    this.cleanupTargets();
+    this.gameState = 'ready';
+    this.score = 0;
+    this.timeLeft = 30.0;
+    this.timerStartTs = 0;
+
+    if (this.gameoverEl) this.gameoverEl.hidden = true;
+    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
+    if (this.timerEl) this.timerEl.textContent = '30.0';
+    if (this.scoreEl) this.scoreEl.textContent = '0';
+    if (this.recordEl) this.recordEl.textContent = this.record.toString();
+
+    const barScore = document.getElementById('game-score');
+    if (barScore) barScore.textContent = '0';
+    const barRecord = document.getElementById('game-record');
+    if (barRecord) barRecord.textContent = this.record.toString();
+    const barTimer = document.getElementById('game-val-timer');
+    if (barTimer) barTimer.textContent = '30.0 с';
+    const startBtn = document.getElementById('bench-start-label');
+    if (startBtn) startBtn.textContent = t('ui.game_start') || 'Старт';
+
+    if (this.hintEl) {
+      this.hintEl.textContent = t('settings_modal.bench_aim_start_hint') || 'Сбейте 1-ю мишень для старта! • [Esc] Выход';
+    }
+
+    this.spawnTarget();
+  },
+
+  cleanupTargets() {
+    if (!this.targetsLayerEl || !this.targetsLayerEl.isConnected) {
+      this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
+    }
+    if (this.targetsLayerEl) this.targetsLayerEl.innerHTML = '';
+    if (!this.fxLayerEl || !this.fxLayerEl.isConnected) {
+      this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
+    }
+    if (this.fxLayerEl) this.fxLayerEl.innerHTML = '';
+    this.activeTarget = null;
+  },
+
+  cleanupGame() {
+    this.cleanupTargets();
+    this.gameState = 'idle';
+    if (this.gameoverEl) this.gameoverEl.hidden = true;
+    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
+    this.stopLoop();
+  },
 
   spawnTarget() {
+    if (!this.targetsLayerEl || !this.targetsLayerEl.isConnected) {
+      this.targetsLayerEl = document.getElementById('bench-aim-targets-layer');
+    }
     if (!this.targetsLayerEl) return;
-    this.cleanupTargets();
 
     const bounds = this.getBounds();
+
+    // Clean up any lingering un-hit targets so strictly 1 active target exists
+    const lingering = this.targetsLayerEl.querySelectorAll('.bench-aim-target:not(.hit)');
+    lingering.forEach(el => el.remove());
+
+    // Pick a random position not too close to current reticle
     let rx = 0;
     let ry = 0;
-
-    for (let attempt = 0; attempt < 20; attempt++) {
+    for (let attempt = 0; attempt < 24; attempt++) {
       rx = Math.floor((Math.random() * 2 - 1) * bounds.boundX);
-      ry = Math.floor((Math.random() * 2 - 1) * bounds.boundY);
-      const dist = Math.hypot(rx - this.reticleX, ry - this.reticleY);
-      if (dist > 70) break;
+      ry = Math.floor(-bounds.boundYTop + Math.random() * (bounds.boundYTop + bounds.boundYBottom));
+      const dist = Math.hypot(rx - this.lastReticleX, ry - this.lastReticleY);
+      if (dist > 130) break;
     }
 
     const el = document.createElement('div');
-    el.className = 'app-bench-aim-target';
+    el.className = 'bench-aim-target';
+    // Center-anchored CSS positioning: 100% immune to layout delay, window resizing or CSS zoom
     el.style.left = '50%';
     el.style.top = '50%';
-    el.style.transform = `translate(calc(-50% + ${rx}px), calc(-50% + ${ry}px))`;
+    el.style.marginLeft = (rx - 30) + 'px';
+    el.style.marginTop = (ry - 30) + 'px';
     el.innerHTML = `
-      <div class="app-target-ring app-target-ring--outer"></div>
-      <div class="app-target-ring app-target-ring--middle"></div>
-      <div class="app-target-ring app-target-ring--inner"></div>
-      <div class="app-target-bullseye"></div>
+      <div class="target-ring outer"></div>
+      <div class="target-ring middle"></div>
+      <div class="target-ring inner"></div>
+      <div class="target-bullseye"></div>
     `;
 
     this.targetsLayerEl.appendChild(el);
     this.activeTarget = {
       x: rx,
       y: ry,
-      el,
-      hitRadius: 36,
+      el: el,
+      hitRadius: 36
     };
-  }
+  },
 
-  checkHit() {
-    if (!this.activeTarget || !this.activeTarget.el || this.gameState !== 'playing') return;
-    const dist = Math.hypot(this.reticleX - this.activeTarget.x, this.reticleY - this.activeTarget.y);
+  checkHit(reticleX, reticleY) {
+    this.lastReticleX = reticleX;
+    this.lastReticleY = reticleY;
+
+    if (!this.activeTarget || !this.activeTarget.el || !this.activeTarget.el.isConnected) {
+      this.spawnTarget();
+      return;
+    }
+    if (this.gameState === 'gameover') return;
+
+    const dist = Math.hypot(reticleX - this.activeTarget.x, reticleY - this.activeTarget.y);
     if (dist <= this.activeTarget.hitRadius) {
       this.onHit();
     }
-  }
+  },
 
   onHit() {
     const target = this.activeTarget;
     if (!target) return;
     this.activeTarget = null;
 
+    // 1st target hit triggers the 30-sec arcade countdown!
+    if (this.gameState === 'ready' || this.gameState === 'idle') {
+      this.gameState = 'playing';
+      this.timerStartTs = performance.now();
+      this.timeLeft = 30.0;
+      if (this.hintEl) {
+        this.hintEl.textContent = t('settings_modal.bench_aim_playing_hint') || '30 секунд! Сбивайте мишени • [Пробел] Центр • [Esc] Выход';
+      }
+      const startBtn = document.getElementById('bench-start-label');
+      if (startBtn) startBtn.textContent = t('ui.game_reset') || 'Сброс';
+    }
+
     this.score++;
+    if (this.scoreEl) this.scoreEl.textContent = this.score.toString();
+    const barScore = document.getElementById('game-score');
+    if (barScore) barScore.textContent = this.score.toString();
+
     if (this.score > this.record) {
       this.record = this.score;
       try {
-        localStorage.setItem('pg_game_aim_record', String(this.record));
-      } catch (_) {}
+        localStorage.setItem('gb_aim_record', this.record.toString());
+      } catch (e) {}
+      if (this.recordEl) this.recordEl.textContent = this.record.toString();
+      const barRecord = document.getElementById('game-record');
+      if (barRecord) barRecord.textContent = this.record.toString();
     }
-    this.updateHUD();
 
-    // Target explosion animation
+    // Visual and Sound Shot Feedback
+    this.playHitSound();
+
+    // Flash reticle
+    const reticleEl = document.getElementById('bench-reticle-dot');
+    if (reticleEl) {
+      reticleEl.classList.remove('shot-flash');
+      void reticleEl.offsetWidth; // trigger reflow
+      reticleEl.classList.add('shot-flash');
+      setTimeout(() => reticleEl.classList.remove('shot-flash'), 140);
+    }
+
+    // Explode hit target
     if (target.el) {
-      target.el.classList.add('is-hit');
+      target.el.classList.add('hit');
       setTimeout(() => {
-        if (target.el?.parentNode) target.el.parentNode.removeChild(target.el);
-      }, 250);
+        if (target.el && target.el.parentNode) {
+          target.el.parentNode.removeChild(target.el);
+        }
+      }, 220);
     }
 
-    // Floating +1 Popup
+    // Center-anchored Floating +1 Popup
+    if (!this.fxLayerEl || !this.fxLayerEl.isConnected) {
+      this.fxLayerEl = document.getElementById('bench-aim-fx-layer');
+    }
     if (this.fxLayerEl) {
-      const pop = document.createElement('div');
-      pop.className = 'app-aim-score-popup';
-      pop.textContent = '+1';
-      pop.style.left = '50%';
-      pop.style.top = '50%';
-      pop.style.transform = `translate(calc(-50% + ${target.x}px), calc(-50% + ${target.y - 20}px))`;
-      this.fxLayerEl.appendChild(pop);
+      const popup = document.createElement('div');
+      popup.className = 'target-floating-score';
+      popup.style.left = '50%';
+      popup.style.top = '50%';
+      popup.style.marginLeft = (target.x - 16) + 'px';
+      popup.style.marginTop = (target.y - 16) + 'px';
+      popup.textContent = '+1';
+      this.fxLayerEl.appendChild(popup);
       setTimeout(() => {
-        if (pop.parentNode) pop.parentNode.removeChild(pop);
-      }, 600);
+        if (popup.parentNode) popup.parentNode.removeChild(popup);
+      }, 500);
     }
 
-    // Spawn next target
-    setTimeout(() => {
-      if (this.gameState === 'playing') this.spawnTarget();
-    }, 150);
-  }
-
-  updateMotion(dsuRateX, dsuRateY, rawRateX, rawRateY, dt = 0.016) {
-    if (!this.isActive) return;
-
-    let rx = this.source === 'raw' ? rawRateX : dsuRateX;
-    let ry = this.source === 'raw' ? rawRateY : dsuRateY;
-
-    if (this.invertX) rx = -rx;
-    if (this.invertY) ry = -ry;
-
-    // Velocity integration with sensitivity scaling
-    const speed = 280 * this.sensitivity;
-    this.reticleX += rx * speed * dt;
-    this.reticleY += ry * speed * dt;
-
-    const bounds = this.getBounds();
-    this.reticleX = Math.max(-bounds.maxReticleX, Math.min(bounds.maxReticleX, this.reticleX));
-    this.reticleY = Math.max(-bounds.maxReticleY, Math.min(bounds.maxReticleY, this.reticleY));
-
-    this.updateReticleDOM();
-    this.checkHit();
-  }
-
-  updateReticleDOM() {
-    if (!this.reticleEl) return;
-    this.reticleEl.style.transform = `translate(calc(-50% + ${this.reticleX.toFixed(1)}px), calc(-50% + ${this.reticleY.toFixed(1)}px))`;
-  }
-
-  updateHUD() {
-    setText($('game-score'), String(this.score));
-    setText($('game-record'), String(this.record));
-    this.onScoreUpdate(this.score, this.record);
-  }
-
-  activate() {
-    this.isActive = true;
-    this.init();
-    if (this.gameState === 'idle') {
+    // Immediately spawn next target so user always has a target to shoot
+    if (this.gameState !== 'gameover') {
       this.spawnTarget();
     }
-  }
+  },
 
-  deactivate() {
-    this.isActive = false;
-    this.stop();
+  update(now) {
+    if (this.gameState === 'playing') {
+      const elapsed = (now - this.timerStartTs) / 1000;
+      this.timeLeft = Math.max(0, 30.0 - elapsed);
+
+      if (this.timerEl) {
+        this.timerEl.textContent = this.timeLeft.toFixed(1);
+      }
+      const barTimer = document.getElementById('game-val-timer');
+      if (barTimer) {
+        barTimer.textContent = `${this.timeLeft.toFixed(1)} с`;
+      }
+
+      if (this.timePillEl) {
+        this.timePillEl.classList.toggle('urgent', this.timeLeft <= 5.0);
+      }
+
+      if (this.timeLeft <= 0) {
+        this.endGame();
+      }
+    }
+  },
+
+  endGame() {
+    this.gameState = 'gameover';
+    this.cleanupTargets();
+
+    if (this.timePillEl) this.timePillEl.classList.remove('urgent');
+    if (this.timerEl) this.timerEl.textContent = '0.0';
+    const barTimer = document.getElementById('game-val-timer');
+    if (barTimer) barTimer.textContent = '0.0 с';
+
+    const isNewRecord = (this.score >= this.record && this.score > 0);
+
+    if (this.recordBadgeEl) {
+      this.recordBadgeEl.hidden = !isNewRecord;
+    }
+    if (this.finalScoreEl) {
+      this.finalScoreEl.textContent = this.score.toString();
+    }
+    if (this.finalRecordEl) {
+      this.finalRecordEl.textContent = this.record.toString();
+    }
+    if (this.gameoverEl) {
+      this.gameoverEl.hidden = false;
+    }
+    const startBtn = document.getElementById('bench-start-label');
+    if (startBtn) {
+      startBtn.textContent = t('ui.game_again') || 'Играть снова';
+    }
+  },
+
+  playHitSound() {
+    try {
+      // TODO: sound
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!this.audioCtx) this.audioCtx = new AudioContext();
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
+      const ctx = this.audioCtx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const now = ctx.currentTime;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.exponentialRampToValueAtTime(1400, now + 0.07);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.13);
+    } catch (e) {}
+  },
+
+  dispose() {
+    this.cleanupGame();
+    if (this.audioCtx) {
+      try { this.audioCtx.close(); } catch (_) {}
+      this.audioCtx = null;
+    }
+    this.initialized = false;
   }
-}
+};
