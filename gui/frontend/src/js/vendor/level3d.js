@@ -83,7 +83,7 @@ export function createLevel(el, opts) {
     function setAccel(x, y, z) {
       var v = new T.Vector3(+x || 0, +y || 0, +z || 0), n = v.length(); if (n < 0.2) return;
       tgt.copy(v.divideScalar(n));
-      if (tgt.z < -0.2) flipT = 1; else if (tgt.z > 0.2) flipT = 0;
+      if (tgt.z < -0.03) flipT = 1; else if (tgt.z > 0.03) flipT = 0;
       kick();
     }
     function setQuaternion(q) { var v = new T.Vector3(0, 0, 1).applyQuaternion(new T.Quaternion(q.x, q.y, q.z, q.w).invert()); setAccel(v.x, v.y, v.z); }
@@ -104,7 +104,7 @@ export function createLevel(el, opts) {
       var bx = ux * sat * TRAVEL, by = uy * sat * TRAVEL, r2 = bx * bx + by * by;
       var hz = Math.sqrt(Math.max(0, CAP_R * CAP_R - r2)) - (CAP_R - capH);
       var bz = H + Math.max(hz - BR * 0.3, BR * 0.6); bub.position.set(bx, by, back ? -bz : bz);
-      var st = cur.z < -0.2 ? 'down' : (rxy < LEVEL ? 'level' : (rxy >= LIM * 1.9 ? 'steep' : 'tilt'));
+      var st = cur.z < -0.03 ? 'down' : (rxy < LEVEL ? 'level' : (rxy >= LIM * 1.9 ? 'steep' : 'tilt'));
       if (st !== state) { var was = state; state = st; var sc2 = st === 'level' ? K.acc : st === 'steep' ? K.warn : st === 'down' ? K.ink3 : K.info; mats.bub.color.copy(C(sc2)); mats.bub.emissive.copy(C(sc2)); mats.bub.emissiveIntensity = st === 'level' ? .3 : .16; halo.material.color.copy(C(sc2)); halo.material.opacity = st === 'level' ? .95 : st === 'down' ? .15 : .5; glowMat.opacity = st === 'level' ? .95 : .4; if (st === 'level' && was && !back) { pulseT = 0; pulse.visible = true; } el.setAttribute('data-state', st); el.dispatchEvent(new CustomEvent('pglevel', { detail: { state: st, tilt: Math.asin(Math.min(rxy, 1)) * 180 / Math.PI } })); }
       if (pulseT >= 0) { pulseT += dt; var pp = Math.min(pulseT / 0.9, 1), es = 1 - Math.pow(1 - pp, 3); pulse.scale.setScalar(.3 + .7 * es); pulse.material.opacity = .75 * (1 - pp); if (pp >= 1) { pulseT = -1; pulse.visible = false; } else mx += 1; }
       halo.position.set(bub.position.x, bub.position.y, bub.position.z + (back ? -.02 : .02));

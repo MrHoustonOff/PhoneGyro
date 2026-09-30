@@ -48,8 +48,9 @@ export function createDeviceLevel(host, label) {
     if (mode !== '3d') return;
     const state = host.dataset.state || (lastEvent && lastEvent.state) || 'level';
     const tilt = tiltDeg;
+    // Standing on an edge ("steep") reads as a tilt too: the degrees say enough.
     setText(label, state === 'level' ? t('ui.level_level') : state === 'down' ? t('ui.level_down')
-      : state === 'steep' ? t('ui.level_steep') : `${t('ui.level_tilt')} ${Math.round(tilt)}°`);
+      : `${t('ui.level_tilt')} ${Math.round(tilt)}°`);
   };
   host.addEventListener('pglevel', (e) => { lastEvent = e.detail; label3d(); });
 
@@ -66,13 +67,41 @@ export function createDeviceLevel(host, label) {
   // The 3D level wants gravity in device axes (face up = 0,0,1). Our source is
   // the calibrated pitch/roll the flat dial uses, so the two models agree: roll
   // right lifts +x, pitch up lifts +y.
+  const gravity = ({ pitch, roll }) => {
+    const p = rad(pitch), r = rad(roll);
+    return [Math.sin(r) * Math.cos(p), Math.sin(p), Math.cos(p) * Math.cos(r)];
+  };
+
+  // The state arrives ~15 times a second and the level settles in ~60 ms, so fed
+  // directly it moves in steps (go, stop, go). Instead each new sample is reached
+  // over the time since the previous one, frame by frame: smooth, at most one
+  // sample late, and no frames at all while nothing changes.
+  const seg = { from: [0, 0, 1], to: [0, 0, 1], cur: [0, 0, 1], t0: 0, dur: 1, at: 0 };
+  let raf = 0;
+  function step(now) {
+    raf = 0;
+    if (mode !== '3d') return;
+    const a = Math.min(1, (now - seg.t0) / seg.dur);
+    seg.cur = seg.from.map((v, i) => v + (seg.to[i] - v) * a);
+    level3d.setAccel(seg.cur[0], seg.cur[1], seg.cur[2]);
+    if (a < 1) raf = requestAnimationFrame(step);
+  }
+  function feed3d(target) {
+    const now = performance.now();
+    seg.dur = Math.max(30, Math.min(150, now - (seg.at || now - 66)));
+    seg.at = now;
+    seg.from = seg.cur;
+    seg.to = target;
+    seg.t0 = now;
+    if (!raf) raf = requestAnimationFrame(step);
+  }
+
   function update(st) {
     last = { pitch: st.pitch || 0, roll: st.roll || 0 };
     if (mode === '3d') {
-      const p = rad(last.pitch), r = rad(last.roll);
-      const az = Math.cos(p) * Math.cos(r);
-      level3d.setAccel(Math.sin(r) * Math.cos(p), Math.sin(p), az);
-      tiltDeg = (Math.acos(Math.max(-1, Math.min(1, az))) * 180) / Math.PI;
+      const g = gravity(last);
+      feed3d(g);
+      tiltDeg = (Math.acos(Math.max(-1, Math.min(1, g[2]))) * 180) / Math.PI;
       label3d();
     } else {
       flat(last);
@@ -84,8 +113,11 @@ export function createDeviceLevel(host, label) {
     if (next === '3d' && !level3d) {
       const ok = await loadThree();
       if (want !== '3d') return;                  // changed while loading
-      level3d = ok ? createLevel(host, { labels: {} }) : null; // null: no WebGL → flat
+      level3d = ok ? createLevel(host, { labels: {}, accel: gravity(last) }) : null; // null: no WebGL → flat
+      seg.from = seg.to = seg.cur = gravity(last);
     } else if (next !== '3d' && level3d) {
+      cancelAnimationFrame(raf);
+      raf = 0;
       level3d.dispose();
       level3d = null;
       lastEvent = null;
