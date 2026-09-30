@@ -147,7 +147,7 @@ export class TelemetryRecorder {
           onClick: () => {
             const defaultName = `phonegyro_telemetry_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.csv`;
             call('SaveCSVFile', defaultName, csvContent)
-              .then(() => toast(t('live_debug.stats_modal_saved') || 'Файл сохранён'))
+              .then((saved) => { if (saved) toast(t('live_debug.stats_modal_saved') || 'Файл сохранён'); })
               .catch(() => {
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 const url = URL.createObjectURL(blob);
