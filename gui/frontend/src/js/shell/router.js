@@ -64,7 +64,7 @@ export function go(screen, tabOrOpts = null, maybeOpts = {}) {
     // Show/hide screen elements
     const allScreens = new Set([
       ...Object.keys(SCREEN_CONFIG),
-      'connect', 'setup', 'settings', 'docs', 'stats', 'soon', 'calibration',
+      'connect', 'setup', 'settings', 'docs', 'stats', 'soon', 'calibration', 'games',
     ]);
     for (const s of allScreens) {
       const el = $('screen-' + s);
@@ -75,6 +75,7 @@ export function go(screen, tabOrOpts = null, maybeOpts = {}) {
     if (shellEl) {
       toggleClass(shellEl, 'has-no-chrome', !nextChrome.header);
       toggleClass(shellEl, 'is-screen-stats', targetScreen === 'stats');
+      toggleClass(shellEl, 'is-screen-games', targetScreen === 'games');
     }
     toggleClass(document.documentElement, 'is-calibrating', targetScreen === 'calibration');
     if (headerEl) show(headerEl, !!nextChrome.header);

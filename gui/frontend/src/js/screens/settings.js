@@ -8,7 +8,7 @@ import { $, setText, show, esc } from '../core/dom.js';
 import { call } from '../core/bridge.js';
 import { getState, onState } from '../core/state.js';
 import { t, onLang } from '../core/i18n.js';
-import { onScreen } from '../shell/router.js';
+import { onScreen, go } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { enhanceSelects } from '../ui/select.js';
@@ -341,6 +341,7 @@ export function startSettings() {
     else if (e.target.closest('[data-regen]')) regenMac();
     else if (e.target.closest('#fw-allow')) allowFirewall(e.target.closest('#fw-allow'));
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
+    else if (e.target.closest('#btn-open-games')) go('games');
   });
   onScreen((s) => {
     if (s === 'settings') load();
