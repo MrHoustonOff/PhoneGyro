@@ -103,7 +103,7 @@ func (a *App) applySettings(s AppSettings) {
 	a.closeActionMu.Lock()
 	a.closeAction = s.CloseAction
 	a.closeActionMu.Unlock()
-	a.hotkeyRecenterEnabled.Store(s.HotkeyRecenterEnabled)
+	a.hotkeyRecenterEnabled.Store(false) // the global recenter hotkey was removed from the product
 	a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
 	a.inputModeMu.Lock()
 	a.inputMode = s.InputMode
@@ -544,12 +544,12 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 	a.themeMu.Unlock()
 
-	a.hotkeyRecenterEnabled.Store(s.HotkeyRecenterEnabled)
+	a.hotkeyRecenterEnabled.Store(false) // the global recenter hotkey was removed from the product
 	if s.HotkeyRecenterKey != "" {
 		a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
 	}
 	if a.trayMgr != nil {
-		a.trayMgr.UpdateHotkey(s.HotkeyRecenterEnabled, a.getHotkeyRecenterKey())
+		a.trayMgr.UpdateHotkey(false, a.getHotkeyRecenterKey())
 	}
 
 	curScale := math.Float64frombits(a.fontScaleBits.Load())

@@ -61,10 +61,6 @@ const COLUMNS = [
       { key: 'debugLog', type: 'toggle', label: 'ui.debug_log', tip: 'ui.debug_log_tip' },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
-    // The global recenter hotkey still exists in Go: keep the way to turn it off.
-    { title: 'settings_modal.group_hotkeys', rows: [
-      { key: 'hotkeyRecenterEnabled', type: 'toggle', label: 'settings_modal.hotkey_recenter', kbd: 'hotkeyRecenterKey' },
-    ] },
   ],
 ];
 

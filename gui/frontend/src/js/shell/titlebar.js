@@ -6,7 +6,7 @@ import { $, setText, show, toggleClass } from '../core/dom.js';
 import { call, ready, runtime } from '../core/bridge.js';
 
 export function startTitlebar() {
-  const bar = $('titlebar');
+  const bar = $('header');
   addEventListener('blur', () => toggleClass(bar, 'is-blur', true));
   addEventListener('focus', () => toggleClass(bar, 'is-blur', false));
 
@@ -22,7 +22,7 @@ export function startTitlebar() {
     $('wc-min').onclick = () => rt.WindowMinimise();
     $('wc-max').onclick = toggleMax;
     $('wc-close').onclick = () => call('CloseWindow'); // the "action on window close"
-    bar.addEventListener('dblclick', (e) => { if (!e.target.closest('.pg-titlebar__ctl')) toggleMax(); });
+    bar.addEventListener('dblclick', (e) => { if (!e.target.closest('.pg-titlebar__ctl, button, .pg-seg, .pg-tab, .pg-island, a')) toggleMax(); });
   }, () => {});
 
   call('GetAppVersion').then((v) => {

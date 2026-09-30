@@ -45,7 +45,7 @@ func TestLoadMissingFieldsKeepDefaults(t *testing.T) {
 		t.Fatal("not found")
 	}
 	d := Defaults()
-	if !s.CemuDriftGuard || !s.SilenceDisconnect || !s.StillnessHint || !s.DisconnectAlert || !s.HotkeyRecenterEnabled {
+	if !s.CemuDriftGuard || !s.SilenceDisconnect || !s.StillnessHint || !s.DisconnectAlert {
 		t.Fatalf("on-by-default switches came back off: %+v", s)
 	}
 	if s.GyroDeadband != d.GyroDeadband || s.GyroDeadbandUsb != d.GyroDeadbandUsb || s.GyroSensitivity != 1 {

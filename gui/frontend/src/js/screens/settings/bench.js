@@ -51,7 +51,7 @@ export function initBench(container, options = {}) {
     const cs = getComputedStyle(canvas);
     const v = (n) => cs.getPropertyValue(n).trim();
     colorsKey = key;
-    colors = { raw: v('--info'), filt: v('--accent'), diff: v('--danger'),
+    colors = { raw: v('--ink'), filt: v(document.documentElement.dataset.theme === 'light' ? '--viz-moss' : '--viz-leaf'), diff: v('--info'),
       line: v('--line-subtle'), zero: v('--line'), ink: v('--ink'), ink2: v('--ink-2'), chip: v('--tile-hi') };
     return colors;
   }
@@ -165,7 +165,7 @@ export function initBench(container, options = {}) {
       ctx.beginPath();
       for (let i = 0; i < n; i++) (i ? ctx.lineTo(px(i), py(R, i)) : ctx.moveTo(px(i), py(R, i)));
       for (let i = n - 1; i >= 0; i--) ctx.lineTo(px(i), py(F, i));
-      ctx.closePath(); ctx.globalAlpha = 0.55; ctx.fillStyle = c.diff; ctx.fill(); ctx.globalAlpha = 1;
+      ctx.closePath(); ctx.globalAlpha = 0.5; ctx.fillStyle = c.diff; ctx.fill(); ctx.globalAlpha = 1;
       ctx.lineJoin = 'round';
       ctx.beginPath(); ctx.strokeStyle = c.raw; ctx.lineWidth = 1.6;
       for (let i = 0; i < n; i++) (i ? ctx.lineTo(px(i), py(R, i)) : ctx.moveTo(px(i), py(R, i)));

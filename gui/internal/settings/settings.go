@@ -103,7 +103,7 @@ func Defaults() Settings {
 		GyroDeadbandUsb:       DefaultDeadbandUSB,
 		GyroSensitivity:       1.00,
 		CloseAction:           "ask",
-		HotkeyRecenterEnabled: true,
+		HotkeyRecenterEnabled: false,
 		HotkeyRecenterKey:     DefaultHotkey,
 		InputMode:             "phone",
 	}
