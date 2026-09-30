@@ -79,8 +79,11 @@ export const TuningBench = {
     const metricLabel = document.getElementById('game-label-timer');
 
     if (target === 'platform') {
-      PlatformGame.init();
-      PlatformGame.syncDimensions(true);
+      PlatformGame.init().then(() => {
+        requestAnimationFrame(() => {
+          PlatformGame.syncDimensions(true);
+        });
+      });
       PlatformGame.updateHud(true);
       if (metricLabel) metricLabel.textContent = t('ui.games_plat_tilt') || 'Наклон:';
     } else if (target === 'aim') {
@@ -248,7 +251,7 @@ function deactivate() {
   call('SetTuningActive', false).catch(() => {});
 
   AimGame.dispose();
-  PlatformGame.dispose();
+  PlatformGame.pause();
 }
 
 function syncActive() {
@@ -265,7 +268,10 @@ export function startGames() {
   TuningBench.init();
   onScreen(() => syncActive());
   document.addEventListener('visibilitychange', () => syncActive());
-  window.addEventListener('beforeunload', () => deactivate());
+  window.addEventListener('beforeunload', () => {
+    deactivate();
+    PlatformGame.dispose();
+  });
 
   // 15Hz state change fallback (if tuning:frame is delayed)
   onState((state) => {

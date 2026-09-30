@@ -25,6 +25,7 @@ async function ensureThree() {
 }
 
 export const PlatformGame = {
+  initializing: false,
   initialized: false,
   renderer: null,
   scene: null,
@@ -112,37 +113,67 @@ export const PlatformGame = {
   },
 
   async init() {
-    if (this.initialized) return;
-    const canvas = document.getElementById('bench-platform-canvas');
-    const vp = document.getElementById('bench-platform-viewport');
-    if (!canvas) return;
+    if (this.initialized || this.initializing) return;
+    this.initializing = true;
 
-    await ensureThree();
-    if (!window.THREE) return;
-    this.initialized = true;
+    try {
+      let canvas = document.getElementById('bench-platform-canvas');
+      const vp = document.getElementById('bench-platform-viewport');
+      if (!canvas) return;
 
-    const THREE = window.THREE;
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer = renderer;
+      await ensureThree();
+      if (!window.THREE) return;
 
-    if (typeof ResizeObserver !== 'undefined') {
-      this.ro = new ResizeObserver(() => {
-        this.syncDimensions(true);
-      });
-      this.ro.observe(canvas);
-      if (vp) this.ro.observe(vp);
-    }
+      const THREE = window.THREE;
 
-    const scene = new THREE.Scene();
-    this.scene = scene;
+      // Ensure canvas has no stale lost context
+      if (canvas.dataset.contextLost === 'true') {
+        const freshCanvas = canvas.cloneNode(false);
+        delete freshCanvas.dataset.contextLost;
+        canvas.parentNode.replaceChild(freshCanvas, canvas);
+        canvas = freshCanvas;
+      }
 
-    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50);
-    camera.position.set(0, 3.6, 4.4);
-    camera.lookAt(0, -0.05, 0);
-    this.camera = camera;
+      let renderer = null;
+      try {
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+      } catch (err) {
+        console.warn('WebGL init fallback with fresh canvas:', err);
+        const freshCanvas = canvas.cloneNode(false);
+        delete freshCanvas.dataset.contextLost;
+        canvas.parentNode.replaceChild(freshCanvas, canvas);
+        canvas = freshCanvas;
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      }
 
-    // Studio Lighting: Sheikah Shrine ancient illumination
+      canvas.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        canvas.dataset.contextLost = 'true';
+      }, false);
+
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer = renderer;
+
+      if (this.ro) {
+        try { this.ro.disconnect(); } catch (_) {}
+        this.ro = null;
+      }
+      if (typeof ResizeObserver !== 'undefined' && vp) {
+        this.ro = new ResizeObserver(() => {
+          this.syncDimensions(false);
+        });
+        this.ro.observe(vp);
+      }
+
+      const scene = new THREE.Scene();
+      this.scene = scene;
+
+      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50);
+      camera.position.set(0, 3.6, 4.4);
+      camera.lookAt(0, -0.05, 0);
+      this.camera = camera;
+
+      // Studio Lighting: Sheikah Shrine ancient illumination
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
@@ -309,9 +340,13 @@ export const PlatformGame = {
     platformGroup.add(ballGroup);
     this.ballMesh = ballGroup;
 
+    this.initialized = true;
     this.recenter();
     this.syncDimensions(true);
-  },
+  } finally {
+    this.initializing = false;
+  }
+},
 
   createEdgeLine() {
     if (!this.platformGroup || !window.THREE) return;
@@ -893,6 +928,18 @@ export const PlatformGame = {
     this.renderer.render(this.scene, this.camera);
   },
 
+  pause() {
+    this.isFalling = false;
+    this.ballVel = { x: 0, z: 0 };
+    this.ballVelY = 0;
+    for (const p of this.confettiParticles) {
+      if (p.mesh && p.mesh.parent) p.mesh.parent.remove(p.mesh);
+      if (p.mesh && p.mesh.geometry) p.mesh.geometry.dispose();
+      if (p.mesh && p.mesh.material) p.mesh.material.dispose();
+    }
+    this.confettiParticles = [];
+  },
+
   dispose() {
     if (this.ro) {
       try { this.ro.disconnect(); } catch (_) {}
@@ -916,19 +963,11 @@ export const PlatformGame = {
 
     for (const p of this.confettiParticles) {
       try {
-        if (p.mesh.geometry) p.mesh.geometry.dispose();
-        if (p.mesh.material) p.mesh.material.dispose();
+        if (p.mesh && p.mesh.geometry) p.mesh.geometry.dispose();
+        if (p.mesh && p.mesh.material) p.mesh.material.dispose();
       } catch (_) {}
     }
     this.confettiParticles = [];
-
-    const canvas = document.getElementById('bench-platform-canvas');
-    if (canvas) {
-      try {
-        const gl = canvas.getContext('webgl') || canvas.getContext('webgl2') || canvas.getContext('experimental-webgl');
-        gl?.getExtension('WEBGL_lose_context')?.loseContext();
-      } catch (_) {}
-    }
 
     if (this.renderer) {
       try { this.renderer.dispose(); } catch (_) {}
@@ -954,5 +993,6 @@ export const PlatformGame = {
     this.cachedW = 0;
     this.cachedH = 0;
     this.initialized = false;
+    this.initializing = false;
   }
 };
