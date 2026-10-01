@@ -598,6 +598,28 @@ export function initTelemetry(paneEl) {
     applyCharts();
   }
 
+  const startTimers = () => {
+    if (!deriveInterval) {
+      deriveInterval = setInterval(tickDerive, 100);
+    }
+    if (!axisTimer) {
+      axisTimer = setInterval(() => {
+        for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
+      }, AXIS_MS);
+    }
+  };
+
+  const stopTimers = () => {
+    if (deriveInterval) {
+      clearInterval(deriveInterval);
+      deriveInterval = null;
+    }
+    if (axisTimer) {
+      clearInterval(axisTimer);
+      axisTimer = null;
+    }
+  };
+
   const onWindowBlur = () => {
     if (!isActive) return;
     if (ecoToggle && ecoToggle.checked) {
@@ -612,6 +634,29 @@ export function initTelemetry(paneEl) {
     if (sceneInstance) sceneInstance.setPaused(false);
     const pauseBadge = $('stats-3d-ecopause');
     if (pauseBadge) pauseBadge.style.display = 'none';
+  };
+
+  const onVisibilityChange = () => {
+    if (!isActive) return;
+    if (document.hidden) {
+      if (sceneInstance) sceneInstance.setPaused(true);
+      const pauseBadge = $('stats-3d-ecopause');
+      if (pauseBadge && ecoToggle && ecoToggle.checked) pauseBadge.style.display = 'inline-flex';
+      if (!recorder.isRecording) {
+        stopTimers();
+        call('SetTuningActive', false).catch(() => {});
+      }
+    } else {
+      if (document.hasFocus() || !ecoToggle || !ecoToggle.checked) {
+        if (sceneInstance) sceneInstance.setPaused(false);
+        const pauseBadge = $('stats-3d-ecopause');
+        if (pauseBadge) pauseBadge.style.display = 'none';
+      }
+      call('SetTuningActive', true).catch(() => {});
+      startTimers();
+      wakeCharts();
+      tickDerive();
+    }
   };
 
   // Handle tuning frames (60Hz fallback)
@@ -914,6 +959,7 @@ export function initTelemetry(paneEl) {
       window.addEventListener('keydown', onKeyDown);
       window.addEventListener('blur', onWindowBlur);
       window.addEventListener('focus', onWindowFocus);
+      document.addEventListener('visibilitychange', onVisibilityChange);
       on('tuning:frame', handleTuningFrame);
       on('livedebug:telemetry', handleLiveTelemetry);
       on('ahrs:quat', handleAhrsQuat);
@@ -926,10 +972,7 @@ export function initTelemetry(paneEl) {
       mountScene();
       connectWebSocket();
       wakeCharts(); // force-wake: IO may have missed the hidden→visible transition
-      deriveInterval = setInterval(tickDerive, 100);
-      axisTimer = setInterval(() => {
-        for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
-      }, AXIS_MS);
+      startTimers();
       renderState(getState());
       tickDerive();
     },
@@ -939,6 +982,7 @@ export function initTelemetry(paneEl) {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('blur', onWindowBlur);
       window.removeEventListener('focus', onWindowFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       off('tuning:frame', handleTuningFrame);
       off('livedebug:telemetry', handleLiveTelemetry);
       off('ahrs:quat', handleAhrsQuat);
@@ -954,12 +998,8 @@ export function initTelemetry(paneEl) {
         clearTimeout(wsReconnectTimer);
         wsReconnectTimer = null;
       }
-      if (deriveInterval) {
-        clearInterval(deriveInterval);
-        deriveInterval = null;
-      }
+      stopTimers();
       deriveEngine.reset();
-      if (axisTimer) { clearInterval(axisTimer); axisTimer = null; }
       for (const k in axisLive) axisLive[k] = null;
       for (const k in sparks) sparks[k].clear();
       for (const k in axes) axes[k].clear();
