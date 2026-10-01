@@ -305,6 +305,9 @@ export async function playSound(type, { force = false } = {}) {
   const masterVol = soundVolume;
 
   if (type === 'intro') {
+    if (!force && (!document.documentElement.classList.contains('is-splash') || !document.getElementById('splash'))) {
+      return;
+    }
     if (!force && (mode === 'off' || masterVol <= 0)) return;
     const indVol = soundVolumes.intro != null ? soundVolumes.intro : 1;
     if (!force && indVol <= 0) return;

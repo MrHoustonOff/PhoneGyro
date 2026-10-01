@@ -20,19 +20,26 @@ function remember(on) {
   try { localStorage.setItem('pg-splash', on ? '1' : '0'); } catch (e) { /* next launch uses the default */ }
 }
 
+let splashActive = false;
+
+export const isSplashActive = () => splashActive;
+
 /** Starts the animation if this launch plays it; finish(backendReady) hands over to the app. */
 export function startSplash() {
   const el = $('splash');
   if (!html.classList.contains('is-splash')) {
     el.remove();
-    return { finish() {} };
+    splashActive = false;
+    return { finish() {}, active: false };
   }
+  splashActive = true;
   el.classList.add('is-run');
   const status = $('splash-status');
   STATUS.forEach(([ms, key, fallback]) => setTimeout(() => setText(status, t(key) || fallback), ms));
   const minTime = new Promise((r) => setTimeout(r, MIN_MS));
   const maxTime = new Promise((r) => setTimeout(r, MAX_MS));
   return {
+    active: true,
     finish(backendReady) {
       // Design timeline: grow at 2.25 s (or when the backend is up, if later).
       // The grown window already looks like the app's ground, so the layer hands
@@ -40,7 +47,12 @@ export function startSplash() {
       Promise.all([minTime, Promise.race([backendReady, maxTime])]).then(() => {
         el.classList.add('is-grown');
         setTimeout(() => { html.classList.add('is-enter'); el.classList.add('is-app'); }, GROW_MS - 80);
-        setTimeout(() => { el.remove(); html.classList.remove('is-splash'); window.dispatchEvent(new Event('resize')); }, GROW_MS + 500);
+        setTimeout(() => {
+          el.remove();
+          html.classList.remove('is-splash');
+          splashActive = false;
+          window.dispatchEvent(new Event('resize'));
+        }, GROW_MS + 500);
         setTimeout(() => html.classList.remove('is-enter'), GROW_MS + 1300);
       });
     },
