@@ -283,7 +283,7 @@ function playCuteDefeat() {
   playTone(95, now + 0.44, 0.35, 0.26, 'sine');
 }
 
-const INTRO_BASE = 0.5;
+const INTRO_BASE = 0.2;
 
 function playIntroAudio(gain) {
   try {
