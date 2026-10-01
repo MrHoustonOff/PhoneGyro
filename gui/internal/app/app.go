@@ -196,7 +196,8 @@ func (a *App) startup(ctx context.Context) {
 		Show:     a.ShowWindow,
 		Quit:     a.QuitApp,
 		Recenter: a.TriggerRecenterFromHotkey,
-		Profile:  func(slot int) { a.SetActiveProfile(slot) },
+		Pause:    func() { a.TogglePause() },
+		Clients:  a.trayClients,
 	})
 	a.trayMgr.Start()
 	a.trayMgr.UpdateHotkey(a.hotkeyRecenterEnabled.Load(), a.getHotkeyRecenterKey())

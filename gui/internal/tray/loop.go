@@ -99,10 +99,7 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 		switch msg {
 		case WM_TRAYICON:
 			switch lParam {
-			case WM_LBUTTONUP:
-				tm.onLeftClick(hwnd)
-				return 0
-			case WM_LBUTTONDBLCLK:
+			case WM_LBUTTONUP, WM_LBUTTONDBLCLK:
 				tm.cb.Show()
 				return 0
 			case WM_RBUTTONUP:
@@ -111,6 +108,15 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 			case wmMouseMove:
 				tm.refreshTip(false)
 				return 0
+			}
+
+		case wmMeasureItem:
+			if tm.measureItem(lParam) {
+				return 1
+			}
+		case wmDrawItem:
+			if tm.drawItem(lParam) {
+				return 1
 			}
 
 		case WM_UPDATE_HOTKEY:
@@ -279,10 +285,6 @@ func (tm *Manager) refresh() {
 		return
 	}
 	st := tm.status()
-	copy(tm.hist[:], tm.hist[1:])
-	tm.hist[histLen-1] = float32(st.Hz)
-	copy(tm.cpuHist[:], tm.cpuHist[1:])
-	tm.cpuHist[histLen-1] = float32(st.CPU)
 	if tm.lastOnline == st.Online && tm.lastPaused == st.Paused && tm.lastPhone == st.Device &&
 		tm.lastEmuCount == st.Emulators && tm.lastProfile == st.Profile && tm.lastLang == st.Lang {
 		return

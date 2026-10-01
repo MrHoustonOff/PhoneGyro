@@ -154,7 +154,7 @@ func (a *App) GetAppVersion() version.Info {
 	return version.Get()
 }
 
-// trayStatus is what the tray icon, its menu and its panel show (internal/tray).
+// trayStatus is what the tray icon, its tooltip and its menu show (internal/tray).
 // Only atomics and a few copies: it runs every 0.8 s and on hover.
 func (a *App) trayStatus() tray.Status {
 	bank := a.activeBank()
@@ -167,17 +167,14 @@ func (a *App) trayStatus() tray.Status {
 		Paused:  a.isPaused.Load(),
 		Profile: a.getActiveProfileName(),
 		PingMs:  a.linkPingMs(),
-		Version: version.Get().Display,
-		DSUPort: a.dsuPort,
 	}
 	if s, ok := bank.deviceName.Load().(string); ok {
 		st.Device = s
 	}
 	if st.Online {
+		st.Link = "Wi-Fi · LAN"
 		if st.Mode == "usb" {
 			st.Link = "USB"
-		} else {
-			st.Link = "Wi-Fi · LAN"
 		}
 		if a.srv != nil {
 			_, _, st.Hz = a.srv.PacketStats()
@@ -186,19 +183,20 @@ func (a *App) trayStatus() tray.Status {
 	if a.dsuSrv != nil {
 		st.Emulators = a.dsuSrv.ActiveClientCount()
 	}
-	bank.profilesMu.RLock()
-	st.Slot = bank.activeSlot
-	for _, p := range bank.profiles {
-		st.Profiles = append(st.Profiles, p.Name)
-	}
-	bank.profilesMu.RUnlock()
-	if p := a.lastResStats.Load(); p != nil {
-		m := *p
-		st.CPU, _ = m["cpuPercent"].(float64)
-		st.RAMMB, _ = m["ramMb"].(float64)
-		st.RAMTotal, _ = m["totalRamMb"].(float64)
-	}
 	return st
+}
+
+// trayClients names the DSU clients for the tray menu; it runs only when the menu opens.
+func (a *App) trayClients() []tray.Client {
+	var out []tray.Client
+	for _, v := range a.dsuClientViews() {
+		name := v.Process
+		if name == "" {
+			name = v.Address
+		}
+		out = append(out, tray.Client{Name: name, Active: v.Active})
+	}
+	return out
 }
 
 // bindDSUCallbacks hooks connection lifecycle events from the DSU UDP server.

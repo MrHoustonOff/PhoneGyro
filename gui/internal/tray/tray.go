@@ -28,36 +28,37 @@ const (
 	iconCount
 )
 
+// Client is one subscribed DSU client (an emulator).
+type Client struct {
+	Name   string
+	Active bool // false: subscribed but not asking for data right now
+}
+
 // Status is what the icon, its tooltip and the menu show.
 type Status struct {
-	Lang      string
-	Theme     string // "dark" | "light": the app's theme, the menu and the panel follow it
-	Accent    string // the app's accent name (settings.ValidAccent)
-	Online    bool   // the active source is connected
-	Paused    bool   // connected, but the output is paused
-	Device    string // its name; "" is shown as "iPhone"
-	Link      string // "Wi-Fi · LAN" / "USB"; "" when unknown
-	Mode      string // "phone" | "usb": the selected input
-	Hz        float64
-	PingMs    int // -1: not measured
-	Emulators int // subscribed DSU clients
-	Profile   string
-	Profiles  []string // the six slots' names; "" = empty slot
-	Slot      int      // active slot index
-	CPU       float64  // process share of the machine, percent
-	RAMMB     float64
-	RAMTotal  float64 // total physical RAM, MB
-	Version   string
-	DSUPort   int
+	Lang    string
+	Theme   string // "dark" | "light": the app's theme, the menu follows it
+	Accent  string // the app's accent name (settings.ValidAccent)
+	Mode    string // "phone" | "usb": the selected input
+	Online  bool   // the active source is connected
+	Paused  bool   // connected, but the output is paused
+	Device  string // its name; "" is shown as "iPhone"
+	Link    string // "Wi-Fi · LAN" / "USB"; "" when unknown
+	Hz      float64
+	PingMs  int // -1: not measured
+	Profile string
+	Emulators int    // clients asking for data (cheap; the list is Callbacks.Clients)
+	Clients   []Client // filled when the menu opens
 }
 
 // Callbacks connect the tray to the app. All are required.
 type Callbacks struct {
 	Status   func() Status
 	Show     func() // open the main window
+	Pause    func() // toggle the pause
+	Clients  func() []Client // the subscribed DSU clients (named: costlier than Status)
 	Quit     func()
-	Recenter func() // the global hotkey was pressed, or the panel's button
-	Profile  func(slot int)
+	Recenter func() // the global hotkey was pressed
 }
 
 // Manager manages the Windows notification area system tray icon and context menu.
@@ -70,9 +71,11 @@ type Manager struct {
 	currentIcon  uintptr
 	taskbarMsg   uint32 // "TaskbarCreated": explorer.exe restarted, the icon must be added again
 	lastTipAt    time.Time
-	hist         [histLen]float32 // rate and CPU history for the panel's graphs, one point per refresh
-	cpuHist      [histLen]float32
-	popClosedAt  time.Time
+	menu         []*menuItem // the open menu's items (their index is the owner-draw item data)
+	menuPal      palette
+	menuGdip     *session
+	menuScale    float32
+	menuBg       uint32
 
 	ready    atomic.Bool
 	stopChan chan struct{}
