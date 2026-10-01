@@ -192,9 +192,6 @@ func (tm *Manager) readd() {
 	pShellNotifyIconW.Call(NIM_ADD, uintptr(unsafe.Pointer(&tm.nid)))
 }
 
-// onLeftClick is wired in popup.go.
-func (tm *Manager) onLeftClick(hwnd uintptr) { tm.cb.Show() }
-
 // status is Callbacks.Status with the device name defaulted.
 func (tm *Manager) status() Status {
 	st := tm.cb.Status()
@@ -282,6 +279,10 @@ func (tm *Manager) refresh() {
 		return
 	}
 	st := tm.status()
+	copy(tm.hist[:], tm.hist[1:])
+	tm.hist[histLen-1] = float32(st.Hz)
+	copy(tm.cpuHist[:], tm.cpuHist[1:])
+	tm.cpuHist[histLen-1] = float32(st.CPU)
 	if tm.lastOnline == st.Online && tm.lastPaused == st.Paused && tm.lastPhone == st.Device &&
 		tm.lastEmuCount == st.Emulators && tm.lastProfile == st.Profile && tm.lastLang == st.Lang {
 		return

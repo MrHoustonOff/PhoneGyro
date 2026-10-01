@@ -162,6 +162,7 @@ func (a *App) trayStatus() tray.Status {
 		Lang:    a.GetLang(),
 		Theme:   a.GetTheme(),
 		Accent:  a.accentName(),
+		Mode:    a.GetInputMode(),
 		Online:  bank.hasClient.Load(),
 		Paused:  a.isPaused.Load(),
 		Profile: a.getActiveProfileName(),
@@ -173,7 +174,7 @@ func (a *App) trayStatus() tray.Status {
 		st.Device = s
 	}
 	if st.Online {
-		if a.GetInputMode() == "usb" {
+		if st.Mode == "usb" {
 			st.Link = "USB"
 		} else {
 			st.Link = "Wi-Fi · LAN"

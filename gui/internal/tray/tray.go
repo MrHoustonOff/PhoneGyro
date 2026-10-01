@@ -37,6 +37,7 @@ type Status struct {
 	Paused    bool   // connected, but the output is paused
 	Device    string // its name; "" is shown as "iPhone"
 	Link      string // "Wi-Fi · LAN" / "USB"; "" when unknown
+	Mode      string // "phone" | "usb": the selected input
 	Hz        float64
 	PingMs    int // -1: not measured
 	Emulators int // subscribed DSU clients
@@ -69,6 +70,9 @@ type Manager struct {
 	currentIcon  uintptr
 	taskbarMsg   uint32 // "TaskbarCreated": explorer.exe restarted, the icon must be added again
 	lastTipAt    time.Time
+	hist         [histLen]float32 // rate and CPU history for the panel's graphs, one point per refresh
+	cpuHist      [histLen]float32
+	popClosedAt  time.Time
 
 	ready    atomic.Bool
 	stopChan chan struct{}
