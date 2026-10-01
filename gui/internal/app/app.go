@@ -112,10 +112,6 @@ type App struct {
 	// the UI-only event streams pause meanwhile (emitStateChange, streamQuat).
 	uiHidden atomic.Bool
 	trayMgr  *tray.Manager
-	// Global Windows Hotkeys
-	hotkeyRecenterEnabled atomic.Bool
-	hotkeyRecenterKeyMu   sync.RWMutex
-	hotkeyRecenterKey     string
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
@@ -198,15 +194,13 @@ func (a *App) startup(ctx context.Context) {
 	a.hubPhase("startup")
 
 	a.trayMgr = tray.New(tray.Callbacks{
-		Status:   a.trayStatus,
-		Show:     a.ShowWindow,
-		Quit:     a.QuitApp,
-		Recenter: a.TriggerRecenterFromHotkey,
-		Pause:    func() { a.TogglePause() },
-		Clients:  a.trayClients,
+		Status:  a.trayStatus,
+		Show:    a.ShowWindow,
+		Quit:    a.QuitApp,
+		Pause:   func() { a.TogglePause() },
+		Clients: a.trayClients,
 	})
 	a.trayMgr.Start()
-	a.trayMgr.UpdateHotkey(a.hotkeyRecenterEnabled.Load(), a.getHotkeyRecenterKey())
 
 	// 1. Certificate Authority
 	appData := os.Getenv("APPDATA")

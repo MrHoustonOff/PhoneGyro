@@ -1,10 +1,8 @@
-// Package tray is the Windows notification-area icon with its menu, and the
-// global recenter hotkey (registered on the tray's hidden window).
+// Package tray is the Windows notification-area icon with its menu.
 package tray
 
 import (
 	_ "embed"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -58,7 +56,6 @@ type Callbacks struct {
 	Pause    func() // toggle the pause
 	Clients  func() []Client // the subscribed DSU clients (named: costlier than Status)
 	Quit     func()
-	Recenter func() // the global hotkey was pressed
 }
 
 // Manager manages the Windows notification area system tray icon and context menu.
@@ -87,12 +84,6 @@ type Manager struct {
 	lastEmuCount int
 	lastProfile  string
 	lastLang     string
-
-	hotkeyMu      sync.RWMutex
-	hotkeyEnabled bool
-	hotkeyMods    uint32
-	hotkeyVK      uint32
-	hotkeyStr     string
 }
 
 // New initializes a pure Win32 tray manager.
@@ -116,62 +107,11 @@ func (tm *Manager) Stop() {
 	tm.stopOnce.Do(func() {
 		close(tm.stopChan)
 		if tm.hwnd != 0 {
-			pUnregisterHotKey.Call(tm.hwnd, uintptr(ID_HOTKEY_RECENTER))
 			tm.nidMu.Lock()
 			pShellNotifyIconW.Call(NIM_DELETE, uintptr(unsafe.Pointer(&tm.nid)))
 			tm.nidMu.Unlock()
 			pPostMessageW.Call(tm.hwnd, WM_CLOSE, 0, 0)
 		}
 	})
-}
-
-// UpdateHotkey parses and updates the global recenter hotkey registration.
-func (tm *Manager) UpdateHotkey(enabled bool, keyStr string) {
-	var mods, vk uint32
-	var err error
-	if enabled && keyStr != "" {
-		mods, vk, err = ParseHotkey(keyStr)
-		if err != nil {
-			fmt.Printf("[-] Failed to parse hotkey '%s': %v\n", keyStr, err)
-			enabled = false
-		}
-	} else {
-		enabled = false
-	}
-
-	tm.hotkeyMu.Lock()
-	tm.hotkeyEnabled = enabled
-	tm.hotkeyMods = mods
-	tm.hotkeyVK = vk
-	tm.hotkeyStr = keyStr
-	hwnd := tm.hwnd
-	tm.hotkeyMu.Unlock()
-
-	if hwnd != 0 {
-		pPostMessageW.Call(hwnd, WM_UPDATE_HOTKEY, 0, 0)
-	}
-}
-
-func (tm *Manager) applyHotkey(hwnd uintptr) {
-	if hwnd == 0 {
-		return
-	}
-	pUnregisterHotKey.Call(hwnd, uintptr(ID_HOTKEY_RECENTER))
-
-	tm.hotkeyMu.RLock()
-	enabled := tm.hotkeyEnabled
-	mods := tm.hotkeyMods
-	vk := tm.hotkeyVK
-	keyStr := tm.hotkeyStr
-	tm.hotkeyMu.RUnlock()
-
-	if enabled && vk != 0 {
-		ret, _, _ := pRegisterHotKey.Call(hwnd, uintptr(ID_HOTKEY_RECENTER), uintptr(mods|MOD_NOREPEAT), uintptr(vk))
-		if ret == 0 {
-			fmt.Printf("[-] Failed to register global Windows hotkey: %s (id %d)\n", keyStr, ID_HOTKEY_RECENTER)
-		} else {
-			fmt.Printf("[+] Registered global Windows hotkey: %s (id %d)\n", keyStr, ID_HOTKEY_RECENTER)
-		}
-	}
 }
 

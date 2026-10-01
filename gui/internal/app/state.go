@@ -408,14 +408,6 @@ func (a *App) ResetAHRS() {
 	}
 }
 
-// TriggerRecenterFromHotkey is invoked by the Windows global hotkey to reset orientation.
-func (a *App) TriggerRecenterFromHotkey() {
-	a.ResetAHRS()
-	if a.ctx != nil {
-		wailsRuntime.EventsEmit(a.ctx, "recenter:triggered", "hotkey")
-	}
-}
-
 // PlaySystemSound plays a native Windows sound for hardware connect/disconnect
 func (a *App) PlaySystemSound(soundType string) {
 	if runtime.GOOS != "windows" {

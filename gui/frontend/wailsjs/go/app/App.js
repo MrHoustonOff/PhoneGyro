@@ -286,10 +286,6 @@ export function TogglePause() {
   return window['go']['app']['App']['TogglePause']();
 }
 
-export function TriggerRecenterFromHotkey() {
-  return window['go']['app']['App']['TriggerRecenterFromHotkey']();
-}
-
 export function UIReady() {
   return window['go']['app']['App']['UIReady']();
 }

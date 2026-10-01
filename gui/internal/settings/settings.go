@@ -20,7 +20,6 @@ const (
 	DefaultDSUPort   = 26760
 	DefaultHTTPPort  = 8080
 	DefaultHTTPSPort = 8443
-	DefaultHotkey    = "Ctrl+Shift+R"
 
 	// Порог микро-тремора свой у каждого источника: шум датчиков разный. Телефон —
 	// ~0.05–0.1 °/с, MPU-6050 в USB-контроллере на ±2000 °/с — ~0.2 °/с в среднем и до
@@ -65,8 +64,6 @@ type Settings struct {
 	GyroSensitivity       float64        `json:"gyroSensitivity"`
 	MinimizeToTray        bool           `json:"minimizeToTray"` // kept for old readers: CloseAction == "minimize"
 	CloseAction           string         `json:"closeAction"`
-	HotkeyRecenterEnabled bool           `json:"hotkeyRecenterEnabled"`
-	HotkeyRecenterKey     string         `json:"hotkeyRecenterKey"`
 	InputMode             string         `json:"inputMode,omitempty"`
 }
 
@@ -82,30 +79,28 @@ func ValidAccent(a string) bool {
 // Defaults is a first launch's settings (DSUMAC is left empty: Load makes one).
 func Defaults() Settings {
 	return Settings{
-		Theme:                 "dark",
-		Accent:                "amber",
-		Lang:                  "ru",
-		FontScale:             1.00,
-		ActiveSlot:            -1,
-		DSUPort:               DefaultDSUPort,
-		HTTPPort:              DefaultHTTPPort,
-		HTTPSPort:             DefaultHTTPSPort,
-		GyroDeadzone:          0.20,
-		Splash:                true,
-		StillnessHint:         true,
-		DisconnectAlert:       true,
-		SilenceDisconnect:     true,
-		CemuDriftGuard:        true,
-		SoundMode:             "cute",
-		SoundVolume:           1,
-		SoundVolumes:          DefaultSoundVolumes(),
-		GyroDeadband:          DefaultDeadbandPhone,
-		GyroDeadbandUsb:       DefaultDeadbandUSB,
-		GyroSensitivity:       1.00,
-		CloseAction:           "ask",
-		HotkeyRecenterEnabled: false,
-		HotkeyRecenterKey:     DefaultHotkey,
-		InputMode:             "phone",
+		Theme:             "dark",
+		Accent:            "amber",
+		Lang:              "ru",
+		FontScale:         1.00,
+		ActiveSlot:        -1,
+		DSUPort:           DefaultDSUPort,
+		HTTPPort:          DefaultHTTPPort,
+		HTTPSPort:         DefaultHTTPSPort,
+		GyroDeadzone:      0.20,
+		Splash:            true,
+		StillnessHint:     true,
+		DisconnectAlert:   true,
+		SilenceDisconnect: true,
+		CemuDriftGuard:    true,
+		SoundMode:         "cute",
+		SoundVolume:       1,
+		SoundVolumes:      DefaultSoundVolumes(),
+		GyroDeadband:      DefaultDeadbandPhone,
+		GyroDeadbandUsb:   DefaultDeadbandUSB,
+		GyroSensitivity:   1.00,
+		CloseAction:       "ask",
+		InputMode:         "phone",
 	}
 }
 
@@ -217,8 +212,6 @@ type stored struct {
 	GyroSensitivity       *float64       `json:"gyroSensitivity,omitempty"`
 	FontScale             *float64       `json:"fontScale,omitempty"`
 	CloseAction           string         `json:"closeAction,omitempty"`
-	HotkeyRecenterEnabled *bool          `json:"hotkeyRecenterEnabled,omitempty"`
-	HotkeyRecenterKey     string         `json:"hotkeyRecenterKey,omitempty"`
 	InputMode             string         `json:"inputMode,omitempty"`
 }
 
@@ -319,12 +312,6 @@ func Load(dir string) (s Settings, found bool) {
 		s.CloseAction = r.CloseAction
 	}
 	s.MinimizeToTray = s.CloseAction == "minimize"
-	if r.HotkeyRecenterEnabled != nil {
-		s.HotkeyRecenterEnabled = *r.HotkeyRecenterEnabled
-	}
-	if r.HotkeyRecenterKey != "" {
-		s.HotkeyRecenterKey = r.HotkeyRecenterKey
-	}
 	if r.InputMode == "usb" {
 		s.InputMode = "usb"
 	}
