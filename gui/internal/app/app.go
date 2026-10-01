@@ -245,6 +245,7 @@ func (a *App) startup(ctx context.Context) {
 
 	// LiveDebug standalone 3D window routes and WebSocket streamer
 	a.serveLiveDebug(srv)
+	a.serveMobileAssets(srv) // the phone page's fonts and textures (mobile_assets.go)
 
 	srv.SetAppVersion(version.Get().Display)
 	srv.SetInputMode(a.GetInputMode())

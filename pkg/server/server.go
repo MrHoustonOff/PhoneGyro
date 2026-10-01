@@ -283,13 +283,13 @@ func (s *Server) DisconnectAllClients() {
 	}
 }
 
-// SetAppVersion substitutes the "__APP_VERSION__" placeholder in the served web
+// SetAppVersion substitutes every "__APP_VERSION__" placeholder in the served web
 // client with display (e.g. "1.1.3.017-dev"), so the phone shows the same build
 // identity as the desktop app footer. A no-op if the placeholder isn't present (the
 // page was changed, or this is never called) — the client just keeps the literal
 // placeholder text rather than failing to load.
 func (s *Server) SetAppVersion(display string) {
-	s.webContent = bytes.Replace(s.webContent, []byte("__APP_VERSION__"), []byte(display), 1)
+	s.webContent = bytes.ReplaceAll(s.webContent, []byte("__APP_VERSION__"), []byte(display))
 }
 
 // SetInputMode changes the active input mode ("phone" or "usb").
