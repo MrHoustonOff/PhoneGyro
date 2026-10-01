@@ -71,9 +71,9 @@ export function GetState():Promise<app.AppState>;
 
 export function GetTheme():Promise<string>;
 
-export function GetUpdateStatus():Promise<app.UpdateStatus>;
-
 export function GetTranslations(arg1:string):Promise<string>;
+
+export function GetUpdateStatus():Promise<app.UpdateStatus>;
 
 export function GetWizardMount():Promise<motion.MountCorrection>;
 

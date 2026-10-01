@@ -107,7 +107,6 @@ body { user-select: none; -webkit-user-select: none; }
   50% { box-shadow: 0 0 0 0.1875rem var(--danger-line), 0 0 2.5rem var(--danger-soft); } }
 @media (prefers-reduced-motion: reduce) { #btn-calibrate.is-hint, #btn-calibrate.is-urgent, .app-devcard.is-alert, .app-hint__bar { animation: none; } }
 
-
 /* Profiles: the current one is a button that opens the list. */
 .app-profiles { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.125rem; }
 .app-profwrap { position: relative; }
@@ -132,7 +131,7 @@ body { user-select: none; -webkit-user-select: none; }
 .app-menu__icon svg { width: 1rem; height: 1rem; stroke: var(--ink-2); fill: none;
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Empty slot rows: dimmed, not interactive */
-.app-menu__item--empty { opacity: .45; pointer-events: none; }
+
 .app-menu__empty { padding: 0.625rem; color: var(--ink-2); font-size: 0.8125rem; }
 .pg-profile__t, .pg-profile__s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -179,17 +178,12 @@ body { user-select: none; -webkit-user-select: none; }
 .app-toast.is-off { opacity: 0; transform: translateX(-50%) translateY(0.5rem); }
 
 /* ── Footer bits ────────────────────────────────────────────────────────── */
-.app-chan { height: 1rem; font-size: 0.625rem; padding: 0 0.375rem; }
-.app-sep { height: 0.875rem; margin: 0 0.125rem; }
+
 /* Conditional separator: only visible when the DEV badge is shown. */
-.app-sep--cond { display: none; }
-#ft-chan:not([hidden]) ~ .app-sep--cond { display: inline-block; }
+
 .app-gh { display: inline-flex; width: 0.875rem; height: 0.875rem; }
-.app-soon-set { width: 100%; margin-top: 0.5rem; }
+
 /* Titlebar: version + channel badge, no logo or app name. */
-.app-tb-ver { gap: 0.375rem; }
-.app-tb-ver .pg-titlebar__ver { font: 600 0.75rem/1 var(--font-mono); color: var(--ink-2); letter-spacing: .02em; }
-.app-tb-ver .app-tb-chan { height: 1rem; font-size: 0.625rem; padding: 0 0.375rem; }
 
 /* ── Launch animation (design: Splash) ─────────────────────────────────────
    The design's sequence as is: a small window on a neutral ground, rings unroll,
@@ -686,10 +680,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   justify-content: flex-end;
   gap: 0.625rem;
 }
-.app-cal-panel--verify {
-  min-height: auto;
-  justify-content: flex-start;
-}
 
 /* Success notice with SVG checkmark */
 .app-cal-success-notice::before {
@@ -705,12 +695,12 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 
 .app-cal-action-box { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 1rem; }
 .app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.app-cal-main { display: flex; flex-direction: column; gap: 0.875rem; min-height: 16rem; }
+
 .app-cal-label { font-weight: 600; font-size: 0.875rem; }
 .app-cal-name { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
-.app-cal-live { display: flex; justify-content: center; padding-top: 0.25rem; font-size: 0.8125rem; color: var(--ink-2); letter-spacing: 0.02em; }
+
 .app-cal-mount .pg-row { min-height: 0; }
-.app-cal-matrix-box { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+
 .app-cal-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .app-cal-chips .pg-badge { font-size: 0.8125rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.375rem; }
 .app-cal-chips .pg-badge b { font-weight: 700; color: var(--ink); }
@@ -726,35 +716,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   align-items: center;
   justify-content: space-between;
   gap: 0.375rem;
-}
-.app-cal-matrix-card {
-  padding: 0.875rem 1rem;
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.625rem;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto;
-  box-sizing: border-box;
-}
-.app-cal-matrix-head {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-}
-.app-cal-matrix-pre {
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  background: var(--tile-hi);
-  border: 1px solid var(--tile-line);
-  border-radius: var(--radius-md);
-  font: 400 0.9375rem/1.5 var(--font-mono);
-  letter-spacing: 0.04em;
-  color: var(--ink);
-  white-space: pre;
 }
 
 /* ── Calibration Save Screen ────────────────────────────────────────────── */
@@ -869,7 +830,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   gap: 0.375rem;
 }
 
-.app-cal-matrix-card,
 .app-cal-mount,
 .app-cal-preview-card {
   background: var(--tile-tex) var(--tile);
@@ -1042,7 +1002,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   .app-cal-extra--r { display: none; }
   #cal-mount { order: 6; }
   .app-cal-disclaimer { order: 7; }
-  .app-cal-live { order: 8; }
+  
 }
 
 /* ── Calibration review pass: ring hosts, tiles, axis tiles, run panel ───── */
@@ -1180,7 +1140,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 
 /* Verify */
 .app-cal-verify-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
-.app-cal-matrix-pre { text-align: center; }
 
 .app-cal-mcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
 .app-cal-mcard {
@@ -1433,8 +1392,15 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-mix .pg-slider { width: 6.5rem; }
 
 /* Tile character (see the tokens near the top): last, so it wins over the flat fills above. */
-.app-cal-axis, .app-cal-vstat, .app-cal-mcard, .app-cal-preview-profile,
-.app-cal-run, .app-cal-action-box.pg-notice, .app-cal-preview-card, .app-cal-mountnote, .app-cal-matrix-card, .app-cal-mount {
+.app-cal-axis,
+.app-cal-vstat,
+.app-cal-mcard,
+.app-cal-preview-profile,
+.app-cal-run,
+.app-cal-action-box.pg-notice,
+.app-cal-preview-card,
+.app-cal-mountnote,
+.app-cal-mount {
   background: var(--tile-lift) var(--tile);
   box-shadow: var(--tile-bevel);
 }
@@ -1606,16 +1572,8 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 
 /* Full-width tiles across all columns in .pg-stats */
-.pg-stat--full {
-  grid-column: 1 / -1;
-}
 
 /* Section group overline in .pg-stats */
-.app-stats-group-label {
-  grid-column: 1 / -1;
-  margin-top: 0.625rem;
-  margin-bottom: -0.125rem;
-}
 
 /* Hero tile: Channel quality index */
 .app-stat-hero {
@@ -1728,16 +1686,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 
 /* Pipeline active chips container */
-.app-pipeline-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  margin-top: 0.375rem;
-}
-.app-pipeline-chips .pg-badge {
-  font-size: 0.6875rem;
-  padding: 0.125rem 0.5rem;
-}
 
 /* Session metrics list */
 .app-session-list {
@@ -1791,11 +1739,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 
 /* DSU clients value single row */
-.app-dsu-clients-val {
-  justify-content: flex-start;
-  gap: 0.375rem;
-  align-items: baseline;
-}
 
 /* USB Protocol card (Group F) */
 .app-stat-usb-card {
@@ -1812,19 +1755,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
   pointer-events: none;
   opacity: 0.45;
 }
-.app-stat-usb-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-.app-stat-usb-title {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font: 600 0.8125rem/1rem var(--font-sans);
-  color: var(--ink);
-}
+
 .app-usb-rows {
   display: flex;
   flex-direction: column;

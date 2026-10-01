@@ -130,12 +130,12 @@ export function GetTheme() {
   return window['go']['app']['App']['GetTheme']();
 }
 
-export function GetUpdateStatus() {
-  return window['go']['app']['App']['GetUpdateStatus']();
-}
-
 export function GetTranslations(arg1) {
   return window['go']['app']['App']['GetTranslations'](arg1);
+}
+
+export function GetUpdateStatus() {
+  return window['go']['app']['App']['GetUpdateStatus']();
 }
 
 export function GetWizardMount() {
