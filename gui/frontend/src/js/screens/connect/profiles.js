@@ -80,7 +80,14 @@ function render(st) {
 
 function setMenu(open) {
   menuOpen = open;
-  show($('prof-menu'), open);
+  const menu = $('prof-menu');
+  menu.classList.remove('is-down');
+  show(menu, open);
+  // Opens upward; when the card sits too high for that, open downward instead.
+  if (open) {
+    const top = document.querySelector('.pg-header')?.getBoundingClientRect().bottom ?? 0;
+    if (menu.getBoundingClientRect().top < top) menu.classList.add('is-down');
+  }
   $('prof-current').setAttribute('aria-expanded', String(open));
 }
 

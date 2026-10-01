@@ -1341,6 +1341,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-cal-axis.is-locked { background: color-mix(in srgb, var(--accent) 15%, var(--tile)); }
 
 /* Control profiles: the list keeps the card grain; its bubbles are dark insets, like the current-profile button. */
+#prof-menu.is-down { bottom: auto; top: calc(100% + 0.375rem); }
 #prof-menu { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem; background: var(--surface-raised) var(--tex-grain); }
 #prof-menu .app-menu__item {
   border-radius: var(--radius-lg);
