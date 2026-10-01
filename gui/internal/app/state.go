@@ -154,19 +154,48 @@ func (a *App) GetAppVersion() version.Info {
 	return version.Get()
 }
 
-// trayStatus is what the tray icon and its menu show (internal/tray).
+// trayStatus is what the tray icon, its menu and its panel show (internal/tray).
+// Only atomics and a few copies: it runs every 0.8 s and on hover.
 func (a *App) trayStatus() tray.Status {
 	bank := a.activeBank()
 	st := tray.Status{
 		Lang:    a.GetLang(),
+		Theme:   a.GetTheme(),
+		Accent:  a.accentName(),
 		Online:  bank.hasClient.Load(),
+		Paused:  a.isPaused.Load(),
 		Profile: a.getActiveProfileName(),
+		PingMs:  a.linkPingMs(),
+		Version: version.Get().Display,
+		DSUPort: a.dsuPort,
 	}
 	if s, ok := bank.deviceName.Load().(string); ok {
 		st.Device = s
 	}
+	if st.Online {
+		if a.GetInputMode() == "usb" {
+			st.Link = "USB"
+		} else {
+			st.Link = "Wi-Fi · LAN"
+		}
+		if a.srv != nil {
+			_, _, st.Hz = a.srv.PacketStats()
+		}
+	}
 	if a.dsuSrv != nil {
 		st.Emulators = a.dsuSrv.ActiveClientCount()
+	}
+	bank.profilesMu.RLock()
+	st.Slot = bank.activeSlot
+	for _, p := range bank.profiles {
+		st.Profiles = append(st.Profiles, p.Name)
+	}
+	bank.profilesMu.RUnlock()
+	if p := a.lastResStats.Load(); p != nil {
+		m := *p
+		st.CPU, _ = m["cpuPercent"].(float64)
+		st.RAMMB, _ = m["ramMb"].(float64)
+		st.RAMTotal, _ = m["totalRamMb"].(float64)
 	}
 	return st
 }
