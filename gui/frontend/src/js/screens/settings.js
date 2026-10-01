@@ -5,7 +5,7 @@
 // screen does not show are kept as they are.
 
 import { $, setText, show, esc } from '../core/dom.js';
-import { call } from '../core/bridge.js';
+import { call, on } from '../core/bridge.js';
 import { getState, onState } from '../core/state.js';
 import { t, onLang } from '../core/i18n.js';
 import { onScreen, go } from '../shell/router.js';
@@ -335,6 +335,7 @@ async function load() {
 
 export function startSettings() {
   const screen = $('screen-settings');
+  on('firewall:status', () => refreshFirewall()); // the verdict after Windows' prompt was answered
   screen.addEventListener('input', onInput);
   screen.addEventListener('change', onInput);
   screen.addEventListener('click', (e) => {

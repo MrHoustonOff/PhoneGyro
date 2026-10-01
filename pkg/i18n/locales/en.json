@@ -348,7 +348,8 @@
     "how": "How to create the rule",
     "docs_heading": "The phone cannot connect: Windows Firewall",
     "alert_text": "> [!CAUTION]\n> Windows Firewall does not let the phone connect to PhoneGyro, so the phone cannot connect. The USB controller is not affected.\n\nCreate an allow rule by hand, once. It takes about a minute; the docs show how.",
-    "alert_public": "Windows marks your network as public; enable the rule for it too."
+    "alert_public": "Windows marks your network as public; enable the rule for it too.",
+    "state_waiting": "Waiting for your answer in the Windows prompt…"
   },
   "update_notice": {
     "title": "PhoneGyro {version} is out",

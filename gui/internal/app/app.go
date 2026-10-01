@@ -291,6 +291,9 @@ func (a *App) startNetwork(dsuSrv *dsu.Server, srv *server.Server) {
 	case <-a.netGate:
 	case <-time.After(netGateMax):
 	}
+	// Before anything listens: with no rule for this exe yet, Windows shows its
+	// own prompt the moment a port opens (firewall.go waits for that answer).
+	prompted := a.firewallPromptExpected()
 	if err := dsuSrv.Start(); err != nil {
 		fmt.Printf("[-] DSU start error: %v\n", err)
 	}
@@ -299,7 +302,7 @@ func (a *App) startNetwork(dsuSrv *dsu.Server, srv *server.Server) {
 		fmt.Printf("[-] Server start error: %v\n", err)
 	}
 	a.hubPhase("HTTP server up")
-	a.watchFirewall() // firewall.go
+	a.watchFirewall(prompted) // firewall.go
 }
 
 // shutdown is called when the Wails application terminates
