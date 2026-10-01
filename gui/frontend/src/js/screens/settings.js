@@ -15,6 +15,7 @@ import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
 import { ACCENTS, applyAccent } from '../ui/accent.js';
 import { setDebugPanel } from '../debug/toggle.js';
+import { setSoundConfig } from '../core/sound.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -209,6 +210,7 @@ function save(now = false) {
   saveTimer = setTimeout(async () => {
     try {
       await call('SaveAppSettings', cur);
+      if (cur) setSoundConfig(cur);
     } catch (e) {
       toast(String(e && e.message || e));
       load();
@@ -315,6 +317,7 @@ async function regenMac() {
 
 async function load() {
   [cur, def] = await Promise.all([call('GetAppSettings'), call('GetDefaultAppSettings')]);
+  if (cur) setSoundConfig(cur);
   render();
   applyMotionFilterParams();
 }
