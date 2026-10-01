@@ -73,6 +73,7 @@ type Manager struct {
 	menuGdip     *session
 	menuScale    float32
 	menuBg       uint32
+	dsuOpen      bool // the right-click menu shows the DSU client list unfolded
 
 	ready    atomic.Bool
 	stopChan chan struct{}

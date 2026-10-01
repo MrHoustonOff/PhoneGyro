@@ -143,6 +143,12 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 	hwnd, _, _ := pCreateWindowExW.Call(0, uintptr(unsafe.Pointer(className)), uintptr(unsafe.Pointer(className)),
 		0, 0, 0, 0, 0, 0, 0, hInstance, 0)
 	tm.hwnd = hwnd
+	// Process-wide: popup menus of this process use dark frame.
+	applyMenuTheme("dark")
+	// HWND-level: pin dark mode to our message window (uxtheme ordinal 133).
+	// This survives process-wide resets by WebView2 / Wails when the user
+	// switches the app theme to light.
+	applyDarkModeToWindow(hwnd)
 
 	tm.nid = NOTIFYICONDATAW{
 		CbSize:           uint32(unsafe.Sizeof(NOTIFYICONDATAW{})),

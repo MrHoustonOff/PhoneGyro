@@ -27,6 +27,8 @@ const (
 	odsSelected   = 0x0001
 	odtMenu       = 1
 	idTrayPause   = 1007
+	idTrayDSU     = 1008
+	tpmNoAnimation = 0x4000
 )
 
 type measureItemStruct struct {
@@ -47,22 +49,26 @@ type drawItemStruct struct {
 type rectI struct{ left, top, right, bottom int32 }
 
 var (
-	pExcludeClipRect         = syscall.NewLazyDLL("gdi32.dll").NewProc("ExcludeClipRect")
 	pGetDpiForMonitor        = syscall.NewLazyDLL("shcore.dll").NewProc("GetDpiForMonitor")
 	pMonitorFromPoint        = user32.NewProc("MonitorFromPoint")
 	pGdipTranslateWorldTrans = gdiplus.NewProc("GdipTranslateWorldTransform")
-	setAppMode               uintptr
-	flushMenuThemes          uintptr
+	setAppMode            uintptr
+	flushMenuThemes       uintptr
+	allowDarkModeForWin   uintptr // uxtheme ordinal 133: AllowDarkModeForWindow
 )
 
 func init() {
 	if h, err := windows.LoadLibrary("uxtheme.dll"); err == nil {
 		setAppMode, _ = windows.GetProcAddressByOrdinal(h, 135)
 		flushMenuThemes, _ = windows.GetProcAddressByOrdinal(h, 136)
+		allowDarkModeForWin, _ = windows.GetProcAddressByOrdinal(h, 133)
 	}
 }
 
 // applyMenuTheme switches the system menus of this process to dark or light.
+// menuThemeMode is the system menu mode asked for: always dark.
+var menuThemeMode = "dark"
+
 func applyMenuTheme(theme string) {
 	if setAppMode == 0 {
 		return
@@ -76,6 +82,18 @@ func applyMenuTheme(theme string) {
 		syscall.SyscallN(flushMenuThemes)
 	}
 }
+
+// applyDarkModeToWindow pins dark-mode to a specific HWND (uxtheme ordinal 133).
+// This survives process-wide resets from WebView2 / Wails when the app theme changes.
+func applyDarkModeToWindow(hwnd uintptr) {
+	if allowDarkModeForWin != 0 {
+		syscall.SyscallN(allowDarkModeForWin, hwnd, 1) // 1 = allow/force dark
+	}
+	if flushMenuThemes != 0 {
+		syscall.SyscallN(flushMenuThemes)
+	}
+}
+
 
 type menuKind int
 
@@ -96,7 +114,8 @@ const (
 	glyphPause   = ""
 	glyphPlay    = ""
 	glyphPower   = ""
-	glyphChevron = ""
+	glyphChevron = "" // down; up () while the client list is open
+	glyphChevUp  = ""
 )
 
 type menuItem struct {
@@ -111,6 +130,7 @@ type menuItem struct {
 	danger   bool // turns red when hovered
 	primary  bool // the default action: accent glyph
 	ok       bool // header: the device is online (accent chip)
+	open     bool // the DSU row: its client list is unfolded
 	id       uint32
 	children []*menuItem
 }
@@ -122,7 +142,7 @@ func (it *menuItem) size() (w, h float32) {
 	case kindInfo:
 		return 268, 46
 	case kindClient:
-		return 256, 36
+		return 268, 36
 	case kindSeparator:
 		return 268, 9
 	}
@@ -144,7 +164,7 @@ func appendOwner(hMenu uintptr, flags uint32, id uint32, data int) {
 }
 
 // buildItems is the menu's content for the status.
-func buildItems(st Status) []*menuItem {
+func buildItems(st Status, dsuOpen bool) []*menuItem {
 	l := st.Lang
 	p := paletteFor(st.Theme, st.Accent)
 
@@ -181,7 +201,7 @@ func buildItems(st Status) []*menuItem {
 		dsu.title, dsu.dot = tr(l, "Нет клиентов", "No clients"), p.warn
 	} else {
 		dsu.title = fmt.Sprintf(tr(l, "Подключено: %d", "Connected: %d"), n)
-		dsu.chevron, dsu.enabled = true, true
+		dsu.chevron, dsu.enabled, dsu.id, dsu.open = true, true, idTrayDSU, dsuOpen
 		for _, c := range st.Clients {
 			ch := &menuItem{kind: kindClient, title: c.Name, dot: p.accent, sub: tr(l, "активен", "active")}
 			if !c.Active {
@@ -203,70 +223,85 @@ func buildItems(st Status) []*menuItem {
 func (tm *Manager) showContextMenu(hwnd uintptr) {
 	var pt POINT
 	pGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
-	pSetForegroundWindow.Call(hwnd)
-
-	hMenu, _, _ := pCreatePopupMenu.Call()
-	if hMenu == 0 {
-		return
-	}
-	defer pDestroyMenu.Call(hMenu)
+	tm.dsuOpen = false
 
 	st := tm.status()
 	st.Clients = tm.cb.Clients()
-	applyMenuTheme(st.Theme)
+	// Always dark, whatever the app's theme (the system switch is best effort; the
+	// frame hook below makes the result the same when it does not take).
+	applyMenuTheme(menuThemeMode)
+	applyDarkModeToWindow(hwnd)
 	sess := startGdip()
 	if sess == nil {
 		return
 	}
 	defer sess.close()
 	tm.menuGdip, tm.menuScale, tm.menuBg = sess, dpiAt(pt), 0
-	tm.menuPal = paletteFor(st.Theme, st.Accent)
-	items := buildItems(st)
-	tm.menu = nil
+	tm.menuPal = paletteFor("dark", st.Accent)
 	defer func() { tm.menu, tm.menuGdip = nil, nil }()
+	setFrameColors(tm.menuPal.raised, blend(tm.menuPal.raised, tm.menuPal.ink, 0.12), int32(268*tm.menuScale))
 
-	// An item's index in tm.menu is its owner-draw data (+1); children follow their parent.
-	add := func(m uintptr, it *menuItem) {
-		tm.menu = append(tm.menu, it)
-		idx := len(tm.menu) - 1
-		flags := uint32(0)
-		if !it.enabled {
-			flags |= MF_GRAYED | MF_DISABLED
+	flags := uint32(TPM_BOTTOMALIGN | TPM_RIGHTALIGN | TPM_RETURNCMD)
+	for {
+		cmd := tm.trackOnce(hwnd, st, pt, flags)
+		if cmd == idTrayDSU {
+			// "Dropdown": unfold or fold the client list and show the menu again in place.
+			tm.dsuOpen = !tm.dsuOpen
+			flags |= tpmNoAnimation
+			continue
 		}
-		if len(it.children) > 0 {
-			sub, _, _ := pCreatePopupMenu.Call()
-			for _, ch := range it.children {
-				tm.menu = append(tm.menu, ch)
-				appendOwner(sub, MF_GRAYED|MF_DISABLED, 0, len(tm.menu)-1)
-			}
-			pAppendMenuW.Call(m, uintptr(flags|mfOwnerDraw|mfPopup), sub, uintptr(idx+1))
-			return
+		switch cmd {
+		case ID_TRAY_OPEN:
+			tm.cb.Show()
+		case idTrayPause:
+			tm.cb.Pause()
+			tm.refresh()
+		case ID_TRAY_QUIT:
+			tm.cb.Quit()
 		}
-		appendOwner(m, flags, it.id, idx)
+		return
 	}
-	add(hMenu, items[0])
-	add(hMenu, items[1])
-	add(hMenu, items[2])
-	add(hMenu, &menuItem{kind: kindSeparator})
-	add(hMenu, items[3])
-	add(hMenu, items[4])
-	add(hMenu, &menuItem{kind: kindSeparator})
-	add(hMenu, items[5])
+}
 
-	cmd, _, _ := pTrackPopupMenu.Call(hMenu, TPM_BOTTOMALIGN|TPM_RIGHTALIGN|TPM_RETURNCMD,
-		uintptr(pt.X), uintptr(pt.Y), 0, hwnd, 0)
+// trackOnce builds the menu for the current fold state and shows it; it returns the chosen command.
+func (tm *Manager) trackOnce(hwnd uintptr, st Status, pt POINT, flags uint32) uintptr {
+	pSetForegroundWindow.Call(hwnd)
+	hMenu, _, _ := pCreatePopupMenu.Call()
+	if hMenu == 0 {
+		return 0
+	}
+	defer pDestroyMenu.Call(hMenu)
+	items := buildItems(st, tm.dsuOpen)
+	tm.menu = nil
+
+	// An item's index in tm.menu is its owner-draw data (+1).
+	add := func(it *menuItem) {
+		tm.menu = append(tm.menu, it)
+		fl := uint32(0)
+		if !it.enabled {
+			fl |= MF_GRAYED | MF_DISABLED
+		}
+		appendOwner(hMenu, fl, it.id, len(tm.menu)-1)
+	}
+	sep := func() { add(&menuItem{kind: kindSeparator}) }
+	add(items[0])
+	add(items[1])
+	add(items[2])
+	if tm.dsuOpen {
+		for _, ch := range items[2].children {
+			add(ch)
+		}
+	}
+	sep()
+	add(items[3])
+	add(items[4])
+	sep()
+	add(items[5])
+
+	cmd, _, _ := pTrackPopupMenu.Call(hMenu, uintptr(flags), uintptr(pt.X), uintptr(pt.Y), 0, hwnd, 0)
 	// Without this the menu may not close on a click elsewhere (MSDN, TrackPopupMenu).
 	pPostMessageW.Call(hwnd, wmNull, 0, 0)
-
-	switch cmd {
-	case ID_TRAY_OPEN:
-		tm.cb.Show()
-	case idTrayPause:
-		tm.cb.Pause()
-		tm.refresh()
-	case ID_TRAY_QUIT:
-		tm.cb.Quit()
-	}
+	return cmd
 }
 
 // ptrOf is the structure a window message's lParam points to.
@@ -306,6 +341,7 @@ func (tm *Manager) drawItem(lParam uintptr) bool {
 	if it == nil || tm.menuGdip == nil {
 		return false
 	}
+	adoptMenuWindow(d.hdc)
 	sc := tm.menuScale
 	p := tm.menuPal
 	bg := p.raised // the whole menu is drawn in the app's own colours, whatever frame the system gives it
@@ -359,7 +395,11 @@ func (tm *Manager) drawItem(lParam uintptr) bool {
 		c.text(it.glyph, icons, 14, styleRegular, p.ink2, 14, 9, 28, 28, alignCenter, false)
 		right := float32(14)
 		if it.chevron {
-			c.text(glyphChevron, icons, 10, styleRegular, p.ink3, w-right-12, 0, 12, h, alignCenter, false)
+			chev := glyphChevron
+			if it.open {
+				chev = glyphChevUp
+			}
+			c.text(chev, icons, 10, styleRegular, p.ink3, w-right-12, 0, 12, h, alignCenter, false)
 			right = 34
 		} else if it.dot != 0 {
 			c.fillEllipse(w-right-8, h/2-4, 8, 8, it.dot)
@@ -383,13 +423,9 @@ func (tm *Manager) drawItem(lParam uintptr) bool {
 		c.line(12, h/2, w-12, h/2, 1, blend(bg, p.ink, 0.14))
 
 	case kindClient:
-		c.fillEllipse(16, h/2-3.5, 7, 7, it.dot)
+		c.fillEllipse(22, h/2-3.5, 7, 7, it.dot)
 		c.text(it.sub, body, 11, styleRegular, p.ink3, w-86-14, 0, 86, h, alignRight, false)
-		c.text(it.title, semi, 13, styleRegular, p.ink, 32, 0, w-32-86-18, h, alignLeft, true)
-	}
-	if len(it.children) > 0 {
-		// Windows draws its own black submenu arrow after the item; keep it off our colours.
-		pExcludeClipRect.Call(d.hdc, uintptr(d.rc.right-int32(28*sc)), uintptr(d.rc.top), uintptr(d.rc.right), uintptr(d.rc.bottom))
+		c.text(it.title, semi, 13, styleRegular, p.ink, 38, 0, w-38-86-18, h, alignLeft, true)
 	}
 	return true
 }

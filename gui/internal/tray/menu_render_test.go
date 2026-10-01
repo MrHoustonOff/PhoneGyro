@@ -32,7 +32,7 @@ func TestRenderMenu(t *testing.T) {
 			}
 			tm.menuGdip, tm.menuScale, tm.menuBg = sess, scale, 0
 			tm.menuPal = paletteFor(st.Theme, st.Accent)
-			items := buildItems(st)
+			items := buildItems(st, true)
 			var flat []*menuItem
 			for _, it := range items {
 				flat = append(flat, it)
