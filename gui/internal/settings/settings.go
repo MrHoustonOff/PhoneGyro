@@ -68,7 +68,6 @@ type Settings struct {
 	HotkeyRecenterEnabled bool           `json:"hotkeyRecenterEnabled"`
 	HotkeyRecenterKey     string         `json:"hotkeyRecenterKey"`
 	InputMode             string         `json:"inputMode,omitempty"`
-	NoAutoZoom            bool           `json:"noAutoZoom"` // true = always use saved fontScale, false (default) = auto-pick on launch
 }
 
 // ValidAccent reports whether a is one of the UI accent colours.
@@ -220,7 +219,6 @@ type stored struct {
 	HotkeyRecenterEnabled *bool          `json:"hotkeyRecenterEnabled,omitempty"`
 	HotkeyRecenterKey     string         `json:"hotkeyRecenterKey,omitempty"`
 	InputMode             string         `json:"inputMode,omitempty"`
-	NoAutoZoom            bool           `json:"noAutoZoom,omitempty"`
 }
 
 // Load reads dir/settings.json over the defaults; invalid values keep their
@@ -329,7 +327,6 @@ func Load(dir string) (s Settings, found bool) {
 	if r.InputMode == "usb" {
 		s.InputMode = "usb"
 	}
-	s.NoAutoZoom = r.NoAutoZoom
 	return s, true
 }
 

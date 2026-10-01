@@ -4,7 +4,7 @@
 import { call, on, off } from '../../core/bridge.js';
 import { go, onScreen, getCurrentScreen } from '../../shell/router.js';
 import { onState } from '../../core/state.js';
-import { t, onLang } from '../../core/i18n.js';
+import { onLang } from '../../core/i18n.js';
 import { AimGame } from './aim-game.js';
 import { PlatformGame } from './platform-game.js';
 
@@ -76,8 +76,6 @@ export const TuningBench = {
     if (viewAim) viewAim.hidden = (target !== 'aim');
     if (viewPlatform) viewPlatform.hidden = (target !== 'platform');
 
-    const metricLabel = document.getElementById('game-label-timer');
-
     if (target === 'platform') {
       PlatformGame.init().then(() => {
         requestAnimationFrame(() => {
@@ -85,11 +83,9 @@ export const TuningBench = {
         });
       });
       PlatformGame.updateHud(true);
-      if (metricLabel) metricLabel.textContent = t('ui.games_plat_tilt') || 'Наклон:';
     } else if (target === 'aim') {
       AimGame.init();
       AimGame.syncState();
-      if (metricLabel) metricLabel.textContent = t('ui.games_aim_time') || 'Время:';
     }
   },
 

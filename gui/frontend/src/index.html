@@ -11,23 +11,6 @@
   (function () {
     var d = document.documentElement, t = null, s = null, z = null;
     try { t = localStorage.getItem('pg-theme'); s = localStorage.getItem('pg-splash'); z = parseFloat(localStorage.getItem('pg-zoom')); } catch (e) {}
-    // Auto-pick scale on launch based on screen height/width unless user opted out.
-    // For small screens (< 720 height), downscale so the 1280x720 window fits without clipping.
-    // For normal/large screens, stay at 1.0 (100 %) so the 1280x720 window displays the 2-column reference layout.
-    var noAZ = false; try { noAZ = localStorage.getItem('pg-no-auto-zoom') === '1'; } catch (e) {}
-    if (!noAZ) {
-      var W = screen.availWidth || 1280;
-      var H = screen.availHeight || 720;
-      var raw = Math.min(1.0, Math.min(W / 1280, (H - 24) / 720));
-      var clamped = Math.min(1.0, Math.max(0.5, raw));
-      var STEPS = [0.5, 0.6, 0.7, 0.8, 0.9, 1];
-      var best = STEPS[0];
-      for (var i = 0; i < STEPS.length; i++) {
-        if (Math.abs(STEPS[i] - clamped) < Math.abs(best - clamped)) best = STEPS[i];
-      }
-      z = best;
-      try { localStorage.setItem('pg-zoom', String(z)); } catch (e) {}
-    }
     if (z >= 0.5 && z <= 3) d.style.setProperty('--pg-zoom', String(z));
     var a = null; try { a = localStorage.getItem('pg-accent'); } catch (e) {}
     a = a === 'gold' ? 'amber' : (a || 'amber'); // green is the design's default: no attribute
@@ -46,7 +29,6 @@
 <!-- A new ring pattern every launch (sets --tex-rings-gen-*; the design tile is the fallback). -->
 <script src="js/zelda-rings.js"></script>
 <script src="js/rings.js"></script>
-<script src="js/vendor/three.min.js"></script>
 <script type="module" src="js/main.js"></script>
 </head>
 <body class="pg-app">

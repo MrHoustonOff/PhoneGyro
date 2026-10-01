@@ -115,6 +115,7 @@ func (a *App) requestClose() (keep bool) {
 	if a.quitting.Load() {
 		return false
 	}
+	a.saveWindow()
 	switch a.GetCloseAction() {
 	case "minimize":
 		a.hideWindow()
@@ -138,6 +139,7 @@ func (a *App) CloseWindow() {
 
 // QuitApp cleanly terminates the entire application.
 func (a *App) QuitApp() {
+	a.saveWindow()
 	a.quitting.Store(true)
 	if a.trayMgr != nil {
 		a.trayMgr.Stop()

@@ -24,6 +24,7 @@ import (
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/usbdev"
 	"phonegyro-gui/internal/version"
+	"phonegyro-gui/internal/winstate"
 
 	"github.com/gorilla/websocket"
 )
@@ -118,8 +119,10 @@ type App struct {
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
-	// Auto-zoom on launch (settings.json noAutoZoom, default false = auto on)
-	noAutoZoom atomic.Bool
+	// Main window placement (winstate): the handle once the window is up, and
+	// the saved placement to restore when it still fits the monitors.
+	winHwnd    uintptr
+	winRestore *winstate.State
 }
 
 // NewApp creates a new App application struct

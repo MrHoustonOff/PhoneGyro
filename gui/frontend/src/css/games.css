@@ -73,27 +73,12 @@
   .app-games-bar__right {
     gap: 0.25rem;
   }
-  .app-games-hud {
-    gap: 0.25rem;
-  }
-  .app-games-hud .pg-badge {
-    padding: 0.125rem 0.375rem;
-    font-size: 0.6875rem;
-  }
   #btn-game-recenter {
     padding: 0 0.375rem;
     font-size: 0.6875rem;
     height: 1.75rem;
   }
   #btn-game-recenter .pg-kbd {
-    display: none;
-  }
-}
-
-@container pgwin (max-width: 53.75rem) {
-  #games-hud-score,
-  #games-hud-record,
-  #games-hud-metric {
     display: none;
   }
 }
@@ -105,25 +90,6 @@
   font-weight: 600;
 }
 
-.app-games-hud {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.app-games-hud .pg-badge {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  padding: 0.1875rem 0.5rem;
-}
-
-.app-games-hud .pg-badge b {
-  color: var(--accent);
-  font-weight: 700;
-  margin-left: 0.25rem;
-}
-
-/* Stage Area (takes entire remaining window) */
 .app-games-stage {
   position: relative;
   flex: 1;

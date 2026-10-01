@@ -466,7 +466,6 @@ export namespace settings {
 	    hotkeyRecenterEnabled: boolean;
 	    hotkeyRecenterKey: string;
 	    inputMode?: string;
-	    noAutoZoom: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -507,7 +506,6 @@ export namespace settings {
 	        this.hotkeyRecenterEnabled = source["hotkeyRecenterEnabled"];
 	        this.hotkeyRecenterKey = source["hotkeyRecenterKey"];
 	        this.inputMode = source["inputMode"];
-	        this.noAutoZoom = source["noAutoZoom"];
 	    }
 	}
 

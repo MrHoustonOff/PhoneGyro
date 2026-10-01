@@ -36,6 +36,8 @@ function step(dir) {
 }
 
 export function startZoom() {
+  // The <head> script already applied the saved scale for the first paint; start from it.
+  z = clamp(parseFloat(document.documentElement.style.getPropertyValue('--pg-zoom')) || 1);
   addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') { e.preventDefault(); step(1); }
@@ -52,16 +54,5 @@ export function startZoom() {
     setZoom(z + (e.deltaY < 0 ? 0.1 : -0.1));
   }, { passive: false });
   on('font-scale-sync', (v) => setZoom(v, { save: false, quiet: true }));
-  let noAZ = false;
-  try { noAZ = localStorage.getItem('pg-no-auto-zoom') === '1'; } catch (e) {}
-  if (noAZ) {
-    call('GetFontScale').then((v) => setZoom(v || 1, { save: false, quiet: true }));
-  } else {
-    call('SetFontScale', z);
-  }
-}
-
-/** Mirrors Go's noAutoZoom setting to localStorage for the next launch's head script. */
-export function syncAutoZoomSetting(noAutoZoom) {
-  try { localStorage.setItem('pg-no-auto-zoom', noAutoZoom ? '1' : '0'); } catch (e) {}
+  call('GetFontScale').then((v) => setZoom(v || 1, { save: false, quiet: true }));
 }

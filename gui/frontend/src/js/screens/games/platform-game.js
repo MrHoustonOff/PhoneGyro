@@ -174,179 +174,179 @@ export const PlatformGame = {
       this.camera = camera;
 
       // Studio Lighting: Sheikah Shrine ancient illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
-    scene.add(ambientLight);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+      scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    dirLight.position.set(3.5, 8.0, 5.0);
-    scene.add(dirLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(3.5, 8.0, 5.0);
+      scene.add(dirLight);
 
-    const cyanPoint = new THREE.PointLight(0x00e5ff, 1.4, 10);
-    cyanPoint.position.set(0, 2.0, 0);
-    scene.add(cyanPoint);
+      const cyanPoint = new THREE.PointLight(0x00e5ff, 1.4, 10);
+      cyanPoint.position.set(0, 2.0, 0);
+      scene.add(cyanPoint);
 
-    // Platform Root Group (rotates on central gimbal pivot)
-    const platformGroup = new THREE.Group();
-    scene.add(platformGroup);
-    this.platformGroup = platformGroup;
+      // Platform Root Group (rotates on central gimbal pivot)
+      const platformGroup = new THREE.Group();
+      scene.add(platformGroup);
+      this.platformGroup = platformGroup;
 
-    const isLight = (document.documentElement.getAttribute('data-theme') === 'light' || document.body.getAttribute('data-theme') === 'light');
+      const isLight = (document.documentElement.getAttribute('data-theme') === 'light' || document.body.getAttribute('data-theme') === 'light');
 
-    // 1. Main Ancient Sheikah Slate Top Slab
-    const slabGeo = new THREE.BoxGeometry(this.platformSizeX, this.platformThickness, this.platformSizeZ);
-    const slateMat = new THREE.MeshStandardMaterial({
-      color: isLight ? 0x2e3644 : 0x151821,
-      roughness: 0.65,
-      metalness: 0.35
-    });
-    const slabMesh = new THREE.Mesh(slabGeo, slateMat);
-    platformGroup.add(slabMesh);
-    this.slabMesh = slabMesh;
-    this.slabMat = slateMat;
+      // 1. Main Ancient Sheikah Slate Top Slab
+      const slabGeo = new THREE.BoxGeometry(this.platformSizeX, this.platformThickness, this.platformSizeZ);
+      const slateMat = new THREE.MeshStandardMaterial({
+        color: isLight ? 0x2e3644 : 0x151821,
+        roughness: 0.65,
+        metalness: 0.35
+      });
+      const slabMesh = new THREE.Mesh(slabGeo, slateMat);
+      platformGroup.add(slabMesh);
+      this.slabMesh = slabMesh;
+      this.slabMat = slateMat;
 
-    // 2. Zelda Underside Tapered Stone Pedestal & Gimbal Hub
-    const pedMat = new THREE.MeshStandardMaterial({
-      color: isLight ? 0x242a36 : 0x0e1017,
-      roughness: 0.72,
-      metalness: 0.28
-    });
-    this.pedMat = pedMat;
+      // 2. Zelda Underside Tapered Stone Pedestal & Gimbal Hub
+      const pedMat = new THREE.MeshStandardMaterial({
+        color: isLight ? 0x242a36 : 0x0e1017,
+        roughness: 0.72,
+        metalness: 0.28
+      });
+      this.pedMat = pedMat;
 
-    const pedMidGeo = new THREE.BoxGeometry(this.platformSizeX * 0.88, 0.08, this.platformSizeZ * 0.88);
-    const pedMid = new THREE.Mesh(pedMidGeo, pedMat);
-    pedMid.position.y = -this.platformThickness / 2 - 0.04;
-    platformGroup.add(pedMid);
-    this.pedMid = pedMid;
+      const pedMidGeo = new THREE.BoxGeometry(this.platformSizeX * 0.88, 0.08, this.platformSizeZ * 0.88);
+      const pedMid = new THREE.Mesh(pedMidGeo, pedMat);
+      pedMid.position.y = -this.platformThickness / 2 - 0.04;
+      platformGroup.add(pedMid);
+      this.pedMid = pedMid;
 
-    const pedLowGeo = new THREE.BoxGeometry(this.platformSizeX * 0.68, 0.10, this.platformSizeZ * 0.68);
-    const pedLow = new THREE.Mesh(pedLowGeo, pedMat);
-    pedLow.position.y = -this.platformThickness / 2 - 0.13;
-    platformGroup.add(pedLow);
-    this.pedLow = pedLow;
+      const pedLowGeo = new THREE.BoxGeometry(this.platformSizeX * 0.68, 0.10, this.platformSizeZ * 0.68);
+      const pedLow = new THREE.Mesh(pedLowGeo, pedMat);
+      pedLow.position.y = -this.platformThickness / 2 - 0.13;
+      platformGroup.add(pedLow);
+      this.pedLow = pedLow;
 
-    // Gimbal Hub & Cyan Energy Ring
-    const hubGeo = new THREE.CylinderGeometry(0.30, 0.36, 0.18, 24);
-    const hubMat = new THREE.MeshStandardMaterial({
-      color: 0x9b752c,
-      metalness: 0.88,
-      roughness: 0.25
-    });
-    const gimbalHub = new THREE.Mesh(hubGeo, hubMat);
-    gimbalHub.position.y = -this.platformThickness / 2 - 0.24;
-    platformGroup.add(gimbalHub);
-    this.gimbalHub = gimbalHub;
+      // Gimbal Hub & Cyan Energy Ring
+      const hubGeo = new THREE.CylinderGeometry(0.30, 0.36, 0.18, 24);
+      const hubMat = new THREE.MeshStandardMaterial({
+        color: 0x9b752c,
+        metalness: 0.88,
+        roughness: 0.25
+      });
+      const gimbalHub = new THREE.Mesh(hubGeo, hubMat);
+      gimbalHub.position.y = -this.platformThickness / 2 - 0.24;
+      platformGroup.add(gimbalHub);
+      this.gimbalHub = gimbalHub;
 
-    const hubRingGeo = new THREE.TorusGeometry(0.32, 0.015, 12, 32);
-    const hubRingMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
-    const hubRing = new THREE.Mesh(hubRingGeo, hubRingMat);
-    hubRing.rotation.x = Math.PI / 2;
-    hubRing.position.y = -this.platformThickness / 2 - 0.24;
-    platformGroup.add(hubRing);
-    this.hubRing = hubRing;
+      const hubRingGeo = new THREE.TorusGeometry(0.32, 0.015, 12, 32);
+      const hubRingMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+      const hubRing = new THREE.Mesh(hubRingGeo, hubRingMat);
+      hubRing.rotation.x = Math.PI / 2;
+      hubRing.position.y = -this.platformThickness / 2 - 0.24;
+      platformGroup.add(hubRing);
+      this.hubRing = hubRing;
 
-    // 3. Surface Sheikah Runic Circuitry & Border Line
-    this.createEdgeLine();
-    this.createRunes();
+      // 3. Surface Sheikah Runic Circuitry & Border Line
+      this.createEdgeLine();
+      this.createRunes();
 
-    // 4. Sheikah Ancient Goal Socket (Receptacle)
-    const holeGroup = new THREE.Group();
+      // 4. Sheikah Ancient Goal Socket (Receptacle)
+      const holeGroup = new THREE.Group();
 
-    // Deep void pit
-    const holePitGeo = new THREE.CircleGeometry(0.18, 32);
-    const holePitMat = new THREE.MeshBasicMaterial({
-      color: 0x030508,
-      side: THREE.DoubleSide
-    });
-    const holePit = new THREE.Mesh(holePitGeo, holePitMat);
-    holePit.rotation.x = -Math.PI / 2;
-    holePit.position.y = this.platformThickness / 2 + 0.002;
-    holeGroup.add(holePit);
+      // Deep void pit
+      const holePitGeo = new THREE.CircleGeometry(0.18, 32);
+      const holePitMat = new THREE.MeshBasicMaterial({
+        color: 0x030508,
+        side: THREE.DoubleSide
+      });
+      const holePit = new THREE.Mesh(holePitGeo, holePitMat);
+      holePit.rotation.x = -Math.PI / 2;
+      holePit.position.y = this.platformThickness / 2 + 0.002;
+      holeGroup.add(holePit);
 
-    // Outer metallic bronze collar
-    const collarGeo = new THREE.TorusGeometry(0.19, 0.016, 12, 32);
-    const collarMat = new THREE.MeshStandardMaterial({
-      color: 0x9b752c,
-      metalness: 0.88,
-      roughness: 0.28
-    });
-    const collar = new THREE.Mesh(collarGeo, collarMat);
-    collar.rotation.x = Math.PI / 2;
-    collar.position.y = this.platformThickness / 2 + 0.003;
-    holeGroup.add(collar);
+      // Outer metallic bronze collar
+      const collarGeo = new THREE.TorusGeometry(0.19, 0.016, 12, 32);
+      const collarMat = new THREE.MeshStandardMaterial({
+        color: 0x9b752c,
+        metalness: 0.88,
+        roughness: 0.28
+      });
+      const collar = new THREE.Mesh(collarGeo, collarMat);
+      collar.rotation.x = Math.PI / 2;
+      collar.position.y = this.platformThickness / 2 + 0.003;
+      holeGroup.add(collar);
 
-    // Glowing Sheikah energetic pulse ring
-    const holeRimGeo = new THREE.RingGeometry(0.15, 0.19, 32);
-    const holeRimMat = new THREE.MeshBasicMaterial({
-      color: 0x00e5ff,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.92
-    });
-    const holeRim = new THREE.Mesh(holeRimGeo, holeRimMat);
-    holeRim.rotation.x = -Math.PI / 2;
-    holeRim.position.y = this.platformThickness / 2 + 0.004;
-    holeGroup.add(holeRim);
+      // Glowing Sheikah energetic pulse ring
+      const holeRimGeo = new THREE.RingGeometry(0.15, 0.19, 32);
+      const holeRimMat = new THREE.MeshBasicMaterial({
+        color: 0x00e5ff,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.92
+      });
+      const holeRim = new THREE.Mesh(holeRimGeo, holeRimMat);
+      holeRim.rotation.x = -Math.PI / 2;
+      holeRim.position.y = this.platformThickness / 2 + 0.004;
+      holeGroup.add(holeRim);
 
-    // Ethereal vertical energy beacon beam rising from the socket
-    const beaconGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.9, 16, 1, true);
-    const beaconMat = new THREE.MeshBasicMaterial({
-      color: 0x00e5ff,
-      transparent: true,
-      opacity: 0.32,
-      side: THREE.DoubleSide,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false
-    });
-    const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
-    beaconMesh.position.y = this.platformThickness / 2 + 0.45;
-    holeGroup.add(beaconMesh);
-    this.beaconMesh = beaconMesh;
+      // Ethereal vertical energy beacon beam rising from the socket
+      const beaconGeo = new THREE.CylinderGeometry(0.08, 0.16, 0.9, 16, 1, true);
+      const beaconMat = new THREE.MeshBasicMaterial({
+        color: 0x00e5ff,
+        transparent: true,
+        opacity: 0.32,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      });
+      const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
+      beaconMesh.position.y = this.platformThickness / 2 + 0.45;
+      holeGroup.add(beaconMesh);
+      this.beaconMesh = beaconMesh;
 
-    platformGroup.add(holeGroup);
-    this.holeMesh = holeGroup;
-    holeGroup.visible = true;
+      platformGroup.add(holeGroup);
+      this.holeMesh = holeGroup;
+      holeGroup.visible = true;
 
-    // 5. Ancient Sheikah Protective Borders (Bortiki)
-    this.createBorders();
+      // 5. Ancient Sheikah Protective Borders (Bortiki)
+      this.createBorders();
 
-    // 6. Ancient Sheikah Orb (Ball)
-    const ballGroup = new THREE.Group();
-    const ballGeo = new THREE.SphereGeometry(this.ballRadius, 32, 32);
-    const ballMat = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      roughness: 0.22,
-      metalness: 0.90
-    });
-    const ballCore = new THREE.Mesh(ballGeo, ballMat);
-    ballGroup.add(ballCore);
+      // 6. Ancient Sheikah Orb (Ball)
+      const ballGroup = new THREE.Group();
+      const ballGeo = new THREE.SphereGeometry(this.ballRadius, 32, 32);
+      const ballMat = new THREE.MeshStandardMaterial({
+        color: 0xd4af37,
+        roughness: 0.22,
+        metalness: 0.90
+      });
+      const ballCore = new THREE.Mesh(ballGeo, ballMat);
+      ballGroup.add(ballCore);
 
-    // Equator & meridian cyan energy rings
-    const eqRingGeo = new THREE.TorusGeometry(this.ballRadius + 0.002, 0.007, 12, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
-    const eqRing = new THREE.Mesh(eqRingGeo, ringMat);
-    ballGroup.add(eqRing);
+      // Equator & meridian cyan energy rings
+      const eqRingGeo = new THREE.TorusGeometry(this.ballRadius + 0.002, 0.007, 12, 32);
+      const ringMat = new THREE.MeshBasicMaterial({ color: 0x00e5ff });
+      const eqRing = new THREE.Mesh(eqRingGeo, ringMat);
+      ballGroup.add(eqRing);
 
-    const merRingGeo = new THREE.TorusGeometry(this.ballRadius + 0.002, 0.007, 12, 32);
-    const merRing = new THREE.Mesh(merRingGeo, ringMat);
-    merRing.rotation.y = Math.PI / 2;
-    ballGroup.add(merRing);
+      const merRingGeo = new THREE.TorusGeometry(this.ballRadius + 0.002, 0.007, 12, 32);
+      const merRing = new THREE.Mesh(merRingGeo, ringMat);
+      merRing.rotation.y = Math.PI / 2;
+      ballGroup.add(merRing);
 
-    // Local light attached to ball
-    const ballLight = new THREE.PointLight(0x00e5ff, 0.70, 1.2);
-    ballGroup.add(ballLight);
+      // Local light attached to ball
+      const ballLight = new THREE.PointLight(0x00e5ff, 0.70, 1.2);
+      ballGroup.add(ballLight);
 
-    this.ballPosY = this.platformThickness / 2 + this.ballRadius;
-    ballGroup.position.set(0, this.ballPosY, 0);
-    platformGroup.add(ballGroup);
-    this.ballMesh = ballGroup;
+      this.ballPosY = this.platformThickness / 2 + this.ballRadius;
+      ballGroup.position.set(0, this.ballPosY, 0);
+      platformGroup.add(ballGroup);
+      this.ballMesh = ballGroup;
 
-    this.initialized = true;
-    this.recenter();
-    this.syncDimensions(true);
-  } finally {
-    this.initializing = false;
-  }
-},
+      this.initialized = true;
+      this.recenter();
+      this.syncDimensions(true);
+    } finally {
+      this.initializing = false;
+    }
+  },
 
   createEdgeLine() {
     if (!this.platformGroup || !window.THREE) return;

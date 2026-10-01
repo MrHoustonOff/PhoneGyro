@@ -10,7 +10,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
-	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // assets is the UI (frontend/src under its own path), set by Run.
@@ -40,6 +39,7 @@ func Run(frontend fs.FS) {
 		app.startDebugHub()
 	}
 	debugApp := NewLiveDebugApp()
+	app.prepareWindow()
 
 	bgR, bgG, bgB := uint8(0xf1), uint8(0xf1), uint8(0xf1)
 	if app.GetTheme() == "dark" {
@@ -60,7 +60,7 @@ func Run(frontend fs.FS) {
 		},
 		OnStartup: app.startup,
 		OnDomReady: func(ctx context.Context) {
-			wailsRuntime.WindowCenter(ctx)
+			app.windowReady()
 			app.hubPhase("window DOM ready")
 		},
 		OnShutdown: app.shutdown,

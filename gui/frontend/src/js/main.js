@@ -1,7 +1,7 @@
 // Entry point. Everything local (clicks, the title bar, the launch animation)
 // starts at once; what needs Go waits for the bridge, then the first state.
 
-import { ready, openURL, call } from './core/bridge.js';
+import { ready, openURL } from './core/bridge.js';
 import { startI18n } from './core/i18n.js';
 import { startState } from './core/state.js';
 import { startTitlebar } from './shell/titlebar.js';
@@ -11,7 +11,7 @@ import { startRouter } from './shell/router.js';
 import { startCopy } from './ui/copy.js';
 import { startTooltips } from './ui/tooltip.js';
 import { startSelects } from './ui/select.js';
-import { startZoom, syncAutoZoomSetting } from './ui/zoom.js';
+import { startZoom } from './ui/zoom.js';
 import { startAccent } from './ui/accent.js';
 import { startDebug, debugBooted } from './debug/toggle.js';
 import { startCloseDialog } from './ui/close-dialog.js';
@@ -58,11 +58,8 @@ async function boot() {
   startZoom();
   startAccent();
   syncSplashSetting();
-  // Mirror Go's noAutoZoom to localStorage for the next launch's head script.
-  call('GetAppSettings').then((s) => { if (s) syncAutoZoomSetting(s.noAutoZoom); });
   startNotices();         // after the strings: they are shown in full
   debugBooted();
-  window.dispatchEvent(new Event('resize'));
 }
 
 const booted = boot().catch((e) => console.error('PhoneGyro UI start failed:', e));
