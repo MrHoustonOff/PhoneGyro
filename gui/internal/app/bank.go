@@ -20,8 +20,10 @@ import (
 // method keeps its exact behavior -- it just now reads/writes through
 // whichever bank is currently active instead of fields directly on App.
 type motionBank struct {
-	hasClient   atomic.Bool
-	connectedAt time.Time
+	hasClient atomic.Bool
+	// connectedAt: when the source came online, UnixNano (0 = offline). Atomic:
+	// the frame handler, the phone callbacks and the UI loops all touch it.
+	connectedAt atomic.Int64
 	// deviceName identifies whatever is actually connected on this source:
 	// the phone's reported model (OnClientDevice), or a USB device's
 	// self-reported name (optional PhoneGyro protocol TYPE=0x02 frame) --
@@ -124,9 +126,29 @@ type motionBank struct {
 	calStepLogs  map[int]StepCaptureLog
 	calValResult ValidationResult
 
+	// frameMu serialises onMotionFrame for this bank: two phone connections at
+	// once (a reload before the old socket times out, a second phone) each run
+	// their own goroutine, and the anchor, the accelerometer filter and the
+	// frame clocks are only ever meant to see one stream.
+	frameMu sync.Mutex
+
 	lastMotionRecvTs   atomic.Int64
 	lastSensorChangeTs atomic.Int64
 }
+
+// connectedSince is when the source came online (zero time while offline).
+func (b *motionBank) connectedSince() time.Time {
+	if ns := b.connectedAt.Load(); ns != 0 {
+		return time.Unix(0, ns)
+	}
+	return time.Time{}
+}
+
+// markConnected records the connection time unless one is already set.
+func (b *motionBank) markConnected() { b.connectedAt.CompareAndSwap(0, time.Now().UnixNano()) }
+
+// clearConnected marks the source offline.
+func (b *motionBank) clearConnected() { b.connectedAt.Store(0) }
 
 // newMotionBank returns a bank with the same defaults NewApp used to give
 // the (formerly single, shared) App fields directly.

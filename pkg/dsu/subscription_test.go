@@ -201,3 +201,13 @@ func TestDSU_ClientsInConnectionOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestTouchClientCap(t *testing.T) {
+	s := NewServer(0)
+	for i := 0; i < MaxClients+10; i++ {
+		s.touchClient(&net.UDPAddr{IP: net.IPv4(10, 0, byte(i>>8), byte(i)), Port: 5000})
+	}
+	if n := s.ActiveClients(); n != MaxClients {
+		t.Fatalf("clients = %d, want %d", n, MaxClients)
+	}
+}

@@ -266,8 +266,8 @@ func (a *App) GetState() AppState {
 			status = "online"
 		}
 
-		if !bank.connectedAt.IsZero() {
-			dur := time.Since(bank.connectedAt)
+		if at := bank.connectedSince(); !at.IsZero() {
+			dur := time.Since(at)
 			h := int(dur.Hours())
 			m := int(dur.Minutes()) % 60
 			s := int(dur.Seconds()) % 60

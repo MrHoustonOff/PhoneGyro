@@ -75,7 +75,10 @@ func (a *App) startDebugHub() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/events", a.hubServeEvents)
 		mux.HandleFunc("/disable", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "*")
+			if !allowAppCORS(w, r) {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
 			go a.DisableDebug()
 		})
 		go func() { _ = http.Serve(ln, mux) }()
@@ -150,8 +153,24 @@ func (a *App) hubPhase(name string) {
 	a.debugLogLine(fmt.Sprintf("INFO phase: %s at %.0f ms", name, float64(time.Since(appStart).Microseconds())/1000))
 }
 
+// allowAppCORS lets the debug window (a WebView on wails.localhost) read the hub
+// across origins, and no web page open in a browser on this PC.
+func allowAppCORS(w http.ResponseWriter, r *http.Request) bool {
+	if !appOrigin(r) {
+		return false
+	}
+	if o := r.Header.Get("Origin"); o != "" {
+		w.Header().Set("Access-Control-Allow-Origin", o)
+		w.Header().Set("Vary", "Origin")
+	}
+	return true
+}
+
 func (a *App) hubServeEvents(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if !allowAppCORS(w, r) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	fl, ok := w.(http.Flusher)

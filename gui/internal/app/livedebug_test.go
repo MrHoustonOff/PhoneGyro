@@ -1,8 +1,11 @@
 package app
 
 import (
+	"math"
 	"net/http/httptest"
 	"testing"
+
+	"phonegyro/pkg/server"
 )
 
 // Знаки Эйлеровых углов (вперёд / вправо / по часовой = +) проверяет
@@ -64,6 +67,20 @@ func TestLiveDebug_SocketGuards(t *testing.T) {
 		}
 		if got := appOrigin(r); got != want {
 			t.Errorf("appOrigin(%q) = %v, want %v", origin, got, want)
+		}
+	}
+}
+
+func TestFiniteFrame(t *testing.T) {
+	ok := server.MotionFrame{RotX: 1, AccY: -1, Qw: 1}
+	if !finiteFrame(ok) {
+		t.Fatal("a normal frame was rejected")
+	}
+	for i, f := range []server.MotionFrame{
+		{RotX: float32(math.NaN())}, {AccZ: float32(math.Inf(1))}, {Qw: float32(math.Inf(-1))},
+	} {
+		if finiteFrame(f) {
+			t.Errorf("frame %d with NaN/Inf passed", i)
 		}
 	}
 }

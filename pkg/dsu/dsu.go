@@ -788,6 +788,9 @@ func (s *Server) stillKicked(addr *net.UDPAddr) bool {
 	return true
 }
 
+// MaxClients caps simultaneous subscribers (a real setup has one or two emulators).
+const MaxClients = 16
+
 // touchClient registers or refreshes a subscription; true if it is new.
 func (s *Server) touchClient(addr *net.UDPAddr) bool {
 	key := addr.String()
@@ -796,6 +799,11 @@ func (s *Server) touchClient(addr *net.UDPAddr) bool {
 
 	client, exists := s.clients[key]
 	if !exists {
+		if len(s.clients) >= MaxClients {
+			// UDP sources are trivial to forge: without a cap every fake address
+			// would get a 60 Hz stream for 5 s and a map entry.
+			return false
+		}
 		now := time.Now()
 		s.clients[key] = &ClientSub{
 			Addr:        addr,

@@ -1,8 +1,6 @@
 package app
 
 import (
-	"time"
-
 	"phonegyro/pkg/server"
 
 	"phonegyro-gui/internal/usbdev"
@@ -34,7 +32,7 @@ func (a *App) usbHost() usbdev.Host {
 		// device" screen instead of showing stale connected/frozen telemetry.
 		Detached: func(forgetName bool) {
 			a.usbBank.hasClient.Store(false)
-			a.usbBank.connectedAt = time.Time{}
+			a.usbBank.clearConnected()
 			if forgetName {
 				a.usbBank.deviceName.Store("Controller")
 			}

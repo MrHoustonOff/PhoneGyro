@@ -60,7 +60,7 @@ func (a *App) heartbeat() {
 				silenceDuration := nowMs - bank.lastMotionRecvTs.Load()
 				frozenDuration := nowMs - bank.lastSensorChangeTs.Load()
 				// Grace period of 2 seconds after initial connection
-				if time.Since(bank.connectedAt) > 2*time.Second {
+				if time.Since(bank.connectedSince()) > 2*time.Second {
 					if silenceDuration > 2000 || frozenDuration > 2000 {
 						a.srv.DisconnectAllClients()
 					}
@@ -106,7 +106,7 @@ func (a *App) watchLinkLoss(ctx context.Context) {
 			kind, total, merged, lost := bank.loss.Snapshot()
 			active := bank.hasClient.Load() && !a.isPaused.Load()
 			var connectedFor time.Duration
-			if at := bank.connectedAt; !at.IsZero() {
+			if at := bank.connectedSince(); !at.IsZero() {
 				connectedFor = now.Sub(at)
 			}
 			if reason, ok := alarm.Check(now, active, connectedFor, kind, total, merged, lost); ok {

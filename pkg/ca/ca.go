@@ -251,16 +251,14 @@ func (cm *CertificateManager) GetCertificate(hello *tls.ClientHelloInfo) (*tls.C
 		}
 	}
 
-	serverName := ""
-	if hello != nil {
-		serverName = strings.TrimSpace(hello.ServerName)
-	}
-
 	// Fast path: check under read lock
+	// The SNI name is the client's to choose: it is never added to the leaf
+	// (any client on the LAN could otherwise grow it and make the server re-sign
+	// a P-384 certificate on every handshake). The phone connects by IP; the
+	// names the leaf carries are the ones given to NewCertificateManager.
 	cm.mu.RLock()
 	ipKnown := (connIP == nil) || (cm.knownIPs[connIP.String()] != nil)
-	dnsKnown := (serverName == "") || cm.knownDNS[serverName]
-	if ipKnown && dnsKnown && cm.LeafCert != nil {
+	if ipKnown && cm.LeafCert != nil {
 		cert := cm.LeafCert
 		cm.mu.RUnlock()
 		return cert, nil
@@ -274,10 +272,6 @@ func (cm *CertificateManager) GetCertificate(hello *tls.ClientHelloInfo) (*tls.C
 	needRebuild := false
 	if connIP != nil && cm.knownIPs[connIP.String()] == nil {
 		cm.knownIPs[connIP.String()] = connIP
-		needRebuild = true
-	}
-	if serverName != "" && !cm.knownDNS[serverName] {
-		cm.knownDNS[serverName] = true
 		needRebuild = true
 	}
 

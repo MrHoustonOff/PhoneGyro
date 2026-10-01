@@ -24,6 +24,12 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 	// mode is active, and vice versa via usbMgr.Start/Stop), so picking
 	// the bank by current input mode is race-free in practice.
 	bank := a.activeBank()
+	if !finiteFrame(frame) {
+		// One NaN would stay in the gyro bias, the anchor and the AHRS for good.
+		return
+	}
+	bank.frameMu.Lock()
+	defer bank.frameMu.Unlock()
 	bank.lastMotionRecvTs.Store(recvTs)
 	if frame.HasEventCounters {
 		bank.loss.ObservePhone(frame.SensorEvents, frame.SensorDropped)
@@ -33,9 +39,7 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 
 	if !bank.hasClient.Load() {
 		bank.hasClient.Store(true)
-		if bank.connectedAt.IsZero() {
-			bank.connectedAt = time.Now()
-		}
+		bank.markConnected()
 		a.emitStateChange()
 		a.broadcastLiveDebugJSON(map[string]any{
 			"type":      "device_status",
@@ -400,4 +404,14 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 			})
 		}
 	}
+}
+
+// finiteFrame: every number in the frame is a real number (no NaN or ±Inf).
+func finiteFrame(f server.MotionFrame) bool {
+	for _, v := range [...]float32{f.RotX, f.RotY, f.RotZ, f.AccX, f.AccY, f.AccZ, f.Qx, f.Qy, f.Qz, f.Qw} {
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+			return false
+		}
+	}
+	return true
 }

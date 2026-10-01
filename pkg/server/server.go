@@ -9,6 +9,9 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -135,9 +138,7 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			CheckOrigin: func(r *http.Request) bool {
-				return true // allow LAN connections
-			},
+			CheckOrigin: sameOrigin,
 		},
 	}
 
@@ -154,7 +155,11 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 
 	// HTTP root catch-all: redirect to HTTPS (registered last so specific routes win)
 	httpMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		target := fmt.Sprintf("https://%s:%d%s", r.URL.Hostname(), s.httpsPort, r.URL.RequestURI())
+		host := r.Host
+		if h, _, err := net.SplitHostPort(r.Host); err == nil {
+			host = h
+		}
+		target := fmt.Sprintf("https://%s%s", net.JoinHostPort(host, strconv.Itoa(s.httpsPort)), r.URL.RequestURI())
 		http.Redirect(w, r, target, http.StatusTemporaryRedirect)
 	})
 
@@ -163,20 +168,24 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 
 // Start launches both servers. All routes must be registered before calling Start.
 func (s *Server) Start() error {
+	// Only GetCertificate, no static Certificates: with both set, crypto/tls
+	// serves the static one to every client without SNI -- the phone connects
+	// by IP, so a leaf re-signed for a new IP (ca.AddHostIPs) would never reach it.
 	tlsConfig := &tls.Config{
-		Certificates:   []tls.Certificate{*s.caManager.LeafCert},
 		GetCertificate: s.caManager.GetCertificate,
 		MinVersion:     tls.VersionTLS12,
 	}
 
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.httpPort),
-		Handler: s.HTTPMux,
+		Addr:              fmt.Sprintf(":%d", s.httpPort),
+		Handler:           s.HTTPMux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	s.httpsServer = &http.Server{
-		Addr:      fmt.Sprintf(":%d", s.httpsPort),
-		Handler:   s.HTTPSMux,
-		TLSConfig: tlsConfig,
+		Addr:              fmt.Sprintf(":%d", s.httpsPort),
+		Handler:           s.HTTPSMux,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
@@ -272,7 +281,19 @@ const (
 	wsReadDeadline = 30 * time.Second // connection dies if no client frame in this window
 	wsPingInterval = 1 * time.Second  // server→client keepalive ping interval (also the RTT sample rate, linkrtt.go)
 	wsPingText     = "PING"           // client listens for this and resets its own watchdog
+	wsMaxMessage   = 4096             // a frame is 58 bytes, a control message well under 1 KB
 )
+
+// sameOrigin lets the phone page open the socket (its Origin is this server)
+// and clients that send no Origin at all; a web page from anywhere else cannot.
+func sameOrigin(r *http.Request) bool {
+	o := r.Header.Get("Origin")
+	if o == "" {
+		return true
+	}
+	u, err := url.Parse(o)
+	return err == nil && strings.EqualFold(u.Host, r.Host)
+}
 
 // DisconnectAllClients forcefully closes all active client WebSocket connections.
 func (s *Server) DisconnectAllClients() {
@@ -367,6 +388,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 	conn.EnableWriteCompression(false)
+	conn.SetReadLimit(wsMaxMessage)
 
 	// Optimize underlying TCP connection for ultra-low latency & keepalive.
 	// For WSS connections, conn.UnderlyingConn() is *tls.Conn, which wraps the raw *net.TCPConn.
@@ -471,15 +493,16 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				Model   string `json:"model"`
 				Visible *bool  `json:"visible"`
 			}
-			if err := json.Unmarshal(message, &ctrl); err == nil {
+			if err := json.Unmarshal(message, &ctrl); err == nil && ctrl.Type != "" {
+				// A control message is never a motion frame, even one this
+				// server does not act on (it would decode as all zeros).
 				if ctrl.Type == "device" && ctrl.Model != "" && s.OnClientDevice != nil {
 					s.OnClientDevice(ctrl.Model)
-					continue
 				}
 				if ctrl.Type == "visibility" && ctrl.Visible != nil && s.OnClientVisibility != nil {
 					s.OnClientVisibility(*ctrl.Visible)
-					continue
 				}
+				continue
 			}
 		}
 

@@ -38,7 +38,6 @@ var (
 	pGdipAddPathLine              = gdiplus.NewProc("GdipAddPathLine")
 	pGdipClosePathFigure          = gdiplus.NewProc("GdipClosePathFigure")
 	pGdipFillPath                 = gdiplus.NewProc("GdipFillPath")
-	pGdipDrawPath                 = gdiplus.NewProc("GdipDrawPath")
 	pGdipFillEllipse              = gdiplus.NewProc("GdipFillEllipse")
 	pGdipDrawLine                 = gdiplus.NewProc("GdipDrawLine")
 	pGdipFillRectangle            = gdiplus.NewProc("GdipFillRectangle")
@@ -52,7 +51,6 @@ var (
 	pGdipSetStringFormatLineAlign = gdiplus.NewProc("GdipSetStringFormatLineAlign")
 	pGdipSetStringFormatTrimming  = gdiplus.NewProc("GdipSetStringFormatTrimming")
 	pGdipDrawString               = gdiplus.NewProc("GdipDrawString")
-	pGdipMeasureString            = gdiplus.NewProc("GdipMeasureString")
 )
 
 type gdipStartupInput struct {
@@ -65,9 +63,6 @@ type gdipStartupInput struct {
 type rectF struct{ x, y, w, h float32 }
 
 func fl(v float32) uintptr { return uintptr(math.Float32bits(v)) }
-
-// argb packs a colour (straight alpha).
-func argb(r, g, b, a uint8) uint32 { return uint32(a)<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b) }
 
 // withAlpha returns c with its alpha scaled by k (0..1).
 func withAlpha(c uint32, k float32) uint32 {
@@ -286,21 +281,4 @@ func (c *canvas) text(s string, font string, px float32, style int32, col uint32
 	r := rectF{x * sc, y * sc, w * sc, h * sc}
 	pGdipDrawString.Call(c.g, uintptr(unsafe.Pointer(&u[0])), uintptr(len(u)-1), f, uintptr(unsafe.Pointer(&r)), c.sf, b)
 	pGdipDeleteBrush.Call(b)
-}
-
-// measure is the width of s in logical px.
-func (c *canvas) measure(s string, font string, px float32, style int32) float32 {
-	f := c.font(font, px, style)
-	if f == 0 || s == "" {
-		return 0
-	}
-	u, _ := syscall.UTF16FromString(s)
-	pGdipSetStringFormatAlign.Call(c.sf, 0)
-	pGdipSetStringFormatTrimming.Call(c.sf, 0)
-	lay := rectF{0, 0, 4000, 200}
-	var bounds rectF
-	var cp, ln int32
-	pGdipMeasureString.Call(c.g, uintptr(unsafe.Pointer(&u[0])), uintptr(len(u)-1), f, uintptr(unsafe.Pointer(&lay)), c.sf,
-		uintptr(unsafe.Pointer(&bounds)), uintptr(unsafe.Pointer(&cp)), uintptr(unsafe.Pointer(&ln)))
-	return bounds.w / c.scale
 }
