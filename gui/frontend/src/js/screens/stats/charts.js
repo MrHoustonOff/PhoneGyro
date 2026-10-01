@@ -54,6 +54,10 @@ export function setChartsEnabled(on) {
   enabled = !!on;
   if (enabled) for (const c of live) if (c.stale) schedule(c);
 }
+/** Force-wake every chart (call after the stats screen becomes visible to resolve IO edge-cases). */
+export function wakeCharts() {
+  for (const c of live) { c.visible = true; if (c.stale) schedule(c); }
+}
 function watch(host, c) {
   c.visible = !io;
   byHost.set(host, c);

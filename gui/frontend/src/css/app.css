@@ -348,11 +348,13 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-set-foot { display: flex; justify-content: flex-end; }
 .pg-row.is-modified { padding-left: 1.375rem; }
 
-/* Brand pill = Home. Outlined in accent while the home screen shows. */
+/* Brand pill = Home. Always accent-outlined (it is the primary navigation element).
+   Stronger glow + inset highlight when the home screen is active. */
 .app-home { cursor: pointer; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; line-height: 1;
+  border-color: var(--accent-line) !important;
   transition: border-color .15s, box-shadow .15s, background .15s; }
 .app-home:hover { background: var(--surface-hover) var(--tex-grain); }
-.app-home.is-home { border-color: var(--accent-line); box-shadow: var(--shadow-float), 0 0 0 1px var(--accent-line); }
+.app-home.is-home { box-shadow: var(--shadow-float), 0 0 0 1px var(--accent-line), inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent); }
 .app-brandmark { width: 1.75rem; height: 1.75rem; object-fit: contain; }
 
 /* Launch animation in the logo's gold: the card's rings, the ring "o", the
@@ -1878,7 +1880,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 /* The chart: an inset well; the height keeps it at about half the tile or more. */
 .app-chart {
   --c: var(--accent);
-  position: relative; flex: 1 0 auto; height: 4.75rem; overflow: hidden;
+  position: relative; flex: 1 0 auto; height: 4.75rem; overflow: hidden; clip-path: inset(0 round var(--radius-md));
   background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
 }
 .app-tile--mini .app-chart { height: 3.5rem; }

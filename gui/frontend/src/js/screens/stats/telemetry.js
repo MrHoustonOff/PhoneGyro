@@ -9,7 +9,7 @@ import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
 import { TelemetryDeriveEngine } from './derive.js';
-import { createSpark, createAxisChart, setChartsEnabled } from './charts.js';
+import { createSpark, createAxisChart, setChartsEnabled, wakeCharts } from './charts.js';
 
 const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
@@ -906,6 +906,9 @@ export function initTelemetry(paneEl) {
       on('resource-stats', handleResourceStats);
       mountScene();
       connectWebSocket();
+      wakeCharts(); // force-wake: IO may have missed the transition from hidden to visible
+      // Init recorder meta label (the HTML has a hardcoded placeholder)
+      setText($('stats-rec-meta'), `0 ${t('live_debug.stats_rows_unit') || 'строк'} · 0 KB`);
       deriveInterval = setInterval(tickDerive, 100);
       axisTimer = setInterval(() => {
         for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
