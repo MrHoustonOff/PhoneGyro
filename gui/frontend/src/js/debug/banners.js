@@ -12,98 +12,24 @@
 //   6. firewall modal — «Брандмауэр заблокировал» (notices.js)
 
 import { go } from '../shell/router.js';
-import { toggleClass, md } from '../core/dom.js';
-import { openModal } from '../ui/modal.js';
-import { t } from '../core/i18n.js';
-import { call, openURL } from '../core/bridge.js';
-import { toast } from '../ui/toast.js';
+import { toggleClass } from '../core/dom.js';
+import { call } from '../core/bridge.js';
+import { cemu, firewall, update } from '../ui/notices.js';
+import { debugHints } from '../screens/connect/cal-hints.js';
 
-// ── Fake payloads (mirrors what Go would send) ────────────────────────────────
+// The dialogs are the app's real ones (ui/notices.js, screens/connect/cal-hints.js),
+// fed with made-up payloads, so what you see here is what the user sees.
 
-const FAKE_CEMU = { guardOn: true, prUrl: 'https://github.com/cemu-project/Cemu/pull/1' };
-const FAKE_FIREWALL = { network: 'public' };
-const FAKE_UPDATE = {
-  current: '1.0.0',
-  latest: '9.9.0',
-  releaseUrl: 'https://github.com/MrHoustonOff/PhoneGyro/releases',
-  downloadUrl: 'https://github.com/MrHoustonOff/PhoneGyro/releases',
-};
-
-// ── Direct banner triggers (copied from notices.js logic, no Go dependency) ──
-
-function p(key, vars) { return `<p>${md(t(key, vars))}</p>`; }
-
-function showCemu() {
-  const n = FAKE_CEMU;
-  openModal({
-    title: t('cemu_notice.title'),
-    body: p('cemu_notice.bug')
-      + p(n.guardOn !== false ? 'cemu_notice.guard_on' : 'cemu_notice.guard_off')
-      + p('cemu_notice.settings')
-      + p('cemu_notice.upstream')
-      + (n.prUrl ? p('cemu_notice.pr', { url: n.prUrl }) : p('cemu_notice.pr_none')),
-    check: t('cemu_notice.dont_show'),
-    actions: [{ label: t('cemu_notice.close'), kind: 'primary' }],
-  });
+const showCemu = () => cemu({ guardOn: true, prUrl: 'https://github.com/cemu-project/Cemu/pull/1' });
+const showFirewall = () => firewall({ network: 'public' });
+async function showUpdate() {
+  const v = await call('GetAppVersion');
+  const releaseUrl = 'https://github.com/MrHoustonOff/PhoneGyro/releases';
+  update({ current: (v && v.release) || '2.0.0', latest: '9.9.0', releaseUrl, downloadUrl: releaseUrl });
 }
-
-function showFirewall() {
-  const st = FAKE_FIREWALL;
-  const why = t('firewall.why') + (st && st.network === 'public' ? ' ' + t('firewall.why_public') : '');
-  openModal({
-    title: t('firewall.alert_title'),
-    body: `<p>${md(why)}</p>` + p('firewall.alert_how'),
-    actions: [
-      { label: t('firewall.later') },
-      {
-        label: t('firewall.allow'),
-        kind: 'primary',
-        onClick: async () => {
-          const res = await call('AllowFirewall');
-          const ok = res && res.status && (res.status.state === 'allowed' || res.status.state === 'off');
-          toast(t(ok ? 'firewall.toast_ok' : res && res.result === 'cancelled' ? 'firewall.toast_cancelled' : 'firewall.toast_failed'));
-        },
-      },
-    ],
-  });
-}
-
-function showUpdate() {
-  const info = FAKE_UPDATE;
-  openModal({
-    title: t('update_notice.title', { version: info.latest }),
-    body: p('update_notice.versions', { current: info.current })
-      + `<ol class="app-steps"><li>${md(t('update_notice.step_download'))}</li><li>${md(t('update_notice.step_run'))}</li></ol>`
-      + `<p class="app-modal-link"><a class="pg-link" href="${info.releaseUrl}">${t('update_notice.release_page')}</a></p>`,
-    check: t('update_notice.skip'),
-    actions: [
-      { label: t('update_notice.later') },
-      {
-        label: t('update_notice.download'),
-        kind: 'primary',
-        onClick: () => openURL(info.downloadUrl || info.releaseUrl),
-      },
-    ],
-  });
-}
-
-// ── Cal-hint triggers (direct DOM manipulation, no state dependency) ──────────
-
-function showRecal() {
-  const el = document.getElementById('hint-recal');
-  if (el) el.hidden = false;
-}
-
-function showNew() {
-  const el = document.getElementById('hint-new');
-  const btn = document.getElementById('btn-calibrate');
-  if (el) el.hidden = false;
-  if (btn) btn.classList.add('is-urgent');
-}
-
-function showSetup() {
-  go('setup');
-}
+const showRecal = () => debugHints.recal();
+const showNew = () => debugHints.newDevice();
+const showSetup = () => go('setup');
 
 // ── Panel builder ─────────────────────────────────────────────────────────────
 

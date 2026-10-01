@@ -1,11 +1,10 @@
-// Package firewall reads and fixes Windows Firewall's verdict on PhoneGyro.
+// Package firewall reads Windows Firewall's verdict on PhoneGyro.
 //
 // The phone connects to the PC over Wi-Fi (HTTP/HTTPS), so Windows Firewall must
 // let inbound connections to PhoneGyro.exe through. Windows asks once, the first
 // time the exe listens; a dismissed prompt leaves block rules behind and Windows
-// never asks again. Check reads the rules (no admin rights needed); Allow, which
-// needs admin rights, turns the verdict around for the networks in use. The UI
-// runs Allow in an elevated copy of the exe (RequestAllow, HelperArg).
+// never asks again. Check reads the rules (no admin rights needed). Fixing it is
+// the user's job: the docs explain how to create the rule by hand.
 package firewall
 
 // States of Status.State.
@@ -23,10 +22,6 @@ type Status struct {
 	Network string `json:"network"` // "public", "private" or "domain": the strictest active one
 	Detail  string `json:"detail,omitempty"`
 }
-
-// HelperArg makes the exe fix the firewall and exit instead of starting the app
-// (see RunHelper). It is what RequestAllow launches elevated.
-const HelperArg = "--firewall-allow"
 
 // RuleName is the name of the allow rule PhoneGyro adds.
 const RuleName = "PhoneGyro"

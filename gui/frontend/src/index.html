@@ -67,6 +67,19 @@
       <!-- A device is streaming (phone or USB): design ScreenUsb, shared by both -->
       <div class="pg-usb app-view" id="view-dash" hidden>
         <div class="pg-usb__col">
+          <!-- New device banner: urgent, first in the left column so it is seen without scrolling -->
+          <div class="app-hint app-hint--urgent" id="hint-new" hidden>
+            <div class="app-hint__body">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16v.5"/></svg>
+              <div>
+                <div class="app-hint__title" data-i18n="calibration.first_connect_title"></div>
+                <div class="app-hint__desc" data-i18n="calibration.first_connect_desc"></div>
+              </div>
+            </div>
+            <button class="pg-btn pg-btn--sm pg-btn--danger app-hint__action" type="button" id="hint-new-cal" data-i18n="calibration.first_connect_btn">Калибровать</button>
+            <span class="app-hint__bar"></span>
+            <button class="app-hint__close" type="button" id="hint-new-close" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          </div>
           <section class="pg-card pg-card--hero pg-rings-corner app-devcard">
             <div class="pg-dev">
               <div class="pg-dev__chip" id="dev-chip">
@@ -99,17 +112,6 @@
             </div>
             <button class="pg-btn pg-btn--info pg-btn--block" id="btn-recenter" type="button" data-i18n-title="recenter.btn_main_tip"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span data-i18n="recenter.btn_main">Центрировать 3D-вид</span></button>
           </section>
-          <!-- New device banner: urgent, lives outside the card, spans full left column -->
-          <div class="app-hint app-hint--urgent" id="hint-new" hidden>
-            <div class="app-hint__body">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16v.5"/></svg>
-              <div>
-                <div class="app-hint__title" data-i18n="calibration.first_connect_title"></div>
-                <div class="app-hint__desc" data-i18n="calibration.first_connect_desc"></div>
-              </div>
-            </div>
-            <button class="app-hint__close" type="button" id="hint-new-close" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-          </div>
           <div class="app-dsu-slot" data-dsu-slot="dash"></div>
         </div>
         <div class="pg-usb__col">

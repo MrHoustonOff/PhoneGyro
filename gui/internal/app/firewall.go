@@ -1,7 +1,6 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -13,9 +12,9 @@ import (
 )
 
 // Windows Firewall must let the phone's connections through (internal/firewall).
-// Settings show the verdict with an "Allow" button; in phone mode, a startup
-// alert (js/firewall.js, #firewall-modal) asks again every launch until it is
-// allowed. USB mode needs no network, so it is never nagged.
+// Settings show the verdict; in phone mode a startup alert (js/ui/notices.js)
+// points at the guide's manual-rule steps every launch until the rule exists.
+// USB mode needs no network, so it is never nagged.
 
 // How long to wait at startup for the user to answer Windows' own prompt,
 // which comes up on the very first launch.
@@ -30,14 +29,6 @@ type firewallState struct {
 	pending *firewall.Status // startup alert not yet shown or closed
 }
 
-// FirewallResult is AllowFirewall's outcome: "ok", "cancelled" (UAC declined)
-// or "error", plus the verdict afterwards.
-type FirewallResult struct {
-	Result string          `json:"result"`
-	Detail string          `json:"detail,omitempty"`
-	Status firewall.Status `json:"status"`
-}
-
 func exePath() string {
 	exe, err := os.Executable()
 	if err != nil {
@@ -49,29 +40,6 @@ func exePath() string {
 // GetFirewallStatus is the firewall's current verdict on PhoneGyro.
 func (a *App) GetFirewallStatus() firewall.Status {
 	return firewall.Check(exePath())
-}
-
-// AllowFirewall asks for admin rights (UAC) and allows PhoneGyro through the
-// firewall for the networks in use.
-func (a *App) AllowFirewall() FirewallResult {
-	res := FirewallResult{Result: "ok"}
-	if err := firewall.RequestAllow(); err != nil {
-		res.Result, res.Detail = "error", err.Error()
-		if errors.Is(err, firewall.ErrCancelled) {
-			res.Result = "cancelled"
-		}
-		fmt.Printf("[firewall] allow: %s %s\n", res.Result, res.Detail)
-	}
-	res.Status = a.GetFirewallStatus()
-	if res.Status.State == firewall.Allowed {
-		a.firewall.mu.Lock()
-		a.firewall.pending = nil
-		a.firewall.mu.Unlock()
-	}
-	if a.ctx != nil {
-		wailsRuntime.EventsEmit(a.ctx, "firewall:status", res.Status)
-	}
-	return res
 }
 
 // watchFirewall checks the firewall once the app is up and raises the alert

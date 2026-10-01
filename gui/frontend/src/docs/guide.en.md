@@ -297,7 +297,24 @@ PhoneGyro runs on the industry-standard **Cemuhook DSU (UDP)** protocol. To any 
 
 The phone connects to the PC over Wi‑Fi, and Windows Firewall has to let those connections through. On the first launch Windows asks for permission itself. If that window was closed or cancelled, the phone cannot connect and Windows never asks again.
 
-The state is shown in **Settings → Network & Server Ports → Windows Firewall**. If it says "Blocked" or "Not allowed", click **"Allow"** and confirm the administrator prompt. In phone mode PhoneGyro reminds you at every start until it is allowed.
+The state is shown in **Settings → Network & Server Ports → Windows Firewall**. If it says "Blocked" or "Not allowed", create an allow rule by hand (once):
+
+1. Press **Win + R**, type `wf.msc` and press Enter.
+2. On the left pick **Inbound Rules**, on the right **New Rule…**.
+3. Rule type — **Program**, path — your `PhoneGyro.exe` (the "Browse" button).
+4. Action — **Allow the connection**.
+5. Profiles — tick all three: Domain, Private and Public.
+6. Name — `PhoneGyro`, then **Finish**.
+
+If you pressed "Cancel" in the Windows prompt earlier, the list may already hold a `PhoneGyro` rule with the action **Block**: delete it, or open its properties and choose "Allow the connection".
+
+The same in one command, in a console run as administrator (use your own path):
+
+```
+netsh advfirewall firewall add rule name="PhoneGyro" dir=in action=allow program="C:\path\to\PhoneGyro.exe" enable=yes profile=any
+```
+
+In phone mode PhoneGyro reminds you at every start until it is allowed.
 
 The permission belongs to the file: run a new `PhoneGyro.exe` from another folder and Windows asks again. The USB controller does not need it. If a third-party antivirus has its own firewall, allow PhoneGyro there too; PhoneGyro cannot see it.
 

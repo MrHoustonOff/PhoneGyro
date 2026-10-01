@@ -7,7 +7,7 @@ import { $, esc, setHTML, toggleClass } from '../core/dom.js';
 import { openURL } from '../core/bridge.js';
 import { t, getLang, onLang } from '../core/i18n.js';
 import { render, slug } from '../core/markdown.js';
-import { onScreen } from '../shell/router.js';
+import { onScreen, go } from '../shell/router.js';
 
 let sections = [];   // [{ title, id, md, text, ids }]
 let loadedLang = '';
@@ -117,6 +117,13 @@ function syncToc() {
   let active = null;
   $('docs-prose').querySelectorAll('h3').forEach((h) => { if (h.getBoundingClientRect().top <= top) active = h.id; });
   $('docs-toc').querySelectorAll('a').forEach((a, i) => toggleClass(a, 'is-active', active ? a.getAttribute('href') === '#' + active : i === 0));
+}
+
+/** Opens the guide scrolled to a heading (its slug), e.g. from a dialog that points at instructions. */
+export async function openDocsAt(id) {
+  go('docs');
+  await load();
+  jump(id);
 }
 
 export function startDocs() {

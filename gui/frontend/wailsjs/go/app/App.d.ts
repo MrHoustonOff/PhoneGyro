@@ -7,8 +7,6 @@ import {firewall} from '../models';
 import {profiles} from '../models';
 import {motion} from '../models';
 
-export function AllowFirewall():Promise<app.FirewallResult>;
-
 export function ClearPreview():Promise<void>;
 
 export function CloseCemuNotice(arg1:boolean):Promise<void>;

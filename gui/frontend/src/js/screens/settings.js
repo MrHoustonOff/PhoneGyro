@@ -11,6 +11,8 @@ import { t, onLang } from '../core/i18n.js';
 import { onScreen, go } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
+import { slug } from '../core/markdown.js';
+import { openDocsAt } from './docs.js';
 import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
 import { ACCENTS, applyAccent } from '../ui/accent.js';
@@ -106,7 +108,7 @@ function control(r, i) {
     }
     case 'toggle': return (r.kbd && cur[r.kbd] ? `<span class="pg-kbd app-kbd">${esc(cur[r.kbd])}</span>` : '')
       + `<label class="pg-toggle"><input type="checkbox" id="${id}"${v ? ' checked' : ''} aria-label="${esc(t(r.label))}"><span class="pg-toggle__track"></span></label>`;
-    case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.allow'))}</button>`;
+    case 'firewall': return `<span class="pg-badge pg-badge--dot" id="fw-state"></span><button class="pg-btn pg-btn--sm" type="button" id="fw-allow" hidden>${esc(t('firewall.how'))}</button>`;
     // Design Accent picker: vendor/accent.js handles the click (wave + rings).
     case 'swatches': return `<div class="pg-swatches" role="radiogroup">${r.options.map((o) =>
       `<button type="button" class="pg-swatch" data-accent-pick="${o}" style="--sw:var(--sw-${o})" role="radio" aria-checked="${v === o}" aria-label="${esc(t('ui.accent_' + o))}" data-tip="${esc(t('ui.accent_' + o))}"></button>`).join('')}</div>`;
@@ -310,17 +312,6 @@ async function refreshFirewall() {
   show($('fw-allow'), bad || st.state === 'unknown');
 }
 
-async function allowFirewall(btn) {
-  btn.disabled = true;
-  setText(btn, t('firewall.waiting'));
-  const res = await call('AllowFirewall');
-  btn.disabled = false;
-  setText(btn, t('firewall.allow'));
-  const ok = res && res.status && (res.status.state === 'allowed' || res.status.state === 'off');
-  toast(t(ok ? 'firewall.toast_ok' : res && res.result === 'cancelled' ? 'firewall.toast_cancelled' : 'firewall.toast_failed'));
-  refreshFirewall();
-}
-
 async function regenMac() {
   await openModal({
     title: t('settings_modal.dsu_mac_regen_title'),
@@ -366,7 +357,7 @@ export function startSettings() {
     }
     else if (e.target.closest('#set-reset-all')) resetAll();
     else if (e.target.closest('[data-regen]')) regenMac();
-    else if (e.target.closest('#fw-allow')) allowFirewall(e.target.closest('#fw-allow'));
+    else if (e.target.closest('#fw-allow')) openDocsAt(slug(t('firewall.docs_heading')));
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
     else if (e.target.closest('#btn-open-games')) go('games');
   });

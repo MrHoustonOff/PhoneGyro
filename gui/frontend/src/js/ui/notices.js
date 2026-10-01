@@ -7,9 +7,9 @@
 import { on, call, openURL } from '../core/bridge.js';
 import { md, esc } from '../core/dom.js';
 import { t } from '../core/i18n.js';
-import { render } from '../core/markdown.js';
+import { render, slug } from '../core/markdown.js';
+import { openDocsAt } from '../screens/docs.js';
 import { openModal } from './modal.js';
-import { toast } from './toast.js';
 
 const p = (key, vars) => `<p>${md(t(key, vars))}</p>`;
 const queue = [];
@@ -28,46 +28,37 @@ async function next() {
   next();
 }
 
-function cemu(n) {
-  const isGuardOn = n.guardOn !== false;
-  const statusMd = isGuardOn ? t('cemu_notice.guard_on') : t('cemu_notice.guard_off');
+export function cemu(n) {
+  const statusMd = n.guardOn !== false ? t('cemu_notice.guard_on') : t('cemu_notice.guard_off');
   const prMd = n.prUrl ? t('cemu_notice.pr', { url: n.prUrl }) : t('cemu_notice.pr_none');
+  const infoList = [t('cemu_notice.settings'), t('cemu_notice.upstream'), prMd].join('\n');
+  const { html } = render([t('cemu_notice.bug'), statusMd, infoList].join('\n\n'));
 
-  const infoList = [t('cemu_notice.settings'), t('cemu_notice.upstream'), prMd].filter(Boolean).join('\n');
-  const fullMd = [
-    t('cemu_notice.bug'),
-    statusMd,
-    infoList,
-  ].filter(Boolean).join('\n\n');
-
-  const { html } = render(fullMd);
-
-  show(() => openModal({
+  return show(() => openModal({
     title: t('cemu_notice.title'),
-    dialogClass: 'app-modal-dialog--cemu',
-    body: `<div class="pg-prose app-cemu-prose">${html}</div>`,
+    dialogClass: 'app-modal-dialog--notice',
+    body: `<div class="pg-prose app-notice-prose">${html}</div>`,
     check: t('cemu_notice.dont_show'),
     actions: [{ label: t('cemu_notice.close'), kind: 'primary', onClick: (hide) => call('CloseCemuNotice', hide) }],
   }).then((i) => { if (i < 0) call('CloseCemuNotice', false); }));
 }
 
-function firewall(st) {
-  const why = t('firewall.why') + (st && st.network === 'public' ? ' ' + t('firewall.why_public') : '');
-  show(() => openModal({
+// Windows Firewall blocks the phone. The rule is made by hand: the dialog points at the guide.
+export function firewall(st) {
+  const text = [t('firewall.alert_text'), st && st.network === 'public' ? t('firewall.alert_public') : ''].filter(Boolean).join('\n\n');
+  const { html } = render(text);
+  return show(() => openModal({
     title: t('firewall.alert_title'),
-    body: `<p>${md(why)}</p>` + p('firewall.alert_how'),
+    dialogClass: 'app-modal-dialog--notice',
+    body: `<div class="pg-prose app-notice-prose">${html}</div>`,
     actions: [
       { label: t('firewall.later') },
-      { label: t('firewall.allow'), kind: 'primary', onClick: async () => {
-        const res = await call('AllowFirewall');
-        const ok = res && res.status && (res.status.state === 'allowed' || res.status.state === 'off');
-        toast(t(ok ? 'firewall.toast_ok' : res && res.result === 'cancelled' ? 'firewall.toast_cancelled' : 'firewall.toast_failed'));
-      } },
+      { label: t('firewall.how'), kind: 'primary', onClick: () => openDocsAt(slug(t('firewall.docs_heading'))) },
     ],
   }).then(() => call('CloseFirewallAlert')));
 }
 
-function update(info) {
+export function update(info) {
   show(() => openModal({
     title: t('update_notice.title', { version: info.latest }),
     body: p('update_notice.versions', { current: info.current }) + `<ol class="app-steps"><li>${md(t('update_notice.step_download'))}</li><li>${md(t('update_notice.step_run'))}</li></ol>`
@@ -87,7 +78,4 @@ export function startNotices() {
   call('PendingCemuNotice').then((n) => n && cemu(n));
   call('PendingFirewallAlert').then((s) => s && firewall(s));
   call('PendingUpdate').then((u) => u && update(u));
-  if (typeof window !== 'undefined') {
-    window.__showCemuNotice = (guardOn = true) => cemu({ guardOn, prUrl: 'https://github.com/cemu-project/Cemu/pull/0000' });
-  }
 }
