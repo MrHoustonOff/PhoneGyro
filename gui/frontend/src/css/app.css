@@ -348,11 +348,12 @@ input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; marg
 .app-set-foot { display: flex; justify-content: flex-end; }
 .pg-row.is-modified { padding-left: 1.375rem; }
 
-/* Brand pill = Home. Outlined in accent while the home screen shows. */
-.app-home { cursor: pointer; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; line-height: 1;
-  transition: border-color .15s, box-shadow .15s, background .15s; }
+/* Brand pill = Home: returns to the main/connect screen */
+.app-home {
+  cursor: pointer; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; line-height: 1;
+  transition: background .15s;
+}
 .app-home:hover { background: var(--surface-hover) var(--tex-grain); }
-.app-home.is-home { border-color: var(--accent-line); box-shadow: var(--shadow-float), 0 0 0 1px var(--accent-line); }
 .app-brandmark { width: 1.75rem; height: 1.75rem; object-fit: contain; }
 
 /* Launch animation in the logo's gold: the card's rings, the ring "o", the
@@ -1879,6 +1880,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-chart {
   --c: var(--accent);
   position: relative; flex: 1 0 auto; height: 4.75rem; overflow: hidden;
+  clip-path: inset(0 round var(--radius-md));
   background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
 }
 .app-tile--mini .app-chart { height: 3.5rem; }
@@ -1888,7 +1890,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-chart__svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .app-chart__grid { fill: none; stroke: var(--line-subtle); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
 .app-chart--axes .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
-.app-chart__glide { will-change: transform; }
+.app-chart__glide { will-change: transform; overflow: visible; }
 /* Line and glow share one path (<use>): stroke settings live on the group and are inherited, the glow overrides width/opacity. */
 .app-chart__lines { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .app-chart__line { vector-effect: non-scaling-stroke; }

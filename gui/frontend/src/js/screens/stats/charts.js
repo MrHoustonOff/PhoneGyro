@@ -54,6 +54,10 @@ export function setChartsEnabled(on) {
   enabled = !!on;
   if (enabled) for (const c of live) if (c.stale) schedule(c);
 }
+/** Force-wake every chart (call after the stats screen becomes visible to resolve IO edge-cases). */
+export function wakeCharts() {
+  for (const c of live) { c.visible = true; if (c.stale) schedule(c); }
+}
 function watch(host, c) {
   c.visible = !io;
   byHost.set(host, c);
@@ -129,17 +133,17 @@ function dot(host, cls) {
 }
 const placeDot = (rail, y) => { rail.style.transform = `translateY(${((y / H) * 100).toFixed(1)}%)`; };
 
-// X positions of n samples: the oldest one step left of the edge, so the glide never shows a gap.
+// X positions of n samples: the oldest steps left of the edge, so the glide never shows a gap.
 function xsFor(n) {
-  const step = W / (n - 2);
+  const step = W / (n - 3);
   const xs = new Array(n);
-  for (let i = 0; i < n; i++) xs[i] = -step + i * step;
+  for (let i = 0; i < n; i++) xs[i] = -2 * step + i * step;
   return xs;
 }
 
 function glider(svg, n, ms) {
   if (!svg.animate || !(ms > 0)) return () => {};
-  const a = svg.animate([{ transform: `translateX(${100 / (n - 2)}%)` }, { transform: 'translateX(0)' }], { duration: ms, easing: 'linear' });
+  const a = svg.animate([{ transform: `translateX(${100 / (n - 3)}%)` }, { transform: 'translateX(0)' }], { duration: ms, easing: 'linear' });
   a.cancel();
   return () => { a.cancel(); a.play(); };
 }

@@ -527,6 +527,7 @@
   },
   "nav": {
     "help": "Help",
+    "home": "Home",
     "live_debug": "Statistics & 3D View Window",
     "settings": "Settings",
     "setup": "Initial Setup",
