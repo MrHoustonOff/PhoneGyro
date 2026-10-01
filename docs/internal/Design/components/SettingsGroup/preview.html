@@ -1,0 +1,14 @@
+<!-- @dsCard group="Forms" height=560 subtitle="Overline + grouped rows with control types" -->
+<div class="pg-app" style="padding:20px"><div style="max-width:640px" class="pg-group">
+<div class="pg-overline"><span class="pg-ring"></span>Aim motion filtering (DSU)</div>
+<div class="pg-group__list">
+<div class="pg-row"><div class="pg-row__label">DSU Port (Cemuhook)<button class="pg-info" aria-label="Info">i</button></div><div class="pg-row__control"><input class="pg-input pg-input--num" value="26760"></div></div>
+<div class="pg-row is-modified"><div class="pg-row__label">DSU MAC Address<button class="pg-info" aria-label="Info">i</button></div><div class="pg-row__control"><input class="pg-input pg-input--mono" value="00:13:37:B7:D3:79" style="width:170px"><button class="pg-btn-icon" aria-label="Regenerate"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></button></div></div>
+<div class="pg-row"><div class="pg-row__label">Tremor threshold - phone</div><div class="pg-row__control"><select class="pg-select"><option>0.10°/s (Standard)</option></select></div></div>
+<div class="pg-row"><div class="pg-row__label">DSU Sensitivity Multiplier</div><div class="pg-row__control"><input class="pg-slider" type="range" min="0.2" max="3" step="0.05" value="1" data-slider><span class="pg-value">1,00x</span></div></div>
+<div class="pg-row is-modified"><div class="pg-row__label">Cemu Drift Guard</div><div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" aria-label="Cemu Drift Guard"><span class="pg-toggle__track"></span></label></div></div>
+<div class="pg-row"><div class="pg-row__label">Stationary Tilt Warning</div><div class="pg-row__control"><label class="pg-toggle"><input type="checkbox" checked aria-label="Stationary Tilt Warning"><span class="pg-toggle__track"></span></label></div></div>
+</div></div></div>
+<script>
+document.querySelectorAll('[data-slider]').forEach(PhoneGyro.slider)
+</script>

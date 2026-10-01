@@ -1,0 +1,1 @@
+Full SIL Open Font License 1.1 texts (with each font's copyright line) for the three typefaces in `fonts/`. Ship these files with the app (for example in a `licenses/` folder next to the executable or on an About screen). They are plain text; no ink or colour applies.

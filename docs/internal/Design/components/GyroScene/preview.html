@@ -1,0 +1,16 @@
+<!-- @dsCard group="3D" height=600 width=1100 subtitle="Themed Three.js stage: gamepad (your model, per-part colours), cube, platform; calibration guides. Live." -->
+<div class="pg-app" style="padding:20px;display:grid;grid-template-columns:1.5fr 1fr;gap:16px;height:100%">
+<div class="pg-stage" id="st1" style="height:540px"><span class="pg-viewport__tag">GAMEPAD</span>
+<div class="pg-stage__tools"><div class="pg-seg" data-seg id="steps"><button class="pg-seg__btn is-active" data-s="idle">Idle</button><button class="pg-seg__btn" data-s="rest">Rest</button><button class="pg-seg__btn" data-s="pitch">Pitch</button><button class="pg-seg__btn" data-s="roll">Roll</button><button class="pg-seg__btn" data-s="axes">Axes</button></div><button class="pg-btn pg-btn--sm" id="rec">Record 1.5s</button></div>
+<div class="pg-stage__cap" id="cap">Live idle motion</div></div>
+<div style="display:flex;flex-direction:column;gap:16px"><div class="pg-stage" id="st2" style="height:262px"><span class="pg-viewport__tag">CUBE</span></div><div class="pg-stage" id="st3" style="height:262px"><span class="pg-viewport__tag">PLATFORM</span></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var CAP={idle:'Live idle motion',rest:'Place your phone on the table in gaming grip',pitch:'Tilt forward (nod)',roll:'Bank right (roll)',axes:'Twist and tilt the phone together, pausing between moves'};
+var s1=PhoneGyro.createScene(document.getElementById('st1'),{glb:'../../models/gamepad.glb.txt',step:'idle'});
+PhoneGyro.createScene(document.getElementById('st2'),{model:'cube',step:'axes'});
+PhoneGyro.createScene(document.getElementById('st3'),{model:'platform',step:'idle',axes:false});
+var seg=document.getElementById('steps');PhoneGyro.segmented(seg);
+seg.addEventListener('click',function(e){var b=e.target.closest('.pg-seg__btn');if(!b)return;s1.setStep(b.dataset.s);document.getElementById('cap').textContent=CAP[b.dataset.s]});
+document.getElementById('rec').addEventListener('click',function(){var t0=performance.now();(function f(){var p=Math.min(1,(performance.now()-t0)/1500);s1.setRecording(p);if(p<1)requestAnimationFrame(f);else setTimeout(function(){s1.setRecording(0)},600)})()});
+
+</script>

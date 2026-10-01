@@ -1,0 +1,1 @@
+Six iOS screenshots for the setup wizard (`step-1.webp` to `step-6.webp`), taken from the app's own `ios-steps` assets. Each already includes its phone frame; show at full column height (about 440px) inside `pg-devshot`, never inside a second frame. Ink: full-colour photographs, not themeable.

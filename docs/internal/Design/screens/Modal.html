@@ -1,0 +1,25 @@
+<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PhoneGyro - ScreenConnect</title>
+<link rel="stylesheet" href="../tokens.css"><link rel="stylesheet" href="../components/bundle.css">
+<style>body{margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;background:var(--bg);padding:0}#pg-theme{position:fixed;right:16px;bottom:64px;z-index:99}</style></head><body>
+<script src="../components/bundle.js"></script><div class="pg-app pg-overlay" style="padding:24px"><div class="pg-modal">
+<div class="pg-modal__head"><div><div class="pg-modal__title">Axis Calibration</div><div class="pg-modal__sub">Axis mapping configuration · iPhone</div></div><button class="pg-btn-icon" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div class="pg-modal__body">
+<div class="pg-stepper"><span class="pg-step is-active" data-s="rest"><span class="pg-step__num">1</span>Rest</span><span class="pg-step__link"></span><span class="pg-step" data-s="pitch"><span class="pg-step__num">2</span>Pitch</span><span class="pg-step__link"></span><span class="pg-step" data-s="roll"><span class="pg-step__num">3</span>Roll</span><span class="pg-step__link"></span><span class="pg-step" data-s="axes"><span class="pg-step__num">4</span>Axes</span><span class="pg-step__link"></span><span class="pg-step"><span class="pg-step__num">5</span>Verify</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<div class="pg-stat"><div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--x">X</span><span class="pg-badge">—</span></div><div class="mono">+0°/c</div></div>
+<div class="pg-stat"><div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--y">Y</span><span class="pg-badge">—</span></div><div class="mono">+0°/c</div></div>
+<div class="pg-stat"><div class="pg-stat__head"><span class="pg-axis__key pg-axis__key--z">Z</span><span class="pg-badge">—</span></div><div class="mono">+0°/c</div></div></div>
+<div><div class="display-md">Step 1 of 4: Stillness Calibration («Rest»)</div><p class="body" style="color:var(--ink-2);margin:6px 0 0">Place your phone still on the desk (in the same grip and orientation you plan to play in) and click <b style="color:var(--ink)">Record Stillness</b>. Gyroscope drift will be measured and the resting gravity vector recorded.</p></div>
+<div class="pg-notice pg-notice--ok pg-notice--plain" style="flex-direction:column;align-items:flex-start;gap:12px;padding:16px"><span class="pg-badge pg-badge--ok pg-badge--dot">Ready to capture</span><button class="pg-btn pg-btn--primary pg-btn--lg pg-btn--block"><svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"/></svg>Record stillness (1.5s)</button></div></div>
+<div><div class="pg-stage" id="stage" style="height:300px"><div class="pg-stage__cap" id="cap">Place your phone on the table in gaming grip</div></div><div class="body-sm" style="text-align:center;color:var(--ink-3);margin-top:8px">3D orientation may differ from your physical grip</div></div></div></div>
+<div class="pg-modal__foot" style="margin-top:8px"><button class="pg-btn"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back</button><button class="pg-link">Manual Setup</button><button class="pg-btn" disabled>Next<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var CAP={rest:'Place your phone on the table in gaming grip',pitch:'Tilt forward (nod)',roll:'Bank right (roll)',axes:'Twist and tilt the phone together, pausing a second between moves'};
+var sc=PhoneGyro.createScene(document.getElementById('stage'),{glb:'../models/gamepad.glb.txt',step:'rest'});
+document.querySelectorAll('.pg-step[data-s]').forEach(function(el){el.style.cursor='pointer';el.addEventListener('click',function(){document.querySelectorAll('.pg-step').forEach(function(x){x.classList.remove('is-active')});el.classList.add('is-active');sc.setStep(el.dataset.s);document.getElementById('cap').textContent=CAP[el.dataset.s]})});
+</script>
+
+<button id="pg-theme" class="pg-btn pg-app">Light / Dark</button>
+<script>document.getElementById('pg-theme').onclick=function(){PhoneGyro.setTheme(PhoneGyro.theme()==="dark"?"light":"dark")}</script></body></html>

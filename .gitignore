@@ -35,9 +35,5 @@ tmp/
 .DS_Store
 Thumbs.db
 
-# Internal architecture specs
-docs/internal/*
-!docs/internal/frontend_rework_log/
-
 # Test output
 tools/frontend-bench/out/

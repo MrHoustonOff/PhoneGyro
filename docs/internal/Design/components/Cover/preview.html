@@ -1,0 +1,23 @@
+<!-- @dsCard height=288 -->
+<div style="position:relative;width:960px;height:288px;overflow:hidden;background:var(--bg)">
+<!--
+blocks: viz-leaf 176x216 slab bleeding off the top, viz-teal 140x140, viz-coral 140x96, viz-amber 124x100, viz-cream 124x136, ink 176x84 (all sides multiples of space-1).
+arrangement: one tall slab with satellites; all blocks sit right of x=480, corners radius-lg.
+pattern: literal motif (Sheikah-like targets) - 12 concentric rings in bg cut out of the blocks, centred on the gap between slab, teal, coral and ink, because the app's texture is nested circles.
+steps/radii: 4px unit, 8px gaps (space-2), radius-lg 14px; rings step 26px, stroke 3px.
+-->
+<svg width="960" height="288" viewBox="0 0 960 288" style="position:absolute;left:0;top:0">
+<style>.leaf{fill:var(--viz-leaf)}.teal{fill:var(--viz-teal)}.coral{fill:var(--viz-coral)}.amber{fill:var(--viz-amber)}.cream{fill:var(--viz-cream)}.ink{fill:var(--ink)}.blk{rx:var(--radius-lg);ry:var(--radius-lg)}.ring{fill:none;stroke:var(--bg);stroke-width:3}.hub{fill:var(--bg)}</style>
+<defs><clipPath id="r"><rect x="480" y="0" width="480" height="288"/></clipPath></defs>
+<g clip-path="url(#r)">
+<rect class="blk leaf" x="488" y="-20" width="176" height="216"/>
+<rect class="blk teal" x="672" y="24" width="140" height="140"/>
+<rect class="blk amber" x="820" y="24" width="124" height="100"/>
+<rect class="blk coral" x="672" y="172" width="140" height="96"/>
+<rect class="blk cream" x="820" y="132" width="124" height="136"/>
+<rect class="blk ink" x="488" y="204" width="176" height="84"/>
+<g><circle class="ring" cx="668" cy="168" r="26"/><circle class="ring" cx="668" cy="168" r="52"/><circle class="ring" cx="668" cy="168" r="78"/><circle class="ring" cx="668" cy="168" r="104"/><circle class="ring" cx="668" cy="168" r="130"/><circle class="ring" cx="668" cy="168" r="156"/><circle class="ring" cx="668" cy="168" r="182"/><circle class="ring" cx="668" cy="168" r="208"/><circle class="ring" cx="668" cy="168" r="234"/><circle class="ring" cx="668" cy="168" r="260"/><circle class="ring" cx="668" cy="168" r="286"/><circle class="ring" cx="668" cy="168" r="312"/><circle class="hub" cx="668" cy="168" r="9"/></g>
+</g></svg>
+<div style="position:absolute;left:32px;bottom:32px;width:420px">
+<div style="font-family:var(--font-display);font-weight:800;font-size:88px;line-height:.95;letter-spacing:-.01em;color:var(--ink)">PhoneGyro</div>
+<div style="font:400 14px/20px var(--font-sans);color:var(--ink-2);margin-top:8px">Phone motion for Cemu, with Hyrule rings.</div></div></div>

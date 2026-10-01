@@ -1,0 +1,10 @@
+<!-- @dsCard group="Forms" height=190 subtitle="Number, mono, select, slider, value" -->
+<div class="pg-app" style="padding:20px"><div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+<input class="pg-input pg-input--num" value="8443" aria-label="Port">
+<input class="pg-input pg-input--mono" value="00:13:37:B7:D3:79" style="width:170px" aria-label="MAC">
+<select class="pg-select" aria-label="Close action"><option>Ask every time</option><option>Minimize to tray</option></select>
+<input class="pg-slider" type="range" min="0" max="100" value="35" data-slider aria-label="Sensitivity"><span class="pg-value">1,00x</span>
+<div class="pg-url"><span class="pg-url__text">https://192.168.31.82:8443/</span></div></div></div>
+<script>
+document.querySelectorAll('[data-slider]').forEach(PhoneGyro.slider)
+</script>

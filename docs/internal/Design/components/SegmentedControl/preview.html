@@ -1,0 +1,8 @@
+<!-- @dsCard group="Selection" height=150 subtitle="Pill track with a raised active segment" -->
+<div class="pg-app" style="padding:20px;display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+<div class="pg-seg" data-seg><button class="pg-seg__btn">RU</button><button class="pg-seg__btn is-active">EN</button></div>
+<div class="pg-seg" data-seg><button class="pg-seg__btn is-active"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>Smartphone</button><button class="pg-seg__btn"><svg viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="10" rx="5"/><path d="M8 10.5v4M6 12.5h4M16 11.5h.01M18 13.5h.01"/></svg>USB Controller</button></div>
+<div class="pg-seg" data-seg><button class="pg-seg__btn">Static</button><button class="pg-seg__btn is-active">4 Cameras</button><button class="pg-seg__btn">Dynamic</button></div></div>
+<script>
+document.querySelectorAll('[data-seg]').forEach(function(s){PhoneGyro.segmented(s)});
+</script>
