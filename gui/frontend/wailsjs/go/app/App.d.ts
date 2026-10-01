@@ -125,6 +125,8 @@ export function SetLang(arg1:string):Promise<void>;
 
 export function SetProfileMountEnabled(arg1:number,arg2:boolean):Promise<string>;
 
+export function SetQuatStream(arg1:boolean):Promise<void>;
+
 export function SetSplash(arg1:boolean):Promise<void>;
 
 export function SetTheme(arg1:string):Promise<void>;

@@ -238,6 +238,10 @@ export function SetProfileMountEnabled(arg1, arg2) {
   return window['go']['app']['App']['SetProfileMountEnabled'](arg1, arg2);
 }
 
+export function SetQuatStream(arg1) {
+  return window['go']['app']['App']['SetQuatStream'](arg1);
+}
+
 export function SetSplash(arg1) {
   return window['go']['app']['App']['SetSplash'](arg1);
 }

@@ -59,6 +59,7 @@ type App struct {
 	liveDebugMu      sync.RWMutex
 	liveDebugClients map[*websocket.Conn]struct{}
 	liveDebugSeq     atomic.Uint64
+	quatStream       atomic.Bool // ahrs:quat has a listener (SetQuatStream)
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
@@ -260,7 +261,7 @@ func (a *App) startup(ctx context.Context) {
 	a.startResourceMonitor()
 	go a.watchNetwork()
 	a.hubPhase("services up")
-	go a.updateLoop() // update_check.go; idle unless the check is switched on
+	go a.updateLoop()              // update_check.go; idle unless the check is switched on
 	go a.startNetwork(dsuSrv, srv) // opens the ports after the launch animation, then watches the firewall
 }
 

@@ -23,6 +23,10 @@ export async function call(method, ...args) {
 
 const eventRegistry = new Map();
 
+// Streams Go sends only while someone listens: the first listener switches the
+// stream on, the last one off (Rule 0: no 60 Hz IPC for a screen nobody shows).
+const GATED = { 'ahrs:quat': 'SetQuatStream' };
+
 function dispatchEvent(event, ...args) {
   const set = eventRegistry.get(event);
   if (!set) return;
@@ -41,6 +45,7 @@ export function on(event, fn) {
   if (!set) {
     set = new Set();
     eventRegistry.set(event, set);
+    if (GATED[event]) call(GATED[event], true).catch(() => {});
     if (window.runtime && window.runtime.EventsOn) {
       window.runtime.EventsOn(event, (...args) => dispatchEvent(event, ...args));
     } else {
@@ -67,6 +72,7 @@ export function off(event, fn) {
 
   if (set.size === 0) {
     eventRegistry.delete(event);
+    if (GATED[event]) call(GATED[event], false).catch(() => {});
     if (window.runtime && window.runtime.EventsOff) {
       window.runtime.EventsOff(event);
     } else {

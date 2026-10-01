@@ -27,7 +27,7 @@ func (a *App) streamQuat(ctx context.Context) {
 			return
 		case <-ticker.C:
 			bank := a.activeBank()
-			if !bank.hasClient.Load() || a.ctx == nil || a.uiHidden.Load() {
+			if !a.quatStream.Load() || !bank.hasClient.Load() || a.ctx == nil || a.uiHidden.Load() {
 				continue
 			}
 			q := [4]uint64{bank.curAhrsQ0.Load(), bank.curAhrsQ1.Load(), bank.curAhrsQ2.Load(), bank.curAhrsQ3.Load()}
@@ -44,6 +44,10 @@ func (a *App) streamQuat(ctx context.Context) {
 		}
 	}
 }
+
+// SetQuatStream switches the ahrs:quat stream on while a screen listens to it
+// (core/bridge.js calls it for the first listener and after the last one).
+func (a *App) SetQuatStream(on bool) { a.quatStream.Store(on) }
 
 // heartbeat sends the state to the UI at 15 Hz (66 ms), drops a phone whose
 // sensors went silent or froze, and keeps the Live Debug cube alive between
