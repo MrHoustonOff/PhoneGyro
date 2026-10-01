@@ -2072,3 +2072,16 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-bench-card__head { cursor: pointer; }
 .app-bench-fold { pointer-events: none; }
 .app-bench-card__head .pg-seg { cursor: default; }
+
+/* ── Centering sheet (js/screens/connect/recenter.js) ──────────────────── */
+.app-rc { max-width: 32rem; }
+.app-rc__body { display: flex; flex-direction: column; gap: 0.875rem; }
+.app-rc__label { margin-bottom: 0.5rem; }
+.app-rc__list { display: flex; flex-direction: column; gap: 0.25rem; max-height: 15rem; overflow: auto; }
+.app-rc__list .app-menu__item { text-align: left; font: inherit; color: inherit; background: transparent; cursor: pointer; }
+.app-rc__prompt { margin: 0; color: var(--ink-2); font-size: 0.875rem; line-height: 1.4; }
+.app-rc__note { font-size: 0.75rem; }
+/* The button fills while the second of stillness runs (--p, recenter.js). */
+.app-rc__go { position: relative; overflow: hidden; min-width: 10rem; }
+.app-rc__go::before { content: ""; position: absolute; inset: 0; width: var(--p, 0%); background: rgba(255, 255, 255, .18); pointer-events: none; }
+.app-rc__go > span { position: relative; }

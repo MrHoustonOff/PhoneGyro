@@ -451,7 +451,7 @@ func (a *App) TogglePause() AppState {
 func (a *App) ResetAHRS() {
 	bank := a.activeBank()
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.centreHere()
 		a.broadcastLiveDebug(1, 0, 0, 0)
 	}
 }

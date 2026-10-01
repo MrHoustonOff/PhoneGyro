@@ -5,8 +5,6 @@ import { $, setText, show, toggleClass } from '../../core/dom.js';
 import { call } from '../../core/bridge.js';
 import { t, onLang } from '../../core/i18n.js';
 import { onState, getState } from '../../core/state.js';
-import { toast } from '../../ui/toast.js';
-import { playSound } from '../../core/sound.js';
 
 const REM_PER_DEG = 0.125;  // bubble travel (2 px per degree at 16 px/rem)
 const MAX_REM = 3.625;      // design: clamp to ±58 px
@@ -108,11 +106,6 @@ export function startDevice() {
   yawEl    = $('dial-yaw');
   labelEl  = $('dial-label');
 
-  $('btn-recenter').onclick = async () => {
-    await call('ResetAHRS');
-    playSound('recenter');
-    toast(t('status.horizon_recenter'));
-  };
   $('btn-pause').onclick = () => call('TogglePause');
   onState(render);
   onLang(() => { if (getState()) render(getState()); });

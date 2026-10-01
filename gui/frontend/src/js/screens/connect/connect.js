@@ -10,6 +10,7 @@ import { go } from '../../shell/router.js';
 import { el as dsuCard, startDsu } from './dsu.js';
 import { startPairing } from './pairing.js';
 import { startDevice } from './device.js';
+import { startRecenter } from './recenter.js';
 import { startProfiles } from './profiles.js';
 import { startCalHints } from './cal-hints.js';
 
@@ -55,6 +56,7 @@ export function startConnect() {
   startDsu();
   startPairing();
   startDevice();
+  startRecenter();
   startProfiles();
   startCalHints();
   onState(render);

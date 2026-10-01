@@ -188,7 +188,7 @@ func (a *App) SaveProfile(slot int, name string, device string, icon string, mat
 		a.applyProfileGravity(bank, slot)
 		a.applyProfileMount(bank, slot)
 		if bank.ahrs != nil {
-			bank.ahrs.Reset()
+			bank.resetOrientation()
 		}
 	}
 
@@ -304,7 +304,7 @@ func (a *App) SetActiveProfile(slot int) string {
 	a.applyProfileMount(bank, slot)
 
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.resetOrientation()
 	}
 
 	a.saveProfiles()

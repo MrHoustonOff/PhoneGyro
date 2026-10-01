@@ -105,7 +105,7 @@ func (a *App) PreviewMatrix(matrix [3][3]float64) {
 	bank.previewMu.Unlock()
 	a.stageWizardMount(bank, matrix)
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.resetOrientation()
 	}
 }
 
@@ -127,7 +127,7 @@ func (a *App) ClearPreview() {
 	bank.wizardMount = nil
 	bank.mountMu.Unlock()
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.resetOrientation()
 	}
 }
 

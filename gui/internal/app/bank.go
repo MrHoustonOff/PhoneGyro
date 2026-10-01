@@ -1,6 +1,7 @@
 package app
 
 import (
+	"math"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -131,9 +132,52 @@ type motionBank struct {
 	// their own goroutine, and the anchor, the accelerometer filter and the
 	// frame clocks are only ever meant to see one stream.
 	frameMu sync.Mutex
+	// levelRef: pitch / roll (float64 bits) of the pose taken as zero by the last
+	// centering (ResetAHRS); the angles the UI shows are relative to it.
+	levelRefP, levelRefR atomic.Uint64
+	centreNext           atomic.Bool // the next frame's angles become levelRef
 
 	lastMotionRecvTs   atomic.Int64
 	lastSensorChangeTs atomic.Int64
+}
+
+// centreHere makes the current pose the zero of the shown angles. The AHRS
+// restarts (heading back to 0) and the next frame's pitch / roll become the
+// offset (fromCentre): taken from a frame computed after the reset, so a matrix
+// switched just before (the calibration's verify step) is already in it.
+func (b *motionBank) centreHere() {
+	b.ahrs.Reset()
+	b.centreNext.Store(true)
+	b.curPitch.Store(0)
+	b.curRoll.Store(0)
+	b.curYaw.Store(0)
+}
+
+// resetOrientation restarts the AHRS and drops the centering: the axes behind
+// the angles changed (new profile, calibration, mount), the old zero means nothing.
+func (b *motionBank) resetOrientation() {
+	b.centreNext.Store(false)
+	b.levelRefP.Store(0)
+	b.levelRefR.Store(0)
+	b.ahrs.Reset()
+}
+
+// fromCentre turns gravity-level angles into angles from the centered pose
+// (taking this frame as the zero right after centreHere).
+func (b *motionBank) fromCentre(p, r float64) (float64, float64) {
+	if b.centreNext.Swap(false) {
+		b.levelRefP.Store(math.Float64bits(p))
+		b.levelRefR.Store(math.Float64bits(r))
+	}
+	return wrap180(p - math.Float64frombits(b.levelRefP.Load())), wrap180(r - math.Float64frombits(b.levelRefR.Load()))
+}
+
+func wrap180(d float64) float64 {
+	d = math.Mod(d+180, 360)
+	if d < 0 {
+		d += 360
+	}
+	return d - 180
 }
 
 // connectedSince is when the source came online (zero time while offline).
