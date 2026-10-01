@@ -1047,7 +1047,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 .app-cal-modal .pg-modal__foot .app-ringhost .pg-btn:hover:not([disabled]) { border-color: var(--line-control); }
 
-/* Axis tiles (legacy behaviour): live rate + fill bar; a confirmed axis turns green with its role. */
+/* Axis tiles: live rate + fill bar; a confirmed axis turns green with its role. */
 .app-cal-axis, .app-cal-vstat {
   --axc: var(--axis-x);
   display: flex;
@@ -1886,7 +1886,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-stats-top .app-stat-hero__num { font-size: 1.125rem; font-variant-numeric: tabular-nums; }
 .app-stats-top .app-stat-hero__unit { font-size: 0.5625rem; line-height: 1; }
 
-/* Stats column (task 7): three sections like LEGACY Live Debug (USB protocol / INPUT / OUTPUT), tiles of two
+/* Stats column (task 7): three sections (USB protocol / INPUT / OUTPUT), tiles of two
    sizes, the chart leads every tile. Charts are SVG drawn by js/screens/stats/charts.js into .app-chart. */
 .app-sec { --sec: var(--info); display: flex; flex-direction: column; gap: 0.625rem; margin-top: 0.875rem; min-width: 0; }
 .app-sec--usb { --sec: var(--viz-teal); }

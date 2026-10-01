@@ -66,7 +66,7 @@ function getEffectiveVolume(type, force = false) {
   return Math.min(3.0, effMaster * ind);
 }
 
-// ── Synthesizer primitives (1-to-1 from LEGACY) ─────────────────────────────
+// ── Synthesizer primitives ─────────────────────────────
 
 function playTone(freq, startTime, duration, gainValue = 0.12, type = 'sine') {
   const vol = curEffectiveVol || soundVolume || 1.0;

@@ -1,5 +1,4 @@
 // ── Zelda 3D Shrine Platform Mini-Game (Apparatus Simulator) ───────────────
-// Direct transfer from LEGACY/frontend/js/platform-game.js adapted to ES module.
 
 import { t } from '../../core/i18n.js';
 import { call } from '../../core/bridge.js';

@@ -1,5 +1,4 @@
 // ── Games Screen Coordinator (Aim Reticle & 3D Marble Platform) ─────────────
-// Direct transfer of the interactive gaming logic from LEGACY/frontend/js/tuning-bench.js.
 
 import { call, on, off } from '../../core/bridge.js';
 import { go, onScreen, getCurrentScreen } from '../../shell/router.js';

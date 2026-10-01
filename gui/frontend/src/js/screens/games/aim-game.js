@@ -1,5 +1,4 @@
 // ── Zelda Target Aim Reticle Mini-Game (30-Sec Target Shoot) ────────────────
-// Direct transfer from LEGACY/frontend/js/aim-game.js adapted to ES module.
 
 import { t } from '../../core/i18n.js';
 import { go } from '../../shell/router.js';

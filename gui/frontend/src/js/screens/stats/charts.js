@@ -1,4 +1,4 @@
-// Live charts of the stats page, in the spirit of LEGACY Live Debug: smooth curves (Catmull-Rom),
+// Live charts of the stats page, smooth curves (Catmull-Rom),
 // a soft glow under the line, a glowing head dot, the full width from the first sample.
 // One SVG drawer for single-line sparks and three-axis X/Y/Z charts.
 // Cost control (the look stays the same):
@@ -82,7 +82,7 @@ function nice(v) {
 
 const f1 = (v) => Math.round(v * 10) / 10;
 
-// Smooth path through points (Catmull-Rom → cubic Bézier), like LEGACY drawAppleChart.
+// Smooth path through points (Catmull-Rom → cubic Bézier).
 function curve(xs, ys) {
   const n = ys.length;
   let d = `M${f1(xs[0])} ${f1(ys[0])}`;
@@ -218,7 +218,7 @@ export function createSpark(host, opts = {}) {
       const x = Number(v);
       if (!Number.isFinite(x)) return;
       const first = !buf.length;
-      if (first) while (buf.length < n) buf.push(x); // full width from the first sample, like LEGACY
+      if (first) while (buf.length < n) buf.push(x); // full width from the first sample
       else { buf.push(x); buf.shift(); }
       const [tl, th] = target();
       if (first) { lo = tl; hi = th; } else { lo += (tl - lo) * EASE; hi += (th - hi) * EASE; }

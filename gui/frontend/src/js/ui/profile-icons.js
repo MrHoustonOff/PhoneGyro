@@ -2,7 +2,6 @@
 //   'default'    → gamepad (generic use, when orientation is unknown)
 //   'vertical'   → phone portrait (phone held vertically)
 //   'horizontal' → phone landscape (phone held sideways)
-// Ported from legacy profile-icons.js.
 
 const ICONS = {
   vertical: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">

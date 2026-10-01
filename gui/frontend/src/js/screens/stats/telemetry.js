@@ -73,7 +73,7 @@ function setBadge(el, status, text = null) {
   if (!el) return;
   if (status === 'none') {
     el.className = 'pg-badge pg-badge--none';
-    setText(el, text != null ? text : 'нет данных');
+    setText(el, text != null ? text : t('live_debug.stats_no_data'));
   } else {
     el.className = `pg-badge pg-badge--${status || 'ok'}`;
     if (text != null) setText(el, text);
@@ -168,12 +168,12 @@ export function initTelemetry(paneEl) {
 
     // L1: Transport (connected, port, baud)
     const port = msg.port || 'USB';
-    const baud = msg.baud ? `${msg.baud} ${t('live_debug.stats_usb_baud_unit') || 'бод'}` : '—';
+    const baud = msg.baud ? `${msg.baud} ${t('live_debug.stats_usb_baud_unit')}` : '—';
     setText($('stats-usb-l1'), `${port} · ${baud}`);
     setBadge(
       $('stats-usb-badge-l1'),
       msg.connected ? 'ok' : 'none',
-      msg.connected ? (t('live_debug.stats_usb_conn_ok') || 'подключен') : (t('live_debug.stats_usb_conn_none') || 'нет')
+      msg.connected ? t('live_debug.stats_usb_conn_ok') : t('live_debug.stats_usb_conn_none')
     );
 
     // L2: Frames (rate_hz, frames, lost, crc_rejects, garbage_bytes)
@@ -181,16 +181,16 @@ export function initTelemetry(paneEl) {
     const frames = msg.frames || 0;
     const lost = msg.lost || 0;
     const crc = msg.crc_rejects || 0;
-    const hzUnit = t('live_debug.stats_hz_unit') || 'Гц';
-    const frUnit = t('live_debug.stats_usb_frames') || 'фр.';
-    const lossUnit = t('live_debug.stats_usb_loss') || 'потерь';
-    const crcUnit = t('live_debug.stats_usb_crc') || 'CRC';
+    const hzUnit = t('live_debug.stats_hz_unit');
+    const frUnit = t('live_debug.stats_usb_frames');
+    const lossUnit = t('live_debug.stats_usb_loss');
+    const crcUnit = t('live_debug.stats_usb_crc');
     const l2Val = `${rate > 0 ? rate.toFixed(0) : '—'} ${hzUnit} · ${frames} ${frUnit} (${lossUnit}: ${lost}, ${crcUnit}: ${crc})`;
     setText($('stats-usb-l2'), l2Val);
     if (lost > 0 || crc > 0) {
-      setBadge($('stats-usb-badge-l2'), 'warn', `${lost + crc} ош.`);
+      setBadge($('stats-usb-badge-l2'), 'warn', t('live_debug.stats_usb_errors', { n: lost + crc }));
     } else if (rate > 0 || frames > 0) {
-      setBadge($('stats-usb-badge-l2'), 'ok', 'стабильно');
+      setBadge($('stats-usb-badge-l2'), 'ok', t('live_debug.stats_usb_stable'));
     } else {
       setBadge($('stats-usb-badge-l2'), 'none', '—');
     }
@@ -203,9 +203,9 @@ export function initTelemetry(paneEl) {
     setText($('stats-usb-l3'), `${proto} · ${gyroR} · ${accR} · ${declHz}`);
     const metaAge = msg.meta_age_ms || 0;
     if (msg.meta_seen && metaAge > 5000) {
-      setBadge($('stats-usb-badge-l3'), 'warn', t('live_debug.stats_usb_meta_stale') || 'устарели');
+      setBadge($('stats-usb-badge-l3'), 'warn', t('live_debug.stats_usb_meta_stale');
     } else if (msg.meta_seen) {
-      setBadge($('stats-usb-badge-l3'), 'ok', t('live_debug.stats_usb_meta_ok') || 'актуален');
+      setBadge($('stats-usb-badge-l3'), 'ok', t('live_debug.stats_usb_meta_ok');
     } else {
       setBadge($('stats-usb-badge-l3'), 'none', '—');
     }
@@ -215,15 +215,15 @@ export function initTelemetry(paneEl) {
     setBadge(
       $('stats-usb-badge-l4'),
       msg.name ? 'ok' : 'none',
-      msg.name ? (t('live_debug.stats_usb_identified') || 'определен') : '—'
+      msg.name ? t('live_debug.stats_usb_identified') : '—'
     );
 
     // L5: Reset (reset_button, reset_presses)
     const hasReset = !!msg.reset_button;
     const presses = msg.reset_presses || 0;
     const l5Val = hasReset
-      ? `${t('live_debug.stats_usb_btn_present') || 'Кнопка есть'} · ${presses} наж.`
-      : (t('live_debug.stats_usb_btn_none') || 'Нет кнопки');
+      ? `${t('live_debug.stats_usb_btn_present')} · ${t('live_debug.stats_usb_presses', { n: presses })}`
+      : t('live_debug.stats_usb_btn_none');
     setText($('stats-usb-l5'), l5Val);
     setBadge(
       $('stats-usb-badge-l5'),
@@ -744,7 +744,7 @@ export function initTelemetry(paneEl) {
       setText(
         qualDesc,
         res.isConnected
-          ? `Потери ${res.lossPct}% · RTT ${res.rttMs} ms · ${res.inHz} Hz`
+          ? t('live_debug.stats_q_desc', { loss: res.lossPct, rtt: res.rttMs, hz: res.inHz })
           : (t('ui.stats_offline_tip') || 'Подключите устройство')
       );
     }
@@ -822,15 +822,15 @@ export function initTelemetry(paneEl) {
     pushSpark('omega', res.omegaMag);
 
     // ═══ GROUP C: Pipeline & Active Filter Chips ═══
-    setText($('stat-pipe-profile'), `Профиль: ${res.activeProfileName}`);
+    setText($('stat-pipe-profile'), t('live_debug.stats_pipe_profile', { v: res.activeProfileName }));
     const pMount = $('stat-pipe-mount');
     if (pMount) {
-      setText(pMount, `Наклон: ${res.mountText}`);
+      setText(pMount, t('live_debug.stats_pipe_mount', { v: res.mountText }));
       toggleClass(pMount, 'pg-badge--ok', res.mountActive);
     }
     const pCemu = $('stat-pipe-cemu');
     if (pCemu) {
-      setText(pCemu, `Защита Cemu: ${res.cemuGuardText}`);
+      setText(pCemu, t('live_debug.stats_pipe_cemu', { v: res.cemuGuardText }));
       toggleClass(pCemu, 'pg-badge--ok', res.cemuGuardActive);
     }
     setText($('stat-pipe-deadband'), `Deadband: ${res.deadbandText}`);

@@ -40,6 +40,7 @@
  * |ω| < 0.5 °/с непрерывно в течение >= 1.0 секунды.
  * (Порог согласуется с gyrobias.go: шум сенсора телефона в покое < 0.1 °/с, в руке > 1.3 °/с).
  */
+import { t } from '../../core/i18n.js';
 
 export class TelemetryDeriveEngine {
   constructor() {
@@ -322,7 +323,7 @@ export class TelemetryDeriveEngine {
     // ── 2. LINK QUALITY INDEX (0–100) ──
     let quality = 0;
     let qualityStatus = 'danger';
-    let qualityVerdict = 'ОФФЛАЙН';
+    let qualityVerdict = t('live_debug.stats_q_offline');
 
     if (!hasLiveStream) {
       this.lossSnaps.length = 0;
@@ -331,11 +332,11 @@ export class TelemetryDeriveEngine {
     if (!isConnected) {
       quality = 0;
       qualityStatus = 'danger';
-      qualityVerdict = 'ОФФЛАЙН';
+      qualityVerdict = t('live_debug.stats_q_offline');
     } else if (!hasLiveStream) {
       quality = 0;
       qualityStatus = 'none';
-      qualityVerdict = 'НЕТ ДАННЫХ';
+      qualityVerdict = t('live_debug.stats_q_nodata');
     } else {
       // 1. Loss score (40%): loss over the last 10 s only (counters' difference), so an old burst fades out
       const snaps = this.lossSnaps;
@@ -395,13 +396,13 @@ export class TelemetryDeriveEngine {
 
       if (quality >= 80) {
         qualityStatus = 'ok';
-        qualityVerdict = 'Отличное качество связи';
+        qualityVerdict = t('live_debug.stats_q_good');
       } else if (quality >= 50) {
         qualityStatus = 'warn';
-        qualityVerdict = 'Среднее качество связи';
+        qualityVerdict = t('live_debug.stats_q_fair');
       } else {
         qualityStatus = 'danger';
-        qualityVerdict = 'Нестабильный канал';
+        qualityVerdict = t('live_debug.stats_q_bad');
       }
     }
 
@@ -428,12 +429,12 @@ export class TelemetryDeriveEngine {
     // Compute Drift & Noise during rest
     let driftDps = this.lastComputedDrift ?? 0;
     let noiseDps = this.lastComputedNoise ?? 0;
-    let noiseTag = 'Движение';
+    let noiseTag = t('live_debug.stats_noise_motion');
 
     if (!isConnected) {
-      noiseTag = 'Офлайн';
+      noiseTag = t('live_debug.stats_noise_offline');
     } else if (!hasLiveStream) {
-      noiseTag = 'Нет данных';
+      noiseTag = t('live_debug.stats_noise_nodata');
     } else if (this.isResting && this.restWin.length >= 20) {
       const n = this.restWin.length;
       let sumGx = 0, sumGy = 0, sumGz = 0;
@@ -459,9 +460,9 @@ export class TelemetryDeriveEngine {
       noiseDps = Math.sqrt(varSum / n);
       this.lastComputedNoise = noiseDps;
 
-      noiseTag = noiseDps < 0.15 ? 'Стабильно' : 'Дрожание';
+      noiseTag = noiseDps < 0.15 ? t('live_debug.stats_noise_stable') : t('live_debug.stats_noise_jitter');
     } else if (!this.isResting) {
-      noiseTag = 'Движение';
+      noiseTag = t('live_debug.stats_noise_motion');
     }
 
     // Status badges according to task6.9 thresholds
@@ -478,14 +479,14 @@ export class TelemetryDeriveEngine {
 
     // ── 4. GROUP C: Pipeline & Active Corrections ──
     const settings = this.latestSettings || {};
-    let activeProfileName = 'По умолчанию';
+    let activeProfileName = t('live_debug.stats_profile_default');
     let mountActive = false;
     let mountAngle = null;
 
     if (state.profiles && typeof state.activeSlot === 'number' && state.activeSlot >= 0) {
       const p = state.profiles[state.activeSlot];
       if (p) {
-        activeProfileName = p.name || `Профиль #${state.activeSlot + 1}`;
+        activeProfileName = p.name || t('live_debug.stats_profile_n', { n: state.activeSlot + 1 });
         if (p.mount && p.mount.enabled) {
           mountActive = true;
           mountAngle = typeof p.mount.tiltDeg === 'number' ? p.mount.tiltDeg : null;
@@ -596,9 +597,9 @@ export class TelemetryDeriveEngine {
       // Group C
       activeProfileName,
       mountActive,
-      mountText: mountActive ? (mountAngle != null ? `Вкл (+${mountAngle.toFixed(1)}°)` : 'Вкл') : 'Выкл',
+      mountText: mountActive ? (mountAngle != null ? `${t('live_debug.stats_on')} (+${mountAngle.toFixed(1)}°)` : t('live_debug.stats_on')) : t('live_debug.stats_off'),
       cemuGuardActive,
-      cemuGuardText: cemuGuardActive ? 'Вкл' : 'Выкл',
+      cemuGuardText: cemuGuardActive ? t('live_debug.stats_on') : t('live_debug.stats_off'),
       deadbandText: `${deadbandVal.toFixed(2)}°/s`,
       sensText: `${sensVal.toFixed(2)}x`,
       outHz: hasLiveStream ? outHz.toFixed(1) : '—',
