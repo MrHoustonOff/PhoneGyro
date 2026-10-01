@@ -202,40 +202,6 @@ export namespace app {
 	        this.logOn = source["logOn"];
 	    }
 	}
-	export class FirewallResult {
-	    result: string;
-	    detail?: string;
-	    status: firewall.Status;
-	
-	    static createFrom(source: any = {}) {
-	        return new FirewallResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.result = source["result"];
-	        this.detail = source["detail"];
-	        this.status = this.convertValues(source["status"], firewall.Status);
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
 	export class UpdateInfo {
 	    current: string;
 	    latest: string;
@@ -252,6 +218,26 @@ export namespace app {
 	        this.latest = source["latest"];
 	        this.releaseUrl = source["releaseUrl"];
 	        this.downloadUrl = source["downloadUrl"];
+	    }
+	}
+	export class UpdateStatus {
+	    state: string;
+	    latest?: string;
+	    releaseUrl?: string;
+	    checkedAt?: number;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new UpdateStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.state = source["state"];
+	        this.latest = source["latest"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.checkedAt = source["checkedAt"];
+	        this.error = source["error"];
 	    }
 	}
 	export class ValidationResult {

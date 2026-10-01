@@ -1901,6 +1901,14 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 /* Resources in the footer: digits only. */
 .pg-footer .pg-mini, .pg-footer .pg-meter { display: none; }
 .app-foot-right { display: flex; align-items: center; gap: 0.5rem; }
+/* Update check: a small quiet island; colour only when there is something to do. */
+.app-upd { font: inherit; border: 0; gap: 0.375rem; cursor: default; }
+.app-upd b { font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.app-upd[data-state="available"], .app-upd[data-state="error"] { cursor: pointer; }
+.app-upd[data-state="available"] b { color: var(--accent-text); }
+.app-upd[data-state="error"] b { color: var(--warn-text); }
+@container pgwin (max-width: 56.25rem) { .app-upd .pg-dim { display: none; } }
+@container pgwin (max-width: 42rem) { .app-upd { display: none; } }
 .app-foot-right .pg-titlebar__ver { display: inline; font: 500 0.6875rem/1 var(--font-mono); color: var(--ink-2); }
 .pg-shell__body { inset: var(--pg-hh) 0.5rem var(--pg-fh) 0; padding: 0; }
 .pg-shell.is-screen-stats .pg-shell__body { padding: 0; }

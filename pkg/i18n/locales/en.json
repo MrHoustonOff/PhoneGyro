@@ -427,7 +427,18 @@
     "cpu": "CPU",
     "cpu_tip": "CPU used by the whole app (including its WebView2 UI) as a share of the machine, like Task Manager",
     "ram": "RAM",
-    "ram_tip": "Physical memory of the app (working set), including its WebView2 UI"
+    "ram_tip": "Physical memory of the app (working set), including its WebView2 UI",
+    "update": "Update:",
+    "update_off": "check is off",
+    "update_checking": "checking…",
+    "update_uptodate": "checked — none",
+    "update_available": "{version} available",
+    "update_error": "could not check",
+    "update_off_tip": "The update check is off. Turn it on: Settings → \"Check for updates at startup\".",
+    "update_checking_tip": "Asking GitHub for the latest version…",
+    "update_uptodate_tip": "No newer version. Last checked: {time}.",
+    "update_available_tip": "A new version is out. Click to open the release page.",
+    "update_error_tip": "Could not reach GitHub ({error}). Click to retry."
   },
   "live_debug": {
     "cam_dynamic": "Dynamic",

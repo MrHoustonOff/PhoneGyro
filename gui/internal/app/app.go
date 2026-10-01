@@ -148,6 +148,7 @@ func NewApp() *App {
 		primaryIP:   primaryIP,
 		profilesDir: profilesDir,
 	}
+	app.update.kick = make(chan struct{}, 1)
 	app.phoneBank = newMotionBank()
 	app.usbBank = newMotionBank()
 	app.applySettings(settings.Defaults())
@@ -261,7 +262,7 @@ func (a *App) startup(ctx context.Context) {
 	a.startResourceMonitor()
 	go a.watchNetwork()
 	a.hubPhase("services up")
-	go a.checkForUpdate() // update_check.go; does nothing unless switched on
+	go a.updateLoop() // update_check.go; idle unless the check is switched on
 	go a.startNetwork(dsuSrv, srv) // opens the ports after the launch animation, then watches the firewall
 }
 

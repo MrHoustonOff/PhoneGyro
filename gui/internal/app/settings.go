@@ -504,8 +504,8 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	// CemuNoticeHidden is not a settings-window field: only the notice's own
 	// "don't show again" changes it (CloseCemuNotice). Same for SkippedUpdate.
-	if !a.update.enabled.Swap(s.CheckUpdates) && s.CheckUpdates {
-		go a.checkForUpdate() // just switched on: check now, not at the next start
+	if a.update.enabled.Swap(s.CheckUpdates) != s.CheckUpdates {
+		a.update.wake() // switched on: check now; switched off: show "off"
 	}
 	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
