@@ -203,9 +203,9 @@ export function initTelemetry(paneEl) {
     setText($('stats-usb-l3'), `${proto} · ${gyroR} · ${accR} · ${declHz}`);
     const metaAge = msg.meta_age_ms || 0;
     if (msg.meta_seen && metaAge > 5000) {
-      setBadge($('stats-usb-badge-l3'), 'warn', t('live_debug.stats_usb_meta_stale');
+      setBadge($('stats-usb-badge-l3'), 'warn', t('live_debug.stats_usb_meta_stale'));
     } else if (msg.meta_seen) {
-      setBadge($('stats-usb-badge-l3'), 'ok', t('live_debug.stats_usb_meta_ok');
+      setBadge($('stats-usb-badge-l3'), 'ok', t('live_debug.stats_usb_meta_ok'));
     } else {
       setBadge($('stats-usb-badge-l3'), 'none', '—');
     }
@@ -692,15 +692,6 @@ export function initTelemetry(paneEl) {
     }
   };
 
-  // Handle livedebug telemetry messages (e.g. from wails bridge)
-  const handleLiveTelemetry = (raw) => {
-    if (!isActive || !raw) return;
-    try {
-      const msg = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      feedStreamFrame(msg);
-    } catch (_) {}
-  };
-
   const handleResourceStats = (r) => {
     if (!isActive || !r) return;
     deriveEngine.feedResources(r);
@@ -961,7 +952,6 @@ export function initTelemetry(paneEl) {
       window.addEventListener('focus', onWindowFocus);
       document.addEventListener('visibilitychange', onVisibilityChange);
       on('tuning:frame', handleTuningFrame);
-      on('livedebug:telemetry', handleLiveTelemetry);
       on('ahrs:quat', handleAhrsQuat);
       on('usb_proto', handleUsbProto);
       on('usb:status', handleUsbProto);
@@ -984,7 +974,6 @@ export function initTelemetry(paneEl) {
       window.removeEventListener('focus', onWindowFocus);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       off('tuning:frame', handleTuningFrame);
-      off('livedebug:telemetry', handleLiveTelemetry);
       off('ahrs:quat', handleAhrsQuat);
       off('usb_proto', handleUsbProto);
       off('usb:status', handleUsbProto);

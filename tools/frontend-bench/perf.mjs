@@ -21,7 +21,6 @@ async function run(dir) {
     if (pageName === 'index.html') {
       await p.evaluate(`__benchStart(${JSON.stringify(scenario)})`);
       // measure the main screen, not the first-connection centring sheet
-      if (scenario !== 'offline') await p.evaluate('FirstCenterGate.done.phone = true; setTimeout(() => RecenterManager.close(true), 300)');
     }
     if (opt.eval) await p.evaluate(opt.eval);
     await sleep(1500);

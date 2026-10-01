@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,10 +29,9 @@ import (
 var latestReleaseAPI = "https://api.github.com/repos/MrHoustonOff/PhoneGyro/releases/latest"
 
 const (
-	updateExeAsset   = "PhoneGyro.exe"
-	updateTimeout    = 10 * time.Second
-	updateFirstWait  = 4 * time.Second // after the window is up: let the start settle first
-	updateEvery      = 6 * time.Hour
+	updateTimeout   = 10 * time.Second
+	updateFirstWait = 4 * time.Second // after the window is up: let the start settle first
+	updateEvery     = 6 * time.Hour
 )
 
 // retry delays after failed checks (the last one repeats until it works).
@@ -253,12 +253,21 @@ func fetchUpdate(ctx context.Context, url, current string) (*UpdateInfo, error) 
 		DownloadURL: rel.HTMLURL,
 	}
 	for _, as := range rel.Assets {
-		if strings.EqualFold(as.Name, updateExeAsset) && as.URL != "" {
+		if strings.EqualFold(as.Name, updateExeAsset(runtime.GOARCH)) && as.URL != "" {
 			info.DownloadURL = as.URL
 			break
 		}
 	}
 	return info, nil
+}
+
+// updateExeAsset is the release file for this build's architecture (names as
+// .github/workflows/release.yml uploads them).
+func updateExeAsset(goarch string) string {
+	if goarch == "arm64" {
+		return "PhoneGyro-windows-arm64.exe"
+	}
+	return "PhoneGyro.exe"
 }
 
 // newerVersion reports whether latest ("2.1.0") is above current ("2.0.1").

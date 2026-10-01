@@ -50,9 +50,9 @@ const wait = (ms) => `new Promise(r => setTimeout(r, ${ms}))`;
 export const STATES = [
   ['offline', wait(300)],
   ['online', GO_ONLINE],
-  ['usb', `(async () => { AppState.setInputMode('usb', true); __emit('state:change', Object.assign(__stateAt('offline', 0), { inputMode: 'usb', usbConnected: false })); await ${wait(600)}; })()`],
-  ['calibration', `(async () => { await ${GO_ONLINE}; CalibrationWizard.openToSlot(0); CalibrationWizard.showScreen('confirm'); await ${wait(800)}; })()`],
-  ['settings', `(async () => { await ${GO_ONLINE}; SettingsManager.open(); await ${wait(800)}; })()`],
+  ['usb', `(async () => { __emit('state:change', Object.assign(__stateAt('offline', 0), { inputMode: 'usb', usbConnected: false })); await ${wait(600)}; })()`],
+  ['calibration', `(async () => { await ${GO_ONLINE}; document.getElementById('btn-calibrate').click(); await ${wait(800)}; })()`],
+  ['settings', `(async () => { await ${GO_ONLINE}; document.querySelector('#nav [data-tab="settings"]').click(); await ${wait(800)}; })()`],
 ];
 const THEME = (t) => `document.documentElement.setAttribute('data-theme', '${t}'); ${wait(400)}`;
 

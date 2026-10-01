@@ -1,6 +1,6 @@
 // Drive the main window through its screens and record, after every step,
 // which elements (with an id) are visible: catches show/hide regressions that
-// static snapshots cannot see (wizards, dialogs, sheets, settings, bench, guides).
+// static snapshots cannot see (screens, wizards, dialogs, notices).
 // node flows.mjs out.json [--ref gitref]
 // node flows.mjs --diff a.json b.json          exit code 1 on differences
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,77 +12,51 @@ const FLOW = `(async () => {
   const visible = () => [...document.querySelectorAll('[id]')].filter(e => getComputedStyle(e).getPropertyValue('display') !== 'none' && e.getClientRects().length).map(e => e.id);
   const step = async (name, f) => {
     try { await f(); } catch (e) { errs.push(name + ': ' + String(e)); }
-    await W(250);
+    await W(900); // screen transitions run ~0.6 s
     steps.push({ name, visible: visible() });
   };
   const on = __stateAt('rest', 0); on.pitch = 0; on.roll = 0; on.yaw = 0;
   const off = __stateAt('offline', 0);
   const click = (sel) => document.querySelector(sel)?.click();
 
+  const tab = (t) => click('#nav [data-tab="' + t + '"]');
+  const esc = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
   await step('offline', () => __emit('state:change', off));
-  await step('first connection sheet', () => { FirstCenterGate.done.phone = false; __emit('state:change', on); });
-  await step('sheet closed', () => RecenterManager.close(true));
-  await step('online', () => { FirstCenterGate.done.phone = true; __emit('state:change', on); });
+  await step('online', () => __emit('state:change', on));
   await step('paused', () => __emit('state:change', Object.assign({}, on, { isPaused: true })));
   await step('resumed', () => __emit('state:change', on));
-  await step('recal hint', () => AppState.showRecalHint());
-  await step('recal hint hidden', () => AppState.hideRecalHint(true));
   await step('dsu clients', () => __emit('dsu:status', { count: 1, clients: [{ address: '127.0.0.1:5', ip: '127.0.0.1', port: 5, active: true, process: 'Cemu' }], kicked: [{ address: '127.0.0.1:6', ip: '127.0.0.1', port: 6, process: 'PadTest' }] }));
   await step('dsu none', () => __emit('dsu:status', { count: 0, clients: [], kicked: [] }));
-  await step('usb mode', () => AppState.setInputMode('usb', true));
   await step('usb waiting', () => __emit('state:change', Object.assign({}, off, { inputMode: 'usb', usbConnected: false })));
   await step('usb connected', () => __emit('state:change', Object.assign({}, on, { inputMode: 'usb', usbConnected: true, usbPort: 'COM3' })));
-  await step('phone mode', () => AppState.setInputMode('phone', true));
+  await step('phone again', () => __emit('state:change', on));
   await step('offline again', () => __emit('state:change', off));
   await step('online again', () => __emit('state:change', on));
 
-  await step('calibration open', () => CalibrationWizard.open());
-  await step('calibration slot 2', () => CalibrationWizard.openToSlot(1));
-  for (const sc of ['capture', 'confirm', 'manual', 'save', 'slots', 'capture']) await step('calibration ' + sc, () => CalibrationWizard.showScreen(sc));
-  for (let i = 0; i < 4; i++) await step('capture step ' + i, () => { CalibrationWizard.captureStep = i; CalibrationWizard.showScreen('capture'); });
-  await step('calibration disconnect alert', () => CalibrationWizard.showDisconnectAlert());
-  await step('calibration alert hidden', () => CalibrationWizard.hideDisconnectAlert());
-  await step('calibration save dropdown', () => CalibrationWizard.openSaveDropdown && CalibrationWizard.openSaveDropdown());
-  await step('calibration save dropdown closed', () => CalibrationWizard.closeSaveDropdown && CalibrationWizard.closeSaveDropdown());
-  await step('calibration closed', () => CalibrationWizard.close());
+  await step('profile menu', () => click('#prof-current'));
+  await step('profile menu closed', () => click('#prof-current'));
+  await step('calibration', () => click('#btn-calibrate'));
+  await step('calibration closed', () => click('#cal-x'));
+  await step('setup wizard', () => click('#btn-setup'));
+  for (let i = 0; i < 6; i++) await step('setup next ' + i, () => click('#wiz-next'));
+  await step('setup closed', () => click('#wiz-close'));
 
-  await step('settings', () => SettingsManager.open());
-  await step('settings tabs', () => document.querySelectorAll('[data-tab], .settings-tab, .settings-nav-item, .settings-sidebar button').forEach(b => b.click()));
-  await step('bench platform', () => TuningBench.switchGame && TuningBench.switchGame('platform'));
-  await step('bench aim', () => TuningBench.switchGame && TuningBench.switchGame('aim'));
-  await step('aim fullscreen', () => AimGame.toggleFullscreen());
-  await step('aim windowed', () => AimGame.toggleFullscreen());
-  await step('device lost', () => __emit('device:disconnected'));
-  await step('device back', () => __emit('device:connected'));
-  await step('settings closed', () => SettingsManager.close());
+  for (const t of ['settings', 'stats', 'docs', 'connect']) await step('screen ' + t, () => tab(t));
+  await step('games', () => { tab('settings'); click('#btn-open-games'); });
+  await step('games closed', () => click('#btn-games-close'));
+  await step('back home', () => tab('connect'));
 
-  await step('help', () => HelpManager.open());
-  await step('help tabs', () => document.querySelectorAll('#help-overlay button, .help-tab').forEach(b => { if (!/close/i.test(b.id)) b.click(); }));
-  await step('help closed', () => HelpManager.close());
-  await step('welcome', () => WelcomeManager.open());
-  for (let i = 0; i < 6; i++) await step('welcome next ' + i, () => click('#welcome-overlay [id*=next]'));
-  await step('welcome closed', () => WelcomeManager.close());
-  await step('setup', () => SetupWizard.open());
-  for (const sc of ['android', 'select', 'ios']) await step('setup ' + sc, () => SetupWizard.showScreen(sc));
-  for (let i = 1; i <= 6; i++) await step('ios step ' + i, () => SetupWizard.setIosStep(i));
-  await step('setup closed', () => SetupWizard.close());
-
-  await step('recenter', () => RecenterManager.open({}));
-  await step('recenter closed', () => RecenterManager.close(true));
-  await step('recenter forced', () => RecenterManager.open({ forced: true }));
-  await step('recenter forced closed', () => RecenterManager.close(true));
-  await step('profile menu', () => ProfileManager.openDropdown());
-  await step('profile menu closed', () => ProfileManager.closeDropdown());
-  await step('close dialog', () => AppleCloseDialog.show());
-  await step('close dialog cancelled', () => click('.apple-dialog-overlay [id*=cancel]'));
-  await step('delete dialog', () => ProfileDeleteDialog.show(1, 'X'));
-  await step('delete dialog cancelled', () => document.querySelectorAll('.apple-dialog-overlay button').forEach(b => { if (/cancel/i.test(b.id + b.className)) b.click(); }));
-  await step('cemu notice', () => CemuNotice.show({ guardOn: true }));
-  await step('cemu notice closed', () => click('#cemu-notice-modal button'));
-  await step('confirm', () => { const p = showAppleConfirm({ title: 't', message: 'm' }); setTimeout(() => click('.apple-dialog-overlay button'), 50); return p; });
-  await step('theme toggled', () => ThemeManager.toggle());
-  await step('theme back', () => ThemeManager.toggle());
-  await step('toast', () => showToast('x'));
+  await step('cemu notice', () => __emit('cemu:notice', { guardOn: true }));
+  await step('cemu notice closed', esc);
+  await step('firewall alert', () => __emit('firewall:alert', { state: 'blocked', network: 'public' }));
+  await step('firewall alert closed', esc);
+  await step('update notice', () => __emit('update:available', { current: '2.0.0', latest: '2.1.0', releaseUrl: 'https://x', downloadUrl: 'https://x' }));
+  await step('update notice closed', esc);
+  await step('close dialog', () => __emit('app:confirm-close'));
+  await step('close dialog cancelled', esc);
+  await step('theme toggled', () => click('#btn-theme'));
+  await step('theme back', () => click('#btn-theme'));
   return JSON.stringify({ steps, errs });
 })()`;
 

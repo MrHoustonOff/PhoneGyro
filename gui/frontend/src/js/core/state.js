@@ -25,7 +25,10 @@ export function setState(st) {
   stateStats.lastAt = now;
   const prev = current;
   current = st;
-  for (const fn of subs) fn(st, prev);
+  // One renderer that throws must not leave every renderer after it stale.
+  for (const fn of subs) {
+    try { fn(st, prev); } catch (err) { console.error('state renderer failed:', err); }
+  }
 }
 
 export async function startState() {

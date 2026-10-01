@@ -156,3 +156,9 @@ func TestSkippedVersionIsNotRaised(t *testing.T) {
 		t.Fatalf("the footer still shows it: %+v", st)
 	}
 }
+
+func TestUpdateExeAsset(t *testing.T) {
+	if updateExeAsset("amd64") != "PhoneGyro.exe" || updateExeAsset("arm64") != "PhoneGyro-windows-arm64.exe" {
+		t.Fatal("wrong release asset for the architecture")
+	}
+}

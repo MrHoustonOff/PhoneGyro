@@ -139,9 +139,7 @@ export function backendStub({ fontScale } = {}) {
 // Brings the main window online past the first-connection sheet (page script).
 export const GO_ONLINE = `(async () => {
   const s = __stateAt('rest', 0); s.pitch = 0; s.roll = 0; s.yaw = 0;
-  FirstCenterGate.done.phone = true;
-  __emit('state:change', s); await new Promise(r => setTimeout(r, 200));
-  RecenterManager.close(true); __emit('state:change', s); await new Promise(r => setTimeout(r, 500));
+  __emit('state:change', s); await new Promise(r => setTimeout(r, 700));
 })()`;
 
 // ── Chrome ───────────────────────────────────────────────────────────────────
