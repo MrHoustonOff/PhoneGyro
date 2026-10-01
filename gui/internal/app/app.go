@@ -212,6 +212,8 @@ func (a *App) startup(ctx context.Context) {
 	caMgr, err := ca.NewCertificateManager(caDir, lanIPs, nil)
 	if err != nil {
 		fmt.Printf("[-] CA init error: %v\n", err)
+	} else if caMgr.Regenerated != "" {
+		a.logEvent("WARN", "certificate: new root CA (%s); the phone has to install it again", caMgr.Regenerated)
 	}
 	a.caMgr = caMgr
 	a.hubPhase("certificates ready")

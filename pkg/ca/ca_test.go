@@ -32,7 +32,7 @@ func TestCertificateManager_CreationAndVerification(t *testing.T) {
 	if !cm.RootCert.IsCA {
 		t.Error("RootCert IsCA should be true")
 	}
-	if cm.RootCert.Subject.CommonName != "PhoneGyro Root CA" {
+	if !strings.HasPrefix(cm.RootCert.Subject.CommonName, "PhoneGyro Root CA") {
 		t.Errorf("unexpected CommonName: %s", cm.RootCert.Subject.CommonName)
 	}
 
@@ -139,7 +139,7 @@ func TestCertificateManager_MobileConfig(t *testing.T) {
 	if !strings.Contains(mcStr, "com.apple.security.root") {
 		t.Error("mobileconfig missing com.apple.security.root payload type")
 	}
-	if !strings.Contains(mcStr, "com.phonegyro.ca.profile") {
+	if !strings.Contains(mcStr, "com.phonegyro.ca."+cm.Fingerprint()) {
 		t.Error("mobileconfig missing profile identifier")
 	}
 }

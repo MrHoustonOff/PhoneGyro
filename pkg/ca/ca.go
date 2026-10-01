@@ -5,11 +5,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
+	"encoding/xml"
 	"fmt"
 	"math/big"
 	"net"
@@ -26,10 +29,13 @@ type CertificateManager struct {
 	RootCert   *x509.Certificate
 	RootKey    *ecdsa.PrivateKey
 	LeafCert   *tls.Certificate
-	leafKey    *ecdsa.PrivateKey
-	mu         sync.RWMutex
-	knownIPs   map[string]net.IP
-	knownDNS   map[string]bool
+	// Regenerated says why the stored root CA was replaced (empty: loaded, or
+	// created on the first start).
+	Regenerated string
+	leafKey     *ecdsa.PrivateKey
+	mu          sync.RWMutex
+	knownIPs    map[string]net.IP
+	knownDNS    map[string]bool
 }
 
 // NewCertificateManager creates or loads the local Root CA and signs a Leaf certificate.
@@ -76,12 +82,13 @@ func NewCertificateManager(storageDir string, hostIPs []net.IP, hostnames []stri
 	}
 
 	cm.mu.Lock()
-	err := cm.generateLeafCertLocked()
-	cm.mu.Unlock()
-	if err != nil {
+	defer cm.mu.Unlock()
+	if cm.loadLeafLocked() {
+		return cm, nil
+	}
+	if err := cm.generateLeafCertLocked(); err != nil {
 		return nil, fmt.Errorf("leaf certificate error: %w", err)
 	}
-
 	return cm, nil
 }
 
@@ -90,36 +97,15 @@ func (cm *CertificateManager) loadOrGenerateRootCA() error {
 	caKeyPath := filepath.Join(cm.storageDir, "ca.key")
 
 	if fileExists(caCertPath) && fileExists(caKeyPath) {
-		certPEM, err := os.ReadFile(caCertPath)
-		if err != nil {
-			return err
+		cert, key, err := loadRootCA(caCertPath, caKeyPath)
+		if err == nil {
+			cm.RootCert = cert
+			cm.RootKey = key
+			return nil
 		}
-		keyPEM, err := os.ReadFile(caKeyPath)
-		if err != nil {
-			return err
-		}
-
-		block, _ := pem.Decode(certPEM)
-		if block == nil {
-			return fmt.Errorf("failed to decode root cert PEM")
-		}
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return err
-		}
-
-		keyBlock, _ := pem.Decode(keyPEM)
-		if keyBlock == nil {
-			return fmt.Errorf("failed to decode root key PEM")
-		}
-		key, err := x509.ParseECPrivateKey(keyBlock.Bytes)
-		if err != nil {
-			return err
-		}
-
-		cm.RootCert = cert
-		cm.RootKey = key
-		return nil
+		// Unreadable, mismatched, expiring or from before the name constraints:
+		// a new CA (the phone has to install it once more, docs/tls.*.md).
+		cm.Regenerated = err.Error()
 	}
 
 	// Generate new Root CA using ECDSA P-384
@@ -140,7 +126,7 @@ func (cm *CertificateManager) loadOrGenerateRootCA() error {
 		Subject: pkix.Name{
 			Organization:       []string{"PhoneGyro"},
 			OrganizationalUnit: []string{"Local Motion Controller"},
-			CommonName:         "PhoneGyro Root CA",
+			CommonName:         rootCommonName(),
 		},
 		NotBefore:             now,
 		NotAfter:              now.Add(3650 * 24 * time.Hour), // 10 years validity
@@ -148,6 +134,10 @@ func (cm *CertificateManager) loadOrGenerateRootCA() error {
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 		MaxPathLen:            1,
+		// The phone trusts this CA for local addresses only: a leaked ca.key
+		// cannot vouch for any site on the internet (docs/tls.en.md).
+		PermittedIPRanges:   PermittedIPRanges(),
+		PermittedDNSDomains: PermittedDNSDomains,
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
@@ -195,16 +185,21 @@ func (cm *CertificateManager) generateLeafCertLocked() error {
 		return fmt.Errorf("failed to generate leaf serial: %w", err)
 	}
 
+	// Only addresses the root may vouch for: one SAN outside its name
+	// constraints (a VPN adapter on 25.x or 26.x, say) makes the phone reject
+	// the whole leaf, for every address.
 	var ips []net.IP
 	for _, ip := range cm.knownIPs {
-		if ip != nil {
+		if ip != nil && PermittedIP(ip) {
 			ips = append(ips, ip)
 		}
 	}
 
 	var dnsNames []string
 	for name := range cm.knownDNS {
-		dnsNames = append(dnsNames, name)
+		if PermittedDNS(name) {
+			dnsNames = append(dnsNames, name)
+		}
 	}
 
 	now := time.Now().Add(-1 * time.Hour)
@@ -235,7 +230,73 @@ func (cm *CertificateManager) generateLeafCertLocked() error {
 	}
 
 	cm.LeafCert = &tlsCert
+	cm.saveLeafLocked(leafDER)
 	return nil
+}
+
+// The leaf is kept on disk (leaf.crt, leaf.key) and reused while it still
+// covers this PC's addresses: Chrome on Android remembers "proceed anyway" for
+// one certificate, so a leaf re-signed at every start brought its warning back
+// at every start.
+const (
+	leafCertFile    = "leaf.crt"
+	leafKeyFile     = "leaf.key"
+	leafMinValidity = 30 * 24 * time.Hour
+)
+
+// loadLeafLocked takes the stored leaf if the current root signed it, it is
+// valid for another month and it names every known address and name.
+func (cm *CertificateManager) loadLeafLocked() bool {
+	certPEM, err1 := os.ReadFile(filepath.Join(cm.storageDir, leafCertFile))
+	keyPEM, err2 := os.ReadFile(filepath.Join(cm.storageDir, leafKeyFile))
+	if err1 != nil || err2 != nil {
+		return false
+	}
+	cb, _ := pem.Decode(certPEM)
+	kb, _ := pem.Decode(keyPEM)
+	if cb == nil || kb == nil {
+		return false
+	}
+	leaf, err := x509.ParseCertificate(cb.Bytes)
+	if err != nil || leaf.CheckSignatureFrom(cm.RootCert) != nil || time.Until(leaf.NotAfter) < leafMinValidity {
+		return false
+	}
+	key, err := x509.ParseECPrivateKey(kb.Bytes)
+	if err != nil {
+		return false
+	}
+	if pub, ok := leaf.PublicKey.(*ecdsa.PublicKey); !ok || !pub.Equal(&key.PublicKey) {
+		return false
+	}
+	have := map[string]bool{}
+	for _, ip := range leaf.IPAddresses {
+		have[ip.String()] = true
+	}
+	for _, n := range leaf.DNSNames {
+		have[n] = true
+	}
+	for k, ip := range cm.knownIPs {
+		if ip != nil && PermittedIP(ip) && !have[k] {
+			return false
+		}
+	}
+	for n := range cm.knownDNS {
+		if PermittedDNS(n) && !have[n] {
+			return false
+		}
+	}
+	cm.leafKey = key
+	cm.LeafCert = &tls.Certificate{Certificate: [][]byte{leaf.Raw, cm.RootCert.Raw}, PrivateKey: key}
+	return true
+}
+
+func (cm *CertificateManager) saveLeafLocked(der []byte) {
+	kb, err := x509.MarshalECPrivateKey(cm.leafKey)
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(cm.storageDir, leafKeyFile), pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: kb}), 0600)
+	_ = os.WriteFile(filepath.Join(cm.storageDir, leafCertFile), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0644)
 }
 
 // GetCertificate dynamically inspects incoming TLS ClientHello to ensure the connecting IP is in the leaf cert SAN.
@@ -420,11 +481,11 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 			<key>PayloadDisplayName</key>
 			<string>PhoneGyro Root CA</string>
 			<key>PayloadIdentifier</key>
-			<string>com.phonegyro.ca.credential</string>
+			<string>com.phonegyro.ca.%[3]s.credential</string>
 			<key>PayloadType</key>
 			<string>com.apple.security.root</string>
 			<key>PayloadUUID</key>
-			<string>%s</string>
+			<string>%[1]s</string>
 			<key>PayloadVersion</key>
 			<integer>1</integer>
 		</dict>
@@ -432,9 +493,9 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 	<key>PayloadDescription</key>
 	<string>Enables secure local HTTPS for motion sensors on iOS devices.</string>
 	<key>PayloadDisplayName</key>
-	<string>PhoneGyro Controller Profile</string>
+	<string>%[4]s</string>
 	<key>PayloadIdentifier</key>
-	<string>com.phonegyro.ca.profile</string>
+	<string>com.phonegyro.ca.%[3]s</string>
 	<key>PayloadOrganization</key>
 	<string>PhoneGyro</string>
 	<key>PayloadRemovalDisallowed</key>
@@ -442,12 +503,12 @@ func (cm *CertificateManager) GenerateMobileConfig() ([]byte, error) {
 	<key>PayloadType</key>
 	<string>Configuration</string>
 	<key>PayloadUUID</key>
-	<string>%s</string>
+	<string>%[2]s</string>
 	<key>PayloadVersion</key>
 	<integer>1</integer>
 </dict>
 </plist>
-`, payloadUUID, profileUUID))
+`, payloadUUID, profileUUID, cm.Fingerprint(), xmlEscape(cm.RootCert.Subject.CommonName)))
 
 	return buf.Bytes(), nil
 }
@@ -477,4 +538,110 @@ func newUUID() (string, error) {
 	b[8] = (b[8] & 0x3f) | 0x80 // Variant RFC 4122
 	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
 		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
+}
+
+// PermittedDNSDomains: the names the root may vouch for.
+var PermittedDNSDomains = []string{"local", "localhost"}
+
+// PermittedIPRanges: the addresses the root may vouch for -- private, CGNAT
+// (hotspots, Tailscale), link-local and loopback; never a public address.
+func PermittedIPRanges() []*net.IPNet {
+	var out []*net.IPNet
+	for _, c := range []string{
+		"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
+		"169.254.0.0/16", "127.0.0.0/8",
+		"fc00::/7", "fe80::/10", "::1/128",
+	} {
+		_, n, _ := net.ParseCIDR(c)
+		out = append(out, n)
+	}
+	return out
+}
+
+// PermittedDNS reports whether the root may vouch for name (it ends in one of
+// PermittedDNSDomains, label-wise, as RFC 5280 name constraints match).
+func PermittedDNS(name string) bool {
+	name = strings.ToLower(strings.TrimSuffix(name, "."))
+	for _, d := range PermittedDNSDomains {
+		if name == d || strings.HasSuffix(name, "."+d) {
+			return true
+		}
+	}
+	return false
+}
+
+// PermittedIP reports whether the root may vouch for ip.
+func PermittedIP(ip net.IP) bool {
+	for _, n := range PermittedIPRanges() {
+		if n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// rootMinValidity: a root that expires sooner is replaced at start.
+const rootMinValidity = 30 * 24 * time.Hour
+
+// loadRootCA reads the stored root and checks it is still usable.
+func loadRootCA(certPath, keyPath string) (*x509.Certificate, *ecdsa.PrivateKey, error) {
+	certPEM, err := os.ReadFile(certPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	keyPEM, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return nil, nil, fmt.Errorf("root cert: not PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("root cert: %w", err)
+	}
+	keyBlock, _ := pem.Decode(keyPEM)
+	if keyBlock == nil {
+		return nil, nil, fmt.Errorf("root key: not PEM")
+	}
+	key, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("root key: %w", err)
+	}
+	if pub, ok := cert.PublicKey.(*ecdsa.PublicKey); !ok || !pub.Equal(&key.PublicKey) {
+		return nil, nil, fmt.Errorf("root key does not match the certificate")
+	}
+	if len(cert.PermittedIPRanges) == 0 {
+		return nil, nil, fmt.Errorf("root without name constraints (made by an older PhoneGyro)")
+	}
+	if time.Until(cert.NotAfter) < rootMinValidity {
+		return nil, nil, fmt.Errorf("root expires %s", cert.NotAfter.Format("2006-01-02"))
+	}
+	return cert, key, nil
+}
+
+// rootCommonName names the root after this PC, so that on a phone trusting
+// several PCs each one is told apart in the settings.
+func rootCommonName() string {
+	if h, err := os.Hostname(); err == nil && strings.TrimSpace(h) != "" {
+		return "PhoneGyro Root CA (" + strings.TrimSpace(h) + ")"
+	}
+	return "PhoneGyro Root CA"
+}
+
+// Fingerprint is the first 8 bytes of the root's SHA-256, in hex: it tells
+// roots of different PCs (and a regenerated root) apart.
+func (cm *CertificateManager) Fingerprint() string {
+	if cm.RootCert == nil {
+		return ""
+	}
+	sum := sha256.Sum256(cm.RootCert.Raw)
+	return hex.EncodeToString(sum[:8])
+}
+
+func xmlEscape(s string) string {
+	var b bytes.Buffer
+	_ = xml.EscapeText(&b, []byte(s))
+	return b.String()
 }

@@ -83,7 +83,7 @@ On Android, everything is remarkably simple and requires zero digging into syste
 1. Scan the Step 1 QR code with your camera and open the local `https://...` link.
 2. Chrome will display a standard self-signed certificate warning: <span style="color: #ff9500">*«Your connection is not private»*</span>.
 3. Tap at the bottom: <kbd>Advanced</kbd> → <kbd>Proceed to ... (unsafe)</kbd>.
-4. **Done!** The browser will permanently remember this exception for your home IP, and the page will open instantly with a single tap in the future.
+4. **Done!** Chrome remembers the decision and opens the page at once from then on. It asks again after the PC's IP changes and in a few other cases, listed in the [certificates document](tls.en.md).
 
 ![Android SSL Setup](imgs/setup-android-ssl.png)
 
@@ -103,6 +103,8 @@ iOS setup is explained in step-by-step detail **directly inside the app** on PC 
 > Buying an official public TLS certificate for a private home LAN makes no technical or financial sense. This application is **completely local and runs 100% offline**. The only exception is the optional update check (Settings → "Check for updates at startup"), which is off by default.
 > 
 > You generate a local root certificate (for iPhone) or explicitly trust **YOUR OWN LOCAL IP ADDRESS** (for Android). This is completely safe, keeps everything local without third-party servers, and grants sensor access. **Thanks to this solution, you can turn literally any smartphone into a motion controller!**
+>
+> When the certificate has to be installed again and when not, where it lives and how to remove it: [PhoneGyro certificates](tls.en.md).
 
 ---
 
@@ -359,6 +361,6 @@ The path and an "Open folder" button are in **Settings → Behavior & notificati
 1. Close PhoneGyro (including from the tray).
 2. Delete `PhoneGyro.exe`.
 3. Delete the `%APPDATA%\PhoneGyro` folder.
-4. On iPhone/iPad: **Settings → General → VPN & Device Management**, remove the **PhoneGyro Root CA** profile.
+4. On iPhone/iPad: **Settings → General → VPN & Device Management**, remove the **PhoneGyro Root CA (PC name)** profile (**PhoneGyro Controller Profile** in older versions).
 
 To only reset settings and profiles, close the app and delete the folder from step 3: PhoneGyro starts fresh next time (the iPhone certificate then has to be installed again).

@@ -1,0 +1,42 @@
+name: Tests
+
+# The same go vet / go test a contributor runs before merging, on every push to
+# the working branches and on pull requests. Nothing to maintain here: new tests
+# are picked up by themselves.
+on:
+  push:
+    branches: [frontend-rework, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: go vet + go test (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: gui/go.mod
+          cache-dependency-path: |
+            go.sum
+            gui/go.sum
+
+      - name: pkg (phone server, DSU, certificates, i18n)
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: gui (app, motion pipeline, USB, tray)
+        working-directory: gui
+        run: |
+          go vet ./...
+          go test ./...
