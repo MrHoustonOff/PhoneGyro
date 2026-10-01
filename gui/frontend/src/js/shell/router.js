@@ -13,9 +13,9 @@ import {
   isTransitioning,
 } from './transition.js';
 
-const TAB_TITLES = { settings: 'nav.settings', stats: 'nav.stats', docs: 'ui.docs' };
+const TAB_TITLES = { connect: 'nav.home', settings: 'nav.settings', stats: 'nav.stats', docs: 'ui.docs' };
 let currentScreen = 'connect';
-let tab = null;
+let tab = 'connect';
 const subs = [];
 
 export const getCurrentScreen = () => currentScreen;
@@ -38,6 +38,9 @@ export function go(screen, tabOrOpts = null, maybeOpts = {}) {
   } else {
     tabName = tabOrOpts;
     opts = maybeOpts || {};
+  }
+  if (!tabName && screen === 'connect') {
+    tabName = 'connect';
   }
 
   // If already on the screen and no transition is running, scroll to top and avoid redundant animation
@@ -121,12 +124,19 @@ export function startRouter() {
   $('nav').addEventListener('click', (e) => {
     const b = e.target.closest('.pg-tab');
     if (!b) return;
-    if (tab === b.dataset.tab) go('connect');
-    else if (b.dataset.tab === 'settings' || b.dataset.tab === 'docs' || b.dataset.tab === 'stats') go(b.dataset.tab, b.dataset.tab);
-    else go('soon', b.dataset.tab);
+    const clickedTab = b.dataset.tab;
+    if (clickedTab === 'connect') {
+      go('connect');
+    } else if (tab === clickedTab) {
+      go('connect');
+    } else if (clickedTab === 'settings' || clickedTab === 'docs' || clickedTab === 'stats') {
+      go(clickedTab, clickedTab);
+    } else {
+      go('soon', clickedTab);
+    }
   });
   $('home').onclick = () => {
-    if (currentScreen !== 'connect' || tab !== null) {
+    if (currentScreen !== 'connect') {
       go('connect');
     } else {
       const body = $('body');

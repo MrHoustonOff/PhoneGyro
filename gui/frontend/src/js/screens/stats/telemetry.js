@@ -9,7 +9,7 @@ import { t } from '../../core/i18n.js';
 import { TelemetryRecorder } from './recorder.js';
 import { createGyroScene } from '../../ui/scene.js';
 import { TelemetryDeriveEngine } from './derive.js';
-import { createSpark, createAxisChart, setChartsEnabled } from './charts.js';
+import { createSpark, createAxisChart, setChartsEnabled, wakeCharts } from './charts.js';
 
 const quatBuf = new Float32Array(4); // Reused quaternion array: zero per-frame allocation
 
@@ -247,24 +247,33 @@ export function initTelemetry(paneEl) {
       return;
     }
     deriveEngine.feedFrame(msg);
-    if (msg.raw_gx != null) axisLive.rawgyro = [msg.raw_gx, msg.raw_gy, msg.raw_gz];
-    if (msg.raw_ax != null) axisLive.rawaccel = [msg.raw_ax, msg.raw_ay, msg.raw_az];
-    if (msg.out_gx != null) axisLive.outgyro = [msg.out_gx, msg.out_gy, msg.out_gz];
+    if (msg.raw_gx != null || msg.raw_gy != null || msg.raw_gz != null) {
+      axisLive.rawgyro = [Number(msg.raw_gx) || 0, Number(msg.raw_gy) || 0, Number(msg.raw_gz) || 0];
+    }
+    if (msg.raw_ax != null || msg.raw_ay != null || msg.raw_az != null) {
+      axisLive.rawaccel = [Number(msg.raw_ax) || 0, Number(msg.raw_ay) || 0, Number(msg.raw_az) || 0];
+    }
+    if (msg.out_gx != null || msg.out_gy != null || msg.out_gz != null) {
+      axisLive.outgyro = [Number(msg.out_gx) || 0, Number(msg.out_gy) || 0, Number(msg.out_gz) || 0];
+    }
     if (recorder.isRecording) {
+      const fallbackOx = lastTuning ? (lastTuning.outX ?? lastTuning.OutX ?? 0) : 0;
+      const fallbackOy = lastTuning ? (lastTuning.outY ?? lastTuning.OutY ?? 0) : 0;
+      const fallbackOz = lastTuning ? (lastTuning.outZ ?? lastTuning.OutZ ?? 0) : 0;
       recorder.recordFrame({
         q0: msg.q0 ?? 1,
         q1: msg.q1 ?? 0,
         q2: msg.q2 ?? 0,
         q3: msg.q3 ?? 0,
-        rawGx: msg.raw_gx ?? msg.rawRotX ?? 0,
-        rawGy: msg.raw_gy ?? msg.rawRotY ?? 0,
-        rawGz: msg.raw_gz ?? msg.rawRotZ ?? 0,
-        rawAx: msg.raw_ax ?? msg.rawAccX ?? 0,
-        rawAy: msg.raw_ay ?? msg.rawAccY ?? 0,
-        rawAz: msg.raw_az ?? msg.rawAccZ ?? 0,
-        outGx: msg.out_gx ?? lastTuning?.OutX ?? 0,
-        outGy: msg.out_gy ?? lastTuning?.OutY ?? 0,
-        outGz: msg.out_gz ?? lastTuning?.OutZ ?? 0,
+        rawGx: Number(msg.raw_gx ?? msg.rawRotX ?? 0) || 0,
+        rawGy: Number(msg.raw_gy ?? msg.rawRotY ?? 0) || 0,
+        rawGz: Number(msg.raw_gz ?? msg.rawRotZ ?? 0) || 0,
+        rawAx: Number(msg.raw_ax ?? msg.rawAccX ?? 0) || 0,
+        rawAy: Number(msg.raw_ay ?? msg.rawAccY ?? 0) || 0,
+        rawAz: Number(msg.raw_az ?? msg.rawAccZ ?? 0) || 0,
+        outGx: Number(msg.out_gx ?? fallbackOx) || 0,
+        outGy: Number(msg.out_gy ?? fallbackOy) || 0,
+        outGz: Number(msg.out_gz ?? fallbackOz) || 0,
         stickLx: msg.stick_lx ?? 0,
         stickLy: msg.stick_ly ?? 0,
         inHz: msg.in_hz ?? 0,
@@ -605,25 +614,35 @@ export function initTelemetry(paneEl) {
     if (pauseBadge) pauseBadge.style.display = 'none';
   };
 
-  // Handle tuning frames (60Hz)
+  // Handle tuning frames (60Hz fallback)
   const handleTuningFrame = (tf) => {
     if (!isActive || !tf) return;
     lastTuning = tf;
-    axisLive.outgyro = [tf.OutX, tf.OutY, tf.OutZ];
-    axisLive.rawgyro = [tf.RawX, tf.RawY, tf.RawZ];
+    const ox = tf.outX !== undefined ? tf.outX : (tf.OutX || 0);
+    const oy = tf.outY !== undefined ? tf.outY : (tf.OutY || 0);
+    const oz = tf.outZ !== undefined ? tf.outZ : (tf.OutZ || 0);
+    const rx = tf.rawX !== undefined ? tf.rawX : (tf.RawX || 0);
+    const ry = tf.rawY !== undefined ? tf.rawY : (tf.RawY || 0);
+    const rz = tf.rawZ !== undefined ? tf.rawZ : (tf.RawZ || 0);
+
+    // Only update axisLive from tuning:frame as fallback if WebSocket is not streaming
+    if (!ws || ws.readyState !== 1) {
+      axisLive.outgyro = [ox, oy, oz];
+      axisLive.rawgyro = [rx, ry, rz];
+    }
     deriveEngine.feedTuning(tf);
-    setText($('tel-out-gx'), (tf.OutX >= 0 ? '+' : '') + tf.OutX.toFixed(2));
-    setText($('tel-out-gy'), (tf.OutY >= 0 ? '+' : '') + tf.OutY.toFixed(2));
-    setText($('tel-out-gz'), (tf.OutZ >= 0 ? '+' : '') + tf.OutZ.toFixed(2));
+    setText($('tel-out-gx'), (ox >= 0 ? '+' : '') + ox.toFixed(2));
+    setText($('tel-out-gy'), (oy >= 0 ? '+' : '') + oy.toFixed(2));
+    setText($('tel-out-gz'), (oz >= 0 ? '+' : '') + oz.toFixed(2));
     if (recorder.isRecording && (!ws || ws.readyState !== 1)) {
       recorder.recordFrame({
-        rawGx: tf.RawX,
-        rawGy: tf.RawY,
-        rawGz: tf.RawZ,
-        outGx: tf.OutX,
-        outGy: tf.OutY,
-        outGz: tf.OutZ,
-        inHz: tf.Hz,
+        rawGx: rx,
+        rawGy: ry,
+        rawGz: rz,
+        outGx: ox,
+        outGy: oy,
+        outGz: oz,
+        inHz: tf.hz ?? tf.Hz ?? 0,
       });
     }
   };
@@ -906,6 +925,7 @@ export function initTelemetry(paneEl) {
       on('resource-stats', handleResourceStats);
       mountScene();
       connectWebSocket();
+      wakeCharts(); // force-wake: IO may have missed the hidden→visible transition
       deriveInterval = setInterval(tickDerive, 100);
       axisTimer = setInterval(() => {
         for (const k in axisLive) if (axisLive[k]) pushAxes(k, ...axisLive[k]);
