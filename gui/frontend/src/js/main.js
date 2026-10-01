@@ -62,7 +62,7 @@ async function boot() {
   if (appSettings) {
     setSoundConfig(appSettings);
   }
-  setTimeout(() => playSound('intro'), 300);
+  setTimeout(() => playSound('intro'), 1000);
   await startI18n();        // strings first: every renderer below uses them
   await Promise.all([startHeader(), startState()]);
   startFooter();
