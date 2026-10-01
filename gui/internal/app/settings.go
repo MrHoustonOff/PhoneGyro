@@ -103,8 +103,6 @@ func (a *App) applySettings(s AppSettings) {
 	a.closeActionMu.Lock()
 	a.closeAction = s.CloseAction
 	a.closeActionMu.Unlock()
-	a.hotkeyRecenterEnabled.Store(false) // the global recenter hotkey was removed from the product
-	a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
 	a.inputModeMu.Lock()
 	a.inputMode = s.InputMode
 	a.inputModeMu.Unlock()
@@ -191,8 +189,6 @@ func (a *App) settingsSnapshot() AppSettings {
 		GyroSensitivity:       sensitivity,
 		MinimizeToTray:        closeAction == "minimize",
 		CloseAction:           closeAction,
-		HotkeyRecenterEnabled: a.hotkeyRecenterEnabled.Load(),
-		HotkeyRecenterKey:     a.getHotkeyRecenterKey(),
 		InputMode:             a.GetInputMode(),
 	}
 }
@@ -239,21 +235,6 @@ func (a *App) ConfirmCloseChoice(action string, remember bool) {
 	} else {
 		a.QuitApp()
 	}
-}
-
-func (a *App) getHotkeyRecenterKey() string {
-	a.hotkeyRecenterKeyMu.RLock()
-	defer a.hotkeyRecenterKeyMu.RUnlock()
-	if a.hotkeyRecenterKey == "" {
-		return settings.DefaultHotkey
-	}
-	return a.hotkeyRecenterKey
-}
-
-func (a *App) setHotkeyRecenterKey(key string) {
-	a.hotkeyRecenterKeyMu.Lock()
-	defer a.hotkeyRecenterKeyMu.Unlock()
-	a.hotkeyRecenterKey = key
 }
 
 // SetTheme updates theme on backend, broadcasts to Live Debug window, and emits event to main window.
@@ -553,14 +534,6 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		a.currentLang = s.Lang
 	}
 	a.themeMu.Unlock()
-
-	a.hotkeyRecenterEnabled.Store(false) // the global recenter hotkey was removed from the product
-	if s.HotkeyRecenterKey != "" {
-		a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
-	}
-	if a.trayMgr != nil {
-		a.trayMgr.UpdateHotkey(false, a.getHotkeyRecenterKey())
-	}
 
 	curScale := math.Float64frombits(a.fontScaleBits.Load())
 	a.broadcastLiveDebugJSON(map[string]any{

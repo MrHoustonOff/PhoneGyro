@@ -119,16 +119,6 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 				return 1
 			}
 
-		case WM_UPDATE_HOTKEY:
-			tm.applyHotkey(hwnd)
-			return 0
-
-		case WM_HOTKEY:
-			if wParam == uintptr(ID_HOTKEY_RECENTER) {
-				tm.cb.Recenter()
-				return 0
-			}
-
 		case WM_CLOSE:
 			pDestroyWindow.Call(hwnd)
 			return 0
@@ -167,7 +157,6 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 
 	pShellNotifyIconW.Call(NIM_ADD, uintptr(unsafe.Pointer(&tm.nid)))
 	tm.ready.Store(true)
-	tm.applyHotkey(hwnd)
 	close(readyChan)
 
 	var msg MSG
@@ -180,7 +169,6 @@ func (tm *Manager) trayLoop(readyChan chan struct{}) {
 		pDispatchMessageW.Call(uintptr(unsafe.Pointer(&msg)))
 	}
 
-	pUnregisterHotKey.Call(hwnd, uintptr(ID_HOTKEY_RECENTER))
 	pShellNotifyIconW.Call(NIM_DELETE, uintptr(unsafe.Pointer(&tm.nid)))
 	for _, h := range tm.icons {
 		if h != 0 {

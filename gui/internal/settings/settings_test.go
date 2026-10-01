@@ -51,7 +51,7 @@ func TestLoadMissingFieldsKeepDefaults(t *testing.T) {
 	if s.GyroDeadband != d.GyroDeadband || s.GyroDeadbandUsb != d.GyroDeadbandUsb || s.GyroSensitivity != 1 {
 		t.Fatalf("filter defaults: %+v", s)
 	}
-	if s.CloseAction != "ask" || s.MinimizeToTray || s.InputMode != "phone" || s.HotkeyRecenterKey != DefaultHotkey {
+	if s.CloseAction != "ask" || s.MinimizeToTray || s.InputMode != "phone" {
 		t.Fatalf("window/input defaults: %+v", s)
 	}
 	// As always: a missing activeSlot reads as slot 0 (profiles.json has the
@@ -119,7 +119,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	s.CemuDriftGuard, s.CemuNoticeHidden, s.SilenceDisconnect = false, true, false
 	s.GyroDeadband, s.GyroDeadbandUsb, s.GyroSensitivity = 0, 0.75, 1.5
 	s.CloseAction, s.MinimizeToTray = "minimize", true
-	s.HotkeyRecenterKey, s.InputMode = "Ctrl+Alt+C", "usb"
+	s.InputMode = "usb"
 	s.SoundVolumes["dsu"] = 3
 	if err := Save(dir, s); err != nil {
 		t.Fatal(err)

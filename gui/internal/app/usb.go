@@ -24,7 +24,6 @@ func (a *App) usbHost() usbdev.Host {
 				a.usbBank.loss.ObserveUSB(gap)
 			}
 		},
-		Recenter: a.TriggerRecenterFromHotkey,
 		Motion: func(f server.MotionFrame) {
 			if a.srv != nil {
 				a.srv.InjectMotionFrame(f)

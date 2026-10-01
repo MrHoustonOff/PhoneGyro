@@ -2,7 +2,7 @@ package tray
 
 import "syscall"
 
-// Win32 API used by the tray window and the hotkey.
+// Win32 API used by the tray window.
 
 var (
 	user32   = syscall.NewLazyDLL("user32.dll")
