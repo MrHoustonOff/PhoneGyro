@@ -19,6 +19,7 @@ import { startSelects } from './ui/select.js';
 import { startZoom } from './ui/zoom.js';
 import { startAccent } from './ui/accent.js';
 import { startDebug, debugBooted } from './debug/toggle.js';
+import { startBannerTriggers } from './debug/banners.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
 import { startConnect } from './screens/connect/connect.js';
@@ -71,6 +72,15 @@ async function boot() {
   startZoom();
   startAccent();
   syncSplashSetting();
+
+  // DEV-only: banner trigger panel (same channel check as the titlebar badge).
+  const appVersion = await call('GetAppVersion').catch(() => null);
+  if (appVersion && appVersion.channel !== 'release') {
+    const toggleBtn = document.getElementById('dbg-banner-toggle');
+    if (toggleBtn) toggleBtn.hidden = false;
+    startBannerTriggers();
+  }
+
   startNotices();         // after the strings: they are shown in full
   debugBooted();
 }

@@ -7,6 +7,7 @@
 import { on, call, openURL } from '../core/bridge.js';
 import { md, esc } from '../core/dom.js';
 import { t } from '../core/i18n.js';
+import { render } from '../core/markdown.js';
 import { openModal } from './modal.js';
 import { toast } from './toast.js';
 
@@ -28,10 +29,23 @@ async function next() {
 }
 
 function cemu(n) {
+  const isGuardOn = n.guardOn !== false;
+  const statusMd = isGuardOn ? t('cemu_notice.guard_on') : t('cemu_notice.guard_off');
+  const prMd = n.prUrl ? t('cemu_notice.pr', { url: n.prUrl }) : t('cemu_notice.pr_none');
+
+  const infoList = [t('cemu_notice.settings'), t('cemu_notice.upstream'), prMd].filter(Boolean).join('\n');
+  const fullMd = [
+    t('cemu_notice.bug'),
+    statusMd,
+    infoList,
+  ].filter(Boolean).join('\n\n');
+
+  const { html } = render(fullMd);
+
   show(() => openModal({
     title: t('cemu_notice.title'),
-    body: p('cemu_notice.bug') + p(n.guardOn !== false ? 'cemu_notice.guard_on' : 'cemu_notice.guard_off') + p('cemu_notice.settings') + p('cemu_notice.upstream')
-      + (n.prUrl ? p('cemu_notice.pr', { url: n.prUrl }) : p('cemu_notice.pr_none')),
+    dialogClass: 'app-modal-dialog--cemu',
+    body: `<div class="pg-prose app-cemu-prose">${html}</div>`,
     check: t('cemu_notice.dont_show'),
     actions: [{ label: t('cemu_notice.close'), kind: 'primary', onClick: (hide) => call('CloseCemuNotice', hide) }],
   }).then((i) => { if (i < 0) call('CloseCemuNotice', false); }));
@@ -73,4 +87,7 @@ export function startNotices() {
   call('PendingCemuNotice').then((n) => n && cemu(n));
   call('PendingFirewallAlert').then((s) => s && firewall(s));
   call('PendingUpdate').then((u) => u && update(u));
+  if (typeof window !== 'undefined') {
+    window.__showCemuNotice = (guardOn = true) => cemu({ guardOn, prUrl: 'https://github.com/cemu-project/Cemu/pull/0000' });
+  }
 }

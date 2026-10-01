@@ -19,6 +19,7 @@ function inline(s) {
   let h = esc(s);
   // allowed tags back (escaped above)
   h = h.replace(/&lt;(\/?)kbd&gt;/g, '<$1kbd>').replace(/&lt;br\s*\/?&gt;/g, '<br>')
+    .replace(/&lt;span class=&quot;([^&"]+)&quot;&gt;([\s\S]*?)&lt;\/span&gt;/g, '<span class="$1">$2</span>')
     .replace(/&lt;span[^&]*?&gt;/g, '').replace(/&lt;\/span&gt;/g, '');
   const codes = [];
   h = h.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });

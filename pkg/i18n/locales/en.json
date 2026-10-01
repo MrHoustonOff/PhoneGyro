@@ -404,16 +404,16 @@
     "download": "Download"
   },
   "cemu_notice": {
-    "title": "Cemu Detected",
-    "bug": "Cemu has a bug: it mistakes slow motion for gyro bias, so the aim slowly drifts away, even while the controller is still.",
-    "guard_on": "PhoneGyro has a fix made specifically for Cemu. **It is on right now.**",
-    "guard_off": "PhoneGyro has a fix made specifically for Cemu. **It is off right now**; you can turn it on in Settings.",
-    "settings": "If something works wrong, you can turn the fix off: Settings → “Input Filtering (DSU)” → “Cemu Drift Guard”. This is not recommended.",
-    "upstream": "We have already prepared a fix for Cemu itself and reported the bug to its developers. If your Cemu is newer than 2.6 and PhoneGyro has not been updated yet, check whether the bug is fixed and turn this option off if it is.",
-    "pr": "Follow the fix: [Cemu pull request]({url})",
-    "pr_none": "A link to the fix in Cemu will come with a later PhoneGyro update.",
+    "title": "🎮 Cemu Detected",
+    "bug": "In **Cemu**, an internal filter quirk mistakenly treats slow controller motions as gyro drift, causing in-game crosshairs (*Zelda: BotW*, etc.) to slowly drift away.",
+    "guard_on": "> [!TIP]\n> **PhoneGyro Drift Guard:** <span class=\"cemu-state-on\">it is on right now</span>\n>\n> Active stabilization compensates for drift in real time: motion aiming stays rock-solid and responsive.",
+    "guard_off": "> [!CAUTION]\n> **PhoneGyro Drift Guard:** <span class=\"cemu-state-off\">it is off right now</span>\n>\n> Drift guard is deactivated! In-game crosshairs may slowly drift. We recommend enabling it in Settings.",
+    "settings": "* ⚙️ **How to configure:** `Settings` → **“Input Filtering (DSU)”** → **“Cemu Drift Guard”**.",
+    "upstream": "* 🛠️ **Cemu Upstream Patch:** we submitted a native fix directly to the Cemu developers.",
+    "pr": "* 🔗 [Follow the Cemu pull request]({url})",
+    "pr_none": "* 🔗 The upstream pull request link will arrive in a future PhoneGyro update.",
     "dont_show": "Don't show again",
-    "close": "Close"
+    "close": "Got it"
   },
   "close_modal": {
     "title": "Close or Minimize to Tray?",
