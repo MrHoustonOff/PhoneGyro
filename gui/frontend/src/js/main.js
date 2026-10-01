@@ -62,6 +62,7 @@ async function boot() {
   if (appSettings) {
     setSoundConfig(appSettings);
   }
+  playSound('intro');
   await startI18n();        // strings first: every renderer below uses them
   await Promise.all([startHeader(), startState()]);
   startFooter();

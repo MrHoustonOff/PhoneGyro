@@ -283,11 +283,41 @@ function playCuteDefeat() {
   playTone(95, now + 0.44, 0.35, 0.26, 'sine');
 }
 
+const INTRO_BASE = 0.5;
+
+function playIntroAudio(gain) {
+  try {
+    const soundUrl = new URL('../../assets/sounds/intro.wav', import.meta.url).href;
+    const audio = new Audio(soundUrl);
+    audio.volume = gain;
+    audio.play().catch((e) => {
+      console.warn('Intro playback blocked or failed:', e);
+    });
+  } catch (err) {
+    console.warn('Intro audio error:', err);
+  }
+}
+
 // ── Public API ──────────────────────────────────────────────────────────────
 
 export async function playSound(type, { force = false } = {}) {
   const mode = soundMode;
   const masterVol = soundVolume;
+
+  if (type === 'intro') {
+    if (!force && (mode === 'off' || masterVol <= 0)) return;
+    const indVol = soundVolumes.intro != null ? soundVolumes.intro : 1;
+    if (!force && indVol <= 0) return;
+
+    const effMaster = (!force && masterVol <= 0) ? 0 : (masterVol > 0 ? masterVol : 1);
+    const effInd = (!force && indVol <= 0) ? 0 : (indVol > 0 ? indVol : 1);
+    const gain = Math.min(1.0, INTRO_BASE * effMaster * effInd);
+    if (gain <= 0) return;
+
+    playIntroAudio(gain);
+    return;
+  }
+
   if (!force && (mode === 'off' || masterVol <= 0)) return;
 
   const indVol = soundVolumes[type] != null ? soundVolumes[type] : 1;
@@ -304,10 +334,6 @@ export async function playSound(type, { force = false } = {}) {
 
   if (type === 'goal') {
     playCuteGoal();
-    return;
-  }
-  if (type === 'intro') {
-    // Handled in Step 3
     return;
   }
 

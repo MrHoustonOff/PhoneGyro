@@ -73,7 +73,7 @@ let mixOpen = false;  // the per-sound mixer is folded out
 // Per-event volumes (settings.json soundVolumes, 0..3, 1 by default).
 const SOUNDS = [
   ['connect', 'sound_phone_connect'], ['disconnect', 'sound_phone_disconnect'], ['loss', 'sound_link_loss'],
-  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'],
+  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'], ['intro', 'sound_intro'],
 ];
 const vol = (k) => { const v = cur.soundVolumes && cur.soundVolumes[k]; return v == null ? 1 : v; };
 const CHEV = '<svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>';
