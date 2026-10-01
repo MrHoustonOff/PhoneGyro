@@ -119,6 +119,11 @@ type App struct {
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
+	// The listeners (DSU UDP, HTTP/HTTPS) start once the UI has finished its launch
+	// animation (UIReady), so Windows' firewall prompt does not cover it.
+	netGate     chan struct{}
+	netGateOnce sync.Once
+
 	// Main window placement (winstate): the handle once the window is up, and
 	// the saved placement to restore when it still fits the monitors.
 	winHwnd    uintptr
@@ -142,6 +147,7 @@ func NewApp() *App {
 	profilesDir := filepath.Join(appData, "phonegyro")
 
 	app := &App{
+		netGate:     make(chan struct{}),
 		i18nMgr:     mgr,
 		primaryIP:   primaryIP,
 		profilesDir: profilesDir,
@@ -225,11 +231,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 	dsuSrv := dsu.NewServer(a.dsuPort, macBytes)
 	a.bindDSUCallbacks(dsuSrv)
-	if err := dsuSrv.Start(); err != nil {
-		fmt.Printf("[-] DSU start error: %v\n", err)
-	}
-	a.dsuSrv = dsuSrv
-	a.hubPhase("DSU server up")
+	a.dsuSrv = dsuSrv // listens after the launch animation (startNetwork)
 
 	// Each bank gets its own aligner (own sensor_frame.json) so a learned
 	// axis mapping never leaks between the phone and a USB device.
@@ -250,9 +252,6 @@ func (a *App) startup(ctx context.Context) {
 	a.serveLiveDebug(srv)
 
 	srv.SetAppVersion(version.Get().Display)
-	if err := srv.Start(); err != nil {
-		fmt.Printf("[-] Server start error: %v\n", err)
-	}
 	srv.SetInputMode(a.GetInputMode())
 	a.srv = srv
 
@@ -269,7 +268,35 @@ func (a *App) startup(ctx context.Context) {
 	go a.watchNetwork()
 	a.hubPhase("services up")
 	go a.checkForUpdate() // update_check.go; does nothing unless switched on
-	go a.watchFirewall()  // firewall.go
+	go a.startNetwork(dsuSrv, srv) // opens the ports after the launch animation, then watches the firewall
+}
+
+// netGateMax is how long the listeners wait for the UI to finish its launch
+// animation; past it they start anyway (a window that never reports must not
+// leave the phone and the emulators without a server).
+const netGateMax = 20 * time.Second
+
+// UIReady is called by the window when its launch animation is over (or right
+// away when there is none). Only then do the servers start listening, so the
+// first-launch Windows Firewall prompt appears over a finished UI.
+func (a *App) UIReady() {
+	a.netGateOnce.Do(func() { close(a.netGate) })
+}
+
+func (a *App) startNetwork(dsuSrv *dsu.Server, srv *server.Server) {
+	select {
+	case <-a.netGate:
+	case <-time.After(netGateMax):
+	}
+	if err := dsuSrv.Start(); err != nil {
+		fmt.Printf("[-] DSU start error: %v\n", err)
+	}
+	a.hubPhase("DSU server up")
+	if err := srv.Start(); err != nil {
+		fmt.Printf("[-] Server start error: %v\n", err)
+	}
+	a.hubPhase("HTTP server up")
+	a.watchFirewall() // firewall.go
 }
 
 // shutdown is called when the Wails application terminates

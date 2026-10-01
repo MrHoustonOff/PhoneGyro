@@ -16,6 +16,8 @@ const STATUS = [[0, 'splash.starting', 'Запуск…'], [1000, 'splash.profil
 
 const html = document.documentElement;
 
+function uiReady() { call('UIReady'); }
+
 function remember(on) {
   try { localStorage.setItem('pg-splash', on ? '1' : '0'); } catch (e) { /* next launch uses the default */ }
 }
@@ -25,7 +27,8 @@ export function startSplash() {
   const el = $('splash');
   if (!html.classList.contains('is-splash')) {
     el.remove();
-    return { finish() {} };
+    // No animation: the window is ready as soon as the backend answers.
+    return { finish(backendReady) { Promise.resolve(backendReady).then(uiReady); } };
   }
   el.classList.add('is-run');
   const status = $('splash-status');
@@ -41,7 +44,9 @@ export function startSplash() {
         el.classList.add('is-grown');
         setTimeout(() => { html.classList.add('is-enter'); el.classList.add('is-app'); }, GROW_MS - 80);
         setTimeout(() => { el.remove(); html.classList.remove('is-splash'); window.dispatchEvent(new Event('resize')); }, GROW_MS + 500);
-        setTimeout(() => html.classList.remove('is-enter'), GROW_MS + 1300);
+        // The islands have settled: the launch animation is over. Only now does Go open its ports,
+        // so the first-launch Windows Firewall prompt does not cover the animation.
+        setTimeout(() => { html.classList.remove('is-enter'); uiReady(); }, GROW_MS + 1300);
       });
     },
   };

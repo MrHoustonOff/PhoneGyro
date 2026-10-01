@@ -290,6 +290,10 @@ export function TriggerRecenterFromHotkey() {
   return window['go']['app']['App']['TriggerRecenterFromHotkey']();
 }
 
+export function UIReady() {
+  return window['go']['app']['App']['UIReady']();
+}
+
 export function ValidateCalibration(arg1, arg2) {
   return window['go']['app']['App']['ValidateCalibration'](arg1, arg2);
 }

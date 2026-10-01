@@ -151,6 +151,8 @@ export function TogglePause():Promise<app.AppState>;
 
 export function TriggerRecenterFromHotkey():Promise<void>;
 
+export function UIReady():Promise<void>;
+
 export function ValidateCalibration(arg1:any,arg2:any):Promise<app.ValidationResult>;
 
 export function ValidateSync():Promise<Array<string>>;
