@@ -81,7 +81,7 @@ func TestDSU_ClientHandshakeAndStreaming(t *testing.T) {
 	}
 	defer srv.Stop()
 
-	serverAddr := srv.conn.LocalAddr().(*net.UDPAddr)
+	serverAddr := srv.conn.Load().LocalAddr().(*net.UDPAddr)
 
 	clientConn, err := net.DialUDP("udp", nil, serverAddr)
 	if err != nil {
@@ -212,7 +212,7 @@ func TestDSU_FixedMACAndImmediatePadDataReply(t *testing.T) {
 		t.Fatalf("expected MAC %v, got %v", fixedMAC, srv.MACAddress())
 	}
 
-	serverAddr := srv.conn.LocalAddr().(*net.UDPAddr)
+	serverAddr := srv.conn.Load().LocalAddr().(*net.UDPAddr)
 	clientConn, err := net.DialUDP("udp", nil, serverAddr)
 	if err != nil {
 		t.Fatalf("failed to dial server: %v", err)
@@ -259,7 +259,7 @@ func TestDSU_IdleHeartbeat(t *testing.T) {
 	}
 	defer srv.Stop()
 
-	serverAddr := srv.conn.LocalAddr().(*net.UDPAddr)
+	serverAddr := srv.conn.Load().LocalAddr().(*net.UDPAddr)
 	clientConn, err := net.DialUDP("udp", nil, serverAddr)
 	if err != nil {
 		t.Fatalf("failed to dial server: %v", err)

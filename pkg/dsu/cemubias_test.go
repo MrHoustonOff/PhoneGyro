@@ -131,7 +131,7 @@ func TestCemuGuard_KeepsCemuBiasAtZero(t *testing.T) {
 	guarded := &fakeCemu{rates: map[float32]bool{}}
 	var guardedAddr string
 	for _, f := range []*fakeCemu{plain, guarded} {
-		c, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+		c, err := net.DialUDP("udp", nil, srv.conn.Load().LocalAddr().(*net.UDPAddr))
 		if err != nil {
 			t.Fatal(err)
 		}

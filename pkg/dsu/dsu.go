@@ -60,7 +60,7 @@ var padPacketPool = sync.Pool{
 // Server implements Cemuhook DSU motion protocol over UDP.
 type Server struct {
 	port          int
-	conn          *net.UDPConn
+	conn          atomic.Pointer[net.UDPConn] // swapped by Rebind
 	serverID      uint32
 	packetCounter uint32
 	macAddr       [6]byte
@@ -202,16 +202,11 @@ func (s *Server) GetClientsInfo() []ClientInfo {
 
 // Start opens UDP socket and begins listening for Cemu requests.
 func (s *Server) Start() error {
-	addr := &net.UDPAddr{Port: s.port, IP: net.IPv4zero}
-	conn, err := net.ListenUDP("udp", addr)
+	conn, err := listenDSU(s.port)
 	if err != nil {
-		return fmt.Errorf("failed to bind DSU UDP port %d: %w", s.port, err)
+		return err
 	}
-
-	_ = conn.SetReadBuffer(64 * 1024)
-	_ = conn.SetWriteBuffer(64 * 1024)
-
-	s.conn = conn
+	s.conn.Store(conn)
 	s.running.Store(true)
 
 	go s.listenLoop()
@@ -221,12 +216,42 @@ func (s *Server) Start() error {
 	return nil
 }
 
+func listenDSU(port int) (*net.UDPConn, error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: port, IP: net.IPv4zero})
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind DSU UDP port %d: %w", port, err)
+	}
+	_ = conn.SetReadBuffer(64 * 1024)
+	_ = conn.SetWriteBuffer(64 * 1024)
+	return conn, nil
+}
+
+// Rebind moves a running server to another port in place: the server, its
+// callbacks and its timestamp chain stay, so nothing holding it has to swap
+// pointers. On error the server keeps its old port. Before Start it only sets
+// the port Start will use.
+func (s *Server) Rebind(port int) error {
+	if !s.running.Load() {
+		s.port = port
+		return nil
+	}
+	conn, err := listenDSU(port)
+	if err != nil {
+		return err
+	}
+	s.port = port
+	if old := s.conn.Swap(conn); old != nil {
+		old.Close() // listenLoop's read fails and it carries on with the new socket
+	}
+	return nil
+}
+
 // Stop terminates the DSU server.
 func (s *Server) Stop() {
 	if s.running.CompareAndSwap(true, false) {
 		close(s.stopChan)
-		if s.conn != nil {
-			s.conn.Close()
+		if c := s.conn.Load(); c != nil {
+			c.Close()
 		}
 	}
 }
@@ -263,7 +288,7 @@ func (s *Server) SendMotion(frame server.MotionFrame) {
 	s.fillPadDataPacket(pkt, packetNum, frame, ts)
 
 	for _, client := range s.clients {
-		_, _ = s.conn.WriteToUDP(pkt, client.Addr)
+		_, _ = s.conn.Load().WriteToUDP(pkt, client.Addr)
 		client.cemu.add(frame.RotX, frame.RotY, frame.RotZ)
 	}
 	s.clientsMu.Unlock()
@@ -431,7 +456,7 @@ func (s *Server) listenLoop() {
 	buf := make([]byte, 1024)
 
 	for s.running.Load() {
-		n, remoteAddr, err := s.conn.ReadFromUDP(buf)
+		n, remoteAddr, err := s.conn.Load().ReadFromUDP(buf)
 		if err != nil {
 			if !s.running.Load() {
 				return
@@ -513,7 +538,7 @@ func (s *Server) sendRestPadDataTo(remoteAddr *net.UDPAddr) {
 	pkt := *bufPtr
 	s.fillPadDataPacket(pkt, packetNum, frame, s.stampRepeat())
 
-	_, _ = s.conn.WriteToUDP(pkt, remoteAddr)
+	_, _ = s.conn.Load().WriteToUDP(pkt, remoteAddr)
 
 	padPacketPool.Put(bufPtr)
 
@@ -546,7 +571,7 @@ func (s *Server) sendCemuCorrectionsLocked(prev server.MotionFrame) {
 		f.RotX, f.RotY, f.RotZ = rx, ry, rz
 		bufPtr := padPacketPool.Get().(*[]byte)
 		s.fillPadDataPacket(*bufPtr, atomic.AddUint32(&s.packetCounter, 1), f, ts)
-		_, _ = s.conn.WriteToUDP(*bufPtr, c.Addr)
+		_, _ = s.conn.Load().WriteToUDP(*bufPtr, c.Addr)
 		padPacketPool.Put(bufPtr)
 		c.cemu.add(rx, ry, rz)
 	}
@@ -617,7 +642,7 @@ func (s *Server) heartbeatLoop() {
 			pkt := *bufPtr
 			s.fillPadDataPacket(pkt, packetNum, idleFrame, s.stampIdle())
 			for _, client := range s.clients {
-				_, _ = s.conn.WriteToUDP(pkt, client.Addr)
+				_, _ = s.conn.Load().WriteToUDP(pkt, client.Addr)
 				client.cemu.add(0, 0, 0)
 			}
 			s.clientsMu.Unlock()
@@ -641,7 +666,7 @@ func (s *Server) sendVersionRsp(remoteAddr *net.UDPAddr) {
 	crc := crc32.ChecksumIEEE(buf)
 	binary.LittleEndian.PutUint32(buf[8:12], crc)
 
-	_, _ = s.conn.WriteToUDP(buf, remoteAddr)
+	_, _ = s.conn.Load().WriteToUDP(buf, remoteAddr)
 }
 
 func (s *Server) sendPortInfoRsp(remoteAddr *net.UDPAddr, payload []byte) {
@@ -684,7 +709,7 @@ func (s *Server) sendPortInfoRsp(remoteAddr *net.UDPAddr, payload []byte) {
 		crc := crc32.ChecksumIEEE(buf)
 		binary.LittleEndian.PutUint32(buf[8:12], crc)
 
-		_, _ = s.conn.WriteToUDP(buf, remoteAddr)
+		_, _ = s.conn.Load().WriteToUDP(buf, remoteAddr)
 	}
 }
 

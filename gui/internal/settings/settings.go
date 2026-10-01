@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"phonegyro/pkg/dsu"
+
+	"phonegyro-gui/internal/fsutil"
 )
 
 // FileName is the settings file inside the app's data directory.
@@ -34,37 +36,37 @@ const (
 
 // Settings holds configurable parameters exposed in the settings window.
 type Settings struct {
-	Theme                 string         `json:"theme"`
-	Accent                string         `json:"accent"`
-	Lang                  string         `json:"lang"`
-	FontScale             float64        `json:"fontScale"`
-	ActiveSlot            int            `json:"activeSlot"`
-	FirstLaunchDone       bool           `json:"firstLaunchDone"`
-	HideAuthor            bool           `json:"hideAuthor"`
-	Splash                bool           `json:"splash"`     // play the launch animation
-	DebugPanel            bool           `json:"debugPanel"` // the debug panel opens at start
-	DebugLog              bool           `json:"debugLog"`   // write logs/debug.log
-	DSUPort               int            `json:"dsuPort"`
-	DSUMAC                string         `json:"dsuMac"`
-	HTTPPort              int            `json:"httpPort"`
-	HTTPSPort             int            `json:"httpsPort"`
-	GyroDeadzone          float64        `json:"gyroDeadzone"`
-	StillnessHint         bool           `json:"stillnessHint"`
-	DisconnectAlert       bool           `json:"disconnectAlert"`
-	SilenceDisconnect     bool           `json:"silenceDisconnect"`
-	CemuDriftGuard        bool           `json:"cemuDriftGuard"`
-	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
-	CheckUpdates          bool           `json:"checkUpdates"`            // off by default: the only request PhoneGyro makes to the internet
-	SkippedUpdate         string         `json:"skippedUpdate,omitempty"` // "don't remind me about this version"
-	SoundMode             string         `json:"soundMode"`
-	SoundVolume           int            `json:"soundVolume"`
-	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
-	GyroDeadband          float64        `json:"gyroDeadband"`
-	GyroDeadbandUsb       float64        `json:"gyroDeadbandUsb"`
-	GyroSensitivity       float64        `json:"gyroSensitivity"`
-	MinimizeToTray        bool           `json:"minimizeToTray"` // kept for old readers: CloseAction == "minimize"
-	CloseAction           string         `json:"closeAction"`
-	InputMode             string         `json:"inputMode,omitempty"`
+	Theme             string         `json:"theme"`
+	Accent            string         `json:"accent"`
+	Lang              string         `json:"lang"`
+	FontScale         float64        `json:"fontScale"`
+	ActiveSlot        int            `json:"activeSlot"`
+	FirstLaunchDone   bool           `json:"firstLaunchDone"`
+	HideAuthor        bool           `json:"hideAuthor"`
+	Splash            bool           `json:"splash"`     // play the launch animation
+	DebugPanel        bool           `json:"debugPanel"` // the debug panel opens at start
+	DebugLog          bool           `json:"debugLog"`   // write logs/debug.log
+	DSUPort           int            `json:"dsuPort"`
+	DSUMAC            string         `json:"dsuMac"`
+	HTTPPort          int            `json:"httpPort"`
+	HTTPSPort         int            `json:"httpsPort"`
+	GyroDeadzone      float64        `json:"gyroDeadzone"`
+	StillnessHint     bool           `json:"stillnessHint"`
+	DisconnectAlert   bool           `json:"disconnectAlert"`
+	SilenceDisconnect bool           `json:"silenceDisconnect"`
+	CemuDriftGuard    bool           `json:"cemuDriftGuard"`
+	CemuNoticeHidden  bool           `json:"cemuNoticeHidden,omitempty"`
+	CheckUpdates      bool           `json:"checkUpdates"`            // off by default: the only request PhoneGyro makes to the internet
+	SkippedUpdate     string         `json:"skippedUpdate,omitempty"` // "don't remind me about this version"
+	SoundMode         string         `json:"soundMode"`
+	SoundVolume       int            `json:"soundVolume"`
+	SoundVolumes      map[string]int `json:"soundVolumes,omitempty"`
+	GyroDeadband      float64        `json:"gyroDeadband"`
+	GyroDeadbandUsb   float64        `json:"gyroDeadbandUsb"`
+	GyroSensitivity   float64        `json:"gyroSensitivity"`
+	MinimizeToTray    bool           `json:"minimizeToTray"` // kept for old readers: CloseAction == "minimize"
+	CloseAction       string         `json:"closeAction"`
+	InputMode         string         `json:"inputMode,omitempty"`
 }
 
 // ValidAccent reports whether a is one of the UI accent colours.
@@ -183,36 +185,36 @@ func RandomMAC() string {
 // stored is settings.json as read: a missing field (nil) takes its default,
 // which for some fields depends on other fields (see Load).
 type stored struct {
-	Theme                 string         `json:"theme"`
-	Accent                string         `json:"accent"`
-	Lang                  string         `json:"lang"`
-	ActiveSlot            int            `json:"activeSlot"`
-	FirstLaunchDone       bool           `json:"firstLaunchDone"`
-	HideAuthor            bool           `json:"hideAuthor"`
-	Splash                *bool          `json:"splash"`
-	DebugPanel            bool           `json:"debugPanel"`
-	DebugLog              bool           `json:"debugLog"`
-	DSUPort               int            `json:"dsuPort"`
-	DSUMAC                string         `json:"dsuMac"`
-	HTTPPort              int            `json:"httpPort"`
-	HTTPSPort             int            `json:"httpsPort"`
-	GyroDeadzone          float64        `json:"gyroDeadzone"`
-	StillnessHint         *bool          `json:"stillnessHint"`
-	DisconnectAlert       *bool          `json:"disconnectAlert"`
-	SilenceDisconnect     *bool          `json:"silenceDisconnect"`
-	CemuDriftGuard        *bool          `json:"cemuDriftGuard"`
-	CemuNoticeHidden      bool           `json:"cemuNoticeHidden,omitempty"`
-	CheckUpdates          bool           `json:"checkUpdates"`
-	SkippedUpdate         string         `json:"skippedUpdate,omitempty"`
-	SoundMode             string         `json:"soundMode"`
-	SoundVolume           *int           `json:"soundVolume"`
-	SoundVolumes          map[string]int `json:"soundVolumes,omitempty"`
-	GyroDeadband          *float64       `json:"gyroDeadband,omitempty"`
-	GyroDeadbandUsb       *float64       `json:"gyroDeadbandUsb,omitempty"`
-	GyroSensitivity       *float64       `json:"gyroSensitivity,omitempty"`
-	FontScale             *float64       `json:"fontScale,omitempty"`
-	CloseAction           string         `json:"closeAction,omitempty"`
-	InputMode             string         `json:"inputMode,omitempty"`
+	Theme             string         `json:"theme"`
+	Accent            string         `json:"accent"`
+	Lang              string         `json:"lang"`
+	ActiveSlot        int            `json:"activeSlot"`
+	FirstLaunchDone   bool           `json:"firstLaunchDone"`
+	HideAuthor        bool           `json:"hideAuthor"`
+	Splash            *bool          `json:"splash"`
+	DebugPanel        bool           `json:"debugPanel"`
+	DebugLog          bool           `json:"debugLog"`
+	DSUPort           int            `json:"dsuPort"`
+	DSUMAC            string         `json:"dsuMac"`
+	HTTPPort          int            `json:"httpPort"`
+	HTTPSPort         int            `json:"httpsPort"`
+	GyroDeadzone      float64        `json:"gyroDeadzone"`
+	StillnessHint     *bool          `json:"stillnessHint"`
+	DisconnectAlert   *bool          `json:"disconnectAlert"`
+	SilenceDisconnect *bool          `json:"silenceDisconnect"`
+	CemuDriftGuard    *bool          `json:"cemuDriftGuard"`
+	CemuNoticeHidden  bool           `json:"cemuNoticeHidden,omitempty"`
+	CheckUpdates      bool           `json:"checkUpdates"`
+	SkippedUpdate     string         `json:"skippedUpdate,omitempty"`
+	SoundMode         string         `json:"soundMode"`
+	SoundVolume       *int           `json:"soundVolume"`
+	SoundVolumes      map[string]int `json:"soundVolumes,omitempty"`
+	GyroDeadband      *float64       `json:"gyroDeadband,omitempty"`
+	GyroDeadbandUsb   *float64       `json:"gyroDeadbandUsb,omitempty"`
+	GyroSensitivity   *float64       `json:"gyroSensitivity,omitempty"`
+	FontScale         *float64       `json:"fontScale,omitempty"`
+	CloseAction       string         `json:"closeAction,omitempty"`
+	InputMode         string         `json:"inputMode,omitempty"`
 }
 
 // Load reads dir/settings.json over the defaults; invalid values keep their
@@ -327,5 +329,5 @@ func Save(dir string, s Settings) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, FileName), data, 0644)
+	return fsutil.WriteFileAtomic(filepath.Join(dir, FileName), data, 0644)
 }

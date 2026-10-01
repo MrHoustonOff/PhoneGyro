@@ -89,6 +89,7 @@ type Server struct {
 	httpPort    int
 	httpsPort   int
 	webContent  []byte
+	listenMu    sync.Mutex
 	httpServer  *http.Server
 	httpsServer *http.Server
 	upgrader    websocket.Upgrader
@@ -159,7 +160,10 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 		if h, _, err := net.SplitHostPort(r.Host); err == nil {
 			host = h
 		}
-		target := fmt.Sprintf("https://%s%s", net.JoinHostPort(host, strconv.Itoa(s.httpsPort)), r.URL.RequestURI())
+		s.listenMu.Lock()
+		httpsPort := s.httpsPort
+		s.listenMu.Unlock()
+		target := fmt.Sprintf("https://%s%s", net.JoinHostPort(host, strconv.Itoa(httpsPort)), r.URL.RequestURI())
 		http.Redirect(w, r, target, http.StatusTemporaryRedirect)
 	})
 
@@ -168,6 +172,18 @@ func NewServer(caMgr *ca.CertificateManager, httpPort, httpsPort int, webHTML []
 
 // Start launches both servers. All routes must be registered before calling Start.
 func (s *Server) Start() error {
+	if err := s.listen(); err != nil {
+		return err
+	}
+	go s.rateMonitorLoop()
+	return nil
+}
+
+// listen opens both listeners on s.httpPort / s.httpsPort and serves them.
+func (s *Server) listen() error {
+	s.listenMu.Lock()
+	httpPort, httpsPort := s.httpPort, s.httpsPort
+	s.listenMu.Unlock()
 	// Only GetCertificate, no static Certificates: with both set, crypto/tls
 	// serves the static one to every client without SNI -- the phone connects
 	// by IP, so a leaf re-signed for a new IP (ca.AddHostIPs) would never reach it.
@@ -176,34 +192,76 @@ func (s *Server) Start() error {
 		MinVersion:     tls.VersionTLS12,
 	}
 
-	s.httpServer = &http.Server{
-		Addr:              fmt.Sprintf(":%d", s.httpPort),
+	httpServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", httpPort),
 		Handler:           s.HTTPMux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	s.httpsServer = &http.Server{
-		Addr:              fmt.Sprintf(":%d", s.httpsPort),
+	httpsServer := &http.Server{
+		Addr:              fmt.Sprintf(":%d", httpsPort),
 		Handler:           s.HTTPSMux,
 		TLSConfig:         tlsConfig,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	httpListener, err := net.Listen("tcp", s.httpServer.Addr)
+	httpListener, err := net.Listen("tcp", httpServer.Addr)
 	if err != nil {
-		return fmt.Errorf("failed to bind HTTP port %d: %w", s.httpPort, err)
+		return fmt.Errorf("failed to bind HTTP port %d: %w", httpPort, err)
 	}
 
-	httpsListener, err := tls.Listen("tcp", s.httpsServer.Addr, tlsConfig)
+	httpsListener, err := tls.Listen("tcp", httpsServer.Addr, tlsConfig)
 	if err != nil {
 		httpListener.Close()
-		return fmt.Errorf("failed to bind HTTPS port %d: %w", s.httpsPort, err)
+		return fmt.Errorf("failed to bind HTTPS port %d: %w", httpsPort, err)
 	}
 
-	go s.httpServer.Serve(httpListener)
-	go s.httpsServer.Serve(httpsListener)
-	go s.rateMonitorLoop()
-
+	s.listenMu.Lock()
+	s.httpServer, s.httpsServer = httpServer, httpsServer
+	s.listenMu.Unlock()
+	go httpServer.Serve(httpListener)
+	go httpsServer.Serve(httpsListener)
 	return nil
+}
+
+// closeListeners stops both HTTP servers (open phone sockets are hijacked
+// connections and stay up).
+func (s *Server) closeListeners() {
+	s.listenMu.Lock()
+	h, hs := s.httpServer, s.httpsServer
+	s.listenMu.Unlock()
+	if h != nil {
+		h.Close()
+	}
+	if hs != nil {
+		hs.Close()
+	}
+}
+
+// Rebind moves a running server to new ports. On error it goes back to the old
+// ones and returns the error. Before Start it only sets the ports Start will use.
+func (s *Server) Rebind(httpPort, httpsPort int) error {
+	s.listenMu.Lock()
+	oldHTTP, oldHTTPS := s.httpPort, s.httpsPort
+	started := s.httpServer != nil
+	s.listenMu.Unlock()
+	if !started {
+		s.setPorts(httpPort, httpsPort)
+		return nil
+	}
+	s.closeListeners()
+	s.setPorts(httpPort, httpsPort)
+	err := s.listen()
+	if err != nil {
+		s.setPorts(oldHTTP, oldHTTPS)
+		_ = s.listen()
+	}
+	return err
+}
+
+func (s *Server) setPorts(httpPort, httpsPort int) {
+	s.listenMu.Lock()
+	s.httpPort, s.httpsPort = httpPort, httpsPort
+	s.listenMu.Unlock()
 }
 
 // Stop gracefully shuts down both servers.
@@ -213,12 +271,7 @@ func (s *Server) Stop() {
 	default:
 		close(s.stopChan)
 	}
-	if s.httpServer != nil {
-		s.httpServer.Close()
-	}
-	if s.httpsServer != nil {
-		s.httpsServer.Close()
-	}
+	s.closeListeners()
 }
 
 func (s *Server) rateMonitorLoop() {

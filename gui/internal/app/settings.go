@@ -446,20 +446,14 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		}
 	}
 
+	// Ports move in place (Rebind): the servers are the same objects, so the
+	// frame handler and the UI keep their pointers. Before the network is up
+	// (startNetwork) the new ports are simply used when it starts.
 	dsuRestarted := false
 	if s.DSUPort != a.dsuPort && a.dsuSrv != nil {
-		a.dsuSrv.Stop()
-		macBytes, _ := settings.ParseMAC(a.getDSUMAC())
-		newDsu := dsu.NewServer(s.DSUPort, macBytes)
-		a.bindDSUCallbacks(newDsu)
-		if err := newDsu.Start(); err != nil {
-			oldDsu := dsu.NewServer(a.dsuPort, macBytes)
-			a.bindDSUCallbacks(oldDsu)
-			_ = oldDsu.Start()
-			a.dsuSrv = oldDsu
-			return nil, fmt.Errorf("failed to bind DSU port %d: %w", s.DSUPort, err)
+		if err := a.dsuSrv.Rebind(s.DSUPort); err != nil {
+			return nil, err
 		}
-		a.dsuSrv = newDsu
 		a.dsuPort = s.DSUPort
 		dsuRestarted = true
 	} else if a.dsuPort == 0 {
@@ -467,6 +461,11 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 
 	if s.HTTPPort != a.httpPort || s.HTTPSPort != a.httpsPort {
+		if a.srv != nil {
+			if err := a.srv.Rebind(s.HTTPPort, s.HTTPSPort); err != nil {
+				return nil, err
+			}
+		}
 		a.httpPort = s.HTTPPort
 		a.httpsPort = s.HTTPSPort
 		a.rebuildURLsAndQRCodes()

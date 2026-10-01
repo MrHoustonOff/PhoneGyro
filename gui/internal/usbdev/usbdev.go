@@ -350,15 +350,27 @@ func (m *Manager) scanOnce(stop chan struct{}) {
 		close(resultCh)
 	}()
 
+	// Whatever is still in flight when one port wins (or the scan is stopped) is
+	// closed here: a second port that proved itself would otherwise sit in the
+	// channel's buffer, open and unusable for any other program, for good.
+	drain := func() {
+		go func() {
+			for r := range resultCh {
+				r.port.Close()
+			}
+		}()
+	}
 	select {
 	case r, ok := <-resultCh:
 		close(probeStop)
 		if !ok {
 			return
 		}
+		drain()
 		m.attach(r.name, r.port, r.frames, r.pending)
 	case <-stop:
 		close(probeStop)
+		drain()
 	}
 }
 

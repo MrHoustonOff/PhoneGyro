@@ -37,7 +37,7 @@ func TestDSU_RepeatedRequestsDoNotPingPong(t *testing.T) {
 	// The device was turning when the client subscribed.
 	srv.SendMotion(server.MotionFrame{RotX: 90, RotY: -45, RotZ: 30, AccY: -1})
 
-	conn, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+	conn, err := net.DialUDP("udp", nil, srv.conn.Load().LocalAddr().(*net.UDPAddr))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +84,7 @@ func TestDSU_KickIgnoresUntilSilent(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer srv.Stop()
-	conn, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+	conn, err := net.DialUDP("udp", nil, srv.conn.Load().LocalAddr().(*net.UDPAddr))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestDSU_Readmit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer srv.Stop()
-	conn, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+	conn, err := net.DialUDP("udp", nil, srv.conn.Load().LocalAddr().(*net.UDPAddr))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func TestDSU_ClientsInConnectionOrder(t *testing.T) {
 	defer srv.Stop()
 	var addrs []string
 	for i := 0; i < 3; i++ {
-		c, err := net.DialUDP("udp", nil, srv.conn.LocalAddr().(*net.UDPAddr))
+		c, err := net.DialUDP("udp", nil, srv.conn.Load().LocalAddr().(*net.UDPAddr))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -210,4 +210,42 @@ func TestTouchClientCap(t *testing.T) {
 	if n := s.ActiveClients(); n != MaxClients {
 		t.Fatalf("clients = %d, want %d", n, MaxClients)
 	}
+}
+
+// Rebind moves a running server to a new port: requests to the new port are
+// answered, the old port is free again.
+func TestRebind(t *testing.T) {
+	srv := NewServer(0)
+	if err := srv.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+	old := srv.conn.Load().LocalAddr().(*net.UDPAddr)
+	probe, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := probe.LocalAddr().(*net.UDPAddr).Port
+	probe.Close()
+	if err := srv.Rebind(port); err != nil {
+		t.Fatal(err)
+	}
+	c, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: port})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	if _, err := c.Write(padDataRequest(1)); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, 256)
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	if n, err := c.Read(buf); err != nil || n != 100 {
+		t.Fatalf("no answer on the new port: n=%d err=%v", n, err)
+	}
+	again, err := net.ListenUDP("udp", &net.UDPAddr{Port: old.Port})
+	if err != nil {
+		t.Fatalf("old port still taken: %v", err)
+	}
+	again.Close()
 }

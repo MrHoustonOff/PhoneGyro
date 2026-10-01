@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"phonegyro-gui/internal/fsutil"
 )
 
 const fileName = "window.json"
@@ -41,7 +43,7 @@ func Save(dir string, s State) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, fileName), b, 0o644)
+	return fsutil.WriteFileAtomic(filepath.Join(dir, fileName), b, 0o644)
 }
 
 // Snap picks the largest scale step that does not exceed fit (the window must
