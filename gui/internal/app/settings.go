@@ -292,16 +292,6 @@ func (a *App) GetTheme() string {
 	return a.currentTheme
 }
 
-// accentName returns the UI accent colour's name.
-func (a *App) accentName() string {
-	a.themeMu.RLock()
-	defer a.themeMu.RUnlock()
-	if settings.ValidAccent(a.accent) {
-		return a.accent
-	}
-	return settings.Defaults().Accent
-}
-
 // GetLang returns the current synchronized language.
 func (a *App) GetLang() string {
 	a.themeMu.RLock()

@@ -55,7 +55,7 @@ func Run(frontend fs.FS) {
 		},
 		OnStartup: app.startup,
 		OnDomReady: func(ctx context.Context) {
-			app.windowReady()
+			app.windowDomReady()
 			app.hubPhase("window DOM ready")
 		},
 		OnShutdown: app.shutdown,

@@ -109,7 +109,15 @@ type App struct {
 	// uiHidden: the main window is hidden in the tray (hideWindow/ShowWindow);
 	// the UI-only event streams pause meanwhile (emitStateChange, streamQuat).
 	uiHidden atomic.Bool
-	trayMgr  *tray.Manager
+	// uiUnloaded: the hidden window's page was replaced by about:blank (hideWindow);
+	// showOnReady: ShowWindow reloaded it and waits for it to show the window;
+	// windowPlaced: the first page load already put the window in place;
+	// trayGen: bumped by every hide/show, so a stale timer does nothing.
+	uiUnloaded   atomic.Bool
+	showOnReady  atomic.Bool
+	windowPlaced atomic.Bool
+	trayGen      atomic.Uint64
+	trayMgr      *tray.Manager
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
@@ -193,11 +201,10 @@ func (a *App) startup(ctx context.Context) {
 	a.hubPhase("startup")
 
 	a.trayMgr = tray.New(tray.Callbacks{
-		Status:  a.trayStatus,
-		Show:    a.ShowWindow,
-		Quit:    a.QuitApp,
-		Pause:   func() { a.TogglePause() },
-		Clients: a.trayClients,
+		Status: a.trayStatus,
+		Show:   a.ShowWindow,
+		Quit:   a.QuitApp,
+		Pause:  func() { a.TogglePause() },
 	})
 	a.trayMgr.Start()
 

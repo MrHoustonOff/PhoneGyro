@@ -16,7 +16,9 @@
     a = a === 'gold' ? 'amber' : (a || 'amber'); // green is the design's default: no attribute
     if (a !== 'green') d.setAttribute('data-accent', a);
     if (t === 'light' || t === 'dark') d.setAttribute('data-theme', t);
-    if (s !== '0' && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) d.classList.add('is-splash');
+    // Back from the tray (Go unloaded the page while hidden): no launch animation.
+    var r = null; try { r = sessionStorage.getItem('pg-restore'); sessionStorage.removeItem('pg-restore'); } catch (e) {}
+    if (s !== '0' && !r && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) d.classList.add('is-splash');
   })();
 </script>
 <link rel="preload" href="fonts/Onest-Regular.woff2" as="font" type="font/woff2" crossorigin>

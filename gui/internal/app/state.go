@@ -84,7 +84,27 @@ type TuningFrame struct {
 }
 
 // ShowWindow restores and brings the main application window to the foreground.
+// If the page was unloaded in the tray it is loaded again first, and the window
+// appears once it is up (windowDomReady), so no blank frame is seen.
 func (a *App) ShowWindow() {
+	a.trayGen.Add(1) // cancels a pending unload
+	if a.uiUnloaded.Swap(false) {
+		a.showOnReady.Store(true)
+		if a.ctx != nil {
+			wailsRuntime.WindowReloadApp(a.ctx)
+		}
+		gen := a.trayGen.Load()
+		time.AfterFunc(uiReloadMax, func() { // the page never reported: show it anyway
+			if a.trayGen.Load() == gen && a.showOnReady.Swap(false) {
+				a.showWindowNow()
+			}
+		})
+		return
+	}
+	a.showWindowNow()
+}
+
+func (a *App) showWindowNow() {
 	if a.ctx != nil {
 		wailsRuntime.WindowShow(a.ctx)
 		wailsRuntime.WindowUnminimise(a.ctx)
@@ -96,14 +116,61 @@ func (a *App) ShowWindow() {
 	}
 }
 
+// How long the window stays loaded after hiding (a quick show back is instant),
+// and how long ShowWindow waits for the reloaded page before showing anyway.
+const (
+	uiUnloadAfter = 2 * time.Second
+	uiReloadMax   = 3 * time.Second
+)
+
 // hideWindow hides the main window to the tray. Until ShowWindow the UI gets no
-// state updates or orientation stream: nobody sees them, and building the state
-// 15 times a second costs CPU. Everything else (DSU, the silence watchdog, the
-// tray, the loss alarm) keeps running.
+// state updates or orientation stream, and after uiUnloadAfter the page itself
+// is unloaded: WebView2 navigates to about:blank, so no DOM, scripts, timers,
+// canvases or WebGL stay alive in the tray. Everything else (DSU, the silence
+// watchdog, the tray, the loss alarm) keeps running.
 func (a *App) hideWindow() {
 	a.uiHidden.Store(true)
-	if a.ctx != nil {
-		wailsRuntime.WindowHide(a.ctx)
+	if a.ctx == nil {
+		return
+	}
+	wailsRuntime.WindowHide(a.ctx)
+	gen := a.trayGen.Add(1)
+	time.AfterFunc(uiUnloadAfter, func() {
+		if a.trayGen.Load() != gen || !a.uiHidden.Load() || a.uiUnloaded.Load() {
+			return
+		}
+		a.uiUnloaded.Store(true)
+		a.releaseUIState()
+		// sessionStorage survives the round trip: the page skips the launch
+		// animation when it comes back (index.html head script).
+		wailsRuntime.WindowExecJS(a.ctx, `try{sessionStorage.setItem('pg-restore','1')}catch(e){};location.replace('about:blank')`)
+		a.logEvent("INFO", "window: UI unloaded in the tray")
+	})
+}
+
+// releaseUIState drops what only an open screen holds: a page unloaded in the
+// middle of the calibration wizard or the bench never says goodbye, and its
+// preview matrix or capture would keep shaping the live output.
+func (a *App) releaseUIState() {
+	a.ClearPreview()
+	a.activeBank().isCapturing.Store(false)
+	a.tuningActive.Store(false)
+	a.quatStream.Store(false)
+}
+
+// windowDomReady runs on every page load (Wails OnDomReady). The first one
+// places the window; the about:blank of the tray is ignored; a reload from the
+// tray shows the window once it is up.
+func (a *App) windowDomReady() {
+	if a.uiUnloaded.Load() {
+		return // about:blank
+	}
+	if !a.windowPlaced.Swap(true) {
+		a.windowReady()
+	}
+	if a.showOnReady.Swap(false) {
+		// Give the first paint a moment: the page answers DOM ready before it has drawn.
+		time.AfterFunc(120*time.Millisecond, a.showWindowNow)
 	}
 }
 
@@ -160,8 +227,6 @@ func (a *App) trayStatus() tray.Status {
 	bank := a.activeBank()
 	st := tray.Status{
 		Lang:    a.GetLang(),
-		Theme:   a.GetTheme(),
-		Accent:  a.accentName(),
 		Mode:    a.GetInputMode(),
 		Online:  bank.hasClient.Load(),
 		Paused:  a.isPaused.Load(),
@@ -172,10 +237,6 @@ func (a *App) trayStatus() tray.Status {
 		st.Device = s
 	}
 	if st.Online {
-		st.Link = "Wi-Fi · LAN"
-		if st.Mode == "usb" {
-			st.Link = "USB"
-		}
 		if a.srv != nil {
 			_, _, st.Hz = a.srv.PacketStats()
 		}
@@ -184,19 +245,6 @@ func (a *App) trayStatus() tray.Status {
 		st.Emulators = a.dsuSrv.ActiveClientCount()
 	}
 	return st
-}
-
-// trayClients names the DSU clients for the tray menu; it runs only when the menu opens.
-func (a *App) trayClients() []tray.Client {
-	var out []tray.Client
-	for _, v := range a.dsuClientViews() {
-		name := v.Process
-		if name == "" {
-			name = v.Address
-		}
-		out = append(out, tray.Client{Name: name, Active: v.Active})
-	}
-	return out
 }
 
 // bindDSUCallbacks hooks connection lifecycle events from the DSU UDP server.
