@@ -26,18 +26,18 @@ type liveDebugMsg struct {
 	Timestamp       uint32          `json:"ts,omitempty"`
 	RecvTs          int64           `json:"recv_ts,omitempty"`
 	SendTs          int64           `json:"send_ts,omitempty"`
-	RawGx           float32         `json:"raw_gx,omitempty"`
-	RawGy           float32         `json:"raw_gy,omitempty"`
-	RawGz           float32         `json:"raw_gz,omitempty"`
-	RawAx           float32         `json:"raw_ax,omitempty"`
-	RawAy           float32         `json:"raw_ay,omitempty"`
-	RawAz           float32         `json:"raw_az,omitempty"`
-	OutGx           float32         `json:"out_gx,omitempty"`
-	OutGy           float32         `json:"out_gy,omitempty"`
-	OutGz           float32         `json:"out_gz,omitempty"`
-	OutAx           float32         `json:"out_ax,omitempty"`
-	OutAy           float32         `json:"out_ay,omitempty"`
-	OutAz           float32         `json:"out_az,omitempty"`
+	RawGx           float32         `json:"raw_gx"`
+	RawGy           float32         `json:"raw_gy"`
+	RawGz           float32         `json:"raw_gz"`
+	RawAx           float32         `json:"raw_ax"`
+	RawAy           float32         `json:"raw_ay"`
+	RawAz           float32         `json:"raw_az"`
+	OutGx           float32         `json:"out_gx"`
+	OutGy           float32         `json:"out_gy"`
+	OutGz           float32         `json:"out_gz"`
+	OutAx           float32         `json:"out_ax"`
+	OutAy           float32         `json:"out_ay"`
+	OutAz           float32         `json:"out_az"`
 	StickLx         float32         `json:"stick_lx,omitempty"`
 	StickLy         float32         `json:"stick_ly,omitempty"`
 	InHz            float64         `json:"in_hz,omitempty"`

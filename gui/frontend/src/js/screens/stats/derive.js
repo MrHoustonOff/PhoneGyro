@@ -518,9 +518,13 @@ export class TelemetryDeriveEngine {
     const rawAy = formatAxis(ay);
     const rawAz = formatAxis(az);
 
-    const outGxVal = frame.outGx ?? frame.out_gx ?? (this.latestTuning ? this.latestTuning.OutX : gx);
-    const outGyVal = frame.outGy ?? frame.out_gy ?? (this.latestTuning ? this.latestTuning.OutY : gy);
-    const outGzVal = frame.outGz ?? frame.out_gz ?? (this.latestTuning ? this.latestTuning.OutZ : gz);
+    const tuningOx = this.latestTuning ? (this.latestTuning.outX ?? this.latestTuning.OutX) : undefined;
+    const tuningOy = this.latestTuning ? (this.latestTuning.outY ?? this.latestTuning.OutY) : undefined;
+    const tuningOz = this.latestTuning ? (this.latestTuning.outZ ?? this.latestTuning.OutZ) : undefined;
+
+    const outGxVal = frame.outGx ?? frame.out_gx ?? (tuningOx !== undefined ? tuningOx : gx);
+    const outGyVal = frame.outGy ?? frame.out_gy ?? (tuningOy !== undefined ? tuningOy : gy);
+    const outGzVal = frame.outGz ?? frame.out_gz ?? (tuningOz !== undefined ? tuningOz : gz);
 
     const outGx = formatAxis(outGxVal);
     const outGy = formatAxis(outGyVal);
