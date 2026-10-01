@@ -162,7 +162,7 @@ func (s *session) canvasForDC(hdc uintptr, scale float32) *canvas {
 	c := &canvas{s: s, scale: scale}
 	pGdipCreateFromHDC.Call(hdc, uintptr(unsafe.Pointer(&c.g)))
 	pGdipSetSmoothingMode.Call(c.g, 4)
-	pGdipSetTextRenderingHint.Call(c.g, 5) // ClearType: the menu background is opaque
+	pGdipSetTextRenderingHint.Call(c.g, 3) // grid-fitted grayscale: no colour fringes on the thin icon strokes
 	pGdipSetPixelOffsetMode.Call(c.g, 4)
 	pGdipCreateStringFormat.Call(0x00001000|0x0800, 0, uintptr(unsafe.Pointer(&c.sf))) // NoWrap | MeasureTrailingSpaces
 	pGdipSetStringFormatLineAlign.Call(c.sf, 1)

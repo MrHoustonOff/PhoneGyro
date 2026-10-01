@@ -54,7 +54,7 @@ func TestRenderMenu(t *testing.T) {
 			}
 			W := int((268 + 20 + 256) * scale)
 			H := int(max32f(heights[0], heights[1]) * scale)
-			bgc := uint32(0x2b2b2b)
+			bgc := uint32(0xf0f0f0) // a classic light frame: the items must not depend on it
 			if st.Theme == "light" {
 				bgc = 0xf9f9f9
 			}

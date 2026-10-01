@@ -47,7 +47,7 @@ type drawItemStruct struct {
 type rectI struct{ left, top, right, bottom int32 }
 
 var (
-	pGetPixel                = syscall.NewLazyDLL("gdi32.dll").NewProc("GetPixel")
+	pExcludeClipRect         = syscall.NewLazyDLL("gdi32.dll").NewProc("ExcludeClipRect")
 	pGetDpiForMonitor        = syscall.NewLazyDLL("shcore.dll").NewProc("GetDpiForMonitor")
 	pMonitorFromPoint        = user32.NewProc("MonitorFromPoint")
 	pGdipTranslateWorldTrans = gdiplus.NewProc("GdipTranslateWorldTransform")
@@ -84,6 +84,7 @@ const (
 	kindInfo
 	kindAction
 	kindClient
+	kindSeparator
 )
 
 // Segoe Fluent Icons / Segoe MDL2 Assets code points.
@@ -122,6 +123,8 @@ func (it *menuItem) size() (w, h float32) {
 		return 268, 46
 	case kindClient:
 		return 256, 36
+	case kindSeparator:
+		return 268, 9
 	}
 	return 268, 40
 }
@@ -244,10 +247,10 @@ func (tm *Manager) showContextMenu(hwnd uintptr) {
 	add(hMenu, items[0])
 	add(hMenu, items[1])
 	add(hMenu, items[2])
-	pAppendMenuW.Call(hMenu, MF_SEPARATOR, 0, 0)
+	add(hMenu, &menuItem{kind: kindSeparator})
 	add(hMenu, items[3])
 	add(hMenu, items[4])
-	pAppendMenuW.Call(hMenu, MF_SEPARATOR, 0, 0)
+	add(hMenu, &menuItem{kind: kindSeparator})
 	add(hMenu, items[5])
 
 	cmd, _, _ := pTrackPopupMenu.Call(hMenu, TPM_BOTTOMALIGN|TPM_RIGHTALIGN|TPM_RETURNCMD,
@@ -293,25 +296,6 @@ func (tm *Manager) measureItem(lParam uintptr) bool {
 	return true
 }
 
-// sampleBg reads the menu's own background colour once, so the owner-drawn
-// items blend into whatever frame the system draws (dark, light, acrylic).
-func (tm *Manager) sampleBg(hdc uintptr, rc rectI) uint32 {
-	if tm.menuBg != 0 {
-		return tm.menuBg
-	}
-	c, _, _ := pGetPixel.Call(hdc, uintptr(rc.left+2), uintptr(rc.top+2))
-	if uint32(c) == 0xFFFFFFFF || c == 0 {
-		if tm.menuPal.dark {
-			c = 0x2b2b2b
-		} else {
-			c = 0xf9f9f9
-		}
-	}
-	// COLORREF is 0x00BBGGRR
-	tm.menuBg = 0xff000000 | (uint32(c)&0xff)<<16 | (uint32(c)>>8&0xff)<<8 | uint32(c)>>16&0xff
-	return tm.menuBg
-}
-
 // drawItem answers WM_DRAWITEM for the open menu.
 func (tm *Manager) drawItem(lParam uintptr) bool {
 	d := (*drawItemStruct)(ptrOf(lParam))
@@ -324,7 +308,7 @@ func (tm *Manager) drawItem(lParam uintptr) bool {
 	}
 	sc := tm.menuScale
 	p := tm.menuPal
-	bg := tm.sampleBg(d.hdc, d.rc)
+	bg := p.raised // the whole menu is drawn in the app's own colours, whatever frame the system gives it
 	w := float32(d.rc.right-d.rc.left) / sc
 	h := float32(d.rc.bottom-d.rc.top) / sc
 
@@ -395,10 +379,17 @@ func (tm *Manager) drawItem(lParam uintptr) bool {
 		c.text(it.glyph, icons, 16, styleRegular, blend(bg, col, dim), 14, 0, 24, h, alignCenter, false)
 		c.text(it.title, semi, 13.5, styleRegular, blend(bg, ink, dim), 48, 0, w-48-14, h, alignLeft, true)
 
+	case kindSeparator:
+		c.line(12, h/2, w-12, h/2, 1, blend(bg, p.ink, 0.14))
+
 	case kindClient:
 		c.fillEllipse(16, h/2-3.5, 7, 7, it.dot)
 		c.text(it.sub, body, 11, styleRegular, p.ink3, w-86-14, 0, 86, h, alignRight, false)
 		c.text(it.title, semi, 13, styleRegular, p.ink, 32, 0, w-32-86-18, h, alignLeft, true)
+	}
+	if len(it.children) > 0 {
+		// Windows draws its own black submenu arrow after the item; keep it off our colours.
+		pExcludeClipRect.Call(d.hdc, uintptr(d.rc.right-int32(28*sc)), uintptr(d.rc.top), uintptr(d.rc.right), uintptr(d.rc.bottom))
 	}
 	return true
 }
