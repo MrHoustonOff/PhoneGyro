@@ -2,16 +2,8 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
-	"os"
-	"os/exec"
-	"syscall"
 	"time"
-
-	"phonegyro-gui/internal/settings"
-
-	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/gorilla/websocket"
 )
@@ -176,31 +168,5 @@ func (a *App) broadcastLiveDebugJSON(v any) {
 			conn.Close()
 			delete(a.liveDebugClients, conn)
 		}
-	}
-}
-
-var (
-	modUser32                    = syscall.NewLazyDLL("user32.dll")
-	procAllowSetForegroundWindow = modUser32.NewProc("AllowSetForegroundWindow")
-)
-
-// OpenLiveDebugWindow opens the standalone 3D Live Debug desktop .exe window.
-func (a *App) OpenLiveDebugWindow() {
-	exePath, err := os.Executable()
-	if err == nil {
-		// ASFW_ANY (-1 = 0xFFFFFFFF) grants the spawned child process permission to activate into foreground
-		_, _, _ = procAllowSetForegroundWindow.Call(uintptr(0xFFFFFFFF))
-		cmd := exec.Command(exePath, "--livedebug")
-		if err := cmd.Start(); err == nil {
-			a.liveDebugCmdMu.Lock()
-			a.liveDebugCmd = cmd
-			a.liveDebugCmdMu.Unlock()
-			return
-		}
-	}
-	// Fallback to browser if process execution fails
-	url := fmt.Sprintf("http://127.0.0.1:%d/livedebug", settings.DefaultHTTPPort)
-	if a.ctx != nil {
-		wailsRuntime.BrowserOpenURL(a.ctx, url)
 	}
 }

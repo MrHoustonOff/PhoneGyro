@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"syscall"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -317,3 +318,6 @@ func (a *App) ToggleDebugWindow() {
 		wailsRuntime.EventsEmit(a.ctx, "debug:active", true)
 	}
 }
+
+// AllowSetForegroundWindow(ASFW_ANY) lets the spawned debug window come to the front.
+var procAllowSetForegroundWindow = syscall.NewLazyDLL("user32.dll").NewProc("AllowSetForegroundWindow")

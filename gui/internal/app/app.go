@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"mime"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -60,8 +59,6 @@ type App struct {
 	liveDebugMu      sync.RWMutex
 	liveDebugClients map[*websocket.Conn]struct{}
 	liveDebugSeq     atomic.Uint64
-	liveDebugCmdMu   sync.Mutex
-	liveDebugCmd     *exec.Cmd
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
@@ -306,14 +303,6 @@ func (a *App) shutdown(ctx context.Context) {
 		a.stopResmon()
 		a.stopResmon = nil
 	}
-
-	// Terminate child Live Debug process if running
-	a.liveDebugCmdMu.Lock()
-	if a.liveDebugCmd != nil && a.liveDebugCmd.Process != nil {
-		_ = a.liveDebugCmd.Process.Kill()
-		a.liveDebugCmd = nil
-	}
-	a.liveDebugCmdMu.Unlock()
 
 	if a.srv != nil {
 		a.srv.Stop()

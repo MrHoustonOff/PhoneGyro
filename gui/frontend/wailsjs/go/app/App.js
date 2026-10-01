@@ -158,10 +158,6 @@ export function OpenDataDir() {
   return window['go']['app']['App']['OpenDataDir']();
 }
 
-export function OpenLiveDebugWindow() {
-  return window['go']['app']['App']['OpenLiveDebugWindow']();
-}
-
 export function PendingCemuNotice() {
   return window['go']['app']['App']['PendingCemuNotice']();
 }

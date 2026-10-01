@@ -102,8 +102,8 @@ func newPlatformMonitor() (Monitor, error) {
 	return m, nil
 }
 
-// appTreePIDs is the app's processes: this one, its own children (the Live
-// Debug window is PhoneGyro.exe --livedebug) and the WebView2 processes that
+// appTreePIDs is the app's processes: this one, its own children (the debug
+// window is PhoneGyro.exe --debugwin) and the WebView2 processes that
 // render their UI (msedgewebview2.exe and everything they start: renderer,
 // GPU, utility). WebView2 does most of the UI work, so leaving it out would
 // under-report both CPU and memory.

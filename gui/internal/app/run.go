@@ -15,17 +15,13 @@ import (
 // assets is the UI (frontend/src under its own path), set by Run.
 var assets fs.FS
 
-// Run starts PhoneGyro: the main window, or the Live Debug window when started
-// with --livedebug. frontend holds frontend/src (embedded by package main).
+// Run starts PhoneGyro: the main window, or the debug window when started with
+// --debugwin. frontend holds frontend/src (embedded by package main).
 func Run(frontend fs.FS) {
 	assets = frontend
 
 	startProfilerIfAsked()
 	for _, arg := range os.Args[1:] {
-		if arg == "--livedebug" {
-			runLiveDebug()
-			return
-		}
 		if arg == "--debugwin" {
 			runDebugWindow()
 			return
@@ -38,7 +34,6 @@ func Run(frontend fs.FS) {
 	if app.debugPanel.Load() || app.debugLogOn.Load() {
 		app.startDebugHub()
 	}
-	debugApp := NewLiveDebugApp()
 	app.prepareWindow()
 
 	bgR, bgG, bgB := uint8(0xf1), uint8(0xf1), uint8(0xf1)
@@ -75,7 +70,6 @@ func Run(frontend fs.FS) {
 		},
 		Bind: []interface{}{
 			app,
-			debugApp,
 		},
 		EnableDefaultContextMenu: true,
 		Debug: options.Debug{

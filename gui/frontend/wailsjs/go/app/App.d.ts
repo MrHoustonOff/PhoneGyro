@@ -85,8 +85,6 @@ export function MarkFirstLaunchDone():Promise<void>;
 
 export function OpenDataDir():Promise<string>;
 
-export function OpenLiveDebugWindow():Promise<void>;
-
 export function PendingCemuNotice():Promise<app.CemuNotice>;
 
 export function PendingFirewallAlert():Promise<firewall.Status>;
