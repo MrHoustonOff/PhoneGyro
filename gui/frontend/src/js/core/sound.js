@@ -1,7 +1,9 @@
 // Synthesized audio alerts (Web Audio API) and system sounds via Go bridge.
 // Settings come from setSoundConfig() (AppSettings: soundMode, soundVolume, soundVolumes).
 
-import { call } from './bridge.js';
+import { call, on } from './bridge.js';
+import { onState } from './state.js';
+import { getCurrentScreen } from '../shell/router.js';
 
 let soundMode = 'cute'; // 'cute' | 'windows' | 'off'
 let soundVolume = 1;    // master volume: 0..3
@@ -340,3 +342,34 @@ export function previewSound(type = 'connect') {
   if (ind <= 0) return;
   playSound(type, { force: true });
 }
+
+export function startSound() {
+  onState((st, prev) => {
+    if (!prev) return; // First state on launch is ignored
+
+    // Connect / Disconnect: status switch between offline and non-offline
+    const prevOffline = !prev.status || prev.status === 'offline';
+    const curOffline = !st.status || st.status === 'offline';
+    if (prevOffline !== curOffline) {
+      if (getCurrentScreen() !== 'calibration') {
+        playSound(curOffline ? 'disconnect' : 'connect');
+      }
+    }
+
+    // DSU: client count increased
+    const prevDsu = prev.dsuClientList ? prev.dsuClientList.length : (prev.dsuClients || 0);
+    const curDsu = st.dsuClientList ? st.dsuClientList.length : (st.dsuClients || 0);
+    if (curDsu > prevDsu) {
+      playSound('dsu');
+    }
+  });
+
+  on('recenter:triggered', () => {
+    playSound('recenter');
+  });
+
+  on('link:loss', () => {
+    playSound('loss');
+  });
+}
+

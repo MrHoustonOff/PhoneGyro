@@ -2,7 +2,7 @@
 // starts at once; what needs Go waits for the bridge, then the first state.
 
 import { ready, openURL, call } from './core/bridge.js';
-import { setSoundConfig, playSound } from './core/sound.js';
+import { setSoundConfig, playSound, startSound } from './core/sound.js';
 import { startI18n } from './core/i18n.js';
 
 if (typeof window !== 'undefined') {
@@ -47,6 +47,7 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   openURL(a.href);
 });
+startSound();
 startConnect();
 startSetup();
 startSettings();
