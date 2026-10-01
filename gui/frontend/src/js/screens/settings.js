@@ -15,6 +15,7 @@ import { enhanceSelects } from '../ui/select.js';
 import { setZoom, onZoom } from '../ui/zoom.js';
 import { ACCENTS, applyAccent } from '../ui/accent.js';
 import { setDebugPanel } from '../debug/toggle.js';
+import { setSoundConfig, previewSound } from '../core/sound.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -72,7 +73,7 @@ let mixOpen = false;  // the per-sound mixer is folded out
 // Per-event volumes (settings.json soundVolumes, 0..3, 1 by default).
 const SOUNDS = [
   ['connect', 'sound_phone_connect'], ['disconnect', 'sound_phone_disconnect'], ['loss', 'sound_link_loss'],
-  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'],
+  ['dsu', 'sound_dsu_connect'], ['recenter', 'sound_recenter'], ['intro', 'sound_intro'],
 ];
 const vol = (k) => { const v = cur.soundVolumes && cur.soundVolumes[k]; return v == null ? 1 : v; };
 const CHEV = '<svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg>';
@@ -170,6 +171,8 @@ function mark(rowEl, r) {
 function resetRow(rowEl) {
   if (rowEl.dataset.mix) {
     cur.soundVolumes = Object.assign({}, cur.soundVolumes, { [rowEl.dataset.mix]: 1 });
+    setSoundConfig(cur);
+    previewSound(rowEl.dataset.mix);
     render();
     save(true);
     return;
@@ -179,6 +182,10 @@ function resetRow(rowEl) {
   cur[r.key] = def[r.key];
   if (r.after) r.after(cur[r.key]);
   if (r.reset) r.reset(cur[r.key]);
+  if (r.key === 'soundMode' || r.key === 'soundVolume') {
+    setSoundConfig(cur);
+    previewSound('connect');
+  }
   render();
   save(true);
 }
@@ -209,6 +216,7 @@ function save(now = false) {
   saveTimer = setTimeout(async () => {
     try {
       await call('SaveAppSettings', cur);
+      if (cur) setSoundConfig(cur);
     } catch (e) {
       toast(String(e && e.message || e));
       load();
@@ -238,6 +246,8 @@ function onInput(e) {
     const b = rowEl.querySelector(':scope > .app-reset');
     if (v !== 1 && !b) rowEl.insertAdjacentHTML('afterbegin', resetBtn());
     if (v === 1 && b) b.remove();
+    setSoundConfig(cur);
+    previewSound(rowEl.dataset.mix);
     save();
     return;
   }
@@ -252,7 +262,15 @@ function onInput(e) {
     if (r.key === 'gyroSensitivity') {
       applyMotionFilterParams();
     }
-    if (e.type === 'change') { if (r.after) r.after(v); mark(rowEl, r); save(); }
+    if (e.type === 'change') {
+      if (r.after) r.after(v);
+      mark(rowEl, r);
+      if (r.key === 'soundVolume') {
+        setSoundConfig(cur);
+        previewSound('connect');
+      }
+      save();
+    }
     return;
   }
   if (e.type !== 'change') return;
@@ -261,6 +279,10 @@ function onInput(e) {
     cur[r.key] = r.num ? Number(el.value) : r.bool ? el.value === 'true' : el.value;
     if (r.key === 'gyroDeadband' || r.key === 'gyroDeadbandUsb') {
       applyMotionFilterParams();
+    }
+    if (r.key === 'soundMode') {
+      setSoundConfig(cur);
+      previewSound('connect');
     }
   }
   else if (r.type === 'port') {
@@ -315,6 +337,7 @@ async function regenMac() {
 
 async function load() {
   [cur, def] = await Promise.all([call('GetAppSettings'), call('GetDefaultAppSettings')]);
+  if (cur) setSoundConfig(cur);
   render();
   applyMotionFilterParams();
 }

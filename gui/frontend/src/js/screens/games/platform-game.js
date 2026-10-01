@@ -3,6 +3,7 @@
 
 import { t } from '../../core/i18n.js';
 import { call } from '../../core/bridge.js';
+import { playSound } from '../../core/sound.js';
 
 async function ensureThree() {
   if (typeof window !== 'undefined' && window.THREE) return window.THREE;
@@ -812,7 +813,7 @@ export const PlatformGame = {
         } catch (_) {}
       }
       this.triggerConfetti(this.holePos.x, this.holePos.z);
-      // TODO: sound ('goal')
+      playSound('goal');
       this.animateScore('up');
       this.spawnHole();
       this.respawnBall();
@@ -843,7 +844,7 @@ export const PlatformGame = {
       this.ballVelY = -0.8;
       this.ballPosY = this.platformThickness / 2 + this.ballRadius;
 
-      // TODO: sound ('defeat')
+      playSound('defeat');
       if (this.score > 0) {
         this.animateScore('lost');
       }

@@ -1,8 +1,13 @@
 // Entry point. Everything local (clicks, the title bar, the launch animation)
 // starts at once; what needs Go waits for the bridge, then the first state.
 
-import { ready, openURL } from './core/bridge.js';
+import { ready, openURL, call } from './core/bridge.js';
+import { setSoundConfig, playSound, startSound } from './core/sound.js';
 import { startI18n } from './core/i18n.js';
+
+if (typeof window !== 'undefined') {
+  window.playSound = playSound;
+}
 import { startState } from './core/state.js';
 import { startTitlebar } from './shell/titlebar.js';
 import { startHeader } from './shell/header.js';
@@ -42,6 +47,7 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   openURL(a.href);
 });
+startSound();
 startConnect();
 startSetup();
 startSettings();
@@ -52,6 +58,13 @@ startGames();
 
 async function boot() {
   await ready;
+  const appSettings = await call('GetAppSettings');
+  if (appSettings) {
+    setSoundConfig(appSettings);
+  }
+  if (splash.active && (!appSettings || appSettings.splash !== false)) {
+    playSound('intro');
+  }
   await startI18n();        // strings first: every renderer below uses them
   await Promise.all([startHeader(), startState()]);
   startFooter();

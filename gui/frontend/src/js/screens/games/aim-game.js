@@ -3,6 +3,7 @@
 
 import { t } from '../../core/i18n.js';
 import { go } from '../../shell/router.js';
+import { playSound } from '../../core/sound.js';
 
 export const AimGame = {
   initialized: false,
@@ -333,28 +334,7 @@ export const AimGame = {
   },
 
   playHitSound() {
-    try {
-      // TODO: sound
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) return;
-      if (!this.audioCtx) this.audioCtx = new AudioContext();
-      if (this.audioCtx.state === 'suspended') {
-        this.audioCtx.resume().catch(() => {});
-      }
-      const ctx = this.audioCtx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const now = ctx.currentTime;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(620, now);
-      osc.frequency.exponentialRampToValueAtTime(1400, now + 0.07);
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.13);
-    } catch (e) {}
+    playSound('goal');
   },
 
   dispose() {

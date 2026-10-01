@@ -15,6 +15,7 @@ import { profileIconSvg, ICON_KEYS } from '../ui/profile-icons.js';
 import { go, onScreen } from '../shell/router.js';
 import { openModal } from '../ui/modal.js';
 import { axisCardsHTML, matrixRows, mappingRows } from '../ui/axis-grids.js';
+import { playSound } from '../core/sound.js';
 
 const STEPS = [
   { key: 'rest', pill: 'step_pill_rest', ms: 1600, rest: true },
@@ -153,7 +154,7 @@ export function showDisconnectAlert() {
     alertOverlay.hidden = false;
   }
 
-  // TODO: playSound('disconnect')
+  playSound('disconnect');
 }
 
 export function hideDisconnectAlert(opts = {}) {
@@ -177,7 +178,7 @@ export function hideDisconnectAlert(opts = {}) {
   }
 
   if (!opts.silent) {
-    // TODO: playSound('connect')
+    playSound('connect');
   }
 
   if (S.wasInterruptedByDisconnect) {

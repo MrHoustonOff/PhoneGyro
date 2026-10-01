@@ -59,6 +59,9 @@ func TestLoadMissingFieldsKeepDefaults(t *testing.T) {
 	if s.ActiveSlot != 0 {
 		t.Fatalf("activeSlot of a file without the field: got %d, want 0", s.ActiveSlot)
 	}
+	if s.SoundVolumes["intro"] != 1 {
+		t.Fatalf("intro default: got %d, want 1", s.SoundVolumes["intro"])
+	}
 }
 
 // TestLoadLegacyDeadband: before the per-source split there was one threshold
@@ -83,7 +86,7 @@ func TestLoadInvalidValues(t *testing.T) {
 	s, _ := Load(write(t, `{"theme":"pink","lang":"de","dsuPort":80,"httpPort":70000,
 		"dsuMac":"nope","fontScale":5,"soundVolume":9,"gyroSensitivity":-1,
 		"closeAction":"explode","activeSlot":7,"inputMode":"bluetooth",
-		"soundVolumes":{"connect":9,"dsu":-2,"unknown":1}}`))
+		"soundVolumes":{"connect":9,"dsu":-2,"intro":7,"unknown":1}}`))
 	d := Defaults()
 	if s.Theme != d.Theme || s.Lang != d.Lang || s.DSUPort != d.DSUPort || s.HTTPPort != d.HTTPPort {
 		t.Fatalf("theme/lang/ports: %+v", s)
@@ -94,8 +97,12 @@ func TestLoadInvalidValues(t *testing.T) {
 	if s.FontScale != 1 || s.SoundVolume != 1 || s.GyroSensitivity != 1 || s.CloseAction != "ask" || s.ActiveSlot != -1 || s.InputMode != "phone" {
 		t.Fatalf("clamped values: %+v", s)
 	}
-	if s.SoundVolumes["connect"] != MaxVolume || s.SoundVolumes["dsu"] != 0 || s.SoundVolumes["goal"] != 1 {
+	if s.SoundVolumes["connect"] != MaxVolume || s.SoundVolumes["dsu"] != 0 || s.SoundVolumes["goal"] != 1 || s.SoundVolumes["intro"] != MaxVolume {
 		t.Fatalf("volumes: %+v", s.SoundVolumes)
+	}
+	sLow, _ := Load(write(t, `{"soundVolumes":{"intro":-5}}`))
+	if sLow.SoundVolumes["intro"] != 0 {
+		t.Fatalf("intro lower bound: got %d, want 0", sLow.SoundVolumes["intro"])
 	}
 	if _, ok := s.SoundVolumes["unknown"]; ok {
 		t.Fatal("unknown sound kept")

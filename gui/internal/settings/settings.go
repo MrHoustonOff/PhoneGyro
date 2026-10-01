@@ -119,6 +119,7 @@ func DefaultSoundVolumes() map[string]int {
 		"goal":       1,
 		"defeat":     1,
 		"loss":       1, // тихий сигнал сильной потери данных (link/alarm.go)
+		"intro":      1,
 	}
 }
 
