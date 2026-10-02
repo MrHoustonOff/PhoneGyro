@@ -564,7 +564,6 @@ function render() {
           <div class="pg-stage__cap" id="cal-stage-cap"></div>
         </div>
         <div class="body-sm app-cal-disclaimer" id="cal-disclaimer">${esc(c('view_disclaimer'))}</div>
-        <div class="app-cal-extra app-cal-extra--r" id="cal-extra-r"></div>
       </div>
     </div>`;
   } else {
@@ -573,6 +572,8 @@ function render() {
   }
 
   const leftCol = $('cal-left');
+  grid = $('cal-grid');
+  if (grid) grid.classList.toggle('is-verify', S.phase === 'verify');
   const disclaimer = $('cal-disclaimer');
   if (disclaimer) disclaimer.hidden = S.phase === 'verify';
 
@@ -603,7 +604,7 @@ function render() {
           </div>`).join('')}
         </div>
         <div id="cal-mount"></div>
-        <div class="app-cal-extra app-cal-extra--l" id="cal-extra-l"></div>
+        <div class="app-cal-extra" id="cal-extra"></div>
       `;
     }
 
@@ -611,7 +612,8 @@ function render() {
     foot().innerHTML = ringHost(btn('restart', c('confirm_restart'))) + '<span class="app-grow"></span>' + btn('tosave', c('confirm_yes'), 'primary');
 
     const extraHTML = axisCardsHTML({ gyro: matrixRows(S.matrix), accel: mappingRows(S.accelMap), det, detOk: isOk, note: t('ui.cal_matrix_note') });
-    for (const id of ['cal-extra-l', 'cal-extra-r']) { const x = $(id); if (x) x.innerHTML = extraHTML; }
+    const extra = $('cal-extra');
+    if (extra) extra.innerHTML = extraHTML;
     renderMount();
     updateLiveRates(st);
     ensureScene('live');
@@ -621,7 +623,8 @@ function render() {
 
   // Steps 1–4
   stopQuatListener();
-  for (const id of ['cal-extra-l', 'cal-extra-r']) { const x = $(id); if (x && x.firstChild) x.innerHTML = ''; }
+  const extra = $('cal-extra');
+  if (extra && extra.firstChild) extra.innerHTML = '';
 
   const cfg = STEPS[S.step];
   const n = S.step;
