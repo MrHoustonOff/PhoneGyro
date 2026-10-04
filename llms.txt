@@ -1,0 +1,43 @@
+# PhoneGyro
+
+> PhoneGyro is a free, open-source (MIT) Windows app that turns a smartphone (iOS or Android, no app install — it runs in the phone's browser) or a USB motion controller (Arduino Nano + MPU-6050) into a gyro motion controller for PC emulators and games over the Cemuhook DSU protocol. Works with Cemu, Ryujinx, Yuzu, RPCS3, Dolphin, PCSX2 and any DSU client.
+
+Key facts:
+- Platform: Windows 10/11 (x64 and ARM64). Download `PhoneGyro.exe` from GitHub Releases; no installer needed.
+- Phone connection: same Wi-Fi network as the PC; scan the QR code on the main screen. iOS needs a one-time local certificate (Safari only exposes motion sensors over HTTPS); the app's "Initial Setup" walks through it.
+- USB controller: Arduino Nano + MPU-6050 with the reference firmware (protocol 1.1+), found automatically on any COM port.
+- Emulator setup: add a DSU / Cemuhook client with server `127.0.0.1`, port `26760` (default). The ports can be changed in settings: DSU 26760, HTTP pairing 8080, HTTPS controller 8443.
+- Calibration is mandatory: a 4-step wizard (rest, nod, roll, axes, about a minute) so in-game aim turns the right way. Profiles are saved per device and grip.
+- Runs in the system tray: the UI is unloaded and memory use drops sharply, but the gyro keeps streaming to emulators. The tray menu lists connected emulators by name.
+- Built with Go and Wails (WebView2). Everything runs on the local machine: no account, no cloud, no telemetry.
+- Formerly called GyroBridge. All v1.x releases are deprecated: use v2.0.0 or newer.
+- Author: MrHoustonOff. Source code, issues and releases are on GitHub.
+
+## Docs
+
+- [Documentation index](https://github.com/MrHoustonOff/PhoneGyro/blob/main/docs/SUMMARY.md): table of contents for every guide section (Russian and English)
+- [Quick start](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/quickstart.en.md): from download to playing in a few minutes
+- [Phone connection](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/phone.en.md): pairing an iPhone or Android phone over Wi-Fi
+- [Certificates and TLS](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/tls.en.md): why iOS needs a certificate and how it stays local
+- [USB controller](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/usb.en.md): Arduino Nano + MPU-6050 hardware and firmware
+- [Emulator setup](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/emulators.en.md): configuring Cemu and other DSU clients
+- [Calibration and recentering](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/calibration.en.md): the wizard, profiles and recentering
+- [Main screen](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/main-screen.en.md): device card, profiles, DSU server and clients
+- [Stats and 3D view](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/stats.en.md): live telemetry and the 3D orientation view
+- [Settings](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/settings.en.md): every option explained
+- [Tray and memory](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/tray.en.md): running in the background, what CORE and WEB memory mean
+- [Troubleshooting](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/troubleshooting.en.md): no connection, drift, firewall, antivirus false positives
+
+## Download
+
+- [Latest release](https://github.com/MrHoustonOff/PhoneGyro/releases/latest): PhoneGyro.exe for Windows x64 and ARM64
+- [Source code](https://github.com/MrHoustonOff/PhoneGyro): Go + Wails, MIT license
+- [USB controller firmware](https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol): reference firmware and protocol for the Arduino Nano + MPU-6050
+
+## Optional
+
+- [README](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/README.md): project overview, building from source, project layout
+- [Data and uninstalling](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/data.en.md): where settings and profiles live, and how to remove PhoneGyro completely
+- [Updates](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/updates.en.md): update checks and release channels
+- [For developers](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/dev.en.md): architecture, motion pipeline, benchmarks
+- [Release notes](https://raw.githubusercontent.com/MrHoustonOff/PhoneGyro/main/docs/RELEASE_NOTES.md): what changed in each version

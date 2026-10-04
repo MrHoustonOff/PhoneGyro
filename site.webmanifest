@@ -1,0 +1,21 @@
+{
+  "name": "PhoneGyro",
+  "short_name": "PhoneGyro",
+  "description": "Gyro of your phone as a motion source for emulators",
+  "start_url": ".",
+  "display": "browser",
+  "background_color": "#0b0b0b",
+  "theme_color": "#0b0b0b",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
