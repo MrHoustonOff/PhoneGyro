@@ -11,7 +11,6 @@
   <img src="https://img.shields.io/github/go-mod/go-version/MrHoustonOff/PhoneGyro?style=flat-square&logo=go&logoColor=white&label=Go" alt="Версия Go">
   <img src="https://img.shields.io/badge/%D0%BF%D0%BB%D0%B0%D1%82%D1%84%D0%BE%D1%80%D0%BC%D0%B0-Windows%20x64%20%7C%20ARM64-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Платформа: Windows x64 и ARM64">
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/MrHoustonOff/PhoneGyro?style=flat-square&label=%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F" alt="Лицензия MIT"></a>
-  <a href="https://github.com/MrHoustonOff/PhoneGyro/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/MrHoustonOff/PhoneGyro/test.yml?style=flat-square&label=%D1%82%D0%B5%D1%81%D1%82%D1%8B" alt="Статус тестов"></a>
 </p>
 
 <p align="center">
