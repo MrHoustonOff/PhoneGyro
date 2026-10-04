@@ -60,7 +60,7 @@ How sensor data becomes DSU packets: [Motion pipeline](motion-pipeline.en.md).
 
 * ***All UI strings*** come from `pkg/i18n/locales/ru.json` and `en.json`. We do not write strings in JS or HTML.
 * ***CSS sizes use only `rem` and `em`.***
-* `gui/frontend/src/css/pg.css` is generated from the design system (`tools/design-css/build.py`) and is never edited by hand. Write your own rules in `css/app.css`.
+* `gui/frontend/src/css/pg.css` is generated from the design system and is never edited by hand. Write your own rules in `css/app.css`.
 * The ***Zero rAF Idle*** rule: when idle, with the window minimized or on inactive screens there must be no idle animation loops (`requestAnimationFrame`). WebGL and listeners are released when leaving a screen.
 * The `--tex-grain` grain texture goes only on large backgrounds; small cards and tiles are smooth.
 * Status colors (green for online, red for no connection) are not recolored to the user's accent.

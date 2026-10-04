@@ -45,7 +45,7 @@ function ensureDependencies() {
 export async function createGyroScene(hostEl, opts = {}) {
   await ensureDependencies();
   const defaultGlb = new URL('../../assets/gamepad.glb.txt', import.meta.url).href;
-  // `still`: no floating bob / idle sway (app option, see tools/design-css/build.py)
+  // `still`: no floating bob / idle sway (app option)
   const sceneOpts = { glb: defaultGlb, still: true, ...opts };
   const scene = window.PhoneGyro.createScene(hostEl, sceneOpts);
   if (scene && typeof scene.dispose === 'function') {
