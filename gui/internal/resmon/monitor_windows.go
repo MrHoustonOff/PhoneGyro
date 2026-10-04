@@ -28,7 +28,7 @@ const (
 	// The process tree changes rarely (Live Debug opens, WebView2 restarts a
 	// renderer): rebuilding it walks every process on the machine, so it is
 	// done this often, not on every sample.
-	treeRefreshEvery = 10 * time.Second
+	treeRefreshEvery = 30 * time.Second
 )
 
 // processMemoryCounters matches Windows PROCESS_MEMORY_COUNTERS layout.
@@ -43,6 +43,10 @@ type processMemoryCounters struct {
 	QuotaNonPagedPoolUsage     uintptr
 	PagefileUsage              uintptr
 	PeakPagefileUsage          uintptr
+	// PROCESS_MEMORY_COUNTERS_EX2 (Windows 10 1809+); older systems reject this cb
+	PrivateUsage          uintptr
+	PrivateWorkingSetSize uintptr
+	SharedCommitUsage     uint64
 }
 
 // memoryStatusEx matches Windows MEMORYSTATUSEX layout.
@@ -62,6 +66,7 @@ type memoryStatusEx struct {
 type tracked struct {
 	h       syscall.Handle
 	own     bool  // the handle belongs to us (not the pseudo handle of this process)
+	core    bool  // PhoneGyro.exe itself (the Go side), not a WebView2 process
 	lastCPU int64 // kernel+user time at the previous sample, ns; -1 = not sampled yet
 }
 
@@ -72,6 +77,7 @@ type windowsMonitor struct {
 	lastWall time.Time
 	totalRAM uint64
 	ncpu     int
+	noEx2    bool // the system has no PROCESS_MEMORY_COUNTERS_EX2
 }
 
 func readTotalRAMWindows() uint64 {
@@ -92,7 +98,7 @@ func newPlatformMonitor() (Monitor, error) {
 	rootPID := uint32(os.Getpid())
 	m := &windowsMonitor{
 		rootPID:  rootPID,
-		procs:    map[uint32]*tracked{rootPID: {h: h, lastCPU: -1}},
+		procs:    map[uint32]*tracked{rootPID: {h: h, core: true, lastCPU: -1}},
 		lastWall: time.Now(),
 		totalRAM: readTotalRAMWindows(),
 		ncpu:     runtime.NumCPU(),
@@ -102,22 +108,22 @@ func newPlatformMonitor() (Monitor, error) {
 	return m, nil
 }
 
-// appTreePIDs is the app's processes: this one, its own children (the Live
-// Debug window is PhoneGyro.exe --livedebug) and the WebView2 processes that
+// appTreePIDs is the app's processes: this one, its own children (the debug
+// window is PhoneGyro.exe --debugwin) and the WebView2 processes that
 // render their UI (msedgewebview2.exe and everything they start: renderer,
 // GPU, utility). WebView2 does most of the UI work, so leaving it out would
 // under-report both CPU and memory.
-func appTreePIDs(rootPID uint32) []uint32 {
+func appTreePIDs(rootPID uint32) map[uint32]bool {
 	snap, err := syscall.CreateToolhelp32Snapshot(syscall.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
-		return []uint32{rootPID}
+		return map[uint32]bool{rootPID: true}
 	}
 	defer syscall.CloseHandle(snap)
 
 	var entry syscall.ProcessEntry32
 	entry.Size = uint32(unsafe.Sizeof(entry))
 	if err := syscall.Process32First(snap, &entry); err != nil {
-		return []uint32{rootPID}
+		return map[uint32]bool{rootPID: true}
 	}
 
 	exePath, _ := os.Executable()
@@ -132,7 +138,7 @@ func appTreePIDs(rootPID uint32) []uint32 {
 		}
 	}
 
-	pids := []uint32{rootPID}
+	pids := map[uint32]bool{rootPID: true} // pid → it is our own executable
 	queue := []uint32{rootPID}
 	seen := map[uint32]bool{rootPID: true}
 	for len(queue) > 0 {
@@ -146,7 +152,7 @@ func appTreePIDs(rootPID uint32) []uint32 {
 			// our own executable, WebView2, and anything WebView2 itself started
 			if n == ourExe || strings.HasPrefix(n, "phonegyro") || n == "msedgewebview2.exe" || nameOf[cur] == "msedgewebview2.exe" {
 				seen[c] = true
-				pids = append(pids, c)
+				pids[c] = n == ourExe || strings.HasPrefix(n, "phonegyro")
 				queue = append(queue, c)
 			}
 		}
@@ -158,9 +164,8 @@ func appTreePIDs(rootPID uint32) []uint32 {
 // ones that left.
 func (m *windowsMonitor) refreshTree() {
 	m.lastTree = time.Now()
-	now := make(map[uint32]bool)
-	for _, pid := range appTreePIDs(m.rootPID) {
-		now[pid] = true
+	now := appTreePIDs(m.rootPID)
+	for pid, core := range now {
 		if _, ok := m.procs[pid]; ok {
 			continue
 		}
@@ -171,10 +176,10 @@ func (m *windowsMonitor) refreshTree() {
 		if err != nil {
 			continue
 		}
-		m.procs[pid] = &tracked{h: h, own: true, lastCPU: -1}
+		m.procs[pid] = &tracked{h: h, own: true, core: core, lastCPU: -1}
 	}
 	for pid, p := range m.procs {
-		if !now[pid] && pid != m.rootPID {
+		if _, ok := now[pid]; !ok && pid != m.rootPID {
 			m.drop(pid, p)
 		}
 	}
@@ -199,7 +204,7 @@ func (m *windowsMonitor) Sample() Stats {
 	}
 	now := time.Now()
 	var cpuDelta int64
-	var rss uint64
+	var core, web uint64
 	for pid, p := range m.procs {
 		var creation, exit, kernel, user syscall.Filetime
 		r, _, _ := procGetProcessTimes.Call(uintptr(p.h),
@@ -217,10 +222,10 @@ func (m *windowsMonitor) Sample() Stats {
 		}
 		p.lastCPU = cpu
 
-		var pmc processMemoryCounters
-		pmc.cb = uint32(unsafe.Sizeof(pmc))
-		if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(p.h), uintptr(unsafe.Pointer(&pmc)), uintptr(pmc.cb)); r != 0 {
-			rss += uint64(pmc.WorkingSetSize)
+		if mem := m.privateMemory(p.h); p.core {
+			core += mem
+		} else {
+			web += mem
 		}
 	}
 
@@ -230,5 +235,27 @@ func (m *windowsMonitor) Sample() Stats {
 	if wall > 0 && m.ncpu > 0 {
 		cpuPercent = float64(cpuDelta) / float64(wall) / float64(m.ncpu) * 100
 	}
-	return Stats{CPUPercent: cpuPercent, RAMBytes: rss, TotalRAMBytes: m.totalRAM}
+	return Stats{CPUPercent: cpuPercent, RAMBytes: core + web, CoreRAMBytes: core, WebRAMBytes: web, TotalRAMBytes: m.totalRAM}
+}
+
+// privateMemory is the process's private working set: what Task Manager shows
+// in its Memory column. The plain working set also counts pages shared with
+// other processes (the WebView2 DLLs, the GPU process's shared memory), so
+// summing it over the app's 6-8 processes counted the same pages many times
+// and reported about twice what Task Manager does.
+func (m *windowsMonitor) privateMemory(h syscall.Handle) uint64 {
+	var pmc processMemoryCounters
+	if !m.noEx2 {
+		pmc.cb = uint32(unsafe.Sizeof(pmc))
+		if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(h), uintptr(unsafe.Pointer(&pmc)), uintptr(pmc.cb)); r != 0 {
+			return uint64(pmc.PrivateWorkingSetSize)
+		}
+		m.noEx2 = true
+	}
+	// before Windows 10 1809: the working set, shared pages included
+	pmc.cb = uint32(unsafe.Offsetof(pmc.PrivateUsage))
+	if r, _, _ := procGetProcessMemoryInfo.Call(uintptr(h), uintptr(unsafe.Pointer(&pmc)), uintptr(pmc.cb)); r != 0 {
+		return uint64(pmc.WorkingSetSize)
+	}
+	return 0
 }

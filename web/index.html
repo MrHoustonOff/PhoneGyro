@@ -1,939 +1,231 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#000000">
-  <title>PhoneGyro Controller</title>
-  <style>
-    /* ── Apple Cupertino Mobile Design System ────────────────────────────── */
-    :root {
-      --bg: #000000;
-      --surface: #1C1C1E;
-      --surface-hover: #2C2C2E;
-      --surface-elevated: #242426;
-      --border: rgba(255, 255, 255, 0.12);
-      --border-subtle: rgba(255, 255, 255, 0.07);
-      --text: #FFFFFF;
-      --text-secondary: #8E8E93;
-      --text-tertiary: #636366;
-
-      --apple-blue: #0A84FF;
-      --apple-green: #28A745;
-      --apple-green-rgb: 40, 167, 69;
-      --apple-red: #FF3B30;
-      --apple-red-rgb: 255, 59, 48;
-      --apple-amber: #FF9F0A;
-      --apple-amber-rgb: 255, 159, 10;
-      --apple-cyan: #64D2FF;
-      --apple-cyan-rgb: 100, 210, 255;
-      --dot-online: #28A745;
-      --dot-offline: #FF3B30;
-
-      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", Menlo, monospace;
-
-      --radius-xl: 24px;
-      --radius-lg: 18px;
-      --radius-md: 14px;
-      --radius-sm: 10px;
-      --radius-pill: 9999px;
-
-      --transition-fast: 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    [data-theme="light"] {
-      --bg: #F2F2F7;
-      --surface: #FFFFFF;
-      --surface-hover: #F2F2F7;
-      --surface-elevated: #E5E5EA;
-      --border: rgba(0, 0, 0, 0.08);
-      --border-subtle: rgba(0, 0, 0, 0.05);
-      --text: #000000;
-      --text-secondary: #6C6C70;
-      --text-tertiary: #AEAEB2;
-
-      --apple-blue: #0071E3;
-      --apple-green: #248A3D;
-      --apple-green-rgb: 36, 138, 61;
-      --apple-red: #FF3B30;
-      --apple-red-rgb: 255, 59, 48;
-      --apple-amber: #FF9500;
-      --apple-amber-rgb: 255, 149, 0;
-      --apple-cyan: #0071E3;
-      --apple-cyan-rgb: 0, 113, 227;
-      --dot-online: #248A3D;
-      --dot-offline: #FF3B30;
-    }
-
-    * {
-      box-sizing: border-box;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow-x: hidden;
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: var(--font-sans);
-      transition: background-color var(--transition-fast), color var(--transition-fast);
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 100vh;
-      min-height: -webkit-fill-available;
-      padding: env(safe-area-inset-top, 16px) 16px env(safe-area-inset-bottom, 20px);
-    }
-
-    /* ── App Wrap ──────────────────────────────────────────────────────────── */
-    .app-container {
-      width: 100%;
-      max-width: 440px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin: 0 auto;
-      flex: 1;
-      justify-content: space-between;
-    }
-
-    /* ── Top Utility Header ────────────────────────────────────────────────── */
-    .header-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 6px 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-pill);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-      gap: 8px;
-    }
-
-    .device-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      background: var(--surface-elevated);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-pill);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.01em;
-      white-space: nowrap;
-    }
-
-    .device-chip-icon {
-      width: 14px;
-      height: 14px;
-      stroke: currentColor;
-      stroke-width: 2;
-      fill: none;
-    }
-
-    .device-status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--dot-offline);
-      transition: background-color var(--transition-fast);
-      flex-shrink: 0;
-    }
-    .device-status-dot.online { background: var(--dot-online); }
-    .device-status-dot.blocked { background: var(--apple-cyan); box-shadow: 0 0 6px rgba(var(--apple-cyan-rgb), 0.5); }
-
-    .header-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .header-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 32px;
-      min-width: 32px;
-      padding: 0 8px;
-      border-radius: var(--radius-pill);
-      background: var(--surface-elevated);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-secondary);
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    .header-btn:active {
-      transform: scale(0.94);
-      background: var(--surface-hover);
-      color: var(--text);
-    }
-
-    .header-btn.active {
-      color: var(--apple-blue);
-      border-color: rgba(10, 132, 255, 0.4);
-      background: rgba(10, 132, 255, 0.12);
-    }
-
-    .header-btn svg {
-      width: 15px;
-      height: 15px;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-    }
-
-    /* ── Main Action Card: Connection ──────────────────────────────────────── */
-    .connection-card {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .btn-main-connection {
-      width: 100%;
-      min-height: 94px;
-      padding: 16px 18px;
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--border);
-      background: var(--surface);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 6px;
-      text-align: left;
-      transition: all var(--transition-fast);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
-    }
-    .btn-main-connection:active {
-      transform: scale(0.98);
-    }
-
-    /* State: Connected & Streaming (Active) */
-    .btn-main-connection.streaming {
-      background: rgba(var(--apple-green-rgb), 0.10);
-      border-color: rgba(var(--apple-green-rgb), 0.38);
-    }
-    .btn-main-connection.streaming .conn-title {
-      color: var(--dot-online);
-    }
-
-    /* State: Disconnected / Connecting */
-    .btn-main-connection.disconnected {
-      background: rgba(var(--apple-red-rgb), 0.08);
-      border-color: rgba(var(--apple-red-rgb), 0.35);
-    }
-    .btn-main-connection.disconnected .conn-title {
-      color: var(--apple-red);
-    }
-
-    /* State: Blocked by PC USB Mode */
-    .btn-main-connection.mode-blocked {
-      background: rgba(var(--apple-cyan-rgb), 0.10);
-      border-color: rgba(var(--apple-cyan-rgb), 0.40);
-    }
-    .btn-main-connection.mode-blocked .conn-title {
-      color: var(--apple-cyan);
-      font-size: clamp(16px, 4.2vw, 19px);
-    }
-
-    .conn-top-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-    }
-
-    .conn-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 9px;
-      border-radius: var(--radius-pill);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .btn-main-connection.streaming .conn-badge {
-      background: rgba(var(--apple-green-rgb), 0.15);
-      color: var(--dot-online);
-      border: 1px solid rgba(var(--apple-green-rgb), 0.3);
-    }
-    .btn-main-connection.disconnected .conn-badge {
-      background: rgba(var(--apple-red-rgb), 0.12);
-      color: var(--apple-red);
-      border: 1px solid rgba(var(--apple-red-rgb), 0.3);
-    }
-    .btn-main-connection.mode-blocked .conn-badge {
-      background: rgba(var(--apple-cyan-rgb), 0.15);
-      color: var(--apple-cyan);
-      border: 1px solid rgba(var(--apple-cyan-rgb), 0.35);
-    }
-
-    .conn-badge-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-    .btn-main-connection.streaming .conn-badge-dot,
-    .btn-main-connection.mode-blocked .conn-badge-dot {
-      animation: pulseDot 2s infinite ease-in-out;
-    }
-
-    @keyframes pulseDot {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.25); }
-    }
-
-    .conn-hz-pill {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-tertiary);
-    }
-
-    .conn-title {
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-    }
-
-    .conn-hint {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      line-height: 1.35;
-    }
-
-    /* Sub Actions Bar under Connection Button */
-    .conn-sub-bar {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      width: 100%;
-    }
-
-    .btn-sub-action {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 11px 14px;
-      border-radius: var(--radius-md);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    .btn-sub-action:active {
-      transform: scale(0.96);
-      background: var(--surface-hover);
-    }
-    .btn-sub-action.active {
-      background: rgba(10, 132, 255, 0.12);
-      border-color: rgba(10, 132, 255, 0.35);
-      color: var(--apple-blue);
-    }
-    .btn-sub-action svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      stroke-width: 2;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    .btn-screensaver-full {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 11px 14px;
-      min-height: 42px;
-      border-radius: var(--radius-md);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all var(--transition-fast);
-    }
-    .btn-screensaver-full:active {
-      transform: scale(0.98);
-      background: var(--surface-hover);
-    }
-    .btn-screensaver-full svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      stroke-width: 2;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    /* ── Central Block: Sensor Level / HUD & Warning ───────────────────────── */
-    .sensor-section {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      min-height: 170px;
-      position: relative;
-    }
-
-    /* Prominent Apple Inclinometer & Artificial Horizon HUD */
-    .gyro-hud-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-    }
-
-    .gyro-hud-bezel {
-      width: 154px;
-      height: 154px;
-      border-radius: 50%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      box-shadow: inset 0 2px 14px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .gyro-hud-svg {
-      width: 140px;
-      height: 140px;
-      overflow: visible;
-    }
-
-    .hud-ring-outer {
-      fill: none;
-      stroke: var(--border);
-      stroke-width: 1.5;
-    }
-
-    .hud-ring-center {
-      fill: none;
-      stroke: var(--border);
-      stroke-width: 1.4;
-      opacity: 0.7;
-      transition: stroke 0.2s ease, stroke-width 0.2s ease;
-    }
-
-    .hud-ring-center.level {
-      stroke: var(--dot-online);
-      stroke-width: 2;
-    }
-
-    .hud-ring-guide {
-      fill: none;
-      stroke: var(--border-subtle);
-      stroke-width: 0.8;
-      stroke-dasharray: 2 3;
-      opacity: 0.45;
-    }
-
-    .hud-crosshair {
-      stroke: var(--border-subtle);
-      stroke-width: 0.8;
-      opacity: 0.35;
-    }
-
-    .hud-tick-major {
-      stroke: var(--text-secondary);
-      stroke-width: 1.6;
-      stroke-linecap: round;
-    }
-
-    .hud-tick-minor {
-      stroke: var(--text-tertiary);
-      stroke-width: 1;
-      stroke-linecap: round;
-      opacity: 0.6;
-    }
-
-    .hud-level-bubble {
-      fill: var(--text);
-      opacity: 0.85;
-      transition: fill 0.2s ease;
-      will-change: cx, cy;
-    }
-
-    .hud-level-bubble.level {
-      fill: var(--dot-online);
-      opacity: 1;
-    }
-
-    .hud-yaw-group {
-      will-change: transform;
-      transition: transform 0.05s linear;
-    }
-
-    .hud-yaw-marker {
-      fill: var(--dot-online);
-    }
-
-    .hud-level-status {
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--text-tertiary);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      transition: all var(--transition-fast);
-      padding: 4px 14px;
-      border-radius: var(--radius-pill);
-      background: var(--surface-elevated);
-      border: 1px solid var(--border-subtle);
-    }
-
-    .hud-level-status.level {
-      color: var(--dot-online);
-      border-color: rgba(var(--apple-green-rgb), 0.3);
-      background: rgba(var(--apple-green-rgb), 0.12);
-    }
-
-    /* ── Warning Banner: Sensors Not Permitted / Inactive ──────────────────── */
-    .sensor-warning-card {
-      width: 100%;
-      background: rgba(var(--apple-red-rgb), 0.08);
-      border: 1px solid rgba(var(--apple-red-rgb), 0.35);
-      border-radius: var(--radius-xl);
-      padding: 22px 18px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 12px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
-      animation: alertPop 0.3s ease-out;
-    }
-
-    @keyframes alertPop {
-      from { opacity: 0; transform: scale(0.96); }
-      to   { opacity: 1; transform: scale(1); }
-    }
-
-    .warning-icon-wrap {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: rgba(var(--apple-red-rgb), 0.15);
-      border: 1px solid rgba(var(--apple-red-rgb), 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--apple-red);
-    }
-    .warning-icon-wrap svg {
-      width: 22px;
-      height: 22px;
-      stroke: currentColor;
-      stroke-width: 2.2;
-      fill: none;
-    }
-
-    .warning-title {
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: -0.01em;
-    }
-
-    .warning-desc {
-      font-size: 13px;
-      color: var(--text-secondary);
-      line-height: 1.4;
-      max-width: 320px;
-    }
-
-    .btn-grant-perm {
-      width: 100%;
-      padding: 14px 20px;
-      border-radius: var(--radius-md);
-      background: var(--apple-red);
-      color: #ffffff;
-      border: none;
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: transform var(--transition-fast);
-      box-shadow: 0 4px 16px rgba(var(--apple-red-rgb), 0.35);
-    }
-    .btn-grant-perm:active {
-      transform: scale(0.97);
-    }
-
-    /* ── Bottom Info / Helper Footer ───────────────────────────────────────── */
-    .app-footer {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      font-size: 11px;
-      color: var(--text-tertiary);
-    }
-
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-weight: 600;
-    }
-
-    .footer-right {
-      font-family: var(--font-mono);
-      font-weight: 600;
-    }
-
-    /* ── OLED Screensaver & Anti-Touch Shield Overlay ───────────────────────── */
-    .screensaver-overlay {
-      position: fixed;
-      inset: 0;
-      background: #000000;
-      z-index: 99999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      padding: env(safe-area-inset-top, 40px) 24px env(safe-area-inset-bottom, 36px);
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .screensaver-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .ss-top-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: var(--radius-pill);
-      font-size: 11px;
-      font-weight: 700;
-      color: #8E8E93;
-      letter-spacing: 0.04em;
-      transition: transform 15s ease-in-out;
-      animation: oledBreathe 8s ease-in-out infinite;
-    }
-
-    .ss-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #28A745;
-      animation: pulseDot 2s infinite ease-in-out;
-    }
-
-    /* Smart Unlock Ring: Hold to unlock */
-    .ss-center-lock {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 14px;
-      cursor: pointer;
-      margin: auto 0;
-      animation: oledBreathe 8s ease-in-out infinite;
-      transition: opacity 0.25s ease;
-    }
-
-    .ss-center-lock.holding {
-      animation: none;
-      opacity: 1;
-    }
-
-    .ss-lock-circle {
-      width: 90px;
-      height: 90px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .ss-lock-svg {
-      width: 90px;
-      height: 90px;
-      transform: rotate(-90deg);
-    }
-
-    .ss-lock-track {
-      fill: none;
-      stroke: rgba(255, 255, 255, 0.12);
-      stroke-width: 3.5;
-    }
-
-    .ss-lock-progress {
-      fill: none;
-      stroke: #0A84FF;
-      stroke-width: 3.5;
-      stroke-linecap: round;
-      stroke-dasharray: 251.2;
-      stroke-dashoffset: 251.2;
-      transition: stroke-dashoffset 0.05s linear;
-    }
-
-    .ss-lock-icon {
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      stroke: #FFFFFF;
-      stroke-width: 2;
-      fill: none;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      opacity: 0.85;
-      transition: transform 0.2s ease;
-    }
-
-    .ss-lock-caption {
-      font-size: 13px;
-      font-weight: 700;
-      color: #8E8E93;
-      letter-spacing: 0.02em;
-      text-align: center;
-    }
-
-    /* OLED Burn-in saving slow breathing opacity */
-    @keyframes oledBreathe {
-      0%, 100% { opacity: 0.25; }
-      50% { opacity: 0.78; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b0b">
+<title>PhoneGyro Controller</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/m/__APP_VERSION__/Onest-Regular.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/m/__APP_VERSION__/Onest-SemiBold.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="/m/__APP_VERSION__/AlegreyaSans-ExtraBold.woff2">
+<script>
+/* Theme before the first paint: no flash of the wrong one. */
+(function () {
+  var t = 'dark';
+  try { t = localStorage.getItem('gb_theme') === 'light' ? 'light' : 'dark'; } catch (e) {}
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+/* PhoneGyro phone page. Design: docs/internal/Design (tokens, Dial, MobileBar, PauseCard, LockButton).
+   Fonts and textures come from /m/ (web/assets), fetched once and cached. */
+@font-face{font-family:"Onest";src:url(/m/__APP_VERSION__/Onest-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Onest";src:url(/m/__APP_VERSION__/Onest-SemiBold.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Alegreya Sans";src:url(/m/__APP_VERSION__/AlegreyaSans-ExtraBold.woff2) format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(/m/__APP_VERSION__/JetBrainsMono-Regular.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(/m/__APP_VERSION__/JetBrainsMono-SemiBold.woff2) format("woff2");font-weight:600;font-display:swap}
+
+:root,[data-theme="light"]{--bg:#f1f1f1;--surface:#fff;--surface-inset:#e8e8e8;--surface-hover:#f5f5f5;--line:rgba(0,0,0,.12);--line-subtle:rgba(0,0,0,.07);--line-control:rgba(0,0,0,.48);--ink:#0b0b0b;--ink-2:#545454;--ink-3:#646464;--on-ink:#fff;--accent:#5b7c26;--accent-text:#4a651d;--accent-soft:rgba(91,124,38,.13);--accent-line:rgba(91,124,38,.4);--info-text:#2f5f6d;--info-soft:rgba(63,117,131,.12);--info-line:rgba(63,117,131,.38);--info:#3f7583;--danger:#c2432f;--on-danger:#fff;--danger-text:#b03a27;--danger-soft:rgba(194,67,47,.1);--danger-line:rgba(194,67,47,.38);--warn:#b07c0c;--shadow-card:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);--shadow-inset:inset 0 1px 2px rgba(0,0,0,.1);--shadow-key:0 1px 0 rgba(0,0,0,.14);--tex-rings:url(/m/__APP_VERSION__/rings-light.svg);--tex-grain:url(/m/__APP_VERSION__/grain-light.png)}
+[data-theme="dark"]{--bg:#0b0b0b;--surface:#151515;--surface-inset:#0a0a0a;--surface-hover:#1e1e1e;--line:rgba(255,255,255,.12);--line-subtle:rgba(255,255,255,.07);--line-control:rgba(255,255,255,.46);--ink:#f4f4f4;--ink-2:#a6a6a6;--ink-3:#8c8c8c;--on-ink:#0b0b0b;--accent:#a3bc69;--accent-text:#a3bc69;--accent-soft:rgba(163,188,105,.15);--accent-line:rgba(163,188,105,.42);--info-text:#9dbfca;--info-soft:rgba(135,170,181,.14);--info-line:rgba(135,170,181,.4);--info:#87aab5;--danger:#f29b88;--on-danger:#0b0b0b;--danger-text:#f5a999;--danger-soft:rgba(242,155,136,.14);--danger-line:rgba(242,155,136,.4);--warn:#f2cc85;--shadow-card:inset 0 1px 0 rgba(255,255,255,.05),0 8px 28px rgba(0,0,0,.55);--shadow-inset:inset 0 1px 3px rgba(0,0,0,.75);--shadow-key:0 1px 0 rgba(0,0,0,.9);--tex-rings:url(/m/__APP_VERSION__/rings-dark.svg);--tex-grain:url(/m/__APP_VERSION__/grain-dark.png)}
+:root{--r-pill:9999px;--r-xl:22px;--f-display:"Alegreya Sans","Onest",system-ui,sans-serif;--f-sans:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;--f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+[hidden]{display:none!important}
+html{background:var(--bg);color:var(--ink);-webkit-text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh;background:var(--bg) var(--tex-rings) 0 0/600px 600px;font:15px/22px var(--f-sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;overscroll-behavior:none}
+button{font:inherit;color:inherit}
+
+/* ── Page ─────────────────────────────────────────────────────────────────── */
+.pg-phone{display:flex;flex-direction:column;gap:16px;width:100%;max-width:440px;min-height:100vh;min-height:100dvh;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 18px)}
+.pg-mbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border-radius:28px;background:var(--surface) var(--tex-grain);border:1px solid var(--line);box-shadow:var(--shadow-card)}
+.pg-mchip{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:var(--r-pill);background:var(--surface-inset);box-shadow:var(--shadow-inset);font-weight:600;font-size:16px;white-space:nowrap}
+.pg-mchip svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pg-mchip__dot{width:8px;height:8px;border-radius:50%;background:var(--danger)}
+.pg-mchip__dot.is-on{background:var(--accent)}
+.pg-mchip__dot.is-usb{background:var(--info)}
+.pg-mbar__end{display:flex;gap:8px;flex:none}
+.pg-mchip{min-width:0}
+.pg-mchip>span:not(.pg-mchip__dot){overflow:hidden;text-overflow:ellipsis}
+.pg-mchip__dot{flex:none}
+@media (max-width:380px){.pg-mchip{padding:0 12px}.pg-mbar__end{gap:6px}}
+.pg-roundbtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid transparent;background:var(--surface-inset);box-shadow:var(--shadow-inset);color:var(--ink-2);font:700 13px/1 var(--f-sans);letter-spacing:.02em;cursor:pointer;transition:background .15s,color .15s,transform .1s}
+.pg-roundbtn:active{transform:scale(.94)}
+.pg-roundbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pg-roundbtn.is-active{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface);color:var(--accent-text);border-color:var(--accent-line)}
+
+.pg-mstage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:0}
+.m-level{display:flex;flex-direction:column;align-items:center;gap:8px}
+
+/* Level dial (the one on the desktop home page): CSS and SVG only. */
+.pg-dial{position:relative;width:264px;height:264px;border-radius:50%;background:var(--surface) var(--tex-grain);border:1px solid var(--line);box-shadow:var(--shadow-card)}
+.pg-dial>svg{position:absolute;inset:0;width:100%;height:100%}
+.pg-dial .tick{stroke:var(--ink-3);stroke-width:2;stroke-linecap:round}
+.pg-dial .tick--major{stroke:var(--ink);stroke-width:2.5}
+.pg-dial .guide{fill:none;stroke:var(--line);stroke-width:1}
+.pg-dial .guide--dash{stroke-dasharray:2 5;stroke:var(--line-control);opacity:.5}
+.pg-dial .cross{stroke:var(--line-subtle);stroke-width:1}
+.pg-dial .level{fill:var(--accent)}
+.pg-dial__yaw{position:absolute;inset:0;will-change:transform}
+.pg-dial__yaw svg{display:block;width:100%;height:100%}
+.pg-dial__well{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:var(--surface-inset);box-shadow:var(--shadow-inset);border:1px solid var(--line)}
+.pg-dial__bubble{position:absolute;left:calc(50% - 15px);top:calc(50% - 15px);width:30px;height:30px;border-radius:50%;background:var(--ink);box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .12s linear;will-change:transform}
+.pg-dial__bubble.is-level{background:var(--accent)}
+.pg-dial__label{display:inline-flex;align-items:center;height:32px;padding:0 20px;border-radius:var(--r-pill);background:var(--surface-inset);box-shadow:var(--shadow-inset);border:1px solid var(--line);font:600 13px/1 var(--f-mono);letter-spacing:.2em;color:var(--ink-2);white-space:nowrap}
+.pg-dial__label.is-level{color:var(--accent-text);border-color:var(--accent-line)}
+@media (max-height:740px){
+  .pg-dial{width:224px;height:224px}
+  .pg-dial__well{width:54px;height:54px;margin:-27px 0 0 -27px}
+  .pg-dial__bubble{width:26px;height:26px;left:calc(50% - 13px);top:calc(50% - 13px)}
+}
+
+/* Sensors not allowed yet */
+.m-warn{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;padding:22px 18px;text-align:center;border-radius:var(--r-xl);border:1px solid var(--danger-line);background:linear-gradient(var(--danger-soft),var(--danger-soft)),var(--surface) var(--tex-grain);box-shadow:var(--shadow-card)}
+.m-warn__icon{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:1px solid var(--danger-line);background:var(--danger-soft);color:var(--danger-text)}
+.m-warn__icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.m-warn__title{font:800 22px/26px var(--f-display);letter-spacing:.01em;text-transform:uppercase;color:var(--danger-text)}
+.m-warn__desc{font-size:14px;line-height:20px;color:var(--ink-2);max-width:320px}
+
+/* Buttons */
+.pg-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:36px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:14px;line-height:20px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-key);transition:background .15s,transform .1s;white-space:nowrap}
+.pg-btn:active{transform:translateY(1px);box-shadow:none;background:var(--surface-hover)}
+.pg-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pg-btn--danger{background:var(--danger);border-color:transparent;color:var(--on-danger)}
+.pg-btn[disabled]{opacity:.45;box-shadow:none}
+.pg-btn--big{width:100%;min-height:56px;border-radius:20px;font-size:16px}
+.pg-mrow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.pg-mrow .pg-btn{min-height:56px;border-radius:20px;font-size:15px;line-height:18px;padding:0 10px;white-space:normal;text-align:center}
+.pg-mrow .pg-btn svg{flex:none}
+.pg-mrow .pg-btn.is-active{background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface);color:var(--accent-text);border-color:var(--accent-line)}
+
+/* Connection card (the design's Pause card): accent = streaming, danger = no link, info = PC in USB mode */
+.pg-pause{--nb:var(--accent-soft);display:block;width:100%;text-align:left;padding:16px 20px 18px;border-radius:var(--r-xl);border:1px solid var(--accent-line);background:linear-gradient(var(--nb),var(--nb)),var(--surface) var(--tex-grain);box-shadow:var(--shadow-card);color:var(--ink);cursor:pointer}
+.pg-pause:active{transform:translateY(1px)}
+.pg-pause__head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pg-pause__title{font-family:var(--f-display);font-weight:800;font-size:34px;line-height:38px;letter-spacing:.01em;text-transform:uppercase;color:var(--accent-text);margin-top:6px}
+.pg-pause__desc{font-size:14px;line-height:20px;color:var(--ink-2);margin-top:2px}
+.pg-pause.is-off{--nb:var(--danger-soft);border-color:var(--danger-line)}
+.pg-pause.is-off .pg-pause__title{color:var(--danger-text)}
+.pg-pause.is-usb{--nb:var(--info-soft);border-color:var(--info-line)}
+.pg-pause.is-usb .pg-pause__title{color:var(--info-text);font-size:clamp(20px,6.4vw,28px);line-height:1.15}
+.pg-badge{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px;border-radius:var(--r-pill);border:1px solid var(--accent-line);background:linear-gradient(var(--accent-soft),var(--accent-soft)),var(--surface);color:var(--accent-text);font:600 12px/1 var(--f-mono);letter-spacing:.02em;white-space:nowrap}
+.pg-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.is-off .pg-badge{border-color:var(--danger-line);background:linear-gradient(var(--danger-soft),var(--danger-soft)),var(--surface);color:var(--danger-text)}
+.is-usb .pg-badge{border-color:var(--info-line);background:linear-gradient(var(--info-soft),var(--info-soft)),var(--surface);color:var(--info-text)}
+.mono{font:400 13px/18px var(--f-mono);color:var(--ink-3)}
+
+.pg-mfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 20px;height:52px;border-radius:26px;background:var(--surface) var(--tex-grain);border:1px solid var(--line);font:400 12px/1 var(--f-mono);color:var(--ink-3);white-space:nowrap}
+
+/* ── Touch Shield (design: LockButton). Only the button, its count and its hint. ── */
+.m-lock{--period:72s;position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);padding:env(safe-area-inset-top,0px) 24px env(safe-area-inset-bottom,0px);touch-action:none;visibility:hidden;opacity:0;pointer-events:none;transition:opacity .3s,visibility 0s .3s}
+.m-lock.active{visibility:visible;opacity:1;pointer-events:auto;transition:opacity .3s}
+/* The rings drift over one 600px tile per period; the button breathes 1 -> 0 -> 1 over the same period, started with it. */
+.m-lock::before{content:"";position:absolute;inset:-600px 0 0 -600px;background:var(--tex-rings) 0 0/600px 600px;pointer-events:none;will-change:transform}
+.m-lock.active::before{animation:pg-drift var(--period) linear infinite}
+@keyframes pg-drift{to{transform:translate3d(600px,600px,0)}}
+.pg-lock{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+.m-lock.active .pg-lock{animation:m-breathe var(--period) ease-in-out infinite}
+@keyframes m-breathe{0%,100%{opacity:1}50%{opacity:0}}
+.m-lock .pg-lock.is-holding{opacity:1!important}
+.pg-lockwrap{position:relative;display:grid;place-items:center}
+.pg-sonar{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none}
+.pg-sonar i{position:absolute;left:-90px;top:-90px;width:180px;height:180px;border-radius:50%;border:2px solid var(--accent-line);opacity:0}
+.pg-lock.is-holding .pg-sonar i{animation:pg-sonar 2.4s ease-out infinite}
+.pg-lock.is-holding .pg-sonar i:nth-child(2){animation-delay:.8s}
+.pg-lock.is-holding .pg-sonar i:nth-child(3){animation-delay:1.6s}
+@keyframes pg-sonar{0%{transform:scale(.7);opacity:.9}100%{transform:scale(3.3);opacity:0}}
+.pg-lockbtn{--hold:0;position:relative;width:148px;height:148px;border-radius:50%;border:1px solid var(--line);background:var(--surface) var(--tex-grain);box-shadow:var(--shadow-card);color:var(--ink);display:grid;place-items:center;cursor:pointer;touch-action:none;padding:0;transition:transform .15s}
+.pg-lockbtn.is-holding{transform:scale(.97)}
+.pg-lockbtn__ring{position:absolute;inset:-14px;width:176px;height:176px;transform:rotate(-90deg);pointer-events:none}
+.pg-lockbtn__ring circle{fill:none;stroke-width:4;stroke-linecap:round}
+.pg-lockbtn__track{stroke:var(--line-control);opacity:.45}
+.pg-lockbtn__prog{stroke:var(--accent);stroke-dasharray:515.2px;stroke-dashoffset:calc(515.2px * (1 - var(--hold)))}
+.pg-lockbtn:not(.is-holding) .pg-lockbtn__prog{transition:stroke-dashoffset .25s}
+.pg-lockbtn svg.pg-lockbtn__icon{width:62px;height:62px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pg-lock__text{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px}
+.pg-lock__count{font:600 28px/32px var(--f-mono);letter-spacing:-.02em}
+.pg-lock__label{color:var(--ink-2)}
+
+@media (prefers-reduced-motion:reduce){.m-lock.active::before,.m-lock.active .pg-lock,.pg-lock.is-holding .pg-sonar i{animation:none}}
+</style>
 </head>
-<body data-theme="dark">
+<body data-ver="__APP_VERSION__">
 
-<div class="app-container">
+<main class="pg-phone" id="app">
 
-  <!-- ── 1. Compact Utility Bar ─────────────────────────────────────────── -->
-  <header class="header-bar">
-    <div class="device-chip" id="device-chip" title="Модель устройства">
-      <svg class="device-chip-icon" viewBox="0 0 24 24">
-        <rect x="5" y="2" width="14" height="20" rx="3"></rect>
-        <line x1="12" y1="18" x2="12.01" y2="18"></line>
-      </svg>
+  <!-- Bar: device, Touch Shield, theme, language -->
+  <header class="pg-mbar">
+    <span class="pg-mchip" id="device-chip">
+      <svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>
       <span id="device-model-label">iPhone</span>
-      <span class="device-status-dot" id="header-status-dot"></span>
-    </div>
-
-    <div class="header-controls">
-      <!-- Screensaver / Anti-Touch Shield Button -->
-      <button class="header-btn" id="btn-screensaver" title="Скринсейвер и защита от тыков">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        </svg>
-      </button>
-
-      <!-- Theme Switcher Button -->
-      <button class="header-btn" id="btn-theme" title="Сменить тему">
-        <svg id="theme-icon" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="5"></circle>
-          <line x1="12" y1="1" x2="12" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="23"></line>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-          <line x1="1" y1="12" x2="3" y2="12"></line>
-          <line x1="21" y1="12" x2="23" y2="12"></line>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-        </svg>
-      </button>
-
-      <!-- Language Switcher Button -->
-      <button class="header-btn" id="btn-lang" title="Switch language">
-        <span id="lang-label">RU</span>
-      </button>
+      <span class="pg-mchip__dot" id="header-status-dot"></span>
+    </span>
+    <div class="pg-mbar__end">
+      <button class="pg-roundbtn" id="btn-screensaver" type="button" aria-label="Touch Shield"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.6-7 10-3.8-1.4-7-5-7-10V6z"/></svg></button>
+      <button class="pg-roundbtn" id="btn-theme" type="button" aria-label="Theme"><svg id="theme-icon" viewBox="0 0 24 24"></svg></button>
+      <button class="pg-roundbtn" id="btn-lang" type="button" aria-label="Language"><span id="lang-label">RU</span></button>
     </div>
   </header>
 
-  <!-- ── 2. Central Block: Visual Sensor HUD or Permission Warning ───────── -->
-  <section class="sensor-section">
-
-    <!-- Active Gyro & Horizon HUD Level (60 FPS Vector Display) -->
-    <div class="gyro-hud-container" id="sensor-hud-container">
-      <div class="gyro-hud-bezel" title="Искусственный горизонт и компас">
-        <svg class="gyro-hud-svg" viewBox="0 0 120 120">
-          <!-- Outer dial ring -->
-          <circle cx="60" cy="60" r="54" class="hud-ring-outer"></circle>
-
-          <!-- Concentric guide rings for leveling (Radius 14 ~ 3 deg level zone, Radius 28 ~ 15 deg, Radius 42 ~ 30 deg) -->
-          <circle cx="60" cy="60" r="14" class="hud-ring-center" id="hud-level-zone"></circle>
-          <circle cx="60" cy="60" r="28" class="hud-ring-guide"></circle>
-          <circle cx="60" cy="60" r="42" class="hud-ring-guide"></circle>
-
-          <!-- Crosshairs -->
-          <line x1="15" y1="60" x2="105" y2="60" class="hud-crosshair"></line>
-          <line x1="60" y1="15" x2="60" y2="105" class="hud-crosshair"></line>
-
-          <!-- Dial Ticks -->
-          <g class="hud-ticks-group">
-            <line x1="60" y1="6" x2="60" y2="12" class="hud-tick-major"></line>
-            <line x1="60" y1="108" x2="60" y2="114" class="hud-tick-major"></line>
-            <line x1="6" y1="60" x2="12" y2="60" class="hud-tick-major"></line>
-            <line x1="108" y1="60" x2="114" y2="60" class="hud-tick-major"></line>
-
-            <line x1="87" y1="13.2" x2="84" y2="18.4" class="hud-tick-minor"></line>
-            <line x1="106.8" y1="33" x2="101.6" y2="36" class="hud-tick-minor"></line>
-            <line x1="106.8" y1="87" x2="101.6" y2="84" class="hud-tick-minor"></line>
-            <line x1="87" y1="106.8" x2="84" y2="101.6" class="hud-tick-minor"></line>
-            <line x1="33" y1="106.8" x2="36" y2="101.6" class="hud-tick-minor"></line>
-            <line x1="13.2" y1="87" x2="18.4" y2="84" class="hud-tick-minor"></line>
-            <line x1="13.2" y1="33" x2="18.4" y2="36" class="hud-tick-minor"></line>
-            <line x1="33" y1="13.2" x2="36" y2="18.4" class="hud-tick-minor"></line>
-          </g>
-
-          <!-- Dynamic Central Inclinometer Bubble -->
-          <circle id="gyro-bubble" cx="60" cy="60" r="7.5" class="hud-level-bubble"></circle>
-
-          <!-- Rotating Yaw Needle / Compass Indicator Group -->
-          <g id="gyro-yaw-group" class="hud-yaw-group" transform="rotate(0 60 60)">
-            <polygon points="60,6 56.5,14 63.5,14" class="hud-yaw-marker"></polygon>
-            <line x1="60" y1="6" x2="60" y2="16" stroke="var(--dot-online)" stroke-width="2.5" stroke-linecap="round"></line>
-          </g>
-        </svg>
+  <!-- Stage: the level dial, or the sensor permission card -->
+  <section class="pg-mstage">
+    <div class="m-level" id="sensor-hud-container">
+      <div class="pg-dial" id="dial">
+        <svg viewBox="0 0 264 264"><circle class="guide" cx="132" cy="132" r="92"/><circle class="guide guide--dash" cx="132" cy="132" r="62"/><circle class="guide" cx="132" cy="132" r="34"/><line class="cross" x1="132" y1="40" x2="132" y2="224"/><line class="cross" x1="40" y1="132" x2="224" y2="132"/><line class="tick" x1="187.0" y1="36.7" x2="193.0" y2="26.3"/><line class="tick" x1="227.3" y1="77.0" x2="237.7" y2="71.0"/><line class="tick tick--major" x1="235.0" y1="132.0" x2="254.0" y2="132.0"/><line class="tick" x1="227.3" y1="187.0" x2="237.7" y2="193.0"/><line class="tick" x1="187.0" y1="227.3" x2="193.0" y2="237.7"/><line class="tick tick--major" x1="132.0" y1="235.0" x2="132.0" y2="254.0"/><line class="tick" x1="77.0" y1="227.3" x2="71.0" y2="237.7"/><line class="tick" x1="36.7" y1="187.0" x2="26.3" y2="193.0"/><line class="tick tick--major" x1="29.0" y1="132.0" x2="10.0" y2="132.0"/><line class="tick" x1="36.7" y1="77.0" x2="26.3" y2="71.0"/><line class="tick" x1="77.0" y1="36.7" x2="71.0" y2="26.3"/></svg>
+        <div class="pg-dial__yaw" id="dial-yaw"><svg viewBox="0 0 264 264"><path class="level" d="M132 9l7 15h-14z"/></svg></div>
+        <div class="pg-dial__well"></div>
+        <div class="pg-dial__bubble" id="dial-bubble"></div>
       </div>
-      <span class="hud-level-status" id="hud-level-status">LEVEL</span>
+      <span class="pg-dial__label" id="hud-level-status">LEVEL</span>
     </div>
 
-    <!-- Sensor Permission Warning Card (Displayed when access is not yet granted) -->
-    <div class="sensor-warning-card" id="sensor-warning-card" style="display: none;">
-      <div class="warning-icon-wrap">
-        <svg viewBox="0 0 24 24">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-          <line x1="12" y1="9" x2="12" y2="13"></line>
-          <line x1="12" y1="17" x2="12.01" y2="17"></line>
-        </svg>
-      </div>
-      <div class="warning-title" id="txt-warn-title">Требуется доступ к датчикам</div>
-      <div class="warning-desc" id="txt-warn-desc">
-        Браузер блокирует доступ к гироскопу. Нажмите кнопку ниже, чтобы разрешить отслеживание движений.
-      </div>
-      <button class="btn-grant-perm" id="btn-grant-sensors">ВКЛЮЧИТЬ ДАТЧИКИ</button>
+    <div class="m-warn" id="sensor-warning-card" hidden>
+      <div class="m-warn__icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="m-warn__title" id="txt-warn-title"></div>
+      <div class="m-warn__desc" id="txt-warn-desc"></div>
+      <button class="pg-btn pg-btn--danger pg-btn--big" id="btn-grant-sensors" type="button"></button>
     </div>
-
   </section>
 
-  <!-- ── 3. Central Block: Primary Connection Action Button ─────────────── -->
-  <section class="connection-card">
-    <button class="btn-main-connection disconnected" id="btn-main-connection">
-      <div class="conn-top-row">
-        <div class="conn-badge" id="conn-badge">
-          <span class="conn-badge-dot"></span>
-          <span id="conn-badge-text">ПОДКЛЮЧЕНИЕ...</span>
-        </div>
-        <div class="conn-hz-pill" id="conn-hz-pill">0 Hz</div>
-      </div>
-      <div class="conn-title" id="conn-title">ПОДКЛЮЧИТЬСЯ</div>
-      <div class="conn-hint" id="conn-hint">Нажмите для подключения к ПК по WebSocket</div>
+  <!-- Connection -->
+  <button class="pg-pause is-off" id="btn-main-connection" type="button">
+    <div class="pg-pause__head">
+      <span class="pg-badge" id="conn-badge"><span id="conn-badge-text"></span></span>
+      <span class="mono" id="conn-hz-pill">0 Hz</span>
+    </div>
+    <div class="pg-pause__title" id="conn-title"></div>
+    <div class="pg-pause__desc" id="conn-hint"></div>
+  </button>
+
+  <div class="pg-mrow">
+    <button class="pg-btn" id="btn-toggle-socket" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 3v9M6.6 6.6a8 8 0 1 0 10.8 0"/></svg>
+      <span id="txt-sub-socket"></span>
     </button>
-
-    <!-- Secondary Quick Actions (Reconnect & Touch Shield / Screensaver) -->
-    <div class="conn-sub-bar">
-      <button class="btn-sub-action" id="btn-toggle-socket">
-        <svg viewBox="0 0 24 24">
-          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-          <line x1="12" y1="2" x2="12" y2="12"></line>
-        </svg>
-        <span id="txt-sub-socket">Разорвать связь</span>
-      </button>
-
-      <button class="btn-sub-action" id="btn-screensaver-main">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-        </svg>
-        <span id="txt-screensaver-main">Защита от касаний</span>
-      </button>
-    </div>
-  </section>
-
-  <!-- ── 4. Compact Footer ──────────────────────────────────────────────── -->
-  <footer class="app-footer">
-    <div class="footer-left">
-      <span>PhoneGyro __APP_VERSION__</span>
-      <span style="opacity: 0.5;">•</span>
-      <span id="txt-footer-role">Клиент контроллера</span>
-    </div>
-    <div class="footer-right">
-      <span id="txt-ping-status">LAN Direct</span>
-    </div>
-  </footer>
-
-</div>
-
-<!-- ── 5. OLED Screensaver & Anti-Touch Shield Overlay ─────────────────────── -->
-<div class="screensaver-overlay" id="screensaver-overlay">
-  <!-- Top: Wandering OLED burn-in safe status -->
-  <div class="ss-top-status" id="ss-top-status">
-    <span class="ss-dot"></span>
-    <span id="ss-status-label">LIVE • iPhone</span>
+    <button class="pg-btn" id="btn-screensaver-main" type="button">
+      <svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 5-3.2 8.6-7 10-3.8-1.4-7-5-7-10V6z"/></svg>
+      <span id="txt-screensaver-main"></span>
+    </button>
   </div>
 
-  <!-- Center: Smart Hold-To-Unlock Circle -->
-  <div class="ss-center-lock" id="ss-center-lock">
-    <div class="ss-lock-circle">
-      <svg class="ss-lock-svg" viewBox="0 0 90 90">
-        <circle cx="45" cy="45" r="40" class="ss-lock-track"></circle>
-        <circle cx="45" cy="45" r="40" class="ss-lock-progress" id="ss-lock-progress"></circle>
-      </svg>
-      <svg class="ss-lock-icon" viewBox="0 0 24 24">
-        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-      </svg>
+  <footer class="pg-mfoot"><span>PhoneGyro · <span id="txt-footer-role"></span></span><span>LAN Direct</span></footer>
+</main>
+
+<!-- Touch Shield: hold the button for 4 s to unlock. Nothing else on this screen. -->
+<div class="m-lock" id="screensaver-overlay">
+  <div class="pg-lock" id="ss-lock">
+    <div class="pg-lockwrap">
+      <div class="pg-sonar"><i></i><i></i><i></i></div>
+      <button class="pg-lockbtn" id="ss-lock-btn" type="button" aria-label="Hold 4 seconds to unlock">
+        <svg class="pg-lockbtn__ring" viewBox="0 0 176 176"><circle class="pg-lockbtn__track" cx="88" cy="88" r="82"/><circle class="pg-lockbtn__prog" cx="88" cy="88" r="82"/></svg>
+        <svg class="pg-lockbtn__icon" viewBox="0 0 64 64"><rect x="15" y="29" width="34" height="25" rx="7"/><path class="shackle" d="M22 29V22a10 10 0 0 1 20 0v7"/><circle cx="32" cy="41" r="2.6"/><path d="M32 44v4"/></svg>
+      </button>
     </div>
-    <div class="ss-lock-caption" id="ss-lock-caption">Удерживайте 4 сек для разблокировки</div>
+    <div class="pg-lock__text"><div class="pg-lock__count" id="ss-count">4.0 s</div><div class="pg-lock__label" id="ss-lock-caption"></div></div>
   </div>
 </div>
 
@@ -941,7 +233,7 @@
 'use strict';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. Localization Dictionary (Zero Emojis, Clean Cupertino Terminology)
+// 1. Localization
 // ─────────────────────────────────────────────────────────────────────────────
 const I18N = {
   ru: {
@@ -966,7 +258,7 @@ const I18N = {
     warn_btn: 'ВКЛЮЧИТЬ ДАТЧИКИ',
     warn_denied: 'Доступ отклонен в Safari. Перейдите в Настройки -> Safari -> Движение и ориентация.',
     footer_role: 'Клиент контроллера',
-    ss_caption: 'Удерживайте 4 сек для разблокировки',
+    ss_caption: 'Удерживайте для разблокировки',
     level_status: 'ГОРИЗОНТ'
   },
   en: {
@@ -991,10 +283,13 @@ const I18N = {
     warn_btn: 'ENABLE SENSORS',
     warn_denied: 'Access denied. Enable in iOS Settings -> Safari -> Motion & Orientation Access.',
     footer_role: 'Controller Client',
-    ss_caption: 'Hold for 4s to unlock',
+    ss_caption: 'Hold to unlock',
     level_status: 'LEVEL'
   }
 };
+
+const $ = (id) => document.getElementById(id);
+function setText(el, v) { if (el.textContent !== v) el.textContent = v; }
 
 let currentLang = localStorage.getItem('gb_lang') || 'ru';
 if (!I18N[currentLang]) currentLang = 'ru';
@@ -1002,48 +297,44 @@ if (!I18N[currentLang]) currentLang = 'ru';
 function setLanguage(lang) {
   currentLang = lang;
   localStorage.setItem('gb_lang', lang);
-  document.getElementById('lang-label').textContent = I18N[lang].lang_btn;
-  document.getElementById('txt-warn-title').textContent = I18N[lang].warn_title;
-  document.getElementById('txt-warn-desc').textContent = I18N[lang].warn_desc;
-  document.getElementById('btn-grant-sensors').textContent = I18N[lang].warn_btn;
-  document.getElementById('txt-footer-role').textContent = I18N[lang].footer_role;
-  document.getElementById('ss-lock-caption').textContent = I18N[lang].ss_caption;
-  const txtScreensaverMain = document.getElementById('txt-screensaver-main');
-  if (txtScreensaverMain) txtScreensaverMain.textContent = I18N[lang].sub_screensaver_btn;
+  const t = I18N[lang];
+  document.documentElement.lang = lang;
+  setText($('lang-label'), t.lang_btn);
+  setText($('txt-warn-title'), t.warn_title);
+  setText($('txt-warn-desc'), t.warn_desc);
+  setText($('btn-grant-sensors'), t.warn_btn);
+  setText($('txt-footer-role'), t.footer_role);
+  setText($('ss-lock-caption'), t.ss_caption);
+  setText($('txt-screensaver-main'), t.sub_screensaver_btn);
   updateConnectionUI();
+  lastLabel = '';
+  hudDirty = true;
+  scheduleHud();
 }
 
-document.getElementById('btn-lang').addEventListener('click', () => {
+$('btn-lang').addEventListener('click', () => {
   setLanguage(currentLang === 'ru' ? 'en' : 'ru');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. Apple Theme Toggle (Dark / Light)
+// 2. Theme (Dark / Light)
 // ─────────────────────────────────────────────────────────────────────────────
-let currentTheme = localStorage.getItem('gb_theme') || 'dark';
+let currentTheme = localStorage.getItem('gb_theme') === 'light' ? 'light' : 'dark';
+const ICON_SUN = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+const ICON_MOON = '<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>';
 
 function applyTheme(theme) {
   currentTheme = theme;
-  document.body.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('gb_theme', theme);
-
   const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', theme === 'light' ? '#F2F2F7' : '#000000');
-
-  const themeIcon = document.getElementById('theme-icon');
-  if (themeIcon) {
-    if (theme === 'light') {
-      // Moon SVG icon for toggling to dark
-      themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
-    } else {
-      // Sun SVG icon for toggling to light
-      themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
-    }
-  }
+  if (metaTheme) metaTheme.setAttribute('content', theme === 'light' ? '#f1f1f1' : '#0b0b0b');
+  // the icon shows what a tap switches to
+  $('theme-icon').innerHTML = theme === 'light' ? ICON_MOON : ICON_SUN;
 }
 applyTheme(currentTheme);
 
-document.getElementById('btn-theme').addEventListener('click', () => {
+$('btn-theme').addEventListener('click', () => {
   applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
 });
 
@@ -1065,10 +356,10 @@ function detectDeviceModel() {
 }
 
 const deviceModel = detectDeviceModel();
-document.getElementById('device-model-label').textContent = deviceModel;
+setText($('device-model-label'), deviceModel);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4. Screen Lock (WakeLock API tied exclusively to Screensaver)
+// 4. Screen Lock (WakeLock API tied exclusively to the Touch Shield)
 // ─────────────────────────────────────────────────────────────────────────────
 let wakeLock = null;
 let wakeLockEnabled = false;
@@ -1092,10 +383,12 @@ function releaseWakeLock() {
   }
 }
 
-// Re-acquire WakeLock on visibility change if screensaver active; dismiss screensaver on hide
+// Re-acquire WakeLock on visibility change if the shield is on; dismiss the shield on hide
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     if (wakeLockEnabled) requestWakeLock();
+    hudDirty = true;
+    scheduleHud();
     if (typeof ws !== 'undefined' && ws && ws.readyState === WebSocket.OPEN) {
       try { ws.send(JSON.stringify({ type: 'visibility', visible: true })); } catch (e) {}
     }
@@ -1111,7 +404,7 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// Dismiss screensaver and release WakeLock on pagehide or blur
+// Dismiss the shield and release WakeLock on pagehide or blur
 window.addEventListener('pagehide', () => {
   if (isScreensaverActive) closeScreensaver();
   releaseWakeLock();
@@ -1122,30 +415,26 @@ window.addEventListener('blur', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. OLED Screensaver & Anti-Touch Shield (Smart Hold & Swipe Unlock)
+// 5. Touch Shield (hold the lock button for 4 s)
 // ─────────────────────────────────────────────────────────────────────────────
-const screensaverOverlay  = document.getElementById('screensaver-overlay');
-const btnScreensaver      = document.getElementById('btn-screensaver');
-const btnScreensaverMain  = document.getElementById('btn-screensaver-main');
-const ssLockProgress      = document.getElementById('ss-lock-progress');
-const ssCenterLock        = document.getElementById('ss-center-lock');
-const ssTopStatus         = document.getElementById('ss-top-status');
-const ssStatusLabel       = document.getElementById('ss-status-label');
+const screensaverOverlay = $('screensaver-overlay');
+const btnScreensaver     = $('btn-screensaver');
+const btnScreensaverMain = $('btn-screensaver-main');
+const lockEl             = $('ss-lock');
+const lockBtn            = $('ss-lock-btn');
+const lockCount          = $('ss-count');
 
 let isScreensaverActive = false;
-let holdTimer = null;
+let holdRaf = 0;
 let holdStartTime = 0;
-const HOLD_DURATION = 4000; // 4.0s hold to unlock
-const CIRCLE_CIRCUMFERENCE = 251.2; // 2 * PI * 40
+let lastCount = '';
+const HOLD_DURATION = 4000; // 4.0 s hold to unlock
 
 function openScreensaver() {
   isScreensaverActive = true;
   screensaverOverlay.classList.add('active');
-  if (btnScreensaver) btnScreensaver.classList.add('active');
-  if (btnScreensaverMain) btnScreensaverMain.classList.add('active');
-  ssStatusLabel.textContent = `LIVE • ${deviceModel}`;
-  ssLockProgress.style.strokeDashoffset = CIRCLE_CIRCUMFERENCE;
-  triggerWandering();
+  btnScreensaver.classList.add('is-active');
+  btnScreensaverMain.classList.add('is-active');
   wakeLockEnabled = true;
   requestWakeLock();
 }
@@ -1153,76 +442,64 @@ function openScreensaver() {
 function closeScreensaver() {
   isScreensaverActive = false;
   screensaverOverlay.classList.remove('active');
-  if (btnScreensaver) btnScreensaver.classList.remove('active');
-  if (btnScreensaverMain) btnScreensaverMain.classList.remove('active');
+  btnScreensaver.classList.remove('is-active');
+  btnScreensaverMain.classList.remove('is-active');
   cancelHold();
   wakeLockEnabled = false;
   releaseWakeLock();
   if (navigator.vibrate) navigator.vibrate([40, 50, 40]);
+  // what the page missed while covered
+  updateConnectionUI();
+  hudDirty = true;
+  scheduleHud();
 }
 
-if (btnScreensaver) {
-  btnScreensaver.addEventListener('click', () => {
-    openScreensaver();
-  });
+btnScreensaver.addEventListener('click', openScreensaver);
+btnScreensaverMain.addEventListener('click', openScreensaver);
+
+function holdStep(now) {
+  if (!holdStartTime) { holdRaf = 0; return; }
+  const p = Math.min(1, (now - holdStartTime) / HOLD_DURATION);
+  lockBtn.style.setProperty('--hold', p.toFixed(3));
+  const left = (HOLD_DURATION * (1 - p) / 1000).toFixed(1) + ' s';
+  if (left !== lastCount) { lastCount = left; lockCount.textContent = left; }
+  if (p >= 1) {
+    holdRaf = 0;
+    closeScreensaver();
+    return;
+  }
+  holdRaf = requestAnimationFrame(holdStep);
 }
 
-if (btnScreensaverMain) {
-  btnScreensaverMain.addEventListener('click', () => {
-    openScreensaver();
-  });
-}
-
-// OLED Burn-in prevention: wandering badge position shift every 20s
-let wanderingInterval = null;
-function triggerWandering() {
-  if (wanderingInterval) clearInterval(wanderingInterval);
-  wanderingInterval = setInterval(() => {
-    if (!isScreensaverActive) return;
-    const dx = (Math.random() - 0.5) * 40;
-    const dy = (Math.random() - 0.5) * 15;
-    ssTopStatus.style.transform = `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px)`;
-  }, 20000);
-}
-
-// 1) Hold-to-Unlock Logic (4.0s hold)
 function startHold(e) {
   e.preventDefault();
+  if (holdStartTime) return;
+  try { lockBtn.setPointerCapture(e.pointerId); } catch (err) {}
   holdStartTime = performance.now();
-  ssCenterLock.classList.add('holding');
+  lockEl.classList.add('is-holding');
+  lockBtn.classList.add('is-holding');
   if (navigator.vibrate) navigator.vibrate(25);
-
-  const step = () => {
-    if (!holdStartTime) return;
-    const elapsed = performance.now() - holdStartTime;
-    const progress = Math.min(1, elapsed / HOLD_DURATION);
-    const offset = CIRCLE_CIRCUMFERENCE * (1 - progress);
-    ssLockProgress.style.strokeDashoffset = offset.toFixed(1);
-
-    if (progress >= 1) {
-      closeScreensaver();
-      return;
-    }
-    holdTimer = requestAnimationFrame(step);
-  };
-  holdTimer = requestAnimationFrame(step);
+  holdRaf = requestAnimationFrame(holdStep);
 }
 
 function cancelHold() {
   holdStartTime = 0;
-  ssCenterLock.classList.remove('holding');
-  if (holdTimer) cancelAnimationFrame(holdTimer);
-  ssLockProgress.style.strokeDashoffset = CIRCLE_CIRCUMFERENCE;
+  if (holdRaf) { cancelAnimationFrame(holdRaf); holdRaf = 0; }
+  lockEl.classList.remove('is-holding');
+  lockBtn.classList.remove('is-holding');
+  lockBtn.style.setProperty('--hold', '0');   // the ring runs back in 250 ms (CSS)
+  lastCount = '4.0 s';
+  lockCount.textContent = lastCount;
 }
 
-ssCenterLock.addEventListener('touchstart', startHold, { passive: false });
-ssCenterLock.addEventListener('touchend', cancelHold);
-ssCenterLock.addEventListener('touchcancel', cancelHold);
-ssCenterLock.addEventListener('mousedown', startHold);
-ssCenterLock.addEventListener('mouseup', cancelHold);
-ssCenterLock.addEventListener('mouseleave', cancelHold);
+lockBtn.addEventListener('pointerdown', startHold);
+lockBtn.addEventListener('pointerup', cancelHold);
+lockBtn.addEventListener('pointercancel', cancelHold);
+lockBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+lockBtn.addEventListener('keydown', (e) => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) startHold(e); });
+lockBtn.addEventListener('keyup', (e) => { if (e.key === ' ' || e.key === 'Enter') cancelHold(); });
 
-// Prevent any touches on screensaver from bubbling to underlying UI
+// Nothing under the shield may be touched
 screensaverOverlay.addEventListener('click', (e) => {
   e.stopPropagation();
 });
@@ -1239,46 +516,45 @@ let lastPacketCount = 0;
 let lastHzCalcTime = performance.now();
 let currentHz = 0;
 
-const btnMainConnection = document.getElementById('btn-main-connection');
-const connBadge         = document.getElementById('conn-badge');
-const connBadgeText     = document.getElementById('conn-badge-text');
-const connTitle         = document.getElementById('conn-title');
-const connHint          = document.getElementById('conn-hint');
-const connHzPill        = document.getElementById('conn-hz-pill');
-const headerStatusDot   = document.getElementById('header-status-dot');
-const btnToggleSocket   = document.getElementById('btn-toggle-socket');
-const txtSubSocket      = document.getElementById('txt-sub-socket');
+const btnMainConnection = $('btn-main-connection');
+const connBadgeText     = $('conn-badge-text');
+const connTitle         = $('conn-title');
+const connHint          = $('conn-hint');
+const connHzPill        = $('conn-hz-pill');
+const headerStatusDot   = $('header-status-dot');
+const btnToggleSocket   = $('btn-toggle-socket');
+const txtSubSocket      = $('txt-sub-socket');
 
 function updateConnectionUI() {
   const t = I18N[currentLang];
 
   if (isModeBlocked) {
-    btnMainConnection.className = 'btn-main-connection mode-blocked';
-    connBadgeText.textContent = t.blocked_badge;
-    connTitle.textContent = t.action_blocked;
-    connHint.textContent = t.hint_blocked;
-    headerStatusDot.className = 'device-status-dot blocked';
-    txtSubSocket.textContent = t.sub_blocked;
-    connHzPill.textContent = 'USB';
+    btnMainConnection.className = 'pg-pause is-usb';
+    setText(connBadgeText, t.blocked_badge);
+    setText(connTitle, t.action_blocked);
+    setText(connHint, t.hint_blocked);
+    headerStatusDot.className = 'pg-mchip__dot is-usb';
+    setText(txtSubSocket, t.sub_blocked);
+    setText(connHzPill, 'USB');
     return;
   }
 
   if (!isConnected) {
-    btnMainConnection.className = 'btn-main-connection disconnected';
-    connBadgeText.textContent = deliberateDisconnect ? t.disconnected_badge : t.connecting_badge;
-    connTitle.textContent = t.action_connect;
-    connHint.textContent = t.hint_disconnected;
-    headerStatusDot.className = 'device-status-dot';
-    txtSubSocket.textContent = t.sub_connect;
-    connHzPill.textContent = '0 Hz';
+    btnMainConnection.className = 'pg-pause is-off';
+    setText(connBadgeText, deliberateDisconnect ? t.disconnected_badge : t.connecting_badge);
+    setText(connTitle, t.action_connect);
+    setText(connHint, t.hint_disconnected);
+    headerStatusDot.className = 'pg-mchip__dot';
+    setText(txtSubSocket, t.sub_connect);
+    setText(connHzPill, '0 Hz');
   } else {
-    btnMainConnection.className = 'btn-main-connection streaming';
-    connBadgeText.textContent = t.streaming_badge;
-    connTitle.textContent = t.action_streaming;
-    connHint.textContent = t.hint_streaming;
-    headerStatusDot.className = 'device-status-dot online';
-    txtSubSocket.textContent = t.sub_disconnect;
-    connHzPill.textContent = `${currentHz} Hz`;
+    btnMainConnection.className = 'pg-pause';
+    setText(connBadgeText, t.streaming_badge);
+    setText(connTitle, t.action_streaming);
+    setText(connHint, t.hint_streaming);
+    headerStatusDot.className = 'pg-mchip__dot is-on';
+    setText(txtSubSocket, t.sub_disconnect);
+    setText(connHzPill, `${currentHz} Hz`);
   }
 }
 
@@ -1290,7 +566,8 @@ setInterval(() => {
     currentHz = Math.round((packetCount - lastPacketCount) / dt);
     lastPacketCount = packetCount;
     lastHzCalcTime = now;
-    if (isConnected && !isModeBlocked) connHzPill.textContent = `${currentHz} Hz`;
+    // nobody sees the number while the shield or another app covers the page
+    if (isConnected && !isModeBlocked && !isScreensaverActive && !document.hidden) setText(connHzPill, `${currentHz} Hz`);
   }
 }, 500);
 
@@ -1372,8 +649,11 @@ function connectWSS() {
   };
 }
 
-// Background polling for mode synchronization
+// Background polling for mode synchronization. A live socket hears about a mode
+// change from the PC itself (and is closed by it), so the poll runs only while
+// there is no link or the PC is in USB mode, and not while the page is hidden.
 async function checkServerMode() {
+  if (document.hidden || (isConnected && !isModeBlocked)) return;
   try {
     const res = await fetch('/api/mode?t=' + Date.now(), { cache: 'no-store' });
     if (res.ok) {
@@ -1450,12 +730,9 @@ const binView   = new DataView(binBuffer);
 let curAlpha = 0, curBeta = 0, curGamma = 0;
 let zeroYawOffset = 0;
 let outQx = 0, outQy = 0, outQz = 0, outQw = 1;
+let quatDirty = false;
 let dsuAccX = 0, dsuAccY = 0, dsuAccZ = 0;
 let lastMotionTime = 0;
-
-const bubble    = document.getElementById('gyro-bubble');
-const yawGroup  = document.getElementById('gyro-yaw-group');
-const hudStatus = document.getElementById('hud-level-status');
 
 function onOrientation(e) {
   if (e.alpha !== null || e.beta !== null || e.gamma !== null) {
@@ -1464,10 +741,25 @@ function onOrientation(e) {
   curAlpha = e.alpha || 0;
   curBeta  = e.beta  || 0;
   curGamma = e.gamma || 0;
+  quatDirty = true;      // the quaternion is built when a frame is sent, not on every event
 
-  // Convert device orientation to unit quaternion
-  // Raw alpha (no recenter offset): the server's drift anchor needs a reference
-  // without artificial jumps.
+  // The level dial redraws once per display frame, and only while it is visible.
+  hudDirty = true;
+  scheduleHud();
+
+  if (performance.now() - lastMotionTime > 200) {
+    flushMotion();
+  }
+}
+
+// Convert device orientation to a unit quaternion.
+// Raw alpha (no recenter offset): the server's drift anchor needs a reference
+// without artificial jumps.
+// W3C DeviceOrientation: R = Rz(alpha) · Rx(beta) · Ry(gamma), device → world.
+// iOS computes this attitude internally at a high rate, so the server uses it
+// to keep the 60 Hz gyro integration from drifting (gui/internal/motion/attitudeanchor.go).
+function updateQuaternion() {
+  quatDirty = false;
   const a = curAlpha * DEG2RAD_HALF;
   const b = curBeta  * DEG2RAD_HALF;
   const c = curGamma * DEG2RAD_HALF;
@@ -1476,9 +768,6 @@ function onOrientation(e) {
   const cB = Math.cos(b), sB = Math.sin(b);
   const cC = Math.cos(c), sC = Math.sin(c);
 
-  // W3C DeviceOrientation: R = Rz(alpha) · Rx(beta) · Ry(gamma), device → world.
-  // iOS computes this attitude internally at a high rate, so the server uses it
-  // to keep the 60 Hz gyro integration from drifting (gui/internal/motion/attitudeanchor.go).
   outQw = cA * cB * cC - sA * sB * sC;
   outQx = cA * sB * cC - sA * cB * sC;
   outQy = cA * cB * sC + sA * sB * cC;
@@ -1487,40 +776,78 @@ function onOrientation(e) {
   if (outQw < 0) {
     outQx = -outQx; outQy = -outQy; outQz = -outQz; outQw = -outQw;
   }
-
-  // Update Visual HUD Level (60 FPS SVG animation)
-  updateHUDLevel(curBeta, curGamma, curAlpha);
-
-  if (performance.now() - lastMotionTime > 200) {
-    flushMotion();
-  }
 }
 
-function updateHUDLevel(pitch, roll, yaw) {
-  if (!bubble || !yawGroup) return;
+// ── Level dial (design: Dial, the home-page block; CSS and SVG only) ──────────
+const dialEl     = $('dial');
+const bubbleEl   = $('dial-bubble');
+const yawEl      = $('dial-yaw');
+const hudStatus  = $('hud-level-status');
+const PX_PER_DEG = 2;     // bubble travel on the 264 px dial
+const MAX_PX     = 58;    // the dial's travel limit
+const LEVEL_DEG  = 3.0;   // the phone counts as level within this tilt
 
-  const maxR = 40.0;
-  // Pitch: tilt forward (pitch > 0) -> bubble moves forward/down (+Y) per user preference
-  const offsetY = Math.max(-maxR, Math.min(maxR, pitch * 0.9));
-  // Roll: tilt right (roll > 0) -> bubble moves right (+X)
-  const offsetX = Math.max(-maxR, Math.min(maxR, roll * 0.9));
+let hudDirty = false, hudRaf = 0;
+let lastBx = NaN, lastBy = NaN, lastYaw = NaN, lastLevel = null, lastLabel = '', lastLabelAt = 0, lastLabelLevel = null;
+let dialScale = 1;
 
-  bubble.setAttribute('cx', (60 + offsetX).toFixed(2));
-  bubble.setAttribute('cy', (60 + offsetY).toFixed(2));
+function measureDial() { dialScale = dialEl.clientWidth / 264 || 1; hudDirty = true; scheduleHud(); }
+window.addEventListener('resize', measureDial);
+window.addEventListener('orientationchange', measureDial);
 
-  // Snap to green level state if within 3.0 degrees
-  const isLevel = Math.abs(pitch) <= 3.0 && Math.abs(roll) <= 3.0;
-  bubble.classList.toggle('level', isLevel);
-  const levelZone = document.getElementById('hud-level-zone');
-  if (levelZone) levelZone.classList.toggle('level', isLevel);
-  if (hudStatus) {
-    hudStatus.classList.toggle('level', isLevel);
+function scheduleHud() {
+  if (hudRaf || !hudDirty) return;
+  hudRaf = requestAnimationFrame(hudFrame);
+}
+
+function hudFrame() {
+  hudRaf = 0;
+  // Covered by the shield or hidden: skip all drawing, the next show repaints.
+  if (!hudDirty || isScreensaverActive || document.hidden) return;
+  hudDirty = false;
+
+  const pitch = curBeta, roll = curGamma;
+  const clamp = (v) => Math.max(-MAX_PX, Math.min(MAX_PX, v * PX_PER_DEG));
+  // Roll right -> bubble right; pitch forward -> bubble down (the user's preference).
+  const bx = Math.round(clamp(roll) * dialScale * 2) / 2;
+  const by = Math.round(clamp(pitch) * dialScale * 2) / 2;
+  if (bx !== lastBx || by !== lastBy) {
+    lastBx = bx; lastBy = by;
+    bubbleEl.style.transform = `translate3d(${bx}px,${by}px,0)`;
   }
 
-  // Rotate yaw needle around center (60, 60)
-  const normalizedYaw = (yaw - zeroYawOffset + 360) % 360;
-  yawGroup.setAttribute('transform', `rotate(${normalizedYaw.toFixed(1)} 60 60)`);
+  const isLevel = Math.abs(pitch) <= LEVEL_DEG && Math.abs(roll) <= LEVEL_DEG;
+  if (isLevel !== lastLevel) {
+    lastLevel = isLevel;
+    bubbleEl.classList.toggle('is-level', isLevel);
+    hudStatus.classList.toggle('is-level', isLevel);
+  }
+
+  // Compass arrow: heading, quarter-degree steps
+  const yaw = Math.round(((curAlpha - zeroYawOffset + 360) % 360) * 4) / 4;
+  if (yaw !== lastYaw) {
+    lastYaw = yaw;
+    yawEl.style.transform = `rotate(${yaw}deg)`;
+  }
+
+  // Label: LEVEL, or the larger tilt and its angle
+  let label;
+  if (isLevel) {
+    label = I18N[currentLang].level_status;
+  } else {
+    const rollBigger = Math.abs(roll) >= Math.abs(pitch);
+    const v = rollBigger ? roll : pitch;
+    label = `${rollBigger ? 'ROLL' : 'PITCH'} ${v >= 0 ? '+' : ''}${v.toFixed(0)}°`;
+  }
+  // The text costs a layout when it changes: at most 10 times a second, but a level flip at once.
+  const now = performance.now();
+  if (label !== lastLabel && (now - lastLabelAt > 100 || isLevel !== lastLabelLevel)) {
+    lastLabel = label; lastLabelAt = now; lastLabelLevel = isLevel;
+    hudStatus.textContent = label;
+  }
+  if (label !== lastLabel) { hudDirty = true; scheduleHud(); }   // pick the newest text up on a later frame
 }
+measureDial();
 
 function readRawGyro(e) {
   if (!e.rotationRate) return { x: 0, y: 0, z: 0 };
@@ -1656,6 +983,7 @@ function flushMotion() {
 
 function sendFrame(tsUs, rateX, rateY, rateZ) {
   if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 0) return false;
+  if (quatDirty) updateQuaternion();
 
   const ts = Math.round(tsUs);
   binView.setUint32(0,  ts % 4294967296, true);             // ts_us low
@@ -1694,15 +1022,20 @@ setInterval(() => {
 const needsPermission = typeof DeviceMotionEvent !== 'undefined' &&
                         typeof DeviceMotionEvent.requestPermission === 'function';
 let sensorsActive = false;
-const sensorWarningCard = document.getElementById('sensor-warning-card');
-const sensorHudContainer= document.getElementById('sensor-hud-container');
-const btnGrantSensors   = document.getElementById('btn-grant-sensors');
+const sensorWarningCard = $('sensor-warning-card');
+const sensorHudContainer= $('sensor-hud-container');
+const btnGrantSensors   = $('btn-grant-sensors');
+
+function showWarning(on) {
+  sensorWarningCard.hidden = !on;
+  sensorHudContainer.hidden = on;
+  if (!on) measureDial();
+}
 
 function onSensorDataReceived() {
   if (!sensorsActive) {
     sensorsActive = true;
-    sensorWarningCard.style.display = 'none';
-    sensorHudContainer.style.display = 'flex';
+    showWarning(false);
   }
 }
 
@@ -1716,12 +1049,11 @@ async function requestSensors() {
         }
         initSensors();
       } else {
-        document.getElementById('txt-warn-desc').textContent = I18N[currentLang].warn_denied;
+        $('txt-warn-desc').textContent = I18N[currentLang].warn_denied;
         btnGrantSensors.disabled = true;
-        btnGrantSensors.style.opacity = '0.5';
       }
     } catch (err) {
-      document.getElementById('txt-warn-desc').textContent = I18N[currentLang].warn_denied;
+      $('txt-warn-desc').textContent = I18N[currentLang].warn_denied;
     }
   } else {
     initSensors();
@@ -1739,16 +1071,12 @@ btnGrantSensors.addEventListener('click', () => {
 
 // Automatic Initial Sensor Startup or Permission Prompt
 if (needsPermission) {
-  sensorWarningCard.style.display = 'flex';
-  sensorHudContainer.style.display = 'none';
+  showWarning(true);
 } else {
   initSensors();
   // Watchdog: If no sensor events arrive within 700ms, display warning
   setTimeout(() => {
-    if (!sensorsActive) {
-      sensorWarningCard.style.display = 'flex';
-      sensorHudContainer.style.display = 'none';
-    }
+    if (!sensorsActive) showWarning(true);
   }, 700);
 }
 

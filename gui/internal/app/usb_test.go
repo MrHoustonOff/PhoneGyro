@@ -1,9 +1,6 @@
 package app
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
 // TestUSBHostFeedsTheUSBBank: what the USB transport reports lands in the USB
 // bank -- the loss counters (через переполнение SEQ; 1 и 2 потеряны), the device
@@ -24,9 +21,9 @@ func TestUSBHostFeedsTheUSBBank(t *testing.T) {
 	}
 
 	app.usbBank.hasClient.Store(true)
-	app.usbBank.connectedAt = time.Now()
+	app.usbBank.markConnected()
 	h.Detached(false) // Stop: the name stays
-	if app.usbBank.hasClient.Load() || !app.usbBank.connectedAt.IsZero() || app.usbBank.deviceName.Load() != "Nano MPU-6050" {
+	if app.usbBank.hasClient.Load() || !app.usbBank.connectedSince().IsZero() || app.usbBank.deviceName.Load() != "Nano MPU-6050" {
 		t.Fatal("Stop did not clear the link, or forgot the name")
 	}
 	h.Detached(true) // unplugged

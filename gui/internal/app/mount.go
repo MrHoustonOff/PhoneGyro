@@ -94,7 +94,7 @@ func (a *App) SetWizardMountEnabled(enabled bool) {
 	}
 	bank.mountMu.Unlock()
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.resetOrientation()
 	}
 }
 
@@ -118,7 +118,7 @@ func (a *App) SetProfileMountEnabled(slot int, enabled bool) string {
 	if active {
 		a.applyProfileMount(bank, slot)
 		if bank.ahrs != nil {
-			bank.ahrs.Reset()
+			bank.resetOrientation()
 		}
 	}
 	a.saveProfiles()

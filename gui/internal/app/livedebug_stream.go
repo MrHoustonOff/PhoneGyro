@@ -2,16 +2,8 @@ package app
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
-	"os"
-	"os/exec"
-	"syscall"
 	"time"
-
-	"phonegyro-gui/internal/settings"
-
-	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"github.com/gorilla/websocket"
 )
@@ -26,18 +18,18 @@ type liveDebugMsg struct {
 	Timestamp       uint32          `json:"ts,omitempty"`
 	RecvTs          int64           `json:"recv_ts,omitempty"`
 	SendTs          int64           `json:"send_ts,omitempty"`
-	RawGx           float32         `json:"raw_gx,omitempty"`
-	RawGy           float32         `json:"raw_gy,omitempty"`
-	RawGz           float32         `json:"raw_gz,omitempty"`
-	RawAx           float32         `json:"raw_ax,omitempty"`
-	RawAy           float32         `json:"raw_ay,omitempty"`
-	RawAz           float32         `json:"raw_az,omitempty"`
-	OutGx           float32         `json:"out_gx,omitempty"`
-	OutGy           float32         `json:"out_gy,omitempty"`
-	OutGz           float32         `json:"out_gz,omitempty"`
-	OutAx           float32         `json:"out_ax,omitempty"`
-	OutAy           float32         `json:"out_ay,omitempty"`
-	OutAz           float32         `json:"out_az,omitempty"`
+	RawGx           float32         `json:"raw_gx"`
+	RawGy           float32         `json:"raw_gy"`
+	RawGz           float32         `json:"raw_gz"`
+	RawAx           float32         `json:"raw_ax"`
+	RawAy           float32         `json:"raw_ay"`
+	RawAz           float32         `json:"raw_az"`
+	OutGx           float32         `json:"out_gx"`
+	OutGy           float32         `json:"out_gy"`
+	OutGz           float32         `json:"out_gz"`
+	OutAx           float32         `json:"out_ax"`
+	OutAy           float32         `json:"out_ay"`
+	OutAz           float32         `json:"out_az"`
 	StickLx         float32         `json:"stick_lx,omitempty"`
 	StickLy         float32         `json:"stick_ly,omitempty"`
 	InHz            float64         `json:"in_hz,omitempty"`
@@ -176,31 +168,5 @@ func (a *App) broadcastLiveDebugJSON(v any) {
 			conn.Close()
 			delete(a.liveDebugClients, conn)
 		}
-	}
-}
-
-var (
-	modUser32                    = syscall.NewLazyDLL("user32.dll")
-	procAllowSetForegroundWindow = modUser32.NewProc("AllowSetForegroundWindow")
-)
-
-// OpenLiveDebugWindow opens the standalone 3D Live Debug desktop .exe window.
-func (a *App) OpenLiveDebugWindow() {
-	exePath, err := os.Executable()
-	if err == nil {
-		// ASFW_ANY (-1 = 0xFFFFFFFF) grants the spawned child process permission to activate into foreground
-		_, _, _ = procAllowSetForegroundWindow.Call(uintptr(0xFFFFFFFF))
-		cmd := exec.Command(exePath, "--livedebug")
-		if err := cmd.Start(); err == nil {
-			a.liveDebugCmdMu.Lock()
-			a.liveDebugCmd = cmd
-			a.liveDebugCmdMu.Unlock()
-			return
-		}
-	}
-	// Fallback to browser if process execution fails
-	url := fmt.Sprintf("http://127.0.0.1:%d/livedebug", settings.DefaultHTTPPort)
-	if a.ctx != nil {
-		wailsRuntime.BrowserOpenURL(a.ctx, url)
 	}
 }

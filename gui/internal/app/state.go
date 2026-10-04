@@ -13,6 +13,7 @@ import (
 	"phonegyro/pkg/dsu"
 
 	"phonegyro-gui/internal/profiles"
+	"phonegyro-gui/internal/resmon"
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/version"
 
@@ -42,6 +43,16 @@ type AppState struct {
 	RawAccX float64 `json:"rawAccX"` // Acceleration X in g
 	RawAccY float64 `json:"rawAccY"` // Acceleration Y in g
 	RawAccZ float64 `json:"rawAccZ"` // Acceleration Z in g
+	// Accelerometer as DSU clients receive it (g): filtered, DSU signs, mount
+	DsuAccX float64 `json:"dsuAccX"`
+	DsuAccY float64 `json:"dsuAccY"`
+	DsuAccZ float64 `json:"dsuAccZ"`
+	// Gyro auto-bias state
+	BiasAtRest       bool    `json:"biasAtRest"`
+	BiasRestProgress float64 `json:"biasRestProgress"`
+	BiasX            float64 `json:"biasX"`
+	BiasY            float64 `json:"biasY"`
+	BiasZ            float64 `json:"biasZ"`
 	// Raw sensor orientation quaternion (live, latest sample from device)
 	Qx float64 `json:"qx"`
 	Qy float64 `json:"qy"`
@@ -64,8 +75,10 @@ type AppState struct {
 	DsuClientList []DSUClientView `json:"dsuClientList"`
 	DsuKickedList []DSUClientView `json:"dsuKickedList"` // disconnected by the user, can be brought back
 	InputMode     string          `json:"inputMode"`
+	DSUPort       int             `json:"dsuPort"`
 	UsbConnected  bool            `json:"usbConnected"`
 	UsbPort       string          `json:"usbPort"`
+	NoPopups      bool            `json:"noPopups"`
 }
 
 // TuningFrame conveys simultaneous raw and filtered telemetry to the frontend tuning bench
@@ -83,7 +96,28 @@ type TuningFrame struct {
 }
 
 // ShowWindow restores and brings the main application window to the foreground.
+// If the page was unloaded in the tray it is loaded again first, and the window
+// appears once it is up (windowDomReady), so no blank frame is seen.
 func (a *App) ShowWindow() {
+	a.trayGen.Add(1) // cancels a pending unload
+	if a.uiUnloaded.Swap(false) {
+		resmon.SetTrayMode(false) // full speed for the reload
+		a.showOnReady.Store(true)
+		if a.ctx != nil {
+			wailsRuntime.WindowReloadApp(a.ctx)
+		}
+		gen := a.trayGen.Load()
+		time.AfterFunc(uiReloadMax, func() { // the page never reported: show it anyway
+			if a.trayGen.Load() == gen && a.showOnReady.Swap(false) {
+				a.showWindowNow()
+			}
+		})
+		return
+	}
+	a.showWindowNow()
+}
+
+func (a *App) showWindowNow() {
 	if a.ctx != nil {
 		wailsRuntime.WindowShow(a.ctx)
 		wailsRuntime.WindowUnminimise(a.ctx)
@@ -95,19 +129,114 @@ func (a *App) ShowWindow() {
 	}
 }
 
+// How long the window stays loaded after hiding (a quick show back is instant),
+// and how long ShowWindow waits for the reloaded page before showing anyway.
+const (
+	uiUnloadAfter = 2 * time.Second
+	uiReloadMax   = 3 * time.Second
+)
+
+// When the tray diet (resmon.SetTrayMode) is applied after the unload.
+var trayTrimAfter = []time.Duration{1500 * time.Millisecond, 20 * time.Second}
+
+// HideToTray is the minimize dialog's "to the tray" (frontend ui/minimize-dialog.js).
+func (a *App) HideToTray() {
+	a.saveWindow()
+	a.hideWindow()
+}
+
 // hideWindow hides the main window to the tray. Until ShowWindow the UI gets no
-// state updates or orientation stream: nobody sees them, and building the state
-// 15 times a second costs CPU. Everything else (DSU, the silence watchdog, the
-// tray, the loss alarm) keeps running.
+// state updates or orientation stream, and after uiUnloadAfter the page itself
+// is unloaded: WebView2 navigates to about:blank, so no DOM, scripts, timers,
+// canvases or WebGL stay alive in the tray. Everything else (DSU, the silence
+// watchdog, the tray, the loss alarm) keeps running.
 func (a *App) hideWindow() {
 	a.uiHidden.Store(true)
-	if a.ctx != nil {
-		wailsRuntime.WindowHide(a.ctx)
+	if a.ctx == nil {
+		return
+	}
+	wailsRuntime.WindowHide(a.ctx)
+	gen := a.trayGen.Add(1)
+	time.AfterFunc(uiUnloadAfter, func() {
+		if a.trayGen.Load() != gen || !a.uiHidden.Load() || a.uiUnloaded.Load() {
+			return
+		}
+		a.uiUnloaded.Store(true)
+		a.releaseUIState()
+		// sessionStorage survives the round trip: the page skips the launch
+		// animation when it comes back (index.html head script).
+		wailsRuntime.WindowExecJS(a.ctx, `try{sessionStorage.setItem('pg-restore','1')}catch(e){};location.replace('about:blank')`)
+		a.logEvent("INFO", "window: UI unloaded in the tray")
+		// once about:blank is up, and again when its leftovers have settled
+		for _, after := range trayTrimAfter {
+			time.AfterFunc(after, func() {
+				if a.trayGen.Load() == gen && a.uiUnloaded.Load() {
+					resmon.SetTrayMode(true)
+				}
+			})
+		}
+	})
+}
+
+// releaseUIState drops what only an open screen holds: a page unloaded in the
+// middle of the calibration wizard or the bench never says goodbye, and its
+// preview matrix or capture would keep shaping the live output.
+func (a *App) releaseUIState() {
+	a.ClearPreview()
+	a.activeBank().isCapturing.Store(false)
+	a.tuningActive.Store(false)
+	a.quatStream.Store(false)
+}
+
+// windowDomReady runs on every page load (Wails OnDomReady). The first one
+// places the window; the about:blank of the tray is ignored; a reload from the
+// tray shows the window once it is up.
+func (a *App) windowDomReady() {
+	if a.uiUnloaded.Load() {
+		return // about:blank
+	}
+	if !a.windowPlaced.Swap(true) {
+		a.windowReady()
+	}
+	if a.showOnReady.Swap(false) {
+		// Give the first paint a moment: the page answers DOM ready before it has drawn.
+		time.AfterFunc(120*time.Millisecond, a.showWindowNow)
+	}
+}
+
+// requestClose applies the "action on window close" and reports whether the
+// window stays: hide to the tray, quit, or ("ask") let the UI show its dialog,
+// which answers with ConfirmCloseChoice. Used by the system close
+// (OnBeforeClose in run.go) and the title bar's close button.
+func (a *App) requestClose() (keep bool) {
+	if a.quitting.Load() {
+		return false
+	}
+	a.saveWindow()
+	switch a.GetCloseAction() {
+	case "minimize":
+		a.hideWindow()
+		return true
+	case "quit":
+		return false
+	default: // "ask"
+		if a.ctx != nil {
+			wailsRuntime.EventsEmit(a.ctx, "app:confirm-close")
+		}
+		return true
+	}
+}
+
+// CloseWindow is the title bar's close button.
+func (a *App) CloseWindow() {
+	if !a.requestClose() {
+		a.QuitApp()
 	}
 }
 
 // QuitApp cleanly terminates the entire application.
 func (a *App) QuitApp() {
+	a.saveWindow()
 	a.quitting.Store(true)
 	if a.trayMgr != nil {
 		a.trayMgr.Stop()
@@ -122,19 +251,38 @@ func (a *App) GetAppVersion() version.Info {
 	return version.Get()
 }
 
-// trayStatus is what the tray icon and its menu show (internal/tray).
+// trayStatus is what the tray icon, its tooltip and its menu show (internal/tray).
+// Only atomics and a few copies: it runs every 0.8 s and on hover.
 func (a *App) trayStatus() tray.Status {
 	bank := a.activeBank()
 	st := tray.Status{
 		Lang:    a.GetLang(),
+		Mode:    a.GetInputMode(),
 		Online:  bank.hasClient.Load(),
+		Paused:  a.isPaused.Load(),
 		Profile: a.getActiveProfileName(),
+		PingMs:  a.linkPingMs(),
 	}
 	if s, ok := bank.deviceName.Load().(string); ok {
 		st.Device = s
 	}
-	if a.dsuSrv != nil {
-		st.Emulators = a.dsuSrv.ActiveClientCount()
+	if st.Online {
+		if a.srv != nil {
+			_, _, st.Hz = a.srv.PacketStats()
+		}
+	}
+	if a.dsuSrv != nil && a.dsuSrv.ActiveClientCount() > 0 {
+		// names are cached per client (dsuclients.DefaultTTL), so this stays cheap
+		for _, v := range a.dsuNames.Name(a.dsuSrv.GetClientsInfo()) {
+			if !v.Active {
+				continue
+			}
+			name := v.Process
+			if name == "" {
+				name = v.Address
+			}
+			st.Emulators = append(st.Emulators, name)
+		}
 	}
 	return st
 }
@@ -206,8 +354,8 @@ func (a *App) GetState() AppState {
 			status = "online"
 		}
 
-		if !bank.connectedAt.IsZero() {
-			dur := time.Since(bank.connectedAt)
+		if at := bank.connectedSince(); !at.IsZero() {
+			dur := time.Since(at)
 			h := int(dur.Hours())
 			m := int(dur.Minutes()) % 60
 			s := int(dur.Seconds()) % 60
@@ -250,40 +398,53 @@ func (a *App) GetState() AppState {
 		}
 	}
 
+	bank.biasMu.RLock()
+	biasSt := bank.biasTracker.Status()
+	bx, by, bz := bank.gyroBias[0], bank.gyroBias[1], bank.gyroBias[2]
+	bank.biasMu.RUnlock()
+
 	return AppState{
-		Status:        status,
-		IsPaused:      a.isPaused.Load(),
-		DeviceName:    devName,
-		Hz:            hz,
-		PingMs:        a.linkPingMs(),
-		ConnectedTime: connectedDuration,
-		Pitch:         math.Float64frombits(bank.curPitch.Load()),
-		Roll:          math.Float64frombits(bank.curRoll.Load()),
-		Yaw:           math.Float64frombits(bank.curYaw.Load()),
-		IP:            a.primaryIP,
-		GamepadURL:    a.gamepadURL,
-		SetupURL:      a.setupURL,
-		QRCode:        a.qrCodePNG,
-		SetupQRCode:   a.setupQRPNG,
-		RawRotX:       math.Float64frombits(bank.curRotX.Load()),
-		RawRotY:       math.Float64frombits(bank.curRotY.Load()),
-		RawRotZ:       math.Float64frombits(bank.curRotZ.Load()),
-		RawAccX:       math.Float64frombits(bank.curAccX.Load()),
-		RawAccY:       math.Float64frombits(bank.curAccY.Load()),
-		RawAccZ:       math.Float64frombits(bank.curAccZ.Load()),
-		Qx:            math.Float64frombits(bank.curQx.Load()),
-		Qy:            math.Float64frombits(bank.curQy.Load()),
-		Qz:            math.Float64frombits(bank.curQz.Load()),
-		Qw:            math.Float64frombits(bank.curQw.Load()),
-		Profiles:      profilesList,
-		ActiveSlot:    activeSlot,
-		ActiveMatrix:  effectiveMat,
-		AhrsQ0:        math.Float64frombits(bank.curAhrsQ0.Load()),
-		AhrsQ1:        math.Float64frombits(bank.curAhrsQ1.Load()),
-		AhrsQ2:        math.Float64frombits(bank.curAhrsQ2.Load()),
-		AhrsQ3:        math.Float64frombits(bank.curAhrsQ3.Load()),
-		FirstLaunch:   !a.firstLaunchDone,
-		HideAuthor:    a.hideAuthor,
+		Status:           status,
+		IsPaused:         a.isPaused.Load(),
+		DeviceName:       devName,
+		Hz:               hz,
+		PingMs:           a.linkPingMs(),
+		ConnectedTime:    connectedDuration,
+		Pitch:            math.Float64frombits(bank.curPitch.Load()),
+		Roll:             math.Float64frombits(bank.curRoll.Load()),
+		Yaw:              math.Float64frombits(bank.curYaw.Load()),
+		IP:               a.primaryIP,
+		GamepadURL:       a.gamepadURL,
+		SetupURL:         a.setupURL,
+		QRCode:           a.qrCodePNG,
+		SetupQRCode:      a.setupQRPNG,
+		RawRotX:          math.Float64frombits(bank.curRotX.Load()),
+		RawRotY:          math.Float64frombits(bank.curRotY.Load()),
+		RawRotZ:          math.Float64frombits(bank.curRotZ.Load()),
+		RawAccX:          math.Float64frombits(bank.curAccX.Load()),
+		RawAccY:          math.Float64frombits(bank.curAccY.Load()),
+		RawAccZ:          math.Float64frombits(bank.curAccZ.Load()),
+		DsuAccX:          math.Float64frombits(bank.dsuAccX.Load()),
+		DsuAccY:          math.Float64frombits(bank.dsuAccY.Load()),
+		DsuAccZ:          math.Float64frombits(bank.dsuAccZ.Load()),
+		BiasAtRest:       biasSt.AtRest,
+		BiasRestProgress: biasSt.RestProgress,
+		BiasX:            bx,
+		BiasY:            by,
+		BiasZ:            bz,
+		Qx:               math.Float64frombits(bank.curQx.Load()),
+		Qy:               math.Float64frombits(bank.curQy.Load()),
+		Qz:               math.Float64frombits(bank.curQz.Load()),
+		Qw:               math.Float64frombits(bank.curQw.Load()),
+		Profiles:         profilesList,
+		ActiveSlot:       activeSlot,
+		ActiveMatrix:     effectiveMat,
+		AhrsQ0:           math.Float64frombits(bank.curAhrsQ0.Load()),
+		AhrsQ1:           math.Float64frombits(bank.curAhrsQ1.Load()),
+		AhrsQ2:           math.Float64frombits(bank.curAhrsQ2.Load()),
+		AhrsQ3:           math.Float64frombits(bank.curAhrsQ3.Load()),
+		FirstLaunch:      !a.firstLaunchDone,
+		HideAuthor:       a.hideAuthor,
 		DsuClients: func() int {
 			if a.dsuSrv != nil {
 				return a.dsuSrv.ActiveClientCount()
@@ -298,6 +459,12 @@ func (a *App) GetState() AppState {
 		}(),
 		DsuKickedList: a.dsuKickedViews(),
 		InputMode:     a.GetInputMode(),
+		DSUPort: func() int {
+			if a.dsuPort != 0 {
+				return a.dsuPort
+			}
+			return 26760
+		}(),
 		UsbConnected: func() bool {
 			if a.usbMgr != nil {
 				connected, _ := a.usbMgr.Status()
@@ -312,6 +479,7 @@ func (a *App) GetState() AppState {
 			}
 			return ""
 		}(),
+		NoPopups: a.noPopups.Load(),
 	}
 }
 
@@ -337,16 +505,8 @@ func (a *App) TogglePause() AppState {
 func (a *App) ResetAHRS() {
 	bank := a.activeBank()
 	if bank.ahrs != nil {
-		bank.ahrs.Reset()
+		bank.centreHere()
 		a.broadcastLiveDebug(1, 0, 0, 0)
-	}
-}
-
-// TriggerRecenterFromHotkey is invoked by the Windows global hotkey to reset orientation.
-func (a *App) TriggerRecenterFromHotkey() {
-	a.ResetAHRS()
-	if a.ctx != nil {
-		wailsRuntime.EventsEmit(a.ctx, "recenter:triggered", "hotkey")
 	}
 }
 

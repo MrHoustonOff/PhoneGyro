@@ -24,6 +24,12 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 	// mode is active, and vice versa via usbMgr.Start/Stop), so picking
 	// the bank by current input mode is race-free in practice.
 	bank := a.activeBank()
+	if !finiteFrame(frame) {
+		// One NaN would stay in the gyro bias, the anchor and the AHRS for good.
+		return
+	}
+	bank.frameMu.Lock()
+	defer bank.frameMu.Unlock()
 	bank.lastMotionRecvTs.Store(recvTs)
 	if frame.HasEventCounters {
 		bank.loss.ObservePhone(frame.SensorEvents, frame.SensorDropped)
@@ -33,9 +39,7 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 
 	if !bank.hasClient.Load() {
 		bank.hasClient.Store(true)
-		if bank.connectedAt.IsZero() {
-			bank.connectedAt = time.Now()
-		}
+		bank.markConnected()
 		a.emitStateChange()
 		a.broadcastLiveDebugJSON(map[string]any{
 			"type":      "device_status",
@@ -300,6 +304,9 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 		dsuRx, dsuRy, dsuRz = float32(r[0]), float32(r[1]), float32(r[2])
 		dsuAx, dsuAy, dsuAz = float32(ac[0]), float32(ac[1]), float32(ac[2])
 	}
+	bank.dsuAccX.Store(math.Float64bits(float64(dsuAx)))
+	bank.dsuAccY.Store(math.Float64bits(float64(dsuAy)))
+	bank.dsuAccZ.Store(math.Float64bits(float64(dsuAz)))
 
 	// dt -- тот же интервал, что получит DSU-клиент по таймстампам пакетов
 	// (pkg/dsu stampMotion, motion/frameclock.go): кубик считает ровно как PadTest.
@@ -311,6 +318,7 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 	if bank.ahrs != nil {
 		q0, q1, q2, q3 := bank.ahrs.Update(dsuRx, dsuRy, dsuRz, dsuAx, dsuAy, dsuAz, ahrsDt)
 		p, r, y := bank.ahrs.GetLevel() // LEVEL/tilt UIs: no Euler singularity beyond 90°
+		p, r = bank.fromCentre(p, r)    // relative to the pose of the last centering
 		curP, curR, curY = p, r, y
 		bank.curPitch.Store(math.Float64bits(p))
 		bank.curRoll.Store(math.Float64bits(r))
@@ -400,4 +408,14 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 			})
 		}
 	}
+}
+
+// finiteFrame: every number in the frame is a real number (no NaN or ±Inf).
+func finiteFrame(f server.MotionFrame) bool {
+	for _, v := range [...]float32{f.RotX, f.RotY, f.RotZ, f.AccX, f.AccY, f.AccZ, f.Qx, f.Qy, f.Qz, f.Qw} {
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+			return false
+		}
+	}
+	return true
 }

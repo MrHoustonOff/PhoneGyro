@@ -1,88 +1,147 @@
 **English** | [Русский](docs/README_RU.md)
 
-<!-- TODO: logo -->
+<p align="center">
+  <img src="docs/imgs/header-en.webp" width="860" alt="PhoneGyro: send your phone's motion into the game">
+</p>
 
-# PhoneGyro
+<p align="center">
+  <a href="https://github.com/MrHoustonOff/PhoneGyro/releases/latest"><img src="https://img.shields.io/github/v/release/MrHoustonOff/PhoneGyro?style=flat-square&label=release" alt="Latest release"></a>
+  <a href="https://github.com/MrHoustonOff/PhoneGyro/releases"><img src="https://img.shields.io/github/downloads/MrHoustonOff/PhoneGyro/total?style=flat-square&label=downloads" alt="Downloads"></a>
+  <a href="https://github.com/MrHoustonOff/PhoneGyro/stargazers"><img src="https://img.shields.io/github/stars/MrHoustonOff/PhoneGyro?style=flat-square&label=stars" alt="Stars"></a>
+  <img src="https://img.shields.io/github/go-mod/go-version/MrHoustonOff/PhoneGyro?style=flat-square&logo=go&logoColor=white&label=Go" alt="Go version">
+  <img src="https://img.shields.io/badge/platform-Windows%20x64%20%7C%20ARM64-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows x64 and ARM64">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/MrHoustonOff/PhoneGyro?style=flat-square&label=license" alt="MIT license"></a>
+  <a href="https://github.com/MrHoustonOff/PhoneGyro/actions/workflows/test.yml"><img src="https://img.shields.io/github/actions/workflow/status/MrHoustonOff/PhoneGyro/test.yml?style=flat-square&label=tests" alt="Tests status"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/MrHoustonOff/PhoneGyro/releases/latest"><b>Download</b></a>
+  &nbsp;&middot;&nbsp;
+  <a href="docs/SUMMARY.md"><b>Documentation</b></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://youtu.be/hDeGmq4bSp0"><b>Video</b></a>
+</p>
+
+PhoneGyro turns your computer into a server and your iPhone or Android phone into a motion source. You can stream your phone's gyroscope data to any client that supports the DSU (Cemuhook) protocol, emulators in the first place.
+
+## Tested on
+
+| Platform | Devices | Result |
+|---|---|---|
+| **iOS 26** | iPhone 13 Pro<br>iPhone 15<br>iPad 9 (2021) | full compatibility |
+| **Android 11** | Redmi Note 9S | full compatibility |
+| **Custom IMU** | MPU-6050 + Arduino Nano | full compatibility |
+
+Compatible with Cemu, RPCS3, Ryujinx, Yuzu, Dolphin, PCSX2, and any game or tool supporting Cemuhook DSU.
+
+## Video
+
+<p align="center">
+  <a href="https://youtu.be/hDeGmq4bSp0"><img src="https://img.youtube.com/vi/hDeGmq4bSp0/hqdefault.jpg" width="560" alt="PhoneGyro video demo on YouTube"></a>
+</p>
 
 > [!IMPORTANT]
 > **Formerly GyroBridge.** Since v2.0.0 the project is called PhoneGyro. All GyroBridge v1.x releases are deprecated and considered highly unstable — use v2.0.0 or newer. There is no migration from v1.x: reinstall the certificate on iPhone/iPad and recalibrate. See the [v2.0.0 release notes](docs/RELEASE_NOTES.md).
 
-> 📖 **Comprehensive User Guide**: [English User Guide](docs/guide.en.md) | [Русскоязычное руководство](docs/guide.ru.md)
-
-PhoneGyro turns your smartphone (iOS or Android) or a USB motion controller (Arduino Nano + MPU-6050) into a motion controller for PC games and emulators using the Cemuhook DSU protocol.
-
-<!-- TODO: video or animated demo gif -->
-
-![PhoneGyro Core Interface](docs/imgs/core%20screen.jpg)
-
-Compatible with Cemu, RPCS3, Ryujinx, Yuzu, Dolphin, PCSX2, and any game or tool supporting Cemuhook DSU.
-
 ---
 
-## Quick Start
+## Quick start
 
 ### 1. Download
-Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for ARM-based Windows devices) from the latest [GitHub Releases](https://github.com/MrHoustonOff/PhoneGyro/releases).
+Download `PhoneGyro.exe` (or `PhoneGyro-windows-arm64.exe` for Windows on ARM) from [GitHub Releases](https://github.com/MrHoustonOff/PhoneGyro/releases/latest). There is no installer: the program is a single file.
 
 ### 2. Launch
-Make sure your PC and smartphone are connected to the **same Wi-Fi network**. Launch `PhoneGyro.exe`.
+Your phone and PC must be **on the same Wi-Fi network**. Launch `PhoneGyro.exe` and pick the source at the top of the window: **Smartphone** or **USB Controller**.
 
-### 3. Connect a Device
-Pick the source at the top of the window: **Smartphone** or **USB Controller**.
-- **iOS (iPhone / iPad)**: Click **Initial Setup** in the app and follow the step-by-step guide to install the local profile certificate required by Safari to access motion sensors over HTTPS.
-- **Android**: Scan the QR code on the main screen with your camera and open the controller web app in Google Chrome.
-- **USB controller** (Arduino Nano + MPU-6050): flash the [reference firmware](https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol) (protocol 1.1+) and plug it in — PhoneGyro finds it on any COM port by itself.
+<p align="center">
+  <img src="docs/imgs/showcase-home.webp" width="720" alt="PhoneGyro main screen: device online, control profile, DSU server with connected emulators">
+</p>
 
-### 4. Calibrate — mandatory step
-Click **Calibrate** and follow the wizard (rest, nod, bank, axis alignment — about a minute). Calibration tells PhoneGyro where "forward" and "right" are for your grip; **without it the in-game aim turns along the wrong axis or backwards.** Perform this once per device and grip; phone and USB profiles are stored separately.
+### 3. Connect a device
+- **iPhone and iPad:** open the **Initial Setup** tab in the app and go through six steps: Safari only exposes gyroscope data over HTTPS, so a local certificate is installed on the phone once. Then scan the QR code on the main screen.
+- **Android:** scan the QR code with the camera and open the page in Chrome. On the "Your connection is not private" warning tap **Advanced**, then **Proceed**.
+- **USB controller** (Arduino Nano + MPU-6050): flash the [reference firmware](https://github.com/MrHoustonOff/PhoneGyro_hardware_protocol) (protocol 1.1 or newer) and plug it in. PhoneGyro finds it on any COM port by itself.
 
-### 4½. Pick the profile and recenter
-On first connection PhoneGyro opens the recenter window: hold the device as you will hold it in game, pick your calibration profile, and press **Recenter**.
+On the phone, turn on **Touch Shield** right away: the screen will not go dark and stray touches will not break anything.
 
-### 5. Configure Emulator
-In your emulator's input/controller settings, configure the motion server:
-- **Server IP**: `127.0.0.1`
-- **Server Port**: `26760`
-- **Protocol**: Cemuhook DSU
+### 4. Calibrate: a mandatory step
+Tap **Calibrate** and go through the wizard: four recording steps and a check, about a minute. Calibration tells PhoneGyro where "forward" and "right" are for your grip. **Without it the aim moves along the wrong axis or backwards.** Once per device and grip is enough; phone and USB controller profiles are stored separately.
 
-> Aim jitters slightly while you hold still? Raise the **tremor threshold** in Settings (separate for phone and USB). Details in the [User Guide](docs/guide.en.md).
+<p align="center">
+  <img src="docs/imgs/calibration-wizard.webp" width="640" alt="Calibration wizard: first step, rest measurement, a 3D gamepad on the right">
+</p>
 
----
+### 5. Set up the emulator
+In your emulator's input settings add a DSU client:
 
-## Live 3D Telemetry & Diagnostics
+| Parameter | Value |
+|---|---|
+| Server IP | `127.0.0.1` |
+| Port | `26760` |
+| Protocol | Cemuhook DSU |
 
-Click **Stats & 3D View** in the header to open the dedicated real-time 3D telemetry and diagnostics window to verify sensor response, orientation stability, and DSU packet delivery rate:
+<p align="center">
+  <img src="docs/imgs/cemu-input-settings.webp" width="560" alt="Cemu input settings: a DSU controller">
+</p>
 
-![3D Telemetry & Diagnostics](docs/imgs/3d%20view%20screen.jpg)
+> [!TIP]
+> While you play, hide PhoneGyro to the tray: the gyro keeps working and the load on your computer drops roughly 4 times.
 
----
-
-## Advanced Settings & Customization
-
-Click the **Settings** button in the header to access advanced options:
-- **Interactive Test Bench**: Live multi-axis oscilloscope, 3D target viewfinder, and apparatus tilt mini-bench to test response and filters before gaming.
-- **Custom Ports**: Modify Cemuhook DSU (`26760`), HTTP pairing (`8080`), and HTTPS controller (`8443`) ports with real-time collision checks.
-- **Gyro Deadband & Sensitivity**: Silence resting sensor micro-jitter with a soft deadband and scale gyro response. Motion itself is sent unsmoothed and drift-corrected (see [Motion Pipeline](docs/motion-pipeline.md)).
-- **Global UI Scaling**: Scale the interface and fonts (`0.80x` - `1.40x`) with desktop shortcuts (`Ctrl +`, `Ctrl -`, `Ctrl 0`).
-- **Audio Feedback**: Choose between synthesized chimes, classic Windows system sounds, or silent mode.
-- **Appearance**: Switch between Apple-inspired dark and light interfaces.
+Step-by-step instructions: [Quick start](docs/quickstart.en.md) and [Emulator setup](docs/emulators.en.md).
 
 ---
 
-## Security, Antivirus & Transparency
+## What is inside
 
-PhoneGyro is 100% open-source software under the MIT license. It contains zero trackers, no telemetry, and makes no external internet connections by default — all communication is strictly between your phone and your PC over your local home Wi-Fi. The only exception is the optional "Check for updates at startup" setting (off by default): when you turn it on, PhoneGyro asks GitHub for the latest release number once per start and sends nothing else.
+- **One server for any client.** Any client sees the Cemuhook DSU server on port `26760`. Connected emulators are shown by program name, and you can disconnect any of them right from the card.
+- **Control profiles.** Six slots each for the phone and the USB controller, every profile with its own gyroscope and accelerometer matrices.
+- **Live 3D view and statistics.** A gamepad model or a cube repeats your movements in four projections, next to gyroscope and accelerometer charts, rate, latency, jitter, packet loss and the USB protocol state.
 
-### Antivirus False Positives Notice
-Independent open-source developers rarely purchase proprietary EV (Extended Validation) code signing certificates due to exorbitant recurring costs ($400+/year). Because of this, automated machine-learning heuristics in certain antivirus software (e.g., Microsoft Defender generic `!ml` tags) might flag freshly compiled binaries as unfamiliar.
+<p align="center">
+  <img src="docs/imgs/stats-live.webp" width="860" alt="Statistics and 3D view: four cameras, gyroscope and accelerometer charts, USB protocol, link quality">
+</p>
 
-We regularly scan release binaries against VirusTotal (69+ engines clean). If you have any security reservations:
-- **Inspect the Source**: Review the entire codebase yourself or pass it to any AI agent (Claude, ChatGPT, Gemini, etc.) to perform an independent security review.
-- **Build from Source**: Follow the instructions below to compile the binary directly on your own machine using Go and Wails.
+- **Tray and saving resources.** In the tray the UI is unloaded from memory while the gyro keeps working.
+- **Tremor threshold.** Separate for the phone and the USB controller: the slowest movements near zero are flattened, ordinary aiming loses no speed. The rest of the motion is sent unsmoothed and drift-corrected ([motion pipeline](docs/motion-pipeline.en.md)).
+- **Mini-games for testing.** Two games in settings let you feel the response before a real game.
+- **Cemu Drift Guard.** A workaround for a known Cemu bug that makes the aim slowly drift.
+- **Look and feel.** Dark and light themes, accent colour, interface scale (`Ctrl +`, `Ctrl -`, `Ctrl 0`), Russian and English, event sounds.
+
+<p align="center">
+  <img src="docs/imgs/settings.webp" width="720" alt="Settings: ports, tremor threshold, behavior, appearance">
+</p>
 
 ---
 
-## Building from Source
+## Documentation
+
+The full guide is at [`docs/SUMMARY.md`](docs/SUMMARY.md). The same pages are built into the app (the **Docs** tab) and work offline.
+
+| Section | What it covers |
+|---|---|
+| [Quick start](docs/quickstart.en.md) | From install to the game |
+| [Connecting a phone](docs/phone.en.md) | The phone page, statuses, certificates |
+| [USB controller](docs/usb.en.md) | The wired sensor |
+| [Emulator setup](docs/emulators.en.md) | Cemu and other DSU clients |
+| [Troubleshooting](docs/troubleshooting.en.md) | No connection, drift, firewall |
+| [For developers](docs/dev.en.md) | Contributing, bug reports |
+
+---
+
+## Security, antivirus and transparency
+
+PhoneGyro is free, open-source software under the MIT license. It has no telemetry, no data collection and no ads. All communication stays inside your local network between the PC and the phone. The only internet request the program can make is an optional update check: it is off by default and turned on in settings. Details: [Updates](docs/updates.en.md).
+
+### Antivirus false positives
+Independent open-source developers rarely buy a corporate code signing (EV) certificate: it costs hundreds of dollars a year. Without a commercial signature, the heuristics of some antivirus products (for example the `!ml` labels in Microsoft Defender) may wrongly flag `PhoneGyro.exe`.
+
+We check releases against VirusTotal (69+ engines report the file clean). If you still have doubts:
+- **Inspect the source.** Read the repository yourself or hand it to any AI assistant (ChatGPT, Claude, Gemini and others) for an independent audit.
+- **Build it yourself.** Compile the binary on your own machine with Go and Wails (instructions below).
+
+---
+
+## Building from source
 
 Prerequisites:
 - [Go](https://go.dev/) 1.25+
@@ -101,37 +160,10 @@ wails build -tags native_webview2loader -o PhoneGyro.exe
 wails build -tags native_webview2loader -platform windows/arm64 -o PhoneGyro-arm64.exe
 ```
 
-The compiled binaries will be placed in `gui/build/bin/`.
-
-### Project Layout
-
-```
-gui/                    Windows app (Wails); main.go only embeds the UI and starts it
-  internal/app/         the App API the UI calls: the frame pipeline (pipeline.go),
-                        motion banks, calibration wizard, phone and USB wiring,
-                        Live Debug, background loops
-  internal/motion/      motion math: calibration matrices, axis alignment, AHRS,
-                        iOS attitude anchor, gyro bias, deadband, mount tilt
-  internal/settings/    settings.json: defaults, older files, port/MAC checks
-  internal/profiles/    profiles.json: the six calibration slots of a source
-  internal/usbdev/      USB host: finds the device, reads and decodes its frames
-  internal/hwproto/     USB hardware protocol wire format (frame, CRC, decoder)
-  internal/link/        link-loss statistics and the data-loss alarm
-  internal/dsuclients/  names local DSU clients after their program, focuses its window
-  internal/tray/        tray icon, its menu and the global recenter hotkey
-  internal/resmon/      CPU / RAM monitor
-  internal/version/     build identity (release tag, build number, channel)
-  frontend/src/         UI: index.html + js/ + css/, Live Debug window
-pkg/server/             phone HTTPS/WebSocket server, USB frame injection
-pkg/dsu/                Cemuhook DSU server
-pkg/ca/, pkg/pairing/   local certificate authority, QR codes
-pkg/i18n/               RU/EN translations
-web/                    the phone page
-docs/                   user guides, motion pipeline notes
-```
+The compiled binaries land in `gui/build/bin/`. Project layout, checks and code rules: [Contributing](docs/contributing.en.md).
 
 ---
 
 ## License
 
-This project is open-source and licensed under the [MIT License](LICENSE).
+This project is open source and licensed under the [MIT License](LICENSE).

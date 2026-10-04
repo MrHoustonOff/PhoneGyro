@@ -75,10 +75,16 @@ export function backendStub({ fontScale } = {}) {
   window.runtime = new Proxy({
     EventsOn(n, cb) { (reg[n] = reg[n] || []).push(cb); return noop; },
     EventsOnMultiple(n, cb) { (reg[n] = reg[n] || []).push(cb); return noop; },
+    EventsOff(n, cb) {
+      if (!reg[n]) return;
+      if (!cb) { reg[n] = []; return; }
+      reg[n] = reg[n].filter((f) => f !== cb);
+    },
   }, { get: (t, k) => (k in t ? t[k] : noop) });
   const emit = (n, d) => (reg[n] || []).forEach(cb => { try { cb(d); } catch (e) { window.__bench.errors.push(String(e && e.stack || e)); } });
   window.__emit = emit;
   window.__STATE = STATE;
+  window.__SETTINGS = SETTINGS;
   const dsu = (scen, t) => scen === 'dsu' ? [
     { address: '127.0.0.1:50001', ip: '127.0.0.1', port: 50001, lastSeenMs: t % 1000, active: true, connectedAtMs: 1, cemuBias: [Math.sin(t) * 0.01, 0, 0], cemuSamples: t | 0, cemuGuard: true, process: 'Cemu', pid: 42 },
     { address: '127.0.0.1:50002', ip: '127.0.0.1', port: 50002, lastSeenMs: (t * 7) % 1000, active: true, connectedAtMs: 1, cemuBias: null, cemuSamples: 0, cemuGuard: false, process: 'PadTest', pid: 43 },
@@ -97,17 +103,23 @@ export function backendStub({ fontScale } = {}) {
   window.__stateAt = stateAt;
   const results = {
     GetState: () => stateAt('offline', 0),
-    GetAppSettings: () => SETTINGS, GetTranslations: (l) => LOCALES[l] || '{}',
+    GetAppSettings: () => window.__SETTINGS || SETTINGS, GetTranslations: (l) => LOCALES[l] || '{}',
     GetLanguages: () => ['ru', 'en'], GetLang: () => 'ru', GetTheme: () => 'dark', GetFontScale: () => SETTINGS.fontScale || 1,
     IsFirstLaunch: () => false, GetHideAuthor: () => false, GetInputMode: () => 'phone',
     GetProfiles: () => STATE.profiles, GetDSUStatus: () => ({ count: 0, clients: [], kicked: [] }),
     GetAppVersion: () => ({ release: '2.0.0', build: '000', channel: 'dev', display: '2.0.0.000-dev' }),
     PendingCemuNotice: () => null, GetResourceStats: () => ({ cpuPercent: 1, ramMb: 50, totalRamMb: 16000, ramPercent: 0.3 }),
-    GetCloseAction: () => 'ask', GetAxisAlignStatus: () => ({}), GetWizardMount: () => null,
+    GetCloseAction: () => 'ask', GetAxisAlignStatus: () => ({ pairs: 8, minPairs: 8, known: true, mapping: ['+X -> Pitch', '+Y -> Yaw', '+Z -> Roll'] }), GetWizardMount: () => ({ status: 'ok', tiltDeg: 1.2, forwardDeg: 0.8, rightDeg: -0.4, checkDeg: 0.1, enabled: true }),
+    StartCapture: () => 'ok',
+    StopCapture: (step) => ({ success: true, vector: [step === 1 ? 1 : 0, step === 0 ? 1 : 0, step === 2 ? 1 : 0], axisIdx: step === 1 ? 0 : step === 2 ? 2 : -1, axisName: step === 1 ? '+X' : step === 2 ? '+Z' : 'Rest', confidence: 0.95, peakSpeed: 120 }),
+    ValidateCalibration: () => ({ success: true, matrix: [[1,0,0],[0,1,0],[0,0,-1]], det: -1.0, pitchAxis: '+X', yawAxis: '+Y', rollAxis: '-Z' }),
+    StartAxisAlign: () => 'ok',
+    PreviewMatrix: () => 'ok', ClearPreview: () => 'ok', ResetAHRS: () => 'ok',
+    SaveProfile: () => 'ok', SetActiveProfile: () => 'ok',
     GetFirewallStatus: () => ({ state: 'allowed', network: 'private' }),
     GetDataDir: () => 'C:/Users/user/AppData/Roaming/phonegyro'.split('/').join(String.fromCharCode(92)),
   };
-  const App = new Proxy({}, { get: (t, k) => (...a) => Promise.resolve(results[k] ? results[k](...a) : null) });
+  const App = new Proxy({}, { get: (t, k) => (...a) => Promise.resolve((k in t ? t[k] : results[k]) ? (k in t ? t[k] : results[k])(...a) : null) });
   window.go = { app: { App, LiveDebugApp: App } };
   window.__benchStart = (scen) => {
     const t0 = performance.now();
@@ -127,9 +139,7 @@ export function backendStub({ fontScale } = {}) {
 // Brings the main window online past the first-connection sheet (page script).
 export const GO_ONLINE = `(async () => {
   const s = __stateAt('rest', 0); s.pitch = 0; s.roll = 0; s.yaw = 0;
-  FirstCenterGate.done.phone = true;
-  __emit('state:change', s); await new Promise(r => setTimeout(r, 200));
-  RecenterManager.close(true); __emit('state:change', s); await new Promise(r => setTimeout(r, 500));
+  __emit('state:change', s); await new Promise(r => setTimeout(r, 700));
 })()`;
 
 // ── Chrome ───────────────────────────────────────────────────────────────────

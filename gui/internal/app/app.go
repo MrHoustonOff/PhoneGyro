@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"mime"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -24,6 +23,7 @@ import (
 	"phonegyro-gui/internal/tray"
 	"phonegyro-gui/internal/usbdev"
 	"phonegyro-gui/internal/version"
+	"phonegyro-gui/internal/winstate"
 
 	"github.com/gorilla/websocket"
 )
@@ -55,18 +55,24 @@ type App struct {
 	toggleMu    sync.Mutex
 	lastToggle  time.Time
 	profilesDir string
+	saveMu      sync.Mutex // serializes writes to settings.json
 	// LiveDebug standalone window WebSocket clients and process handle
 	liveDebugMu      sync.RWMutex
 	liveDebugClients map[*websocket.Conn]struct{}
 	liveDebugSeq     atomic.Uint64
-	liveDebugCmdMu   sync.Mutex
-	liveDebugCmd     *exec.Cmd
+	quatStream       atomic.Bool // ahrs:quat has a listener (SetQuatStream)
 	// Multi-window theme and language synchronization
 	themeMu         sync.RWMutex
 	currentTheme    string
+	debugLogOn      atomic.Bool   // settings.json debugLog (debug.go)
+	debugPanel      atomic.Bool   // settings.json debugPanel
+	debugLog        debugLogState // logs/debug.log
+	hub             debugHub      // debughub.go
+	accent          string        // UI accent colour (settings.json accent), guarded by themeMu
 	currentLang     string
 	firstLaunchDone bool
 	hideAuthor      bool
+	splash          atomic.Bool // play the launch animation
 	// Process resource monitor (CPU / RAM)
 	stopResmon   func()
 	lastResStats atomic.Pointer[map[string]any]
@@ -77,6 +83,7 @@ type App struct {
 	httpPort          int
 	httpsPort         int
 	gyroDeadzoneBits  atomic.Uint64
+	noPopups          atomic.Bool // --no-recenter-popup / --no-popups / --bench
 	stillnessHint     atomic.Bool
 	disconnectAlert   atomic.Bool
 	silenceDisconnect atomic.Bool
@@ -104,14 +111,27 @@ type App struct {
 	// uiHidden: the main window is hidden in the tray (hideWindow/ShowWindow);
 	// the UI-only event streams pause meanwhile (emitStateChange, streamQuat).
 	uiHidden atomic.Bool
-	trayMgr  *tray.Manager
-	// Global Windows Hotkeys
-	hotkeyRecenterEnabled atomic.Bool
-	hotkeyRecenterKeyMu   sync.RWMutex
-	hotkeyRecenterKey     string
+	// uiUnloaded: the hidden window's page was replaced by about:blank (hideWindow);
+	// showOnReady: ShowWindow reloaded it and waits for it to show the window;
+	// windowPlaced: the first page load already put the window in place;
+	// trayGen: bumped by every hide/show, so a stale timer does nothing.
+	uiUnloaded   atomic.Bool
+	showOnReady  atomic.Bool
+	windowPlaced atomic.Bool
+	trayGen      atomic.Uint64
+	trayMgr      *tray.Manager
 	// Input Mode ("phone" vs "usb")
 	inputModeMu sync.RWMutex
 	inputMode   string
+	// The listeners (DSU UDP, HTTP/HTTPS) start once the UI has finished its launch
+	// animation (UIReady), so Windows' firewall prompt does not cover it.
+	netGate     chan struct{}
+	netGateOnce sync.Once
+
+	// Main window placement (winstate): the handle once the window is up, and
+	// the saved placement to restore when it still fits the monitors.
+	winHwnd    uintptr
+	winRestore *winstate.State
 }
 
 // NewApp creates a new App application struct
@@ -131,10 +151,12 @@ func NewApp() *App {
 	profilesDir := filepath.Join(appData, "phonegyro")
 
 	app := &App{
+		netGate:     make(chan struct{}),
 		i18nMgr:     mgr,
 		primaryIP:   primaryIP,
 		profilesDir: profilesDir,
 	}
+	app.update.kick = make(chan struct{}, 1)
 	app.phoneBank = newMotionBank()
 	app.usbBank = newMotionBank()
 	app.applySettings(settings.Defaults())
@@ -178,15 +200,15 @@ func (a *App) logEvent(level, format string, args ...any) {
 func (a *App) startup(ctx context.Context) {
 	a.routeStdLog()
 	a.ctx = ctx
+	a.hubPhase("startup")
 
 	a.trayMgr = tray.New(tray.Callbacks{
-		Status:   a.trayStatus,
-		Show:     a.ShowWindow,
-		Quit:     a.QuitApp,
-		Recenter: a.TriggerRecenterFromHotkey,
+		Status: a.trayStatus,
+		Show:   a.ShowWindow,
+		Quit:   a.QuitApp,
+		Pause:  func() { a.TogglePause() },
 	})
 	a.trayMgr.Start()
-	a.trayMgr.UpdateHotkey(a.hotkeyRecenterEnabled.Load(), a.getHotkeyRecenterKey())
 
 	// 1. Certificate Authority
 	appData := os.Getenv("APPDATA")
@@ -199,8 +221,11 @@ func (a *App) startup(ctx context.Context) {
 	caMgr, err := ca.NewCertificateManager(caDir, lanIPs, nil)
 	if err != nil {
 		fmt.Printf("[-] CA init error: %v\n", err)
+	} else if caMgr.Regenerated != "" {
+		a.logEvent("WARN", "certificate: new root CA (%s); the phone has to install it again", caMgr.Regenerated)
 	}
 	a.caMgr = caMgr
+	a.hubPhase("certificates ready")
 
 	// 2. Cemuhook DSU Server (UDP)
 	macBytes, err := settings.ParseMAC(a.getDSUMAC())
@@ -210,10 +235,7 @@ func (a *App) startup(ctx context.Context) {
 	}
 	dsuSrv := dsu.NewServer(a.dsuPort, macBytes)
 	a.bindDSUCallbacks(dsuSrv)
-	if err := dsuSrv.Start(); err != nil {
-		fmt.Printf("[-] DSU start error: %v\n", err)
-	}
-	a.dsuSrv = dsuSrv
+	a.dsuSrv = dsuSrv // listens after the launch animation (startNetwork)
 
 	// Each bank gets its own aligner (own sensor_frame.json) so a learned
 	// axis mapping never leaks between the phone and a USB device.
@@ -232,11 +254,9 @@ func (a *App) startup(ctx context.Context) {
 
 	// LiveDebug standalone 3D window routes and WebSocket streamer
 	a.serveLiveDebug(srv)
+	a.serveMobileAssets(srv) // the phone page's fonts and textures (mobile_assets.go)
 
 	srv.SetAppVersion(version.Get().Display)
-	if err := srv.Start(); err != nil {
-		fmt.Printf("[-] Server start error: %v\n", err)
-	}
 	srv.SetInputMode(a.GetInputMode())
 	a.srv = srv
 
@@ -251,8 +271,51 @@ func (a *App) startup(ctx context.Context) {
 	go a.watchLinkLoss(ctx)
 	a.startResourceMonitor()
 	go a.watchNetwork()
-	go a.checkForUpdate() // update_check.go; does nothing unless switched on
-	go a.watchFirewall()  // firewall.go
+	a.hubPhase("services up")
+	go a.updateLoop()              // update_check.go; idle unless the check is switched on
+	go a.startNetwork(dsuSrv, srv) // opens the ports after the launch animation, then watches the firewall
+}
+
+// netGateMax is how long the listeners wait for the UI to finish its launch
+// animation; past it they start anyway (a window that never reports must not
+// leave the phone and the emulators without a server).
+const netGateMax = 20 * time.Second
+
+// UIReady is called by the window when its launch animation is over (or right
+// away when there is none). Only then do the servers start listening, so the
+// first-launch Windows Firewall prompt appears over a finished UI.
+func (a *App) UIReady() {
+	a.netGateOnce.Do(func() { close(a.netGate) })
+}
+
+func (a *App) startNetwork(dsuSrv *dsu.Server, srv *server.Server) {
+	select {
+	case <-a.netGate:
+	case <-time.After(netGateMax):
+	}
+	// Before anything listens: with no rule for this exe yet, Windows shows its
+	// own prompt the moment a port opens (firewall.go waits for that answer).
+	prompted := a.firewallPromptExpected()
+	if err := dsuSrv.Start(); err != nil {
+		fmt.Printf("[-] DSU start error: %v\n", err)
+	}
+	a.hubPhase("DSU server up")
+	if err := srv.Start(); err != nil {
+		fmt.Printf("[-] Server start error: %v\n", err)
+	}
+	a.hubPhase("HTTP server up")
+	a.watchFirewall(prompted) // firewall.go
+}
+
+// IsNoPopups returns true if popup suppression is enabled (--no-recenter-popup / --no-popups / --bench).
+func (a *App) IsNoPopups() bool {
+	return a.noPopups.Load()
+}
+
+// SetNoPopups configures popup suppression at runtime.
+func (a *App) SetNoPopups(val bool) {
+	a.noPopups.Store(val)
+	a.emitStateChange()
 }
 
 // shutdown is called when the Wails application terminates
@@ -266,14 +329,6 @@ func (a *App) shutdown(ctx context.Context) {
 		a.stopResmon()
 		a.stopResmon = nil
 	}
-
-	// Terminate child Live Debug process if running
-	a.liveDebugCmdMu.Lock()
-	if a.liveDebugCmd != nil && a.liveDebugCmd.Process != nil {
-		_ = a.liveDebugCmd.Process.Kill()
-		a.liveDebugCmd = nil
-	}
-	a.liveDebugCmdMu.Unlock()
 
 	if a.srv != nil {
 		a.srv.Stop()

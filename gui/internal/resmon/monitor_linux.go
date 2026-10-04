@@ -122,9 +122,11 @@ func (m *linuxMonitor) Sample() Stats {
 	}
 	m.lastWall = now
 
+	rss := m.readRSS()
 	return Stats{
+		CoreRAMBytes:  rss, // the webview on Linux is in-process
 		CPUPercent:    cpuPercent,
-		RAMBytes:      m.readRSS(),
+		RAMBytes:      rss,
 		TotalRAMBytes: m.totalRAM,
 	}
 }

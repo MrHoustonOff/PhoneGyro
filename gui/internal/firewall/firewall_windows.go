@@ -3,16 +3,12 @@ package firewall
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
-	"unsafe"
 
 	ole "github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 )
 
@@ -27,9 +23,6 @@ const (
 	sFalse        = 1          // S_FALSE: COM already initialised on this thread
 	rpcChangeMode = 0x80010106 // RPC_E_CHANGED_MODE: initialised with another model
 )
-
-// ErrCancelled is returned by RequestAllow when the user declines the UAC prompt.
-var ErrCancelled = errors.New("cancelled")
 
 // withPolicy runs fn with the firewall policy object (HNetCfg.FwPolicy2) on a
 // COM-initialised, locked OS thread.
@@ -179,180 +172,4 @@ func Check(exe string) Status {
 		st.State, st.Detail = Unknown, err.Error()
 	}
 	return st
-}
-
-// Allow lets inbound connections to exe through on the networks in use: block
-// rules naming exe stop covering them (a rule left with no network is switched
-// off), and the PhoneGyro allow rule is added or widened. Needs admin rights.
-func Allow(exe string) error {
-	return withPolicy(func(pol *ole.IDispatch) error {
-		active, err := activeProfiles(pol)
-		if err != nil {
-			return err
-		}
-		if active == 0 {
-			return nil // firewall off: nothing to allow
-		}
-		var own *ole.IDispatch
-		err = forEachAppRule(pol, exe, func(r *ole.IDispatch, info rule) error {
-			if !info.inbound {
-				return nil
-			}
-			if info.allow {
-				if own == nil && strProp(r, "Name") == RuleName {
-					r.AddRef()
-					own = r
-				}
-				return nil
-			}
-			if !info.enabled || info.profiles&active == 0 {
-				return nil
-			}
-			profiles := info.profiles
-			if profiles == profilesAll {
-				profiles = profileDomain | profilePrivate | profilePublic
-			}
-			if left := profiles &^ active; left != 0 {
-				_, err := oleutil.PutProperty(r, "Profiles", left)
-				return err
-			}
-			_, err := oleutil.PutProperty(r, "Enabled", false)
-			return err
-		})
-		if err != nil {
-			return err
-		}
-
-		if own != nil {
-			defer own.Release()
-			profiles, _ := intProp(own, "Profiles")
-			if _, err := oleutil.PutProperty(own, "Profiles", profiles|active); err != nil {
-				return err
-			}
-			_, err := oleutil.PutProperty(own, "Enabled", true)
-			return err
-		}
-
-		unk, err := oleutil.CreateObject("HNetCfg.FWRule")
-		if err != nil {
-			return err
-		}
-		defer unk.Release()
-		r, err := unk.QueryInterface(ole.IID_IDispatch)
-		if err != nil {
-			return err
-		}
-		defer r.Release()
-		for _, p := range []struct {
-			name string
-			val  interface{}
-		}{
-			{"Name", RuleName},
-			{"Description", "Lets the phone connect to PhoneGyro over Wi-Fi."},
-			{"ApplicationName", exe},
-			{"Protocol", int32(protoAny)},
-			{"Direction", int32(dirIn)},
-			{"Action", int32(actionAllow)},
-			{"Profiles", active},
-			{"Enabled", true},
-		} {
-			if _, err := oleutil.PutProperty(r, p.name, p.val); err != nil {
-				return fmt.Errorf("%s: %w", p.name, err)
-			}
-		}
-		rv, err := oleutil.GetProperty(pol, "Rules")
-		if err != nil {
-			return err
-		}
-		rules := rv.ToIDispatch()
-		defer rules.Release()
-		_, err = oleutil.CallMethod(rules, "Add", r)
-		return err
-	})
-}
-
-// RunHelper is the elevated side of RequestAllow: main calls it when started
-// with HelperArg, before anything else, and exits with its code.
-func RunHelper() int {
-	exe, err := os.Executable()
-	if err != nil {
-		return 2
-	}
-	if err := Allow(exe); err != nil {
-		return 1
-	}
-	return 0
-}
-
-// shellExecuteInfo is SHELLEXECUTEINFOW.
-type shellExecuteInfo struct {
-	cbSize       uint32
-	fMask        uint32
-	hwnd         uintptr
-	verb         *uint16
-	file         *uint16
-	parameters   *uint16
-	directory    *uint16
-	show         int32
-	instApp      uintptr
-	idList       uintptr
-	class        *uint16
-	keyClass     uintptr
-	hotKey       uint32
-	iconOrMonito uintptr
-	process      windows.Handle
-}
-
-var (
-	procShellExecuteEx   = windows.NewLazySystemDLL("shell32.dll").NewProc("ShellExecuteExW")
-	procForegroundWindow = windows.NewLazySystemDLL("user32.dll").NewProc("GetForegroundWindow")
-)
-
-// RequestAllow runs this exe with HelperArg as administrator (Windows shows
-// the UAC prompt) and waits for it. ErrCancelled if the user says no.
-func RequestAllow() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	const (
-		seeMaskNoCloseProcess = 0x40
-		seeMaskNoAsync        = 0x100
-		swHide                = 0
-	)
-	owner, _, _ := procForegroundWindow.Call() // the UAC prompt comes up over our window
-	info := shellExecuteInfo{
-		fMask:      seeMaskNoCloseProcess | seeMaskNoAsync,
-		hwnd:       owner,
-		verb:       windows.StringToUTF16Ptr("runas"),
-		file:       windows.StringToUTF16Ptr(exe),
-		parameters: windows.StringToUTF16Ptr(HelperArg),
-		show:       swHide,
-	}
-	info.cbSize = uint32(unsafe.Sizeof(info))
-	if ok, _, callErr := procShellExecuteEx.Call(uintptr(unsafe.Pointer(&info))); ok == 0 {
-		if errors.Is(callErr, windows.ERROR_CANCELLED) {
-			return ErrCancelled
-		}
-		return callErr
-	}
-	if info.process == 0 {
-		return errors.New("no process")
-	}
-	defer windows.CloseHandle(info.process)
-	ev, err := windows.WaitForSingleObject(info.process, uint32((60 * time.Second).Milliseconds()))
-	if err != nil {
-		return err
-	}
-	if ev != windows.WAIT_OBJECT_0 {
-		return errors.New("timed out")
-	}
-	var code uint32
-	if err := windows.GetExitCodeProcess(info.process, &code); err != nil {
-		return err
-	}
-	if code != 0 {
-		return fmt.Errorf("exit code %d", code)
-	}
-	return nil
 }

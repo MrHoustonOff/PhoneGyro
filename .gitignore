@@ -35,5 +35,14 @@ tmp/
 .DS_Store
 Thumbs.db
 
-# Internal architecture specs
-docs/internal/
+# Test output
+tools/frontend-bench/out/
+reports/
+**/reports/
+
+# Auto-generated Wails Go bindings
+gui/frontend/wailsjs/go/
+
+# Python
+__pycache__/
+*.pyc

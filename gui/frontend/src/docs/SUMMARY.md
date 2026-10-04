@@ -1,0 +1,16 @@
+# Документация PhoneGyro
+
+- [Быстрый старт](quickstart.ru.md)
+- [Подключение телефона](phone.ru.md)
+  - [Сертификаты и TLS](tls.ru.md)
+- [USB-контроллер](usb.ru.md)
+- [Настройка эмулятора](emulators.ru.md)
+- [Настройки](settings.ru.md)
+- [Трей и память](tray.ru.md)
+- [Обновления](updates.ru.md)
+- [Решение проблем](troubleshooting.ru.md)
+- [Данные и удаление](data.ru.md)
+- [Для разработчиков](dev.ru.md)
+  - [Участие в разработке](contributing.ru.md)
+  - [Как сообщить о проблеме](issues.ru.md)
+  - [Пайплайн движения](motion-pipeline.ru.md)

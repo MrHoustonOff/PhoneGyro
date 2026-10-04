@@ -5,7 +5,9 @@ import "time"
 // Stats represents a snapshot of process resource consumption metrics.
 type Stats struct {
 	CPUPercent    float64 // share of the whole machine, like Task Manager (100 = every core busy)
-	RAMBytes      uint64  // RSS / Working Set memory in bytes
+	RAMBytes      uint64  // private working set on Windows (Task Manager's Memory column), RSS elsewhere
+	CoreRAMBytes  uint64  // of that, PhoneGyro.exe itself (Go)
+	WebRAMBytes   uint64  // of that, the WebView2 processes (the UI)
 	TotalRAMBytes uint64  // Total physical RAM in bytes
 }
 

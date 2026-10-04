@@ -30,7 +30,5 @@
  "gyroSensitivity": 1,
  "minimizeToTray": false,
  "closeAction": "ask",
- "hotkeyRecenterEnabled": true,
- "hotkeyRecenterKey": "Ctrl+Shift+R",
  "inputMode": "phone"
 }

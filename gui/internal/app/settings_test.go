@@ -137,3 +137,46 @@ func TestProfileSlots6_And_SettingsPersistence(t *testing.T) {
 		t.Fatalf("expected reloaded sound volumes to match, got %+v", reloadedVols)
 	}
 }
+
+func TestSaveAppSettings_DoesNotOverwriteThemeAndLang(t *testing.T) {
+	tempDir := t.TempDir()
+	app := NewApp()
+	app.profilesDir = tempDir
+	app.loadSettings()
+
+	// User configures Light theme and English language in the header
+	app.SetTheme("light")
+	app.SetLang("en")
+
+	if app.GetTheme() != "light" || app.GetLang() != "en" {
+		t.Fatalf("expected theme=light, lang=en; got theme=%s, lang=%s", app.GetTheme(), app.GetLang())
+	}
+
+	// Frontend settings screen submits a snapshot with stale dark/ru defaults while tuning sensitivity
+	snapshot := app.settingsSnapshot()
+	snapshot.Theme = "dark" // stale
+	snapshot.Lang = "ru"   // stale
+	snapshot.GyroSensitivity = 1.85
+
+	if _, err := app.SaveAppSettings(snapshot); err != nil {
+		t.Fatalf("SaveAppSettings failed: %v", err)
+	}
+
+	// In-memory theme and lang must remain what user explicitly set
+	if app.GetTheme() != "light" || app.GetLang() != "en" {
+		t.Fatalf("SaveAppSettings overwrote theme/lang: theme=%s, lang=%s", app.GetTheme(), app.GetLang())
+	}
+
+	// Persisted file on restart must also retain light/en
+	appReload := NewApp()
+	appReload.profilesDir = tempDir
+	appReload.loadSettings()
+
+	if appReload.GetTheme() != "light" || appReload.GetLang() != "en" {
+		t.Fatalf("reloaded settings lost theme/lang: theme=%s, lang=%s", appReload.GetTheme(), appReload.GetLang())
+	}
+	if appReload.settingsSnapshot().GyroSensitivity != 1.85 {
+		t.Fatalf("reloaded settings missed sensitivity: got %v", appReload.settingsSnapshot().GyroSensitivity)
+	}
+}
+

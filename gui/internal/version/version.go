@@ -98,6 +98,7 @@ func gitInDir(dir string) (release, build, channel string) {
 	run := func(args ...string) (string, bool) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = dir
+		prepareCmd(cmd)
 		out, err := cmd.Output()
 		if err != nil {
 			return "", false

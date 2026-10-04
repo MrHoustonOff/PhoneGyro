@@ -27,7 +27,7 @@ func (a *App) streamQuat(ctx context.Context) {
 			return
 		case <-ticker.C:
 			bank := a.activeBank()
-			if !bank.hasClient.Load() || a.ctx == nil || a.uiHidden.Load() {
+			if !a.quatStream.Load() || !bank.hasClient.Load() || a.ctx == nil || a.uiHidden.Load() {
 				continue
 			}
 			q := [4]uint64{bank.curAhrsQ0.Load(), bank.curAhrsQ1.Load(), bank.curAhrsQ2.Load(), bank.curAhrsQ3.Load()}
@@ -45,6 +45,10 @@ func (a *App) streamQuat(ctx context.Context) {
 	}
 }
 
+// SetQuatStream switches the ahrs:quat stream on while a screen listens to it
+// (core/bridge.js calls it for the first listener and after the last one).
+func (a *App) SetQuatStream(on bool) { a.quatStream.Store(on) }
+
 // heartbeat sends the state to the UI at 15 Hz (66 ms), drops a phone whose
 // sensors went silent or froze, and keeps the Live Debug cube alive between
 // motion packets.
@@ -60,7 +64,7 @@ func (a *App) heartbeat() {
 				silenceDuration := nowMs - bank.lastMotionRecvTs.Load()
 				frozenDuration := nowMs - bank.lastSensorChangeTs.Load()
 				// Grace period of 2 seconds after initial connection
-				if time.Since(bank.connectedAt) > 2*time.Second {
+				if time.Since(bank.connectedSince()) > 2*time.Second {
 					if silenceDuration > 2000 || frozenDuration > 2000 {
 						a.srv.DisconnectAllClients()
 					}
@@ -106,7 +110,7 @@ func (a *App) watchLinkLoss(ctx context.Context) {
 			kind, total, merged, lost := bank.loss.Snapshot()
 			active := bank.hasClient.Load() && !a.isPaused.Load()
 			var connectedFor time.Duration
-			if at := bank.connectedAt; !at.IsZero() {
+			if at := bank.connectedSince(); !at.IsZero() {
 				connectedFor = now.Sub(at)
 			}
 			if reason, ok := alarm.Check(now, active, connectedFor, kind, total, merged, lost); ok {
@@ -122,6 +126,9 @@ func (a *App) watchLinkLoss(ctx context.Context) {
 // startResourceMonitor samples the process CPU / RAM for the UI.
 func (a *App) startResourceMonitor() {
 	a.stopResmon = resmon.RunLoop(1500*time.Millisecond, func(s resmon.Stats) {
+		if a.uiHidden.Load() || a.ctx == nil {
+			return
+		}
 		ramPercent := 0.0
 		if s.TotalRAMBytes > 0 {
 			ramPercent = (float64(s.RAMBytes) / float64(s.TotalRAMBytes)) * 100.0
@@ -129,13 +136,13 @@ func (a *App) startResourceMonitor() {
 		statsPayload := map[string]any{
 			"cpuPercent": s.CPUPercent,
 			"ramMb":      float64(s.RAMBytes) / (1024 * 1024),
+			"coreRamMb":  float64(s.CoreRAMBytes) / (1024 * 1024),
+			"webRamMb":   float64(s.WebRAMBytes) / (1024 * 1024),
 			"totalRamMb": float64(s.TotalRAMBytes) / (1024 * 1024),
 			"ramPercent": ramPercent,
 		}
 		a.lastResStats.Store(&statsPayload)
-		if a.ctx != nil {
-			wailsRuntime.EventsEmit(a.ctx, "resource-stats", statsPayload)
-		}
+		wailsRuntime.EventsEmit(a.ctx, "resource-stats", statsPayload)
 	})
 }
 

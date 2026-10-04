@@ -45,19 +45,22 @@ func TestLoadMissingFieldsKeepDefaults(t *testing.T) {
 		t.Fatal("not found")
 	}
 	d := Defaults()
-	if !s.CemuDriftGuard || !s.SilenceDisconnect || !s.StillnessHint || !s.DisconnectAlert || !s.HotkeyRecenterEnabled {
+	if !s.CemuDriftGuard || !s.SilenceDisconnect || !s.StillnessHint || !s.DisconnectAlert {
 		t.Fatalf("on-by-default switches came back off: %+v", s)
 	}
 	if s.GyroDeadband != d.GyroDeadband || s.GyroDeadbandUsb != d.GyroDeadbandUsb || s.GyroSensitivity != 1 {
 		t.Fatalf("filter defaults: %+v", s)
 	}
-	if s.CloseAction != "ask" || s.MinimizeToTray || s.InputMode != "phone" || s.HotkeyRecenterKey != DefaultHotkey {
+	if s.CloseAction != "ask" || s.MinimizeToTray || s.InputMode != "phone" {
 		t.Fatalf("window/input defaults: %+v", s)
 	}
 	// As always: a missing activeSlot reads as slot 0 (profiles.json has the
 	// real active slot and is loaded after the settings).
 	if s.ActiveSlot != 0 {
 		t.Fatalf("activeSlot of a file without the field: got %d, want 0", s.ActiveSlot)
+	}
+	if s.SoundVolumes["intro"] != 1 {
+		t.Fatalf("intro default: got %d, want 1", s.SoundVolumes["intro"])
 	}
 }
 
@@ -83,7 +86,7 @@ func TestLoadInvalidValues(t *testing.T) {
 	s, _ := Load(write(t, `{"theme":"pink","lang":"de","dsuPort":80,"httpPort":70000,
 		"dsuMac":"nope","fontScale":5,"soundVolume":9,"gyroSensitivity":-1,
 		"closeAction":"explode","activeSlot":7,"inputMode":"bluetooth",
-		"soundVolumes":{"connect":9,"dsu":-2,"unknown":1}}`))
+		"soundVolumes":{"connect":9,"dsu":-2,"intro":7,"unknown":1}}`))
 	d := Defaults()
 	if s.Theme != d.Theme || s.Lang != d.Lang || s.DSUPort != d.DSUPort || s.HTTPPort != d.HTTPPort {
 		t.Fatalf("theme/lang/ports: %+v", s)
@@ -94,8 +97,12 @@ func TestLoadInvalidValues(t *testing.T) {
 	if s.FontScale != 1 || s.SoundVolume != 1 || s.GyroSensitivity != 1 || s.CloseAction != "ask" || s.ActiveSlot != -1 || s.InputMode != "phone" {
 		t.Fatalf("clamped values: %+v", s)
 	}
-	if s.SoundVolumes["connect"] != MaxVolume || s.SoundVolumes["dsu"] != 0 || s.SoundVolumes["goal"] != 1 {
+	if s.SoundVolumes["connect"] != MaxVolume || s.SoundVolumes["dsu"] != 0 || s.SoundVolumes["goal"] != 1 || s.SoundVolumes["intro"] != MaxVolume {
 		t.Fatalf("volumes: %+v", s.SoundVolumes)
+	}
+	sLow, _ := Load(write(t, `{"soundVolumes":{"intro":-5}}`))
+	if sLow.SoundVolumes["intro"] != 0 {
+		t.Fatalf("intro lower bound: got %d, want 0", sLow.SoundVolumes["intro"])
 	}
 	if _, ok := s.SoundVolumes["unknown"]; ok {
 		t.Fatal("unknown sound kept")
@@ -112,7 +119,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 	s.CemuDriftGuard, s.CemuNoticeHidden, s.SilenceDisconnect = false, true, false
 	s.GyroDeadband, s.GyroDeadbandUsb, s.GyroSensitivity = 0, 0.75, 1.5
 	s.CloseAction, s.MinimizeToTray = "minimize", true
-	s.HotkeyRecenterKey, s.InputMode = "Ctrl+Alt+C", "usb"
+	s.InputMode = "usb"
 	s.SoundVolumes["dsu"] = 3
 	if err := Save(dir, s); err != nil {
 		t.Fatal(err)

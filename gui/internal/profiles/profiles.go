@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"phonegyro-gui/internal/fsutil"
 	"phonegyro-gui/internal/motion"
 )
 
@@ -196,5 +197,5 @@ func Save(dir string, f File) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, FileName), data, 0644)
+	return fsutil.WriteFileAtomic(filepath.Join(dir, FileName), data, 0644)
 }

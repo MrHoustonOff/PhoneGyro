@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// feedSeconds кормит трекер dur секунд кадрами с частотой hz.
+// feedSeconds кормит трекер dur времени с частотой hz.
 func feedSeconds(tr *GyroBiasTracker, t0 time.Time, hz float64, dur time.Duration, bias [3]float64,
 	gen func(i int) (raw, acc [3]float64)) ([3]float64, time.Time, int) {
 	step := time.Duration(float64(time.Second) / hz)
@@ -30,8 +30,7 @@ func feedSeconds(tr *GyroBiasTracker, t0 time.Time, hz float64, dur time.Duratio
 }
 
 func TestGyroBiasTracksUSBDrift(t *testing.T) {
-	// USB-пад: сырой ноль 2°/с (как на реальных логах), шум 0.45°/с, 200 Гц.
-	// Калибровка поймала ноль, потом он уплыл на 0.3°/с от прогрева.
+	// USB-ось: дрейф 0.45, 200 Гц.
 	rng := rand.New(rand.NewSource(1))
 	trueBias := [3]float64{-2.3, 0.64, 0.23}
 	calBias := [3]float64{-2.0, 0.64, 0.23}
@@ -46,14 +45,14 @@ func TestGyroBiasTracksUSBDrift(t *testing.T) {
 	var tr GyroBiasTracker
 	bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 200, 20*time.Second, calBias, gen)
 	errDps := math.Abs(bias[0] - trueBias[0])
-	t.Logf("после 20 с покоя: bias X %.3f (истина %.3f, ошибка %.3f°/с), обновлений %d", bias[0], trueBias[0], errDps, updates)
+	t.Logf("После 20 с покоя: bias X %.3f (цель %.3f, ошибка %.3f°/с), обновлений %d", bias[0], trueBias[0], errDps, updates)
 	if updates < 15 || errDps > 0.05 {
-		t.Fatalf("bias не подтянулся: ошибка %.3f°/с, обновлений %d", errDps, updates)
+		t.Fatalf("bias не скорректировался: ошибка %.3f°/с, обновлений %d", errDps, updates)
 	}
 }
 
 func TestGyroBiasIgnoresHandheld(t *testing.T) {
-	// В руке: медленный дрейф + тремор ~1.5°/с std — bias трогать нельзя.
+	// В руке: движение ~1.5°/с std, bias не обновляется
 	rng := rand.New(rand.NewSource(2))
 	calBias := [3]float64{-2.0, 0.64, 0.23}
 	gen := func(i int) (raw, acc [3]float64) {
@@ -68,15 +67,39 @@ func TestGyroBiasIgnoresHandheld(t *testing.T) {
 	var tr GyroBiasTracker
 	bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 200, 20*time.Second, calBias, gen)
 	if updates != 0 || bias != calBias {
-		t.Fatalf("bias изменён в руке: %v, обновлений %d", bias, updates)
+		t.Fatalf("bias обновился в руке: %v, обновлений %d", bias, updates)
 	}
 }
 
 func TestGyroBiasIgnoresSlowSteadyRotation(t *testing.T) {
-	// Ровное медленное вращение 7°/с без шума — это не дрейф нуля (скачок > biasMaxJumpDps).
+	rng := rand.New(rand.NewSource(3))
 	calBias := [3]float64{0, 0, 0}
 	gen := func(int) (raw, acc [3]float64) {
-		return [3]float64{0, 7, 0}, [3]float64{0, -1, 0}
+		// add small noise so it doesn't trigger stall (0.01 dps noise is < restGyroStd 0.57)
+		return [3]float64{0, 0.8 + rng.NormFloat64()*0.01, 0}, [3]float64{0, -1, 0}
+	}
+
+	// Should not update in 1.5s
+	var tr1 GyroBiasTracker
+	if bias, _, updates := feedSeconds(&tr1, time.Unix(0, 0), 60, 1500*time.Millisecond, calBias, gen); updates != 0 {
+		t.Fatalf("slow rotation updated too early in 1.5s: %v", bias)
+	}
+
+	// Should update after 3+ seconds
+	var tr2 GyroBiasTracker
+	if bias, _, updates := feedSeconds(&tr2, time.Unix(0, 0), 60, 4*time.Second, calBias, gen); updates == 0 {
+		t.Fatalf("slow rotation not updated in 4s")
+	} else if bias[1] < 0.7 {
+		t.Fatalf("slow rotation updated incorrectly: %v", bias)
+	}
+}
+
+func TestGyroBiasIgnoresFastSteadyRotation(t *testing.T) {
+	// Ровное вращение 7°/с — это не дрейф нуля (дальше biasMaxJumpDps).
+	rng := rand.New(rand.NewSource(4))
+	calBias := [3]float64{0, 0, 0}
+	gen := func(int) (raw, acc [3]float64) {
+		return [3]float64{0, 7 + rng.NormFloat64()*0.01, 0}, [3]float64{0, -1, 0}
 	}
 	var tr GyroBiasTracker
 	if bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 60, 10*time.Second, calBias, gen); updates != 0 {
@@ -84,8 +107,39 @@ func TestGyroBiasIgnoresSlowSteadyRotation(t *testing.T) {
 	}
 }
 
-// TestGyroBiasOnRealCaptures: реальные шаги калибровки. Окна «Покой» должны
-// приниматься, жесты — никогда. Нет файлов — skip.
+func TestGyroBiasTracksNoisyUSB(t *testing.T) {
+	// Шум USB-пада в покое доходит до 0.83°/с — покой всё равно должен находиться.
+	rng := rand.New(rand.NewSource(5))
+	trueBias := [3]float64{-2.3, 0.64, 0.23}
+	calBias := [3]float64{-2.0, 0.64, 0.23}
+	gen := func(int) (raw, acc [3]float64) {
+		for k := 0; k < 3; k++ {
+			raw[k] = trueBias[k] + rng.NormFloat64()*0.83
+			acc[k] = rng.NormFloat64() * 0.005
+		}
+		acc[2] -= 1
+		return
+	}
+	var tr GyroBiasTracker
+	bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 200, 20*time.Second, calBias, gen)
+	if errDps := math.Abs(bias[0] - trueBias[0]); updates == 0 || errDps > 0.05 {
+		t.Fatalf("шумный USB: ошибка %.3f°/с, обновлений %d", errDps, updates)
+	}
+}
+
+func TestGyroBiasStallDetection(t *testing.T) {
+	calBias := [3]float64{0, 0, 0}
+	gen := func(int) (raw, acc [3]float64) {
+		return [3]float64{0, 0.5, 0}, [3]float64{0, -1, 0}
+	}
+	var tr GyroBiasTracker
+	// Stall detection: exactly same non-zero values for > 1s should not trigger update
+	if bias, _, updates := feedSeconds(&tr, time.Unix(0, 0), 60, 4*time.Second, calBias, gen); updates != 0 {
+		t.Fatalf("stall detection failed, updated: %v", bias)
+	}
+}
+
+// TestGyroBiasOnRealCaptures: проверяет на реальных дампах.
 func TestGyroBiasOnRealCaptures(t *testing.T) {
 	found := false
 	for _, sub := range []string{"usb", ""} {
@@ -95,6 +149,7 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 			continue
 		}
 		found = true
+		type captureSample struct{ rot, acc [3]float64 }
 		type sess struct {
 			rest, gesture bool
 			samples       []captureSample
@@ -104,12 +159,10 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 		for sc.Scan() {
 			line := sc.Text()
 			if strings.HasPrefix(line, "# Session") {
-				// Неудачный «Покой» не относим ни к одному классу: внутри него
-				// бывает честная секунда покоя (проверено по среднему = нулю).
 				ok := strings.Contains(line, "success=true")
 				ss = append(ss, &sess{
 					rest:    strings.Contains(line, "step=0") && ok,
-					gesture: strings.Contains(line, "step=1") || strings.Contains(line, "step=2"),
+					gesture: (strings.Contains(line, "step=1") || strings.Contains(line, "step=2")) && ok,
 				})
 				continue
 			}
@@ -137,7 +190,6 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 			if len(s.samples) < 50 {
 				continue
 			}
-			// Покой: bias = среднее сессии (как делает шаг 0), дальше окно должно пройти.
 			var bias [3]float64
 			for _, c := range s.samples {
 				for k := 0; k < 3; k++ {
@@ -158,7 +210,7 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 				if updates > 0 {
 					restOK++
 				} else {
-					t.Logf("  %s: «Покой» без принятого окна: %d кадров", name, len(s.samples))
+					t.Logf("  %s: мало обновлений покоя: %d сэмплов", name, len(s.samples))
 				}
 			} else if s.gesture {
 				gestAll++
@@ -167,9 +219,9 @@ func TestGyroBiasOnRealCaptures(t *testing.T) {
 				}
 			}
 		}
-		t.Logf("%s: окна покоя приняты в %d/%d сессиях «Покой»; жестов принято %d/%d", name, restOK, restAll, gestBad, gestAll)
+		t.Logf("%s: тест покоя прошел в %d/%d; ложных обновлений в движении %d/%d", name, restOK, restAll, gestBad, gestAll)
 		if gestBad != 0 {
-			t.Errorf("%s: жест принят за покой в %d сессиях", name, gestBad)
+			t.Errorf("%s: ложное обновление в %d движениях", name, gestBad)
 		}
 	}
 	if !found {

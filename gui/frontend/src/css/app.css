@@ -1,0 +1,2718 @@
+/* App styles on top of the design system (pg.css is generated, do not edit it).
+   Only what the design system does not cover: the window frame, app-specific
+   pieces built from its classes, and the launch/entrance motion. */
+
+/* ── Window ─────────────────────────────────────────────────────────────── */
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--bg); }
+body { user-select: none; -webkit-user-select: none; }
+#shell { position: fixed; inset: 0; }
+/* The ring tile drifts slower than the design's 120 s: calmer (owner's call).
+   It moves ~3 px/s, 0.05 px a frame: drawn 60 times a second it made the GPU
+   recompose the whole window every frame for an invisible shift. 20 steps a
+   second (0.16 px each, 0.5 px at 300 % zoom) look the same and recompose a
+   third as often (measured: 60 -> 15-20 full-window frames/s at idle). */
+.pg-drift::before { animation-duration: 192s; animation-timing-function: steps(3840); }
+/* Pause drift throughout the entire splash and entrance animation to keep D3D11 compositor 100% free */
+html.is-splash .pg-drift::before {
+  animation-play-state: paused !important;
+}
+/* Rule 0: Pause drift animation when window is blurred or document is hidden to save GPU */
+html.is-hidden .pg-drift::before,
+html.is-blur .pg-drift::before {
+  animation-play-state: paused !important;
+}
+
+.app-logo { display: block; flex: none; }
+.pg-wc .wc-restore, .is-max .pg-wc .wc-max { display: none; }
+.is-max .pg-wc .wc-restore { display: block; }
+
+.app-grow { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-center { text-align: center; }
+.app-sub { color: var(--ink-2); text-align: center; }
+.app-row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.app-row-flat { padding: 0; min-height: 0; border: 0; }
+.app-wide { min-width: 15rem; }
+
+/* ── Connect ────────────────────────────────────────────────────────────── */
+.pg-conn .app-sub { margin-top: -0.5rem; }
+.app-qr { display: block; image-rendering: pixelated; border-radius: 0.125rem; }
+.app-qr:not([src]) { visibility: hidden; }
+.pg-qr .app-qr { background: #fff; }
+.app-dsu-slot { width: 100%; display: flex; flex-direction: column; }
+.app-chip-lg { width: 4rem; height: 4rem; }
+.app-chip-lg svg { width: 1.875rem; height: 1.875rem; }
+.app-scan::before { animation: app-blink 1.2s ease-in-out infinite; }
+@keyframes app-blink { 50% { opacity: .25; } }
+
+/* DSU clients inside the notice (the program behind each client). */
+.app-dsu { width: 100%; }
+.app-dsu__body { flex: 1; min-width: 0; }
+.app-dsu__list { display: flex; flex-direction: column; gap: 0.25rem; margin-top: 0.5rem; }
+.app-dsu__list:empty { display: none; }
+.app-client { display: flex; align-items: center; gap: var(--space-2); min-height: 1.875rem; padding: 0 0.25rem 0 0.625rem;
+  border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--line-subtle); }
+.app-client.is-app { cursor: pointer; }
+.app-client.is-app:hover { border-color: var(--line); background: var(--surface-hover); }
+.app-client__dot { width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: var(--accent); flex: none; }
+.app-client.is-idle .app-client__dot { background: var(--warn); }
+.app-client.is-off { opacity: .6; }
+.app-client.is-off .app-client__dot { background: var(--ink-3); }
+.app-client__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 0.7812rem/1 var(--font-mono); }
+.app-client .pg-badge { height: 1.125rem; font-size: 0.625rem; padding: 0 0.375rem; }
+.app-client .pg-btn-icon { width: 1.5rem; height: 1.5rem; }
+.app-client .pg-btn-icon svg { width: 0.75rem; height: 0.75rem; }
+
+/* Device dashboard (phone online or USB connected). */
+.app-devcard { display: flex; flex-direction: column; gap: 0.375rem; padding: 1.125rem 1.375rem; }
+.pg-dev__chip .app-ico-usb, #dev-chip.is-usb .app-ico-phone { display: none; }
+#dev-chip.is-usb .app-ico-usb { display: block; }
+.app-dialwrap { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+.app-devfoot { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem 0.75rem; margin-top: 0.25rem; flex-wrap: wrap; }
+.app-linkbadge { height: 1.75rem; }
+#btn-recenter { margin-top: 0.5rem; }
+.app-pause { letter-spacing: .14em; }
+.app-pause.is-paused { background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--surface); border-color: var(--warn-line); color: var(--warn-text); }
+
+/* ── Calibration hint banners ───────────────────────────────────────────────
+   Two reusable variants:
+   --soft  : inline below devfoot, orange warning, closeable, appears on stillness.
+   --urgent: full-width card below devcard, red alert, new-device first calibration. */
+.app-hint { display: flex; align-items: flex-start; gap: 0.625rem;
+  padding: 0.625rem 0.75rem; border-radius: var(--radius-md);
+  font-size: 0.8125rem; line-height: 1.45; }
+.app-hint svg { flex: none; width: 1rem; height: 1rem; stroke: currentColor;
+  fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; margin-top: 0.125rem; }
+.app-hint__close { flex: none; margin-left: auto; display: flex; padding: 0.125rem;
+  background: none; border: none; cursor: pointer; color: inherit; opacity: .6; border-radius: var(--radius-sm); }
+.app-hint__close:hover { opacity: 1; background: var(--surface-hover); }
+.app-hint__close svg { width: 0.875rem; height: 0.875rem; margin: 0; }
+
+/* Soft: inline inside devcard, warm amber */
+.app-hint--soft { background: var(--warn-soft); color: var(--warn-text); border: 1px solid var(--warn-line); }
+
+/* Urgent: bold red card, spans left column, outside devcard */
+.app-hint--urgent { flex-direction: column; gap: 0.5rem; position: relative;
+  background: var(--danger-soft); color: var(--danger-text);
+  border: 0.0938rem solid var(--danger-line); padding: 0.875rem 1rem; }
+.app-hint--urgent .app-hint__body { display: flex; align-items: flex-start; gap: 0.75rem; width: 100%; }
+.app-hint--urgent .app-hint__body svg { width: 1.25rem; height: 1.25rem; margin-top: 0.125rem; }
+.app-hint--urgent .app-hint__title { font-weight: 700; font-size: 0.875rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 0.25rem; }
+.app-hint--urgent .app-hint__desc { font-size: 0.8rem; opacity: .9; line-height: 1.5; }
+.app-hint--urgent .app-hint__close { position: absolute; top: 0.625rem; right: 0.625rem; }
+.app-hint__action { align-self: flex-start; margin-left: 2rem; }
+/* The 20 s countdown: a thin line along the bottom edge that runs out. */
+.app-hint__bar { position: absolute; left: 0; right: 0; bottom: 0; height: 0.1875rem; border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: var(--danger-line); transform-origin: left; animation: app-hint-bar 20s linear forwards; }
+@keyframes app-hint-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Calibrate button: pulsing accent when urgent calibration needed */
+#btn-calibrate.is-urgent { border-color: var(--danger-line); color: var(--danger-text);
+  background: linear-gradient(var(--danger-soft), var(--danger-soft)), var(--surface); }
+@keyframes app-cal-pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--danger-line); } 50% { box-shadow: 0 0 0 0.1875rem var(--danger-soft); } }
+#btn-calibrate.is-urgent { animation: app-cal-pulse 2s ease-in-out infinite; }
+/* Soft hint: the same button, amber and calmer. */
+#btn-calibrate.is-hint { border-color: var(--warn-line); color: var(--warn-text);
+  background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--surface); animation: app-cal-hint 2.4s ease-in-out infinite; }
+@keyframes app-cal-hint { 0%, 100% { box-shadow: 0 0 0 0 var(--warn-line); } 50% { box-shadow: 0 0 0 0.1875rem var(--warn-soft); } }
+/* New device: the device card glows red while the alert is up. */
+.app-devcard.is-alert { border-color: var(--danger-line); animation: app-card-alert 2.4s ease-in-out infinite; }
+@keyframes app-card-alert { 0%, 100% { box-shadow: 0 0 0 0.0625rem var(--danger-line), 0 0 1.5rem var(--danger-soft); }
+  50% { box-shadow: 0 0 0 0.1875rem var(--danger-line), 0 0 2.5rem var(--danger-soft); } }
+@media (prefers-reduced-motion: reduce) { #btn-calibrate.is-hint, #btn-calibrate.is-urgent, .app-devcard.is-alert, .app-hint__bar { animation: none; } }
+
+/* Profiles: the current one is a button that opens the list. */
+.app-profiles { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem 1.125rem; }
+.app-profwrap { position: relative; }
+.app-profbtn { width: 100%; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.app-profbtn:hover { border-color: var(--line-control); }
+.app-profbtn .chev { transition: transform .15s; }
+.app-profbtn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.app-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + 0.375rem); z-index: 20; max-height: 18.75rem; overflow: auto;
+  padding: 0.375rem; border-radius: var(--radius-lg); background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--line); box-shadow: var(--shadow-pop); }
+.app-menu__item { display: flex; align-items: center; gap: 0.625rem; width: 100%; padding: 0.5rem 0.5rem 0.5rem 0.625rem; border: 1px solid transparent;
+  border-radius: var(--radius-md); background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.app-menu__item:hover { background: var(--surface-hover); }
+.app-menu__item.is-active { background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface); border-color: var(--accent-line); }
+.app-menu__item .pg-btn-icon { width: 1.625rem; height: 1.625rem; flex: none; }
+.app-menu__item .pg-btn-icon:hover { color: var(--danger-text); background: var(--danger-soft); }
+.app-menu__item .pg-btn-icon svg { width: 0.75rem; height: 0.75rem; }
+/* Profile icon chip — shown inside active-profile button and dropdown items */
+.app-menu__icon { flex: none; display: flex; align-items: center; justify-content: center;
+  width: 1.75rem; height: 1.75rem; border-radius: var(--radius-sm);
+  background: var(--surface-hover); border: 1px solid var(--line-subtle); }
+.app-menu__icon svg { width: 1rem; height: 1rem; stroke: var(--ink-2); fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* Empty slot rows: dimmed, not interactive */
+
+.app-menu__empty { padding: 0.625rem; color: var(--ink-2); font-size: 0.8125rem; }
+.pg-profile__t, .pg-profile__s { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Initial setup ──────────────────────────────────────────────────────── */
+.app-wiz { position: relative; flex: 1; }
+/* The wizard fits the window (design: pg-fit): the screenshot shrinks, nothing scrolls. */
+#screen-setup { height: 100%; min-height: 0; padding-bottom: 0.375rem; }
+#screen-setup .app-wiz { min-height: 0; overflow: hidden; }
+.app-wiz-ios .pg-wiz__grid { min-height: 0; }
+.app-wiz-ios .pg-wiz__shot { height: 100%; }
+.app-wiz-close { position: absolute; top: 0.875rem; right: 0.875rem; z-index: 2; }
+.app-wiz-title { font-size: 2.125rem; line-height: 2.375rem; margin-top: 0.5rem; text-align: center; }
+.app-wiz-pick, .app-wiz-android { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; text-align: center; }
+.app-wiz-ios { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.app-platforms { display: grid; grid-template-columns: repeat(2, minmax(0, 15rem)); gap: 1rem; margin-top: 0.5rem; }
+.app-platform { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 1.5rem 1rem; cursor: pointer; font: inherit; color: var(--ink); transition: border-color .15s, background .15s; }
+.app-platform:hover { border-color: var(--accent-line); background: var(--surface-hover) var(--tex-grain); }
+.app-platform svg { width: 2.5rem; height: 2.5rem; stroke: var(--accent-text); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.app-wiz-text { font-size: 1.1875rem; line-height: 1.8125rem; font-weight: 500; max-width: 40rem; }
+.app-wiz-android .app-wiz-text { font-size: 1rem; line-height: 1.5625rem; }
+#wiz-step1-extra { display: flex; flex-direction: column; gap: 0.875rem; }
+.app-qr-sm { align-self: flex-start; padding: 0.75rem; border-radius: var(--radius-lg); }
+#wiz-step1-extra .pg-url { align-self: flex-start; }
+.app-stepbadge { align-self: flex-start; height: auto; min-height: 1.75rem; padding: 0.25rem 0.75rem; white-space: normal; line-height: 1.5; }
+.app-wiz-back { min-width: 7.5rem; min-height: 2.75rem; }
+.app-wiz-next { min-width: 18.75rem; min-height: 3rem; }
+.pg-disclosure__body p { margin: 0 0 0.5rem; }
+
+/* ── Modal, toast ───────────────────────────────────────────────────────── */
+.app-overlay { position: fixed; inset: 0; z-index: 60; animation: app-fade .15s ease-out; }
+.app-overlay .pg-modal { max-width: 28.75rem; animation: app-pop .18s cubic-bezier(.2,.8,.2,1); }
+.app-overlay .pg-modal__foot { justify-content: flex-end; }
+.app-overlay .pg-modal { position: relative; overflow: hidden; }
+.app-overlay .pg-modal.pg-rings-corner::after { right: auto; top: auto; left: -4.375rem; bottom: -4.375rem; }
+.app-overlay .pg-modal > * { position: relative; z-index: 1; }
+@keyframes app-fade { from { opacity: 0; } }
+@keyframes app-pop { from { opacity: 0; transform: translateY(0.5rem) scale(.98); } }
+
+.app-toast { --k: var(--pg-zoom, 1); /* in <body>, outside the zoomed #shell (see .app-tip) */
+  position: fixed; left: 50%; bottom: calc(3.5rem * var(--k)); z-index: 70; transform: translateX(-50%); display: inline-flex; align-items: center;
+  height: calc(2.375rem * var(--k)); padding: 0 calc(1.125rem * var(--k)); border-radius: var(--radius-pill); background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--line); box-shadow: var(--shadow-pop); font-weight: 600; font-size: calc(0.8125rem * var(--k)); line-height: 1; font-family: var(--font-sans); color: var(--ink);
+  white-space: nowrap; transition: opacity .18s, transform .18s; }
+.app-toast.is-off { opacity: 0; transform: translateX(-50%) translateY(0.5rem); }
+
+/* ── Footer bits ────────────────────────────────────────────────────────── */
+
+/* Conditional separator: only visible when the DEV badge is shown. */
+
+.app-gh { display: inline-flex; width: 0.875rem; height: 0.875rem; }
+
+/* Titlebar: version + channel badge, no logo or app name. */
+
+/* ── Launch animation (design: Splash) ─────────────────────────────────────
+   Two-stage GPU handover:
+   1. The central card, halo, and text gently expand (+8–12%) and dissolve.
+      Defensive overrides ensure surface grain, border, and drop-shadow stay 100% intact.
+   2. Splash overlay dissolves smoothly over the app, and islands drop in.
+   Compositor-only: transforms and opacity without layout thrashing or blur. */
+html:not(.is-splash) #splash { display: none; }
+.app-splash { position: fixed; inset: 0; z-index: 100; width: auto; height: auto; --sw: 100%; --sh: 100%;
+  background: var(--bg);
+  contain: layout;
+  transition: opacity .5s ease-out; }
+.app-splash.is-app { opacity: 0; pointer-events: none; }
+.app-splash .pg-splash__mark { object-fit: contain; }
+
+/* Backing rings: the card's unroll repeated across the whole ground, much fainter
+   and counter-turning, so the centre stays the focus. A canvas the size of the
+   window, drawn by js/splash-rings.js (animated SVG was repainted every frame). */
+.app-splash__bg { position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; transition: opacity .45s ease-out; z-index: 1; }
+.app-splash.is-grown .app-splash__bg,
+.app-splash.is-app .app-splash__bg { opacity: 0; }
+
+/* Central card: stays crisp with round surface, drop shadow, and border.
+   Initial state: completely invisible and scaled down so it emerges smoothly. */
+.app-splash .pg-splash__win {
+  width: 22.5rem;
+  height: 22.5rem;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.90);
+  z-index: 3;
+}
+
+/* Point 1 & 2: Emerges from opacity 0 and scale 0.90 -> 1.0 (smooth intro),
+   then subtly and noticeably grows scale 1.0 -> 1.05 while waiting for the backend */
+@keyframes app-win-intro-grow {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.90);
+    animation-timing-function: cubic-bezier(.16, 1, .3, 1);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.0);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+.app-splash.is-run .pg-splash__win {
+  animation: app-win-intro-grow 2.25s forwards !important;
+}
+
+/* At handover: Phase 1 — seamless bloom and dissolve into the noisy dark ground */
+@keyframes pg-win-grow {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+}
+.app-splash.is-grown .pg-splash__win,
+.app-splash.is-app .pg-splash__win {
+  animation: pg-win-grow .42s cubic-bezier(.2,.8,.2,1) forwards !important;
+  width: 22.5rem !important;
+  height: 22.5rem !important;
+  border-radius: 50% !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow-pop) !important;
+  background: var(--surface) var(--tex-grain) !important;
+  overflow: visible !important;
+}
+
+/* Inner rings burst outward and dissolve completely within Phase 1 */
+.app-splash.is-grown .pg-splash__rings {
+  transform: scale(2.8) !important;
+  opacity: 0 !important;
+  transition: transform .42s cubic-bezier(.4,0,.2,1), opacity .4s ease-out !important;
+}
+
+/* Central logo & wordmark dissolve gently */
+.app-splash.is-grown .pg-splash__center {
+  opacity: 0 !important;
+  transform: scale(0.96) !important;
+  transition: opacity .3s ease-out, transform .4s cubic-bezier(.2,.8,.2,1) !important;
+}
+
+/* Disable redundant inner texture so it never mismatches or shifts over the app shell rings */
+.app-splash .pg-splash__tex { display: none !important; }
+.app-splash .pg-splash__mark { width: 4rem; height: 4rem; }
+.app-splash .pg-splash__word { font-size: 3.125rem; }
+.app-splash .pg-splash__bar { display: none !important; }
+
+/* Halo behind card: circular tile of Zelda rings.
+   Initial state: completely invisible and scaled down (0.90).
+   Rotates continuously around its axis, emerges from opacity 0, and subtly grows scale 1.0 -> 1.06 */
+.app-splash__halo { position: absolute; left: 50%; top: 50%; width: 28.75rem; height: 28.75rem; margin: -14.375rem 0 0 -14.375rem;
+  border-radius: 50%; background: var(--bg) var(--tex-rings) center / 37.5rem 37.5rem scroll; border: 1px solid var(--line);
+  box-shadow: var(--shadow-card); opacity: 0; scale: .90; pointer-events: none; z-index: 2; }
+
+@keyframes app-halo-intro-grow {
+  0% {
+    opacity: 0;
+    scale: 0.90;
+    animation-timing-function: cubic-bezier(.16, 1, .3, 1);
+  }
+  22% {
+    opacity: 1;
+    scale: 1.0;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    opacity: 1;
+    scale: 1.06;
+  }
+}
+
+@keyframes app-halo-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.app-splash.is-run .app-splash__halo {
+  animation: app-halo-intro-grow 2.25s forwards, app-halo-spin 24s linear infinite;
+}
+
+@keyframes app-halo-grow-out {
+  0% {
+    opacity: 1;
+    scale: 1.06;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.14;
+  }
+}
+.app-splash.is-grown .app-splash__halo,
+.app-splash.is-app .app-splash__halo {
+  opacity: 0;
+  pointer-events: none;
+  animation: app-halo-grow-out .42s cubic-bezier(.2,.8,.2,1) forwards, app-halo-spin 24s linear infinite !important;
+}
+
+/* The app under the opaque splash is not painted during the intro (js/splash.js
+   adds is-warm at 1.9 s): its layers — the 192 s wallpaper alone is the window
+   plus 75rem each way — would otherwise be rasterised and held by the GPU while
+   the rings and letters animate. Warming up before the reveal keeps the reveal
+   from rasterising everything at once. */
+html.is-splash:not(.is-warm) #shell { visibility: hidden; }
+
+/* While splash is playing and until entrance begins, keep shell islands invisible */
+html.is-splash:not(.is-enter) .pg-titlebar,
+html.is-splash:not(.is-enter) .pg-header > *,
+html.is-splash:not(.is-enter) .pg-footer > *,
+html.is-splash:not(.is-enter) .app-screen {
+  opacity: 0 !important;
+}
+
+/* The app enters: islands drop and rise, the screen pops (design: is-app / is-enter). */
+html.is-enter .pg-titlebar { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) both; }
+html.is-enter .pg-header > * { animation: pg-drop .6s cubic-bezier(.2,.8,.2,1) .05s both; }
+html.is-enter .pg-header > *:nth-child(2) { animation-delay: .12s; }
+html.is-enter .pg-footer > * { animation: pg-rise .6s cubic-bezier(.2,.8,.2,1) .2s both; }
+html.is-enter .pg-footer > *:nth-child(2) { animation-delay: .27s; }
+html.is-enter .app-screen:not([hidden]) { animation: pg-pop .7s cubic-bezier(.2,.8,.2,1) .12s both; }
+
+/* ── pg.css keyframe overrides (app.css loads after pg.css → last wins) ────
+   pg-letter: remove filter:blur — it forces repaint+GPU texture upload on
+   every frame for each of the 8+ letter spans at 2560×1440. opacity+transform
+   are compositor-only and give the same "materialise" feel without the cost. */
+@keyframes pg-letter {
+  from { opacity: 0; transform: translateY(.55em); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* pg-bar: replace width animation with transform:scaleX — width triggers
+   layout on every frame; scaleX stays on the compositor layer.
+   The bar has overflow:hidden and border-radius, so visually identical. */
+.pg-splash__bar i { transform-origin: left; transform: scaleX(0); }
+@keyframes pg-bar { to { transform: scaleX(1); } }
+.pg-splash.is-run .pg-splash__bar i {
+  animation: pg-bar 1.1s cubic-bezier(.4,0,.2,1) 1s forwards;
+}
+
+/* Copy button after a copy (ui/copy.js). */
+.pg-btn.is-copied { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+
+
+/* ── Settings ───────────────────────────────────────────────────────────── */
+#screen-settings { padding-top: 0.375rem; }
+/* Hide the browser's spin buttons on number inputs (port fields): they look
+   bad and serve no purpose in a settings form with keyboard / drag editing. */
+input[type="number"] { -webkit-appearance: textfield; appearance: textfield; }
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.app-mac { width: 10.625rem; }
+.app-path { width: 13.125rem; direction: rtl; text-overflow: ellipsis; }
+.app-kbd { margin-right: 0.25rem; }
+.app-check { display: flex; align-items: center; gap: 0.625rem; font-size: 0.875rem; color: var(--ink-2); cursor: pointer; }
+.app-modal-text { color: var(--ink-2); font-size: 0.875rem; line-height: 1.3125rem; }
+.app-modal-text p { margin: 0 0 0.625rem; }
+.app-modal-text b { color: var(--ink); }
+.app-modal-text a { color: var(--accent-text); }
+.app-steps { margin: 0; padding: 0.625rem 0.75rem 0.625rem 1.875rem; border-radius: var(--radius-md); background: var(--info-soft); border: 1px solid var(--info-line); color: var(--ink); }
+.app-overlay .pg-modal__head { padding-right: var(--space-6); }
+.app-modal-link { margin: 0.75rem 0 0 !important; }
+
+/* Modal dialog (openModal): compact width, rings corner, crisp rhythm */
+.app-modal-dialog {
+  display: flex;
+  flex-direction: column;
+  max-width: 27rem;
+  max-height: calc(100vh - 3rem);
+  width: 100%;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden !important;
+  position: relative;
+}
+.app-modal-dialog.pg-rings-corner::after {
+  content: "";
+  position: absolute;
+  right: -3.5rem;
+  top: -3.5rem;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 0.75rem, var(--accent-soft) 0.75rem 0.9375rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  z-index: 0;
+  opacity: 0.65;
+}
+.app-modal-dialog .pg-modal__head {
+  padding: 1.5rem 1.5rem 0.375rem;
+  flex-shrink: 0;
+}
+.app-modal-dialog .pg-modal__title {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.app-modal-dialog .pg-modal__sub {
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  margin-top: 0.375rem;
+  line-height: 1.45;
+}
+.app-modal-dialog .pg-modal__body.app-modal-text {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.app-modal-dialog .app-modal-check {
+  flex-shrink: 0;
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
+.app-modal-dialog .pg-modal__foot {
+  padding: 1rem 1.5rem 1.25rem;
+  justify-content: flex-end;
+  gap: 0.625rem;
+  border-top: 1px solid var(--line-subtle);
+  flex-shrink: 0;
+}
+
+/* ── Notice dialogs (Cemu, firewall): markdown body with callouts ────────────────────────────────────────── */
+.app-modal-dialog--notice {
+  max-width: 34rem;
+  max-height: min(42rem, calc(100vh - 2.5rem));
+}
+.app-modal-dialog--notice .pg-modal__head {
+  padding: 1.375rem 1.5rem 0.5rem;
+}
+.app-modal-dialog--notice .pg-modal__title {
+  font-size: 1.375rem;
+}
+.app-modal-dialog--notice .pg-modal__body.app-modal-text {
+  padding: 0.25rem 1.5rem 0.5rem;
+}
+.app-modal-dialog--notice .app-notice-prose {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.app-modal-dialog--notice .app-notice-prose p {
+  margin: 0 0 0.625rem;
+}
+.app-modal-dialog--notice .app-notice-prose strong,
+.app-modal-dialog--notice .app-notice-prose b {
+  color: var(--ink);
+}
+.app-modal-dialog--notice .app-notice-prose hr {
+  margin: 0.75rem 0;
+  height: 1px;
+  background: var(--line-subtle);
+  border: 0;
+}
+.app-modal-dialog--notice .app-notice-prose .pg-callout {
+  margin: 0.625rem 0 0.875rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-lg);
+}
+.app-modal-dialog--notice .app-notice-prose .pg-callout p {
+  margin: 0;
+}
+.app-modal-dialog--notice .app-notice-prose .pg-callout p + p {
+  margin-top: 0.375rem;
+}
+.app-modal-dialog--notice .app-notice-prose .pg-callout--tip {
+  --nb: var(--good-soft);
+  --cl: var(--good-line);
+  --ct: var(--good-text);
+  background: linear-gradient(var(--good-soft), var(--good-soft)), var(--surface);
+  border-color: var(--good-line);
+}
+.app-modal-dialog--notice .app-notice-prose .pg-callout--danger {
+  --nb: var(--danger-soft);
+  --cl: var(--danger-line);
+  --ct: var(--danger-text);
+  background: linear-gradient(var(--danger-soft), var(--danger-soft)), var(--surface);
+  border-color: var(--danger-line);
+}
+.app-modal-dialog--notice .app-notice-prose ul {
+  margin: 0.75rem 0 0.25rem;
+  padding-left: 1.25rem;
+}
+.app-modal-dialog--notice .app-notice-prose li {
+  margin: 0.375rem 0;
+  color: var(--ink-2);
+}
+.app-modal-dialog--notice .app-notice-prose li strong {
+  color: var(--ink);
+}
+
+/* ── Review fixes (2026-09-30) ──────────────────────────────────────────── */
+/* The body's scrollbar kept Windows' resize cursor from showing at the right
+   edge (resizing still worked): keep it off the window's resize border. */
+.pg-shell__body { right: 0.5rem; }
+/* Header and footer islands float over scrolling content: a deeper shadow
+   tells them apart from what passes underneath. */
+:root, [data-theme="light"] { --shadow-float: 0 0.125rem 0.375rem rgba(0,0,0,0.06), 0 0.625rem 1.75rem rgba(0,0,0,0.14); }
+[data-theme="dark"] { --shadow-float: inset 0 1px 0 rgba(255,255,255,0.05), 0 0.625rem 1.875rem rgba(0,0,0,0.75); }
+.pg-header .pg-island, .pg-footer .pg-island, .pg-titlebar__ctl { box-shadow: var(--shadow-float); }
+/* Info marks never shrink with a long label. */
+.pg-info { flex: none; }
+/* Slider track without a border: at fractional Windows scaling the 1px border
+   drew a second line over the fill. */
+.pg-slider::-webkit-slider-runnable-track { border: 0; height: 0.375rem; }
+.pg-slider::-webkit-slider-thumb { margin-top: -0.375rem; }
+
+/* Tooltips (ui/tooltip.js): a small raised sheet, placed above the target. */
+.app-tip { --k: var(--pg-zoom, 1); /* lives in <body>, outside the zoomed #shell: sizes carry the interface scale themselves */
+  position: fixed; left: 0; top: 0; z-index: 90; max-width: calc(20rem * var(--k)); padding: calc(0.4375rem * var(--k)) calc(0.625rem * var(--k));
+  border-radius: calc(var(--radius-md) * var(--k)); background: var(--surface-raised) var(--tex-grain); border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop); color: var(--ink); font-weight: 500; font-size: calc(0.78125rem * var(--k)); line-height: 1.35; font-family: var(--font-sans); white-space: pre-line;
+  pointer-events: none; opacity: 0; transition: opacity .12s ease-out; }
+.app-tip.is-on { opacity: 1; }
+
+/* Dropdowns (ui/select.js): the design's pg-select as a button, a styled list. */
+.app-select { display: inline-flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-width: 7.5rem;
+  padding: 0 0.625rem 0 0.75rem; background-image: none; font: 500 0.875rem/1 var(--font-sans); white-space: nowrap; }
+.app-select span { overflow: hidden; text-overflow: ellipsis; }
+.app-select svg { width: 1rem; height: 1rem; flex: none; stroke: var(--ink-2); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.app-select[aria-expanded="true"] { border-color: var(--accent); }
+.app-select[aria-expanded="true"] svg { transform: rotate(180deg); }
+.app-select__menu { position: fixed; top: 0; left: 0; right: auto; bottom: auto; z-index: 80; max-height: 20rem; animation: app-pop .12s ease-out; }
+.app-select__menu .app-menu__item { font-size: 0.875rem; white-space: nowrap; }
+
+/* Changed-from-default mark (design: pg-row.is-modified) that resets the row:
+   the dot itself is the button and shows ↺ on hover. */
+.pg-row.is-modified::before { display: none; }
+.app-reset { position: absolute; left: 0.25rem; top: 50%; width: 1.125rem; height: 1.125rem; margin-top: -0.5625rem;
+  display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; color: var(--accent-text); }
+.app-reset::before { content: ""; width: 0.3125rem; height: 0.3125rem; border-radius: 50%; background: var(--accent); transition: opacity .12s; }
+.app-reset svg { position: absolute; width: 0.75rem; height: 0.75rem; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .12s; }
+.app-reset:hover { background: var(--accent-soft); }
+.app-reset:hover::before { opacity: 0; }
+.app-reset:hover svg { opacity: 1; }
+.app-set-foot { display: flex; justify-content: flex-end; }
+.pg-row.is-modified { padding-left: 1.375rem; }
+
+/* Brand pill = Home: returns to the main/connect screen */
+.app-home {
+  cursor: pointer; font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.375rem; line-height: 1;
+  transition: background .15s;
+}
+.app-home:hover { background: var(--surface-hover) var(--tex-grain); }
+.app-brandmark { width: 1.75rem; height: 1.75rem; object-fit: contain; }
+
+/* Launch animation in the logo's gold: the card's rings, the ring "o", the
+   progress bar. The status line is bolder so it reads. */
+:root, [data-theme="light"] { --brand: #c6903b; --brand-text: #8a5e18; }
+[data-theme="dark"] { --brand: #d09a44; --brand-text: #e0b060; }
+.app-splash .pg-splash__rings circle { stroke: var(--brand); }
+.app-splash .pg-splash__word .pg-wordmark__o { border-color: var(--brand); }
+.app-splash .pg-splash__word .pg-wordmark__o::after { background: var(--brand); }
+.app-splash .pg-splash__bar i { background: var(--brand); }
+.app-splash .pg-splash__status span { font: 600 0.8125rem/1rem var(--font-mono); letter-spacing: .04em; color: var(--brand-text); }
+.app-splash .pg-splash__steps {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1875rem;
+  width: 9.375rem;
+  margin-top: 0.125rem;
+}
+.app-splash .pg-splash__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font: 500 0.6875rem/1 var(--font-mono);
+  letter-spacing: .03em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  animation: pg-step-drop .28s cubic-bezier(.16, 1, .3, 1) both;
+}
+.app-splash .pg-splash__step span {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+.app-splash .pg-splash__step:last-child {
+  color: var(--brand-text);
+  font-weight: 700;
+}
+.app-splash .pg-splash__check {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+  stroke: var(--brand);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  animation: pg-check-pop .25s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+@keyframes pg-step-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.375rem);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes pg-check-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Initial setup: the step scrolls inside the card, the footer is slimmer, and
+   steps cross-fade (js/screens/setup.js restarts .is-swap). */
+#screen-setup .app-wiz { overflow: hidden; }
+.app-wiz-pick, .app-wiz-android, .app-wiz-ios { min-height: 0; overflow-x: hidden; overflow-y: auto; } /* one axis (design Scroll) */
+.app-wiz-ios .pg-wiz__grid { flex: none; }
+.app-wiz-ios .pg-wiz__main { overflow: visible; }
+.app-wiz-ios .pg-wiz__shot { height: auto; }
+.app-wiz-ios .pg-wiz__shot img { max-height: 28rem; }
+#screen-setup .pg-wiz__foot { padding-top: 0.625rem; }
+.app-wiz-back { min-height: 2.5rem; }
+.app-wiz-next { min-height: 2.75rem; }
+.is-swap { animation: app-swap .32s cubic-bezier(.2,.8,.2,1); }
+@keyframes app-swap { from { opacity: 0; transform: translateX(0.75rem); } }
+.is-swap.is-back { animation-name: app-swap-back; }
+@keyframes app-swap-back { from { opacity: 0; transform: translateX(-0.75rem); } }
+@media (prefers-reduced-motion: reduce) { .is-swap { animation: none; } }
+
+/* Interface scale (ui/zoom.js, design: Zoom): zoom shrinks/grows the UI;
+   position:fixed+inset:0 anchors to the viewport without reading vw/vh at
+   paint time (fixes the "squashed on first paint" bug: vw/vh were stale
+   before WindowCenter in OnDomReady; now the browser measures from the
+   physical viewport every time). Container queries see the zoomed size. */
+#shell { zoom: var(--pg-zoom, 1); position: fixed; inset: 0; width: auto; height: auto; }
+/* Dialogs live in <body>, outside #shell: same zoom, same viewport anchor. */
+.app-overlay { zoom: var(--pg-zoom, 1); position: fixed; inset: 0; width: auto; height: auto; }
+
+/* ── Docs (design: ScreenDocs) ──────────────────────────────────────────── */
+#screen-docs { padding-top: 0.375rem; }
+@container pgwin (min-width: 860px) { #screen-docs { height: 100%; } }
+.app-docnav { display: flex; flex-direction: column; gap: 0.125rem; padding: 0.75rem; }
+#docs-nav { display: flex; flex-direction: column; gap: 0.125rem; margin-top: 0.5rem; }
+#docs-nav .pg-docnav__item, .app-docnav__gh { width: 100%; background: transparent; font: inherit; font-size: 0.875rem; font-weight: 600; text-align: left; }
+#docs-nav .pg-docnav__item.is-active { background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface); }
+.app-docnav__gh { border-top: 1px solid var(--line-subtle); border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.app-docnav__gh svg { width: 1rem; height: 1rem; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.app-docbody { padding: 1.75rem 2.5rem; }
+/* Obsidian-style centred reading column: prose is capped and centred inside
+   the article card while the card itself stays full-width for the background. */
+.pg-prose { max-width: 48rem; margin-left: auto; margin-right: auto; }
+.app-docs-crumb { margin-bottom: 0.5rem; }
+#docs-nav .pg-docnav__item[data-depth="1"] { padding-inline-start: 1.75rem; font-weight: 500; }
+#docs-nav .pg-docnav__item[data-depth="2"] { padding-inline-start: 2.5rem; font-weight: 500; }
+.pg-toc a[data-lvl="3"] { padding-inline-start: 1rem; }
+.app-docs-note { margin-bottom: 1rem; }
+.app-hit { background: var(--accent-soft); color: inherit; border-radius: 0.1875rem; }
+.pg-prose pre { overflow-x: auto; overflow-y: hidden; padding: 0.75rem 1rem; border-radius: var(--radius-md); background: var(--surface-inset); box-shadow: var(--shadow-inset); font: 0.8125rem/1.5 var(--font-mono); }
+.pg-prose { user-select: text; -webkit-user-select: text; }
+/* Compact (design ResponsiveDocs): the sections become a chip row. */
+@container pgwin (max-width: 859px) {
+  #docs-nav { display: contents; }
+  .app-docnav .app-grow, .app-docnav__gh { display: none !important; }
+  #docs-nav .pg-docnav__item { width: auto; }
+}
+.pg-prose img { display: block; max-width: 100%; max-height: 30rem; width: auto; margin: 0 auto; }
+.pg-toc a { text-decoration: none; }
+/* Remove top/bottom fade mask from docs scroll containers — user wants clean edges. */
+.pg-docs > article.pg-scroll--fade,
+.pg-docs > aside.pg-scroll--fade {
+  -webkit-mask-image: none;
+  mask-image: none;
+  padding-block: 0;
+}
+
+/* Tile shade: one step off the surface so blocks read as blocks (calibration page, profile card). */
+:root, [data-theme="light"] { --tile: #e4e3dd; --tile-hi: #d7d6cf; --tile-line: rgba(0, 0, 0, 0.16); }
+[data-theme="dark"] { --tile: #303030; --tile-hi: #3c3c3c; --tile-line: rgba(255, 255, 255, 0.16); }
+/* Tiles have no image texture at all (a noise tile costs a raster layer and reads as dirt on small blocks).
+   Their character is drawn with gradients: small tiles get a lift (light from above + bevel), large panels the same lift. */
+:root {
+  --tile-tex: none;
+  --tile-hi-tex: none;
+  --tile-lift: linear-gradient(180deg, color-mix(in srgb, var(--tile-hi) 70%, transparent), transparent 65%);
+  --tile-bevel: inset 0 1px 0 color-mix(in srgb, #fff 14%, transparent), inset 0 -1px 0 color-mix(in srgb, #000 20%, transparent);
+}
+.app-axcards { display: flex; flex-direction: column; gap: 0.375rem; }
+.app-axcards .app-cal-mcards { gap: 0.5rem; }
+
+/* ── Calibration screen & card (design: Modal as full page card) ───────── */
+html.is-calibrating,
+html.is-calibrating[data-theme="light"],
+html.is-calibrating[data-accent],
+html.is-calibrating[data-theme="light"][data-accent] {
+  --accent: #5b7c26;
+  --on-accent: #ffffff;
+  --accent-text: #4a651d;
+  --accent-soft: rgba(91, 124, 38, 0.13);
+  --accent-line: rgba(91, 124, 38, 0.40);
+  --axis-y: var(--accent);
+}
+
+html.is-calibrating[data-theme="dark"],
+html.is-calibrating[data-theme="dark"][data-accent] {
+  --accent: #a3bc69;
+  --on-accent: #0b0b0b;
+  --accent-text: #a3bc69;
+  --accent-soft: rgba(163, 188, 105, 0.15);
+  --accent-line: rgba(163, 188, 105, 0.42);
+  --axis-y: var(--accent);
+}
+
+.app-calpage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 0;
+  padding: 1.5rem var(--space-4);
+  box-sizing: border-box;
+}
+
+.app-calpage .pg-btn--primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.app-calpage .pg-btn--primary:hover:not([disabled]) {
+  filter: brightness(1.08);
+  background: var(--accent);
+}
+.app-cal-modal {
+  width: 100%;
+  max-width: 65rem;
+  min-height: min(35rem, 100%);
+  max-height: 100%;
+  box-shadow: var(--shadow-pop);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-cal-modal .pg-modal__body {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  flex: 1;
+  min-height: 0;
+}
+.app-cal-modal .pg-modal__foot { flex: none; justify-content: space-between; }
+.app-cal-modal .pg-modal__foot .pg-btn[data-act="next"] { min-width: 11rem; }
+
+@container pgwin (max-width: 859px) {
+  .app-calpage {
+    padding: 0.5rem;
+    justify-content: flex-start;
+  }
+  .app-cal-modal {
+    max-width: 100%;
+    min-height: 0;
+  }
+}
+.app-cal-stepper { margin-bottom: 1.25rem; background: color-mix(in srgb, var(--tile) 60%, var(--surface-inset)); }
+.app-cal-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1.25rem; align-items: stretch; }
+.app-cal-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 22.5rem;
+  height: 100%;
+}
+.app-cal-right { display: flex; flex-direction: column; gap: 0.5rem; min-height: 0; }
+.app-cal-stage { flex: 1 1 auto; min-height: 18.75rem; }
+.app-cal-stage .pg-stage__cap {
+  white-space: normal;
+  text-align: center;
+  max-width: calc(100% - 2rem);
+  width: max-content;
+  border-radius: var(--radius-lg);
+  line-height: 1.35;
+  padding: 0.375rem 0.75rem;
+}
+.app-cal-disclaimer { text-align: center; color: var(--ink-3); }
+.app-cal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.app-cal-stat-val { font-size: 1rem; font-weight: 600; color: var(--ink); }
+
+/* Axis chips readability */
+.app-cal-modal .pg-axis__key {
+  width: auto;
+  min-width: 1.25rem;
+  height: 1.125rem;
+  padding: 0 0.3125rem;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  font-weight: 800;
+  border-width: 1px;
+  border-style: solid;
+}
+.app-cal-modal .pg-axis__key--x {
+  background: color-mix(in srgb, var(--axis-x) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-x) 65%, transparent);
+  color: var(--axis-x);
+}
+.app-cal-modal .pg-axis__key--y {
+  background: color-mix(in srgb, var(--axis-y) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-y) 65%, transparent);
+  color: var(--axis-y);
+}
+.app-cal-modal .pg-axis__key--z {
+  background: color-mix(in srgb, var(--axis-z) 28%, var(--surface-raised));
+  border-color: color-mix(in srgb, var(--axis-z) 65%, transparent);
+  color: var(--axis-z);
+}
+[data-theme="light"] .app-cal-modal .pg-axis__key--x { color: var(--danger-text, #b03a27); }
+[data-theme="light"] .app-cal-modal .pg-axis__key--y { color: var(--accent-text, #4a651d); }
+[data-theme="light"] .app-cal-modal .pg-axis__key--z { color: var(--info-text, #2f5f6d); }
+
+.app-cal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-height: 6.5rem;
+}
+.app-cal-desc { margin: 0; color: var(--ink-2); font-size: 0.9375rem; line-height: 1.45; }
+.app-cal-desc b { color: var(--ink); }
+
+.app-cal-panel {
+  margin-top: auto;
+  min-height: 8.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+
+/* Success notice with SVG checkmark */
+.app-cal-success-notice::before {
+  display: none !important;
+}
+.app-cal-ok-ico {
+  width: 1.125rem;
+  height: 1.125rem;
+  color: var(--accent);
+  flex: none;
+  margin-top: 0.125rem;
+}
+
+.app-cal-action-box { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; padding: 1rem; }
+.app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+
+.app-cal-label { font-weight: 600; font-size: 0.875rem; }
+.app-cal-name { padding-left: 0.875rem; height: 2.5rem; font-size: 0.9375rem; }
+
+.app-cal-mount .pg-row { min-height: 0; }
+
+.app-cal-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.app-cal-chips .pg-badge { font-size: 0.8125rem; font-weight: 500; display: inline-flex; align-items: center; gap: 0.375rem; }
+.app-cal-chips .pg-badge b { font-weight: 700; color: var(--ink); }
+.app-cal-det { font-size: 0.8125rem; }
+
+.app-cal-verify-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+}
+.app-cal-verify-stats .pg-stat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+
+/* ── Calibration Save Screen ────────────────────────────────────────────── */
+.app-cal-save {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  width: 100%;
+  min-height: 31rem;
+}
+.app-cal-save-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+.app-cal-save-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+.app-cal-save-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+}
+.app-cal-preview-card {
+  padding: 1.125rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.app-cal-preview-profile {
+  width: 100%;
+}
+.app-cal-preview-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line-subtle);
+}
+.app-cal-preview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+}
+@container pgwin (max-width: 859px) {
+  .app-cal-save-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+.app-cal-modal:has(.app-cal-save) {
+  min-height: 39rem;
+}
+
+/* ── Corner Ring Decorations & Overlines (Task 4F) ──────────────────────── */
+.app-cal-ring-corner {
+  position: relative;
+  overflow: hidden;
+}
+.app-cal-ring-corner > * {
+  position: relative;
+  z-index: 1;
+}
+.app-cal-ring-corner::after {
+  content: "";
+  position: absolute;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 0.75rem, var(--accent-soft) 0.75rem 0.9375rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, transparent 70%);
+  z-index: 0;
+  opacity: 0.55;
+}
+.app-cal-ring-corner--tr::after {
+  right: -3.25rem;
+  top: -3.25rem;
+}
+.app-cal-ring-corner--br::after {
+  right: -3.25rem;
+  bottom: -3.25rem;
+}
+.app-cal-ring-corner--bl::after {
+  left: -3.25rem;
+  bottom: -3.25rem;
+}
+.app-cal-ring-corner--tl::after {
+  left: -3.25rem;
+  top: -3.25rem;
+}
+
+.app-cal-overline {
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.app-cal-mount,
+.app-cal-preview-card {
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-slotwrap {
+  position: relative;
+  width: 100%;
+}
+.app-cal-slot-trigger {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  transition: border-color .15s;
+}
+.app-cal-slot-trigger:hover {
+  border-color: var(--line-control);
+}
+.app-cal-slot-trigger[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+.app-cal-slot-trigger .chev {
+  margin-left: 0.375rem;
+  flex: none;
+  transition: transform .15s;
+  stroke: var(--ink-2);
+}
+.app-cal-slot-trigger[aria-expanded="true"] .chev {
+  transform: rotate(90deg);
+}
+.app-cal-slotmenu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.375rem);
+  bottom: auto;
+  z-index: 50;
+  max-height: min(23rem, calc(100vh - 12rem));
+  overflow-y: auto;
+  padding: 0.375rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.app-cal-slotmenu .app-menu__item {
+  padding: 0.375rem 0.5rem 0.375rem 0.625rem;
+  min-height: 2.75rem;
+}
+.app-cal-icon--muted {
+  opacity: 0.45;
+}
+.app-cal-menu-item--empty .pg-profile__t {
+  color: var(--ink-2);
+}
+.app-menu__check {
+  margin-left: auto;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.app-cal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+.app-cal-warn {
+  width: 100%;
+}
+.app-cal-icons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+  width: 100%;
+}
+.app-cal-icon-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.375rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  font: inherit;
+}
+.app-cal-icon-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-control);
+}
+.app-cal-icon-card.is-selected {
+  border-color: var(--accent);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.app-cal-icon-svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-cal-icon-svg svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.app-cal-icon-card.is-selected .app-cal-icon-svg svg {
+  stroke: var(--accent);
+}
+.app-cal-icon-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: center;
+}
+.app-cal-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0.125rem;
+}
+.app-cal-device-badge {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--ink-2);
+  background: var(--surface-hover);
+  border: 1px solid var(--line-subtle);
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-full);
+}
+.app-cal-device-badge svg {
+  stroke: var(--ink-2);
+}
+
+@container pgwin (max-width: 859px) {
+  .app-cal-stepper { margin-bottom: 0.875rem; }
+  .app-cal-grid { display: flex; flex-direction: column; gap: 0.875rem; align-items: stretch; }
+  .app-cal-left, .app-cal-right { display: contents; }
+  .app-cal-grid .app-cal-info { order: 1; }
+  .app-cal-stage { order: 2; flex: none; min-height: 0; height: 11.5rem; width: 100%; }
+  .app-cal-panel { order: 4; }
+  .app-cal-stats { order: 0; }
+  .app-cal-verify-stats { order: 4; }
+  .app-cal-extra { order: 5; }
+  .app-cal-grid.is-verify .app-cal-stage { flex: none; height: 11.5rem; }
+  #cal-mount { order: 6; }
+  .app-cal-disclaimer { order: 7; }
+  
+}
+
+/* ── Calibration review pass: ring hosts, tiles, axis tiles, run panel ───── */
+/* Ring host: the ripple pattern is centred on the control it sits behind (close
+   button, left footer button); the control itself is opaque and painted above it. */
+.app-ringhost {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.app-ringhost::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 17rem;
+  height: 17rem;
+  margin: -8.5rem 0 0 -8.5rem;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-radial-gradient(circle at center, transparent 0 1.4rem, color-mix(in srgb, var(--accent) 30%, transparent) 1.4rem 1.6rem);
+  -webkit-mask: radial-gradient(circle at center, #000 0, #000 28%, transparent 70%);
+  mask: radial-gradient(circle at center, #000 0, #000 28%, transparent 70%);
+}
+.app-ringhost > * { position: relative; z-index: 1; }
+.app-cal-x {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 24%, var(--tile-hi));
+  border: 1px solid var(--danger);
+  box-shadow: none;
+}
+.app-cal-x svg { stroke: currentColor; }
+.app-cal-x:hover { background: color-mix(in srgb, var(--danger) 28%, var(--tile-hi)); border-color: var(--danger); }
+.app-cal-modal .pg-modal__foot .app-ringhost .pg-btn {
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-modal .pg-modal__foot .app-ringhost .pg-btn:hover:not([disabled]) { border-color: var(--line-control); }
+
+/* Axis tiles: live rate + fill bar; a confirmed axis turns green with its role. */
+.app-cal-axis, .app-cal-vstat {
+  --axc: var(--axis-x);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3125rem;
+  min-width: 0;
+  padding: 0.5rem 0.625rem 0.625rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+  transition: border-color .2s, background-color .2s;
+}
+#cal-ax-1 { --axc: var(--axis-y); }
+#cal-ax-2 { --axc: var(--axis-z); }
+.app-cal-axis__head, .app-cal-vstat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-height: 1.25rem;
+}
+.app-cal-vstat__name { display: inline-flex; align-items: center; gap: 0.375rem; font-weight: 600; font-size: 0.8125rem; }
+.app-cal-axis__tag {
+  font: 700 0.6875rem/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--accent-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+.app-cal-axbar, .app-cal-bar {
+  height: 0.375rem;
+  border-radius: 6.1875rem;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  overflow: hidden;
+}
+.app-cal-bar { height: 0.5rem; }
+.app-cal-axbar > i, .app-cal-bar > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--axc, var(--accent));
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+  transition: transform .1s linear;
+}
+.app-cal-bar > i { background: var(--accent); }
+.app-cal-axis.is-locked {
+  border-color: var(--accent-line);
+  background: color-mix(in srgb, var(--accent) 15%, var(--tile));
+}
+.app-cal-axis.is-locked .app-cal-axbar > i { background: var(--accent); transition-duration: .35s; }
+.app-cal-axis.is-locked .app-cal-stat-val { color: var(--accent-text); }
+
+/* Action / recording panel */
+.app-cal-action-box.pg-notice {
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+  box-shadow: none;
+}
+.app-cal-run {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-runrow { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.app-cal-runtext { font-size: 1rem; line-height: 1.3; font-weight: 700; color: var(--ink); }
+.app-cal-runtext--soft { font-size: 0.875rem; font-weight: 400; color: var(--ink-2); }
+.app-cal-segs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 0.3125rem; height: 0.625rem; }
+.app-cal-segs > i {
+  border-radius: 6.1875rem;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  transition: background-color .15s;
+}
+.app-cal-segs > i.is-on { background: var(--accent); }
+.app-cal-success-notice {
+  background: color-mix(in srgb, var(--accent) 16%, var(--tile));
+  border: 1px solid var(--accent-line);
+}
+.app-cal-panel .pg-btn:not(.pg-btn--primary) {
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+
+/* Verify */
+.app-cal-verify-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.625rem; }
+
+.app-cal-mcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; }
+.app-cal-mcard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.5rem 0.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+  min-width: 0;
+}
+.app-cal-mcard__t {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.app-cal-mgrid {
+  display: grid;
+  grid-template-columns: auto repeat(3, 2.125rem);
+  gap: 0.25rem;
+  align-items: center;
+  justify-items: center;
+}
+.app-cal-mcell {
+  display: grid;
+  place-items: center;
+  width: 2.125rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  font: 600 0.8125rem/1 var(--font-mono);
+  color: var(--ink-3);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.app-cal-mcell.is-on {
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.app-cal-mnote { margin: 0; text-align: center; font-size: 0.75rem; line-height: 1.4; color: var(--ink-3); }
+
+/* Compact mount card */
+.app-cal-mount--compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-tex) var(--tile);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-mount__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.app-cal-mount__t {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.app-cal-mount__sub {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  line-height: 1.35;
+}
+.app-cal-mountnote { background: var(--tile-tex) var(--tile); }
+.app-cal-mountnote .pg-notice__sub { display: block; margin-top: 0.25rem; }
+
+/* Verify: the axis grids always sit in the left column, under the angles; the 3D
+   stage takes the whole height of the right one. Low windows get compact grids. */
+.app-cal-extra { display: flex; flex-direction: column; gap: 0.375rem; }
+.app-cal-grid.is-verify .app-cal-stage { flex: 1 1 auto; height: auto; min-height: 8.5rem; }
+/* Low windows: the left column scrolls on its own instead of being cut by the footer. */
+@container pgwin (min-width: 860px) {
+  /* every step, not only verify: the step grid takes the window's height down to
+     the footer and the 3D stage fills its column (a tall window left half of it
+     empty under a fixed-height stage) */
+  .app-cal-modal .pg-modal__body:has(.app-cal-grid) { display: flex; flex-direction: column; }
+  #cal-body:has(> .app-cal-grid) { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .app-cal-grid { min-height: 0; flex: 1 1 auto; }
+  .app-cal-grid .app-cal-stage { flex: 1 1 auto; height: auto; min-height: 8.5rem; }
+  .app-cal-grid.is-verify { min-height: 0; flex: 1 1 auto; }
+  .app-cal-grid.is-verify .app-cal-left { min-height: 0; overflow-y: auto; padding-right: 0.25rem; }
+  .app-cal-grid.is-verify .app-cal-left > * { flex-shrink: 0; }
+}
+@container pgwin (min-width: 860px) and (max-height: 859px) {
+  .app-cal-mgrid { grid-template-columns: auto repeat(3, 1.5rem); gap: 0.125rem; }
+  .app-cal-mcell { width: 1.5rem; height: 1.0625rem; font-size: 0.6875rem; }
+  .app-cal-mcard { padding: 0.3125rem 0.375rem 0.375rem; gap: 0.1875rem; }
+  .app-cal-mcards { gap: 0.375rem; }
+  .app-cal-mnote { font-size: 0.6875rem; line-height: 1.3; }
+}
+
+/* Completed steps of the stepper jump back to their step. */
+.app-cal-stepper .pg-step[data-act] { cursor: pointer; }
+.app-cal-stepper .pg-step[data-act]:hover { filter: brightness(1.25); }
+.app-cal-stepper .pg-step[data-act]:focus-visible { outline: 0.125rem solid var(--accent); outline-offset: 0.125rem; }
+
+/* Save */
+.app-cal-preview-profile {
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-lg);
+  background: var(--tile-hi);
+  border: 1px solid var(--tile-line);
+}
+.app-cal-slot-trigger,
+.app-cal-icon-card {
+  background: var(--tile);
+  border-color: var(--tile-line);
+}
+.app-cal-icon-card:hover { background: var(--tile-hi); }
+.app-cal-icon-card.is-selected {
+  background: color-mix(in srgb, var(--accent) 16%, var(--tile));
+  border-color: var(--accent);
+}
+.app-cal-slotmenu { background: var(--tile-hi-tex) var(--tile-hi); border-color: var(--tile-line); }
+.app-cal-slotmenu .app-menu__item { border: 1px solid transparent; }
+.app-cal-slotmenu .app-cal-menu-item--empty { border: 1px dashed var(--line-control); }
+.app-cal-menu-item--empty .pg-profile__t { color: var(--ink-3); }
+.app-cal-menu-item--empty .app-menu__icon { border-style: dashed; }
+.app-cal-freebadge { color: var(--ink-3); background: transparent; border: 1px dashed var(--line-control); font-family: inherit; }
+.app-cal-device-badge { background: var(--tile); border-color: var(--tile-line); }
+
+/* Low windows: keep the whole step in view instead of scrolling inside the card. */
+@container pgwin (max-height: 859px) {
+  .app-calpage { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+  .app-cal-modal { height: 100%; }
+  .app-cal-modal .pg-modal__body { padding-bottom: 0.75rem; }
+  .app-cal-modal .display-md { font-size: 1.25rem; line-height: 1.3; }
+  .app-cal-stepper { margin-bottom: 0.5rem; }
+  .app-cal-stepper .pg-step { height: 1.875rem; font-size: 0.75rem; padding: 0 0.625rem 0 0.25rem; }
+  .app-cal-stepper .pg-step__num { width: 1.25rem; height: 1.25rem; font-size: 0.6875rem; }
+  .app-cal-stage { height: 9.75rem; min-height: 8.5rem; }
+  .app-cal-disclaimer { display: none; }
+  .app-cal-info { min-height: 0; }
+  .app-cal-left { min-height: 0; gap: 0.375rem; }
+  .app-cal-panel { min-height: 0; }
+  .app-cal-desc { font-size: 0.875rem; line-height: 1.35; }
+  .app-cal-mount__sub {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ── Calibration Disconnect Modal Card Alert & Blur ──────────────────────── */
+.app-cal-modal.is-disconnected {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 0.1875rem var(--danger), var(--shadow-pop), 0 0 1.75rem var(--danger-soft);
+}
+.app-cal-disconnect {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--overlay);
+  backdrop-filter: blur(1.25rem);
+  -webkit-backdrop-filter: blur(1.25rem);
+  border-radius: 0;
+  overflow: hidden;
+}
+.app-cal-disconnect-card {
+  max-width: 23.75rem;
+  width: 100%;
+  background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-pop), 0 0 2rem var(--danger-soft);
+}
+.app-cal-disconnect-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+.app-cal-disconnect-icon svg {
+  width: 1.625rem;
+  height: 1.625rem;
+}
+.app-cal-disconnect-title {
+  margin: 0 0 0.5rem 0;
+  color: var(--ink);
+}
+.app-cal-disconnect-desc {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin: 0 0 1.125rem 0;
+  max-width: 20rem;
+}
+.app-cal-disconnect-badge {
+  font-family: inherit;
+  font-size: 0.75rem;
+  letter-spacing: normal;
+  height: 1.5rem;
+  padding: 0 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.app-cal-disconnect-badge::before {
+  animation: app-cal-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes app-cal-dot-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.app-cal-disconnect-actions {
+  display: flex;
+  gap: 0.625rem;
+  width: 100%;
+  justify-content: center;
+}
+.app-cal-disconnect-actions .pg-btn {
+  min-width: 10rem;
+}
+
+/* Setup wizard in compact windows (and at a big interface scale): the design
+   drops the phone screenshot; the owner wants it, so it goes under the text. */
+@container pgwin (max-width: 859px) {
+  #screen-setup .pg-wiz__grid { grid-template-columns: minmax(0, 1fr); }
+  #screen-setup .pg-wiz__shot { display: grid !important; }
+  #screen-setup .pg-wiz__shot img { max-height: 24rem; }
+}
+@container pgwin (max-height: 619px) {
+  #screen-setup .pg-wiz__shot { display: grid !important; }
+}
+
+/* Per-sound mixer (Settings): folded rows under "Sound volume". */
+.app-mixbtn svg { width: 0.875rem; height: 0.875rem; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.app-mixbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.app-mix { background: var(--surface-inset); }
+.app-mix .pg-row__label { flex-direction: column; align-items: flex-start; gap: 0.125rem; padding-left: 0.75rem; }
+.app-mix__name { font-size: 0.8125rem; }
+.app-mix__desc { font-weight: 400; }
+.app-mix .pg-slider { width: 6.5rem; }
+
+/* Tile character (see the tokens near the top): last, so it wins over the flat fills above. */
+.app-cal-axis,
+.app-cal-vstat,
+.app-cal-mcard,
+.app-cal-preview-profile,
+.app-cal-run,
+.app-cal-action-box.pg-notice,
+.app-cal-preview-card,
+.app-cal-mountnote,
+.app-cal-mount {
+  background: var(--tile-lift) var(--tile);
+  box-shadow: var(--tile-bevel);
+}
+.app-cal-axis.is-locked { background: color-mix(in srgb, var(--accent) 15%, var(--tile)); }
+
+/* Control profiles: the list keeps the card grain; its bubbles are dark insets, like the current-profile button. */
+#prof-menu.is-down { bottom: auto; top: calc(100% + 0.375rem); }
+#prof-menu { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem; background: var(--surface-raised) var(--tex-grain); }
+#prof-menu .app-menu__item {
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-inset);
+}
+#prof-menu .app-menu__item:hover { border-color: var(--line-control); background: var(--surface-inset); }
+#prof-menu .app-menu__item.is-active {
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-inset);
+  border-color: var(--accent-line);
+}
+
+/* "Reset to defaults": red like the calibration close button (tinted, not a solid danger button). */
+#set-reset-all {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 24%, var(--tile-hi));
+  border: 1px solid var(--danger);
+}
+#set-reset-all:hover:not([disabled]) { background: color-mix(in srgb, var(--danger) 34%, var(--tile-hi)); }
+
+/* ───────── Response Test Bench Card (Settings Screen) ───────── */
+.app-bench-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem 1rem;
+  background: var(--surface) var(--tex-grain);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+}
+.app-bench-card__head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+.app-bench-legend { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.75rem; color: var(--ink-2); }
+.app-legend-item { display: inline-flex; align-items: center; gap: 0.375rem; }
+.app-legend-dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; display: inline-block; }
+.app-legend-dot--raw { background: var(--ink); }
+.app-legend-dot--filt { background: var(--viz-leaf); }
+[data-theme="light"] .app-legend-dot--filt { background: var(--viz-moss); }
+.app-legend-dot--diff { background: var(--info); opacity: 0.6; border-radius: 0.125rem; }
+.app-bench-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 16rem;
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-inset);
+  overflow: hidden;
+}
+.app-bench-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+/* Offline Blur Overlay */
+.app-bench-offline-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--overlay);
+  backdrop-filter: blur(0.5rem);
+  -webkit-backdrop-filter: blur(0.5rem);
+  border-radius: inherit;
+  box-sizing: border-box;
+}
+
+.app-bench-offline-overlay[hidden] {
+  display: none !important;
+}
+
+.app-bench-offline-card {
+  max-width: 18.75rem;
+  width: 100%;
+  background: var(--surface-raised) var(--tex-grain);
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.125rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: var(--shadow-pop), 0 0 1.25rem var(--danger-soft);
+  box-sizing: border-box;
+}
+
+.app-bench-offline-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+.app-bench-offline-icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.app-bench-offline-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.app-bench-offline-desc {
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--ink-2);
+  margin: 0;
+  max-width: 16rem;
+}
+
+/* Card Footer: Metrics & Actions */
+.app-bench-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.app-bench-stat {
+  display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; min-height: 3.25rem;
+  padding: 0.5rem 0.625rem; border-radius: var(--radius-md);
+  background: var(--tile-lift) var(--tile); border: 1px solid var(--tile-line); box-shadow: var(--tile-bevel);
+}
+.app-bench-stat > .pg-dim { font-size: 0.6875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.app-bench-stat > b { font: 600 0.875rem/1.2 var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.app-bench-stat > .pg-badge { align-self: flex-start; }
+@container pgwin (max-width: 859px) {
+  .app-bench-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-bench-canvas-wrap { height: 13rem; }
+}
+
+/* ───────── Stats & 3D screen shell ───────── */
+.pg-shell.is-screen-stats .pg-shell__body {
+  padding: var(--pg-tb) 0 0;
+  overflow: hidden;
+}
+@container pgwin (max-width: 859px) {
+  .pg-shell.is-screen-stats .pg-shell__body {
+    overflow: auto;
+  }
+}
+
+.app-stats-page {
+  width: 100%;
+  height: 100%;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.app-stats-page .pg-tel {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Full-width tiles across all columns in .pg-stats */
+
+/* Section group overline in .pg-stats */
+
+/* Hero tile: Channel quality index */
+.app-stat-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 0.75rem 1rem;
+}
+.app-stat-hero .app-cal-ring-corner {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 7.5rem;
+  height: 7.5rem;
+  pointer-events: none;
+  opacity: 0.65;
+}
+.app-stat-hero__body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+.app-stat-hero__ring-wrap {
+  position: relative;
+  width: 4.25rem;
+  height: 4.25rem;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.app-stat-hero__ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.app-stat-hero__ring-bg {
+  fill: none;
+  stroke: var(--surface-inset);
+  stroke-width: 3.5;
+}
+.app-stat-hero__ring-bar {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease;
+}
+.app-stat-hero__score {
+  position: absolute;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.0625rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+}
+.app-stat-hero__num {
+  font-size: 1.1875rem;
+  color: var(--ink);
+}
+.app-stat-hero__unit {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.app-stat-hero__meta {
+  flex: 1;
+  min-width: 0;
+}
+.app-stat-hero__verdict {
+  font-weight: 700;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.app-stat-hero__desc {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+  margin-top: 0.125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-stat-hero__spark {
+  width: 6.25rem;
+  flex: none;
+  position: relative;
+}
+.app-stat-hero__spark-label {
+  position: absolute;
+  bottom: 0.125rem;
+  right: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  line-height: 1;
+  color: var(--ink-2);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.app-stat-hero__spark .pg-spark svg path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Pipeline active chips container */
+
+/* Session metrics list */
+.app-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font: 400 0.6875rem/0.875rem var(--font-mono);
+  color: var(--ink-2);
+}
+.app-session-list b {
+  color: var(--ink);
+}
+
+/* DSU Client list */
+.app-dsu-client-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  font: 400 0.6875rem/0.875rem var(--font-mono);
+  color: var(--ink-2);
+}
+.app-dsu-client-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.1875rem 0.375rem;
+  background: var(--surface-inset);
+  border-radius: var(--radius-xs, 0.25rem);
+}
+.app-dsu-client-row b {
+  color: var(--ink);
+}
+
+.pg-badge--none {
+  border-color: var(--line-subtle);
+  color: var(--ink-2);
+  background: transparent;
+}
+
+/* Recording button in active state */
+#btn-stats-record.is-recording {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+#btn-stats-record.is-recording .pg-rec__dot {
+  animation: pg-ping 1.2s ease-out infinite;
+}
+
+/* DSU clients value single row */
+
+/* USB Protocol card (Group F) */
+.app-stat-usb-card {
+  padding: 0.625rem 0.875rem;
+  position: relative;
+  overflow: hidden;
+}
+.app-stat-usb-card .app-cal-ring-corner {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6.25rem;
+  height: 6.25rem;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.app-usb-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.app-usb-row {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm, 0.375rem);
+  background: var(--surface-inset);
+  font: 400 0.6875rem/0.875rem var(--font-mono);
+}
+.app-usb-row__label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.app-usb-row__label .pg-badge {
+  font-size: 0.625rem;
+  padding: 0.0625rem 0.3125rem;
+}
+.app-usb-row__val {
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Accent palette: a quiet row of small squares instead of big circles, so the row keeps the page's rhythm. */
+.pg-swatches { gap: 0.375rem; }
+.pg-swatch { width: 1.5rem; height: 1.5rem; border-radius: 0.375rem; }
+.pg-swatch[aria-checked="true"] { box-shadow: 0 0 0 0.125rem var(--surface), 0 0 0 0.25rem var(--ink); }
+
+/* "Reset to defaults": its own footer row under both columns, with air around it. */
+.app-set-foot { margin-top: 1rem; padding-bottom: 0.5rem; }
+
+/* Docked chrome: the header IS the title bar (brand, tabs, theme/language/status, window controls), the footer is a
+   thin strip. Content scrolls between them. */
+.pg-shell { --pg-tb: 0rem; --pg-hh: 2.875rem; --pg-fh: 1.75rem; }
+.pg-shell > .pg-header.app-dock {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--pg-hh); z-index: 4;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  padding: 0 0.5rem; box-sizing: border-box; pointer-events: auto;
+  background: var(--surface) var(--tex-grain); border-bottom: 1px solid var(--line);
+  -webkit-app-region: drag; --wails-draggable: drag; user-select: none;
+}
+.app-dock__main { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.75rem; }
+.app-dock__main > *:last-child { justify-self: end; }
+.app-dock__main > *:first-child { justify-self: start; }
+.app-dock button, .app-dock a, .app-dock .pg-seg, .app-dock .pg-island, .app-dock .pg-tab { -webkit-app-region: no-drag; --wails-draggable: no-drag; }
+.app-dock .pg-island { height: 2.125rem; background: transparent; border: 0; box-shadow: none; padding: 0 0.125rem; }
+.app-dock .pg-brand { padding: 0 0.375rem; }
+.app-dock #nav { gap: 0.125rem; padding: 0; }
+.app-dock .pg-tab { padding: 0 0.625rem; }
+/* Full page names in the centre; when they do not fit (any language, any zoom:
+   titlebar.js measures) the tabs fold into icons (the active one stays highlighted). */
+.app-dock.is-compact .pg-tab .pg-tab__l,
+.app-dock.is-tiny .pg-wordmark { display: none; }
+.app-dock .pg-status__t { display: none; }
+.app-dock__ctl { margin-left: auto; flex: none; background: transparent; border: 0; box-shadow: none; padding: 0; height: 2rem; gap: 0; }
+.app-dock__ctl .pg-wc { width: 2.5rem; height: 2rem; border-radius: var(--radius-md); }
+.pg-header.is-blur .app-dock__main, .pg-header.is-blur .app-dock__ctl { opacity: .6; }
+.pg-shell.has-no-chrome .app-dock__main { visibility: hidden; }
+.pg-shell.has-no-chrome > .pg-header.app-dock { background: transparent; border-bottom: 0; }
+.pg-footer { height: var(--pg-fh); padding: 0 var(--space-4); box-sizing: border-box; pointer-events: auto; background: var(--surface); border-top: 1px solid var(--line); }
+.pg-footer .pg-island { height: 1.375rem; padding: 0 0.5rem; background: transparent; border: 0; box-shadow: none; font-size: 0.6875rem; }
+/* Resources in the footer: digits only. */
+.pg-footer .pg-mini, .pg-footer .pg-meter { display: none; }
+.app-foot-right { display: flex; align-items: center; gap: 0.5rem; }
+/* Update status: sleek status pill matching design system */
+.pg-footer .app-upd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.375rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface-inset);
+  font: 500 0.6875rem/1 var(--font-sans);
+  color: var(--ink-2);
+  cursor: pointer;
+  box-shadow: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.pg-footer .app-upd:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong, var(--ink-3));
+  color: var(--ink);
+}
+.pg-footer .app-upd .app-upd__dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--ink-3);
+  transition: background 0.2s ease;
+}
+.pg-footer .app-upd b {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.6875rem;
+  color: var(--ink);
+}
+.pg-footer .app-upd[data-state="uptodate"] .app-upd__dot {
+  background: var(--good);
+  box-shadow: 0 0 0.25rem var(--good-soft);
+}
+.pg-footer .app-upd[data-state="uptodate"] b {
+  color: var(--good-text);
+}
+.pg-footer .app-upd[data-state="available"] {
+  background: linear-gradient(var(--warn-soft), var(--warn-soft)), var(--surface);
+  border-color: var(--warn-line);
+}
+.pg-footer .app-upd[data-state="available"] .app-upd__dot {
+  background: var(--warn);
+  animation: pg-ping 2s ease-out infinite;
+}
+.pg-footer .app-upd[data-state="available"] b {
+  color: var(--warn-text);
+  font-weight: 700;
+}
+.pg-footer .app-upd[data-state="available"]:hover {
+  background: var(--surface-hover);
+  border-color: var(--warn);
+  transform: translateY(-0.0625rem);
+  box-shadow: var(--shadow-card);
+}
+.pg-footer .app-upd[data-state="checking"] .app-upd__dot {
+  background: var(--info);
+  animation: pg-ping 1.5s ease-out infinite;
+}
+.pg-footer .app-upd[data-state="checking"] b {
+  color: var(--ink-2);
+}
+.pg-footer .app-upd[data-state="error"] {
+  border-color: var(--danger-line);
+  background: linear-gradient(var(--danger-soft), var(--danger-soft)), var(--surface);
+}
+.pg-footer .app-upd[data-state="error"] .app-upd__dot {
+  background: var(--danger);
+}
+.pg-footer .app-upd[data-state="error"] b {
+  color: var(--danger-text);
+}
+.pg-footer .app-upd[data-state="error"]:hover {
+  border-color: var(--danger);
+}
+.pg-footer .app-upd[data-state="off"] .app-upd__dot {
+  background: var(--ink-4);
+  opacity: 0.5;
+}
+@container pgwin (max-width: 56.25rem) { .app-upd .pg-dim { display: none; } }
+@container pgwin (max-width: 42rem) { .app-upd { display: none; } }
+.app-foot-right .pg-titlebar__ver { display: inline; font: 500 0.6875rem/1 var(--font-mono); color: var(--ink-2); }
+.pg-shell__body { inset: var(--pg-hh) 0.5rem var(--pg-fh) 0; padding: 0; }
+.pg-shell.is-screen-stats .pg-shell__body { padding: 0; }
+.pg-shell.has-no-chrome .pg-shell__body { inset: var(--pg-hh) 0 0 0; padding: 0; }
+.pg-shell.has-no-chrome .pg-footer { display: none; }
+
+/* Semantic status colours: fixed, never the user's accent. Green = online / active / clients present, red = offline / none. */
+:root, [data-theme="light"] { --good: #5b7c26; --good-text: #4a651d; --good-soft: rgba(91, 124, 38, 0.13); --good-line: rgba(91, 124, 38, 0.40); }
+[data-theme="dark"] { --good: #a3bc69; --good-text: #a3bc69; --good-soft: rgba(163, 188, 105, 0.15); --good-line: rgba(163, 188, 105, 0.42); }
+.pg-badge--ok { background: linear-gradient(var(--good-soft), var(--good-soft)), var(--surface); border-color: var(--good-line); color: var(--good-text); }
+.pg-badge--ok.pg-badge--dot::before { background: var(--good); }
+.pg-notice--ok { --nb: var(--good-soft); border-color: var(--good-line); }
+.pg-notice--ok::before { background: var(--good); box-shadow: 0 0 0 0.1875rem var(--good-soft); }
+.pg-status--online .pg-status__dot { background: var(--good); }
+.pg-status--online .pg-status__dot::after { color: var(--good); }
+
+/* ───────── Stats & 3D, second pass: dense square-ish tiles, wider side, camera switch at the bottom ───────── */
+.app-stats-page .pg-tel { grid-template-columns: minmax(27rem, 32%) 1fr; }
+.app-stats-page .pg-tel__side {
+  direction: rtl; /* the scrollbar sits on the left */
+  padding: 0.75rem 0.75rem 0.75rem 0.5rem; gap: 0.625rem;
+}
+.app-stats-page .pg-tel__side > * { direction: ltr; }
+.app-stats-page .pg-tel__mode { top: auto; bottom: 0.875rem; right: auto; left: 50%; transform: translateX(-50%); box-shadow: var(--shadow-float); }
+
+.app-stats-top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 0.5rem; align-items: stretch; }
+.app-stats-top > .pg-card { display: flex; flex-direction: column; justify-content: center; }
+.app-stats-top .app-stat-hero { min-height: 0; padding: 0.625rem 0.75rem; }
+.app-stats-top .app-stat-hero .app-stat-hero__spark { display: none; }
+.app-stats-top .app-stat-hero__body { flex-wrap: nowrap; gap: 0.625rem; }
+.app-stats-top .app-stat-hero__desc { display: none; }
+/* Narrow top row: nothing may leave its card. Recorder time is a column (mm:ss over the limit), the meta line
+   wraps by whole items; the score sits inside the ring as a number over "/100". */
+.app-stats-top .pg-rec__top { flex-wrap: wrap; gap: 0.375rem 0.5rem; }
+.app-stats-top .pg-rec__top .pg-btn { flex: none; }
+.app-stats-top .pg-rec__time {
+  margin-left: auto; display: flex; flex-direction: column; align-items: flex-end;
+  font-size: 1.25rem; line-height: 1.375rem; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.app-stats-top .pg-rec__time small { font-size: 0.625rem; line-height: 0.75rem; }
+.app-stats-top .pg-rec__meta { flex-wrap: wrap; gap: 0.25rem 0.5rem; white-space: nowrap; } /* whole items wrap, never mid-phrase */
+.app-stats-top .pg-rec__meta .pg-badge { flex: none; }
+.app-stats-top .app-stat-hero__score { flex-direction: column; align-items: center; gap: 0.125rem; }
+.app-stats-top .app-stat-hero__num { font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.app-stats-top .app-stat-hero__unit { font-size: 0.5625rem; line-height: 1; }
+
+/* Stats column (task 7): three sections (USB protocol / INPUT / OUTPUT), tiles of two
+   sizes, the chart leads every tile. Charts are SVG drawn by js/screens/stats/charts.js into .app-chart. */
+.app-sec { --sec: var(--info); display: flex; flex-direction: column; gap: 0.625rem; margin-top: 0.875rem; min-width: 0; }
+.app-sec--usb { --sec: var(--viz-teal); }
+.app-sec--out { --sec: var(--accent); }
+.app-sec--usb:has(> #stats-usb-card[hidden]) { display: none; }
+.app-sec__head { display: flex; align-items: center; gap: 0.625rem; padding-inline: 0.125rem; min-width: 0; }
+.app-sec__title { flex: 1; min-width: 0; color: var(--sec); }
+.app-sec__title::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, color-mix(in srgb, var(--sec) 45%, transparent), transparent); }
+.app-sec__title .pg-ring { background: radial-gradient(circle, var(--sec) 0 0.0938rem, transparent 0.125rem 0.2rem, var(--sec) 0.225rem 0.2875rem, transparent 0.3125rem 0.375rem); }
+.app-sec .app-stat-usb-card { padding: 0.5rem 0.75rem; }
+
+.app-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.625rem; align-items: stretch; }
+@container pgside (max-width: 330px) { .app-tiles { grid-template-columns: minmax(0, 1fr); } }
+.app-stats-page .app-tile {
+  min-height: 0; padding: 0.75rem 0.875rem 0.8125rem; gap: 0.5rem; justify-content: flex-start;
+  transition: transform .18s cubic-bezier(.2, .8, .2, 1), box-shadow .18s;
+}
+.app-stats-page .app-tile:hover { transform: scale(1.025); box-shadow: var(--shadow-pop); z-index: 2; }
+.app-tile--wide { grid-column: 1 / -1; }
+.app-tile .pg-stat__head { white-space: normal; overflow: visible; align-items: flex-start; gap: 0.5rem; }
+.app-tile .pg-stat__head > span:first-child { flex: 1 1 auto; min-width: 0; font-size: 0.75rem; line-height: 1.15; }
+.app-tile .pg-stat__head .pg-badge { flex: none; max-width: none; font-size: 0.625rem; }
+.app-tile .pg-stat__value { font-size: 1.375rem; line-height: 1.625rem; font-variant-numeric: tabular-nums; align-items: baseline; gap: 0.5rem; }
+.app-tile--mini .pg-stat__value { font-size: 1.125rem; line-height: 1.375rem; }
+.app-tile__sub { font: 400 0.6875rem/1rem var(--font-mono); color: var(--ink-3); letter-spacing: 0; white-space: nowrap; }
+.app-tile__sub b { color: var(--ink-2); font-weight: 600; }
+
+/* The chart: an inset well; the height keeps it at about half the tile or more. */
+.app-chart {
+  --c: var(--accent);
+  position: relative; flex: 1 0 auto; height: 4.75rem; overflow: hidden;
+  clip-path: inset(0 round var(--radius-md));
+  background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
+}
+.app-tile--mini .app-chart { height: 3.5rem; }
+.app-tile--short .app-chart { height: 3.5rem; }
+.app-chart--axes { height: 5.25rem; }
+.app-tile--mini .app-chart--axes { height: 3.5rem; }
+.app-chart__svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.app-chart__grid { fill: none; stroke: var(--line-subtle); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.app-chart--axes .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
+.app-chart__glide { will-change: transform; overflow: visible; }
+/* Line and glow share one path (<use>): stroke settings live on the group and are inherited, the glow overrides width/opacity. */
+.app-chart__lines { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.app-chart__line { vector-effect: non-scaling-stroke; }
+.app-chart__halo { stroke-width: 5; stroke-opacity: 0.22; }
+.app-chart__area { stroke: none; }
+.app-chart__lines.ax-x, .app-chart__rail.ax-x { --c: var(--axis-x); }
+.app-chart__lines.ax-y, .app-chart__rail.ax-y { --c: var(--axis-y); }
+.app-chart__lines.ax-z, .app-chart__rail.ax-z { --c: var(--axis-z); }
+/* Head dot rides a full-height rail moved by transform: translateY(40%) puts it at 40 % of the chart, no layout. */
+.app-chart__rail { position: absolute; top: 0; right: 0.1875rem; width: 0.4375rem; height: 100%; pointer-events: none; will-change: transform; }
+.app-chart__rail > b {
+  position: absolute; left: 0; top: -0.21875rem; width: 0.4375rem; height: 0.4375rem; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 0.1875rem color-mix(in srgb, var(--c) 30%, transparent), 0 0 0.625rem var(--c);
+}
+.app-chart__empty {
+  position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+  font: 600 0.625rem/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+.app-chart.is-empty .app-chart__empty { display: flex; }
+.app-chart.is-empty .app-chart__rail { display: none; }
+.app-stats-page.is-charts-off .app-chart { display: none; } /* "Charts" switch off: the tiles keep their numbers */
+.app-chart.is-empty .app-chart__grid:nth-of-type(2) { stroke: var(--line); stroke-dasharray: none; }
+
+/* X / Y / Z: legend in the head, current values in one row, the chart below across the tile. */
+.app-axlegend { flex: none; font: 600 0.625rem/1rem var(--font-mono); letter-spacing: .06em; color: var(--ink-3); }
+.app-axlegend i { font-style: normal; }
+.app-axlegend .ax-x { color: var(--axis-x); }
+.app-axlegend .ax-y { color: var(--axis-y); }
+.app-axlegend .ax-z { color: var(--axis-z); }
+.app-axvals { display: flex; flex-wrap: wrap; gap: 0.375rem 1.125rem; font: 600 0.875rem/1.25rem var(--font-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.app-axvals > span { display: inline-flex; align-items: center; gap: 0.375rem; }
+.app-axvals b { font-weight: 600; min-width: 4.5em; }
+.app-axvals--mini { flex-wrap: nowrap; gap: 0.375rem; font-size: 0.6875rem; line-height: 1rem; }
+.app-axvals--mini > span { gap: 0.1875rem; min-width: 0; }
+.app-axvals--mini b { min-width: 0; }
+.app-axvals--mini .pg-axis__key { width: 0.875rem; height: 0.875rem; font-size: 0.5rem; }
+
+/* DSU clients: the list, or an idle emulator mark while nobody listens. */
+.app-dsu-box {
+  flex: 1 0 auto; min-height: 4.25rem; display: flex; align-items: center; justify-content: center; padding: 0.375rem;
+  background: var(--surface-inset); box-shadow: var(--shadow-inset); border: 1px solid var(--line-subtle); border-radius: var(--radius-md);
+}
+.app-dsu-box > #stat-dsu-client-name { align-self: stretch; width: 100%; }
+.app-dsu-box .app-dsu-client-list { margin-top: 0; }
+.app-dsu-box .app-dsu-client-row { min-width: 0; }
+.app-dsu-box .app-dsu-client-row > span:not(.pg-badge) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-dsu-box .app-dsu-client-row .pg-badge { flex: none; }
+.app-dsu-box__idle { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; font: 500 0.6875rem/1rem var(--font-sans); color: var(--ink-3); text-align: center; }
+.app-dsu-box__idle svg { width: 1.5rem; height: 1.5rem; fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.app-dsu-box__idle[hidden] { display: none; }
+.app-tile .app-session-list { flex: 1; justify-content: center; gap: 0.5rem; font-size: 0.75rem; line-height: 1rem; }
+.app-tile .app-session-list > div { display: flex; justify-content: space-between; gap: 0.5rem; padding-bottom: 0.375rem; border-bottom: 1px solid var(--line-subtle); }
+.app-tile .app-session-list > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.app-tile .app-session-list b { font-variant-numeric: tabular-nums; }
+.app-stats-page .pg-spark { height: 3rem; }
+.pg-spark svg path { fill: none; stroke-width: 1.7; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.pg-spark svg path.app-spark-fill { stroke: none; opacity: 0.22; }
+#stats-3d-quad-wrap .pg-viewport__tag { z-index: 3; }
+
+/* The groups of the right column sit in one flex column with the design's gap (the wrapper div has none of its own). */
+.app-set-col-groups { display: flex; flex-direction: column; gap: 1.125rem; min-width: 0; }
+.pg-set__main > .pg-group, .app-set-col-groups > .pg-group { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* Dynamic-camera key hint: centred just above the camera switch (bottom of the 3D block). */
+#stats-orbit-hint {
+  top: auto !important; left: 50% !important; right: auto !important;
+  bottom: calc(0.875rem + 2.625rem) !important; transform: translateX(-50%);
+  white-space: nowrap; z-index: 3;
+}
+
+/* ───────── Mini-games entry button (Settings Screen) ───────── */
+.app-bench-games-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  font: 600 0.8125rem/1.25rem var(--font-sans);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .15s ease;
+  box-sizing: border-box;
+}
+
+.app-bench-games-btn:hover {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  box-shadow: 0 0.25rem 0.75rem var(--accent-glow, rgba(0, 229, 255, 0.12));
+  transform: translateY(-1px);
+}
+
+.app-bench-games-btn:active {
+  transform: translateY(0);
+}
+
+.app-bench-games-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.app-bench-games-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: var(--accent);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.app-bench-games-arrow {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke: var(--ink-3);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  transition: transform .18s ease, stroke .18s ease;
+}
+
+.app-bench-games-btn:hover .app-bench-games-arrow {
+  transform: translateX(0.1875rem);
+  stroke: var(--accent);
+}
+
+/* Filter response: folded by default, the heading is the fold button. */
+.app-bench-fold { display: flex; align-items: center; gap: 0.5rem; background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.app-bench-fold .chev { transition: transform .15s; color: var(--ink-2); }
+.app-bench-fold[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.app-bench-card.is-collapsed > :not(.app-bench-card__head) { display: none; }
+.app-bench-card.is-collapsed .pg-seg { display: none; }
+.app-bench-card.is-collapsed { padding-bottom: 0.875rem; }
+.app-bench-card__head { cursor: pointer; }
+.app-bench-fold { pointer-events: none; }
+.app-bench-card__head .pg-seg { cursor: default; }
+
+/* ── Centering sheet (js/screens/connect/recenter.js) ──────────────────── */
+.app-rc { max-width: 32rem; }
+.app-rc--headless .pg-modal__body { padding-top: 1.5rem; }
+.app-rc__body { display: flex; flex-direction: column; gap: 0.875rem; }
+.app-rc__label {
+  margin-bottom: 0.5rem;
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.app-rc__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 15rem;
+  overflow: auto;
+  padding: 0.125rem;
+}
+.app-rc__list .app-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-inset);
+  transition: border-color .15s ease, background .15s ease;
+}
+.app-rc__list .app-menu__item:hover {
+  border-color: var(--line-control);
+  background: var(--surface-inset);
+}
+.app-rc__list .app-menu__item.is-active {
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)), var(--surface-inset);
+  border-color: var(--accent-line);
+}
+.app-rc__prompt { margin: 0; color: var(--ink-2); font-size: 0.875rem; line-height: 1.4; }
+.app-rc__note { font-size: 0.75rem; }
+<<<<<<< HEAD
+
+/* Foot: left red cancel/later button, right 50% green recenter button */
+.app-modal-dialog.app-rc .pg-modal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.875rem;
+}
+.app-rc__cancel {
+  flex: 0 0 auto;
+  min-width: 6.5rem;
+}
+.app-rc .app-rc__go {
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 50%;
+  width: 50%;
+  min-width: 10rem;
+  background: var(--good);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 600;
+  text-align: center;
+  justify-content: center;
+}
+.app-rc .app-rc__go,
+.app-rc .app-rc__go:hover,
+.app-rc .app-rc__go:disabled,
+.app-rc .app-rc__go[disabled],
+.app-rc .app-rc__go.is-holding {
+  background: var(--good);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.app-rc .app-rc__go:hover:not(.is-holding):not([disabled]) {
+  filter: brightness(1.08);
+}
+.app-rc .app-rc__go:disabled,
+.app-rc .app-rc__go[disabled] {
+  opacity: 1;
+  cursor: default;
+  box-shadow: none;
+}
+.app-rc .app-rc__go.is-holding {
+  cursor: wait;
+  filter: none;
+}
+.app-rc__go::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--p, 0%);
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+  transition: width 50ms linear;
+}
+[data-theme="dark"] .app-rc__go::before {
+  background: rgba(0, 0, 0, 0.22);
+}
+.app-rc__go > span {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Platform Game FPS Counter ───────────────────────────────────────────── */
+.bench-platform-fps {
+  position: absolute;
+  top: 0.75rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  backdrop-filter: blur(0.5rem);
+  z-index: 10;
+}
+.bench-platform-fps .pg-dim {
+  font-size: 0.625rem;
+  opacity: 0.65;
+}
+
+/* ── Platform Game Start & Recenter Preparation Overlay ──────────────────── */
+.bench-platform-ready {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(0.875rem);
+  -webkit-backdrop-filter: blur(0.875rem);
+  background: rgba(14, 13, 11, 0.65);
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+[data-theme="light"] .bench-platform-ready {
+  background: rgba(245, 243, 237, 0.70);
+}
+.bench-platform-ready.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.bench-platform-ready-card {
+  max-width: 27rem;
+  width: 100%;
+  padding: 2.25rem 2rem;
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.125rem;
+}
+.bench-platform-ready-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+.bench-platform-ready-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.bench-platform-ready-desc {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.bench-platform-ready-btn {
+  min-width: 10rem;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.75rem 2rem;
+  margin-top: 0.5rem;
+}
+
+/* Bias auto-zero micro-strip (compact, sleek, 3x smaller) */
+.app-bias-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.3125rem 0.625rem 0.375rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  box-shadow: var(--shadow-inset);
+  margin-top: 0.125rem;
+}
+
+.app-bias-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.125rem;
+}
+
+.app-bias-status {
+  height: 1.125rem;
+  padding: 0 0.4375rem;
+  font-size: 0.59375rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.app-bias-xyz {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.app-bias-axis {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.1875rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+}
+
+.app-bias-k {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.app-bias-v {
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.app-bias-axis--x .app-bias-k { color: var(--axis-x); }
+.app-bias-axis--y .app-bias-k { color: var(--axis-y); }
+.app-bias-axis--z .app-bias-k { color: var(--axis-z); }
+
+.app-bias-bar {
+  height: 0.125rem;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  overflow: hidden;
+}
+
+.app-bias-bar__fill {
+  height: 100%;
+  width: 100%;
+  background: var(--good, #3f9b53);
+  border-radius: var(--radius-pill);
+  transform-origin: left;
+  transform: scaleX(0); /* progress by transform: no layout at 15 Hz */
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.app-bias-bar__fill.is-far {
+  background: var(--warn);
+}
+
+/* Accelerometer now (g), under the bias strip: one bar per axis from the centre.
+   Bars move by transform only (compositor, no layout); device.js writes them at
+   the state's 15 Hz and only when a value changes, nothing while still. */
+.app-accel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem;
+  margin-top: 0.375rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface-inset);
+  border: 1px solid var(--line-subtle);
+  box-shadow: var(--shadow-inset);
+}
+.app-accel__row {
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr) 3.25rem;
+  align-items: center;
+  gap: 0.875rem;
+}
+.app-accel__k { font: 700 0.8125rem/1 var(--font-mono); color: var(--c); }
+.app-accel__row--x { --c: var(--axis-x); }
+.app-accel__row--y { --c: var(--axis-y); }
+.app-accel__row--z { --c: var(--axis-z); }
+.app-accel__track {
+  position: relative;
+  display: flex;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-subtle);
+}
+.app-accel__track::after { /* zero mark */
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -0.1875rem;
+  bottom: -0.1875rem;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--ink-3);
+  opacity: 0.6;
+}
+.app-accel__half { position: relative; flex: 1; overflow: hidden; }
+.app-accel__half--neg { border-radius: var(--radius-pill) 0 0 var(--radius-pill); }
+.app-accel__half--pos { border-radius: 0 var(--radius-pill) var(--radius-pill) 0; }
+.app-accel__half i {
+  position: absolute;
+  inset: 0;
+  background: var(--c);
+  border-radius: var(--radius-pill);
+  transition: transform 0.066s linear; /* one state interval: steps glide */
+}
+.app-accel__half--neg i { transform: translateX(100%); }
+.app-accel__half--pos i { transform: translateX(-100%); }
+.app-accel__v {
+  font: 600 0.875rem/1 var(--font-mono);
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

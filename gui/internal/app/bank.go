@@ -1,6 +1,7 @@
 package app
 
 import (
+	"math"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -20,8 +21,10 @@ import (
 // method keeps its exact behavior -- it just now reads/writes through
 // whichever bank is currently active instead of fields directly on App.
 type motionBank struct {
-	hasClient   atomic.Bool
-	connectedAt time.Time
+	hasClient atomic.Bool
+	// connectedAt: when the source came online, UnixNano (0 = offline). Atomic:
+	// the frame handler, the phone callbacks and the UI loops all touch it.
+	connectedAt atomic.Int64
 	// deviceName identifies whatever is actually connected on this source:
 	// the phone's reported model (OnClientDevice), or a USB device's
 	// self-reported name (optional PhoneGyro protocol TYPE=0x02 frame) --
@@ -39,6 +42,10 @@ type motionBank struct {
 	curAccX atomic.Uint64
 	curAccY atomic.Uint64
 	curAccZ atomic.Uint64
+	// Accelerometer exactly as sent to DSU clients (filtered, DSU signs, mount), g
+	dsuAccX atomic.Uint64
+	dsuAccY atomic.Uint64
+	dsuAccZ atomic.Uint64
 	curQx   atomic.Uint64
 	curQy   atomic.Uint64
 	curQz   atomic.Uint64
@@ -124,9 +131,72 @@ type motionBank struct {
 	calStepLogs  map[int]StepCaptureLog
 	calValResult ValidationResult
 
+	// frameMu serialises onMotionFrame for this bank: two phone connections at
+	// once (a reload before the old socket times out, a second phone) each run
+	// their own goroutine, and the anchor, the accelerometer filter and the
+	// frame clocks are only ever meant to see one stream.
+	frameMu sync.Mutex
+	// levelRef: pitch / roll (float64 bits) of the pose taken as zero by the last
+	// centering (ResetAHRS); the angles the UI shows are relative to it.
+	levelRefP, levelRefR atomic.Uint64
+	centreNext           atomic.Bool // the next frame's angles become levelRef
+
 	lastMotionRecvTs   atomic.Int64
 	lastSensorChangeTs atomic.Int64
 }
+
+// centreHere makes the current pose the zero of the shown angles. The AHRS
+// restarts (heading back to 0) and the next frame's pitch / roll become the
+// offset (fromCentre): taken from a frame computed after the reset, so a matrix
+// switched just before (the calibration's verify step) is already in it.
+func (b *motionBank) centreHere() {
+	b.ahrs.Reset()
+	b.centreNext.Store(true)
+	b.curPitch.Store(0)
+	b.curRoll.Store(0)
+	b.curYaw.Store(0)
+}
+
+// resetOrientation restarts the AHRS and drops the centering: the axes behind
+// the angles changed (new profile, calibration, mount), the old zero means nothing.
+func (b *motionBank) resetOrientation() {
+	b.centreNext.Store(false)
+	b.levelRefP.Store(0)
+	b.levelRefR.Store(0)
+	b.ahrs.Reset()
+}
+
+// fromCentre turns gravity-level angles into angles from the centered pose
+// (taking this frame as the zero right after centreHere).
+func (b *motionBank) fromCentre(p, r float64) (float64, float64) {
+	if b.centreNext.Swap(false) {
+		b.levelRefP.Store(math.Float64bits(p))
+		b.levelRefR.Store(math.Float64bits(r))
+	}
+	return wrap180(p - math.Float64frombits(b.levelRefP.Load())), wrap180(r - math.Float64frombits(b.levelRefR.Load()))
+}
+
+func wrap180(d float64) float64 {
+	d = math.Mod(d+180, 360)
+	if d < 0 {
+		d += 360
+	}
+	return d - 180
+}
+
+// connectedSince is when the source came online (zero time while offline).
+func (b *motionBank) connectedSince() time.Time {
+	if ns := b.connectedAt.Load(); ns != 0 {
+		return time.Unix(0, ns)
+	}
+	return time.Time{}
+}
+
+// markConnected records the connection time unless one is already set.
+func (b *motionBank) markConnected() { b.connectedAt.CompareAndSwap(0, time.Now().UnixNano()) }
+
+// clearConnected marks the source offline.
+func (b *motionBank) clearConnected() { b.connectedAt.Store(0) }
 
 // newMotionBank returns a bank with the same defaults NewApp used to give
 // the (formerly single, shared) App fields directly.

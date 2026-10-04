@@ -75,6 +75,7 @@ type connState struct {
 	afterMeta     bool // the previous frame was metadata: a data SEQ of 0 now means a reboot
 	lastSeq       uint8
 	droppedFrames uint64
+	seqJumps      uint64 // SEQ moved by more than seqMaxGap: out of order or a second stream, not loss
 	dataFrames    uint64
 
 	// The previous data frame, to reject replays: a real device never sends two
@@ -181,7 +182,17 @@ func (st *connState) handle(f hwproto.Frame, h *Host) (fresh bool) {
 			if gap < 0 {
 				gap += 256
 			}
-			if gap > 1 {
+			if gap > seqMaxGap {
+				// SEQ is 8 bits and ~200 frames/s: a hole this long (over 0.6 s) never
+				// shows up as a modulo-256 step, it is a frame from behind or from a
+				// second stream. Counting it as 250 lost frames made the loss card
+				// read 99% while the gyro was clean (seen with a real controller).
+				st.seqJumps++
+				if st.seqJumps <= 5 || st.seqJumps%1000 == 0 {
+					h.Log("WARN", "USB: SEQ jumped %d -> %d (%d times); not counted as loss", st.lastSeq, f.Seq, st.seqJumps)
+				}
+				gap = 1
+			} else if gap > 1 {
 				st.droppedFrames += uint64(gap - 1)
 			}
 		}
@@ -350,15 +361,27 @@ func (m *Manager) scanOnce(stop chan struct{}) {
 		close(resultCh)
 	}()
 
+	// Whatever is still in flight when one port wins (or the scan is stopped) is
+	// closed here: a second port that proved itself would otherwise sit in the
+	// channel's buffer, open and unusable for any other program, for good.
+	drain := func() {
+		go func() {
+			for r := range resultCh {
+				r.port.Close()
+			}
+		}()
+	}
 	select {
 	case r, ok := <-resultCh:
 		close(probeStop)
 		if !ok {
 			return
 		}
+		drain()
 		m.attach(r.name, r.port, r.frames, r.pending)
 	case <-stop:
 		close(probeStop)
+		drain()
 	}
 }
 
@@ -489,3 +512,7 @@ func (m *Manager) readLoop(port serial.Port, name string, initial []hwproto.Fram
 		m.host.Changed()
 	}
 }
+
+// seqMaxGap is the largest SEQ step still read as lost frames (the other half of the
+// 256 range means "behind", see the jump handling in handleFrame).
+const seqMaxGap = 128

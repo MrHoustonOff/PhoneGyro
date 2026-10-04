@@ -62,9 +62,17 @@ func (a *App) loadSettings() {
 func (a *App) applySettings(s AppSettings) {
 	a.themeMu.Lock()
 	a.currentTheme = s.Theme
+	a.accent = s.Accent
 	a.currentLang = s.Lang
 	a.firstLaunchDone = s.FirstLaunchDone
 	a.hideAuthor = s.HideAuthor
+	a.splash.Store(s.Splash)
+	a.debugPanel.Store(s.DebugPanel)
+	if !a.debugLogOn.Swap(s.DebugLog) && s.DebugLog {
+		a.logEvent("INFO", "debug log on: logs/debug.log")
+	} else if !s.DebugLog {
+		a.closeDebugLog()
+	}
 	a.themeMu.Unlock()
 
 	if a.phoneBank != nil && s.ActiveSlot >= 0 && s.ActiveSlot < 6 {
@@ -95,8 +103,6 @@ func (a *App) applySettings(s AppSettings) {
 	a.closeActionMu.Lock()
 	a.closeAction = s.CloseAction
 	a.closeActionMu.Unlock()
-	a.hotkeyRecenterEnabled.Store(s.HotkeyRecenterEnabled)
-	a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
 	a.inputModeMu.Lock()
 	a.inputMode = s.InputMode
 	a.inputModeMu.Unlock()
@@ -109,6 +115,7 @@ func (a *App) settingsSnapshot() AppSettings {
 
 	a.themeMu.RLock()
 	theme := a.currentTheme
+	accent := a.accent
 	lang := a.currentLang
 	firstLaunch := a.firstLaunchDone
 	hideAuthor := a.hideAuthor
@@ -147,12 +154,21 @@ func (a *App) settingsSnapshot() AppSettings {
 	closeAction := a.GetCloseAction()
 
 	return AppSettings{
-		Theme:                 theme,
+		Theme: theme,
+		Accent: func() string {
+			if settings.ValidAccent(accent) {
+				return accent
+			}
+			return def.Accent
+		}(),
 		Lang:                  lang,
 		FontScale:             a.GetFontScale(),
 		ActiveSlot:            slot,
 		FirstLaunchDone:       firstLaunch,
 		HideAuthor:            hideAuthor,
+		Splash:                a.splash.Load(),
+		DebugPanel:            a.debugPanel.Load(),
+		DebugLog:              a.debugLogOn.Load(),
 		DSUPort:               orDefault(a.dsuPort, def.DSUPort),
 		DSUMAC:                a.getDSUMAC(),
 		HTTPPort:              orDefault(a.httpPort, def.HTTPPort),
@@ -173,8 +189,6 @@ func (a *App) settingsSnapshot() AppSettings {
 		GyroSensitivity:       sensitivity,
 		MinimizeToTray:        closeAction == "minimize",
 		CloseAction:           closeAction,
-		HotkeyRecenterEnabled: a.hotkeyRecenterEnabled.Load(),
-		HotkeyRecenterKey:     a.getHotkeyRecenterKey(),
 		InputMode:             a.GetInputMode(),
 	}
 }
@@ -184,10 +198,15 @@ func (a *App) saveSettings() {
 	if a.profilesDir == "" {
 		return
 	}
+	a.saveMu.Lock()
+	defer a.saveMu.Unlock()
+
 	if a.getDSUMAC() == "" {
 		a.setDSUMAC(settings.RandomMAC())
 	}
-	_ = settings.Save(a.profilesDir, a.settingsSnapshot())
+	if err := settings.Save(a.profilesDir, a.settingsSnapshot()); err != nil {
+		a.logEvent("ERROR", "failed to save settings.json: %v", err)
+	}
 }
 
 // GetCloseAction returns the current action on window close ("ask", "minimize", "quit").
@@ -221,21 +240,6 @@ func (a *App) ConfirmCloseChoice(action string, remember bool) {
 	} else {
 		a.QuitApp()
 	}
-}
-
-func (a *App) getHotkeyRecenterKey() string {
-	a.hotkeyRecenterKeyMu.RLock()
-	defer a.hotkeyRecenterKeyMu.RUnlock()
-	if a.hotkeyRecenterKey == "" {
-		return settings.DefaultHotkey
-	}
-	return a.hotkeyRecenterKey
-}
-
-func (a *App) setHotkeyRecenterKey(key string) {
-	a.hotkeyRecenterKeyMu.Lock()
-	defer a.hotkeyRecenterKeyMu.Unlock()
-	a.hotkeyRecenterKey = key
 }
 
 // SetTheme updates theme on backend, broadcasts to Live Debug window, and emits event to main window.
@@ -345,6 +349,20 @@ func (a *App) MarkFirstLaunchDone() {
 	a.saveSettings()
 }
 
+// GetDefaultAppSettings is a first launch's settings: the settings screen marks
+// what differs from them and resets to them.
+func (a *App) GetDefaultAppSettings() AppSettings { return settings.Defaults() }
+
+// GetSplash reports whether the launch animation plays (settings.json splash).
+func (a *App) GetSplash() bool { return a.splash.Load() }
+
+// SetSplash turns the launch animation on or off and saves it.
+func (a *App) SetSplash(on bool) {
+	if a.splash.Swap(on) != on {
+		a.saveSettings()
+	}
+}
+
 // GetHideAuthor returns whether the discreet author attribution should be hidden.
 func (a *App) GetHideAuthor() bool {
 	a.themeMu.RLock()
@@ -423,20 +441,14 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		}
 	}
 
+	// Ports move in place (Rebind): the servers are the same objects, so the
+	// frame handler and the UI keep their pointers. Before the network is up
+	// (startNetwork) the new ports are simply used when it starts.
 	dsuRestarted := false
 	if s.DSUPort != a.dsuPort && a.dsuSrv != nil {
-		a.dsuSrv.Stop()
-		macBytes, _ := settings.ParseMAC(a.getDSUMAC())
-		newDsu := dsu.NewServer(s.DSUPort, macBytes)
-		a.bindDSUCallbacks(newDsu)
-		if err := newDsu.Start(); err != nil {
-			oldDsu := dsu.NewServer(a.dsuPort, macBytes)
-			a.bindDSUCallbacks(oldDsu)
-			_ = oldDsu.Start()
-			a.dsuSrv = oldDsu
-			return nil, fmt.Errorf("failed to bind DSU port %d: %w", s.DSUPort, err)
+		if err := a.dsuSrv.Rebind(s.DSUPort); err != nil {
+			return nil, err
 		}
-		a.dsuSrv = newDsu
 		a.dsuPort = s.DSUPort
 		dsuRestarted = true
 	} else if a.dsuPort == 0 {
@@ -444,6 +456,11 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	}
 
 	if s.HTTPPort != a.httpPort || s.HTTPSPort != a.httpsPort {
+		if a.srv != nil {
+			if err := a.srv.Rebind(s.HTTPPort, s.HTTPSPort); err != nil {
+				return nil, err
+			}
+		}
 		a.httpPort = s.HTTPPort
 		a.httpsPort = s.HTTPSPort
 		a.rebuildURLsAndQRCodes()
@@ -451,6 +468,11 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 
 	if s.GyroDeadzone >= 0 {
 		a.gyroDeadzoneBits.Store(math.Float64bits(s.GyroDeadzone))
+	}
+	if settings.ValidAccent(s.Accent) {
+		a.themeMu.Lock()
+		a.accent = s.Accent
+		a.themeMu.Unlock()
 	}
 	if s.GyroDeadband >= 0 && s.GyroDeadband <= 1.0 {
 		a.gyroDeadbandBits.Store(math.Float64bits(s.GyroDeadband))
@@ -462,14 +484,22 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		a.gyroSensitivityBits.Store(math.Float64bits(s.GyroSensitivity))
 	}
 
+	a.splash.Store(s.Splash)
+	a.debugPanel.Store(s.DebugPanel)
+	if !a.debugLogOn.Swap(s.DebugLog) && s.DebugLog {
+		a.logEvent("INFO", "debug log on: logs/debug.log")
+	} else if !s.DebugLog {
+		a.closeDebugLog()
+	}
+	a.syncDebug()
 	a.stillnessHint.Store(s.StillnessHint)
 	a.disconnectAlert.Store(s.DisconnectAlert)
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	// CemuNoticeHidden is not a settings-window field: only the notice's own
 	// "don't show again" changes it (CloseCemuNotice). Same for SkippedUpdate.
-	if !a.update.enabled.Swap(s.CheckUpdates) && s.CheckUpdates {
-		go a.checkForUpdate() // just switched on: check now, not at the next start
+	if a.update.enabled.Swap(s.CheckUpdates) != s.CheckUpdates {
+		a.update.wake() // switched on: check now; switched off: show "off"
 	}
 	a.dsuClientViews() // turns the guard on or off for the Cemu clients now
 	if s.CloseAction != "" {
@@ -490,22 +520,8 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 		a.fontScaleBits.Store(math.Float64bits(1.00))
 	}
 
-	a.themeMu.Lock()
-	if s.Theme == "dark" || s.Theme == "light" {
-		a.currentTheme = s.Theme
-	}
-	if s.Lang == "ru" || s.Lang == "en" {
-		a.currentLang = s.Lang
-	}
-	a.themeMu.Unlock()
-
-	a.hotkeyRecenterEnabled.Store(s.HotkeyRecenterEnabled)
-	if s.HotkeyRecenterKey != "" {
-		a.setHotkeyRecenterKey(s.HotkeyRecenterKey)
-	}
-	if a.trayMgr != nil {
-		a.trayMgr.UpdateHotkey(s.HotkeyRecenterEnabled, a.getHotkeyRecenterKey())
-	}
+	// Note: Theme and Lang are controlled authoritatively via SetTheme and SetLang (header).
+	// We do not overwrite them here with potentially stale frontend snapshots.
 
 	curScale := math.Float64frombits(a.fontScaleBits.Load())
 	a.broadcastLiveDebugJSON(map[string]any{

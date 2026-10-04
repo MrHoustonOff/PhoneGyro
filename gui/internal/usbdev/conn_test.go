@@ -127,3 +127,20 @@ func TestConnStateHandsOnFrames(t *testing.T) {
 		t.Fatalf("names %v", app.names)
 	}
 }
+
+// TestUSBConnStateSeqJumpIsNotLoss: a SEQ step over half of the 8-bit range means a
+// frame from behind (or a second stream), not 150+ lost frames. Counting it as loss
+// made the loss card show 99% on a controller whose gyro was clean.
+func TestUSBConnStateSeqJumpIsNotLoss(t *testing.T) {
+	app := newTestHost(t)
+	st := newConnState()
+	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 100}, &app.Host)
+	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 99}, &app.Host)  // one step back
+	st.handle(hwproto.Frame{Type: hwproto.TypeData, Seq: 100}, &app.Host) // and forward again
+	if st.droppedFrames != 0 {
+		t.Fatalf("a frame from behind counted as %d lost frames, want 0", st.droppedFrames)
+	}
+	if st.seqJumps != 1 {
+		t.Fatalf("seqJumps = %d, want 1", st.seqJumps)
+	}
+}

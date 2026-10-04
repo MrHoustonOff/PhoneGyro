@@ -3,7 +3,7 @@
   "name": "PhoneGyro",
   "outputfilename": "PhoneGyro",
   "frontend:dir": "./frontend/src",
-  "wailsjsdir": "./frontend/src",
+  "wailsjsdir": "./frontend",
   "version": "2.0.0",
   "author": {
     "name": "MrHoustonOff",

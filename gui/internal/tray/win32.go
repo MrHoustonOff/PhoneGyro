@@ -2,7 +2,7 @@ package tray
 
 import "syscall"
 
-// Win32 API used by the tray window and the hotkey.
+// Win32 API used by the tray window.
 
 var (
 	user32   = syscall.NewLazyDLL("user32.dll")
@@ -24,7 +24,6 @@ var (
 	pAppendMenuW         = user32.NewProc("AppendMenuW")
 	pTrackPopupMenu      = user32.NewProc("TrackPopupMenu")
 	pDestroyMenu         = user32.NewProc("DestroyMenu")
-	pLoadImageW          = user32.NewProc("LoadImageW")
 
 	pShellNotifyIconW = shell32.NewProc("Shell_NotifyIconW")
 	pGetModuleHandleW = kernel32.NewProc("GetModuleHandleW")
