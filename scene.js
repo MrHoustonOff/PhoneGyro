@@ -37,6 +37,20 @@
     return g;
   }
 
+  /* A THREE namespace for the hero stage without the floor linework (thin floor rings and the two floor axis lines). */
+  function noFloorThree() {
+    var T = window.THREE, N = Object.create(T);
+    N.RingGeometry = function (a, b, s) {
+      if (s === 160 && b - a < 0.02) return new T.BufferGeometry();
+      return new T.RingGeometry(a, b, s, arguments[3], arguments[4], arguments[5]);
+    };
+    N.PlaneGeometry = function (w, h) {
+      if (h < 0.01 && w > 8) return new T.BufferGeometry();
+      return new T.PlaneGeometry(w, h, arguments[2], arguments[3]);
+    };
+    return N;
+  }
+
   function mount(host) {
     var T = window.THREE, PG = window.PhoneGyro;
     if (!T || !PG || !PG.createScene || !host) return null;
@@ -48,7 +62,7 @@
 
     function start(glb) {
       if (dead) return;
-      scene = PG.createScene(host, { glb: glb, model: 'gamepad', step: 'live' });
+      scene = PG.createScene(host, { glb: glb, model: 'gamepad', step: 'live', THREE: noFloorThree() });
       if (scene) host.classList.add('is-3d');
     }
     function tryNext(i) {
@@ -157,12 +171,14 @@
     }
     function collect() {
       items = [];
-      q('.lp-head').forEach(function (h) { tag(q('.pg-overline, .lp-h2, .lp-lead', h), 0, 0.1); });
+      q('.lp-head').forEach(function (h) { tag(q('.pg-overline, .lp-h2, .lp-lead', h), 0, 0.08); });
+      q('.lp-facts').forEach(function (f) { q('.lp-fact', f).forEach(function (c, i) { c.setAttribute('data-sc', ''); items.push({ el: c, d: (i % 4) * 0.08 }); }); });
+      tag(q('.lp-qs__side > *'), 0.05, 0.08);
       tag(q('.lp-how__i'), 0, 0.14);
       q('.lp-bento > .lp-b').forEach(function (c, i) { c.setAttribute('data-sc', ''); items.push({ el: c, d: (i % 3) * 0.12 }); });
       tag(q('.lp-steps li'), 0, 0);
       tag(q('.lp-qs__act, .lp-qs__main > .pg-notice, .lp-qs__main > .pg-card'), 0, 0);
-      tag(q('.lp-faq'), 0, 0);
+      tag(q('.lp-faq'), 0.06, 0);
       tag(q('.lp-final'), 0, 0);
       tag(q('.lp-footer__cols > *'), 0, 0.1);
     }
@@ -272,5 +288,50 @@
     return { dispose: function () { dead = true; if (raf) cancelAnimationFrame(raf); if (io) io.disconnect(); } };
   }
 
-  window.PGLanding = { mount: mount, mountDemo: mountDemo, mountScroll: mountScroll, mountAxes: mountAxes };
+  /* Desktop flourishes: card glow that follows the cursor, magnetic primary buttons, mosaic tiles with depth.
+     Rings inside the mosaic are SVG <animate>; they are paused under reduced motion. */
+  function mountFx(root) {
+    if (!root || !window.matchMedia) return null;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var svgs = Array.prototype.slice.call(root.querySelectorAll('.lp-mz__svg'));
+    if (reduce) { svgs.forEach(function (s) { try { s.pauseAnimations(); } catch (e) {} }); return null; }
+    var mq = window.matchMedia('(min-width: 901px) and (pointer: fine)');
+    var mags = Array.prototype.slice.call(root.querySelectorAll('.pg-btn--primary.pg-btn--lg'));
+    var arts = Array.prototype.slice.call(root.querySelectorAll('.lp-mz')).map(function (m) {
+      return { el: m, tiles: Array.prototype.slice.call(m.querySelectorAll('.lp-mz__t')) };
+    });
+    var depth = [1.0, 0.55, 0.8, 0.65, 0.45, 0.35];
+    var px = 0, py = 0, pending = false, on = false;
+    function apply() {
+      pending = false;
+      var i, r, el = document.elementFromPoint(px, py);
+      var card = el && el.closest ? el.closest('.pg-card:not(.lp-tile)') : null;
+      if (card) { r = card.getBoundingClientRect(); card.style.setProperty('--mx', (px - r.left) + 'px'); card.style.setProperty('--my', (py - r.top) + 'px'); }
+      for (i = 0; i < mags.length; i++) {
+        r = mags[i].getBoundingClientRect();
+        var cx = r.left + r.width / 2, cy = r.top + r.height / 2, dx = px - cx, dy = py - cy, d = Math.sqrt(dx * dx + dy * dy);
+        mags[i].style.translate = d < 140 ? (dx * 0.18).toFixed(1) + 'px ' + (dy * 0.28).toFixed(1) + 'px' : '0 0';
+      }
+      arts.forEach(function (a) {
+        r = a.el.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > (window.innerHeight || 900)) return;
+        var nx = Math.max(-1, Math.min(1, (px - (r.left + r.width / 2)) / (r.width))), ny = Math.max(-1, Math.min(1, (py - (r.top + r.height / 2)) / (r.height)));
+        a.tiles.forEach(function (t, k) { var f = depth[k % depth.length] * 22; t.setAttribute('transform', 'translate(' + (nx * f).toFixed(1) + ' ' + (ny * f).toFixed(1) + ')'); });
+      });
+    }
+    function onMove(e) { px = e.clientX; py = e.clientY; if (!pending) { pending = true; requestAnimationFrame(apply); } }
+    function sync() {
+      if (mq.matches && !on) { on = true; root.classList.add('is-fx'); window.addEventListener('pointermove', onMove, { passive: true }); }
+      else if (!mq.matches && on) {
+        on = false; root.classList.remove('is-fx'); window.removeEventListener('pointermove', onMove);
+        mags.forEach(function (m) { m.style.translate = ''; });
+        arts.forEach(function (a) { a.tiles.forEach(function (t) { t.removeAttribute('transform'); }); });
+      }
+    }
+    sync();
+    if (mq.addEventListener) mq.addEventListener('change', sync);
+    return { dispose: function () { window.removeEventListener('pointermove', onMove); root.classList.remove('is-fx'); } };
+  }
+
+  window.PGLanding = { mount: mount, mountDemo: mountDemo, mountScroll: mountScroll, mountAxes: mountAxes, mountFx: mountFx };
 })();

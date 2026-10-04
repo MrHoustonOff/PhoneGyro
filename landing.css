@@ -307,6 +307,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* static-site additions */
 .lp-ic{display:inline-flex}
 [data-theme="dark"] .lp-ic--moon,:root:not([data-theme="dark"]) .lp-ic--sun{display:none}
+.lp a.pg-seg__btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
 .lp-skip{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:var(--radius-md);background:var(--ink);color:var(--on-ink);font:600 14px/1 var(--font-sans);text-decoration:none}
 .lp-skip:focus{top:12px}
 .lp :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
