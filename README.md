@@ -23,6 +23,8 @@
 
 PhoneGyro turns your computer into a server and your iPhone or Android phone into a motion source. You can stream your phone's gyroscope data to any client that supports the DSU (Cemuhook) protocol, emulators in the first place.
 
+**If you like this project, please consider leaving a star!** ⭐
+
 ## Tested on
 
 | Platform | Devices | Result |
