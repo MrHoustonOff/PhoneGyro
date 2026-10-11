@@ -1,4 +1,4 @@
-[English](../README.md) | **Русский**
+<img width="452" height="101" alt="{EAEB9683-8EFE-410B-B5B8-BFAFB6493D4F}" src="https://github.com/user-attachments/assets/da014509-e084-45f6-af75-f61030b36b3e" />[English](../README.md) | **Русский**
 
 <p align="center">
   <img src="imgs/header-ru.webp" width="860" alt="PhoneGyro: передайте движения телефона в игру">
@@ -22,6 +22,8 @@
 </p>
 
 PhoneGyro превращает ваш компьютер в сервер, а ваш iPhone или Android-телефон в источник движения. Вы можете передавать данные гироскопа телефона в любой клиент, поддерживающий протокол DSU (Cemuhook), в первую очередь в эмуляторы.
+
+Если вам понравился проект, пожалуйста, поставьте звезду! ⭐
 
 ## Протестировано на
 
