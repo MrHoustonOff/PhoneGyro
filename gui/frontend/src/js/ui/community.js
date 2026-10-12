@@ -2,13 +2,12 @@
 // when (internal/community, app/community.go) and raises "community:prompt";
 // the answer goes back with CommunityAnswer, which also spends the ask. Built on
 // the modal sheet (pg-overlay + pg-modal) and the design's own pieces: pg-sonar,
-// pg-callout, pg-btn, pg-link and the accent burst.
+// pg-callout, pg-btn and pg-link.
 
 import { on, call, openURL } from '../core/bridge.js';
 import { esc } from '../core/dom.js';
 import { t } from '../core/i18n.js';
 import { getCurrentScreen, onScreen } from '../shell/router.js';
-import { accent } from '../vendor/accent.js';
 import { queueNotice } from './notices.js';
 
 const REPO = 'https://github.com/MrHoustonOff/PhoneGyro';
@@ -81,7 +80,6 @@ function openWindow() {
       if (!b || done) return;
       if (b.dataset.a === 'star') {
         box.classList.add('is-starred');
-        try { accent.burst(box.querySelector('.app-comm__core')); } catch (_) { /* the burst is decoration */ }
         openURL(REPO);
         close('star', 1100);
       } else close(b.dataset.a);
