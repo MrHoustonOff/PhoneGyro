@@ -22,6 +22,7 @@ import { startDebug, debugBooted } from './debug/toggle.js';
 import { startBannerTriggers } from './debug/banners.js';
 import { startCloseDialog } from './ui/close-dialog.js';
 import { startNotices } from './ui/notices.js';
+import { startCommunity } from './ui/community.js';
 import { startConnect } from './screens/connect/connect.js';
 import { startSetup } from './screens/setup.js';
 import { startSettings } from './screens/settings.js';
@@ -104,6 +105,7 @@ async function boot() {
   }
 
   startNotices();         // after the strings: they are shown in full
+  startCommunity();       // the GitHub star window, raised by Go
   debugBooted();
 
   // Rule 0: Pause background drift animation when window is blurred or hidden

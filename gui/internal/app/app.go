@@ -89,6 +89,7 @@ type App struct {
 	silenceDisconnect atomic.Bool
 	cemuDriftGuard    atomic.Bool // drift guard for Cemu clients (pkg/dsu/cemubias.go)
 	cemuNotice        cemuNoticeState
+	community         communityState // the GitHub star window (community.go)
 	update            updateState
 	firewall          firewallState
 	dsuNames          dsuclients.Namer // program names of local DSU clients (dsu_clients.go)
@@ -320,6 +321,8 @@ func (a *App) SetNoPopups(val bool) {
 
 // shutdown is called when the Wails application terminates
 func (a *App) shutdown(ctx context.Context) {
+	a.communityClose(time.Now())
+
 	if a.trayMgr != nil {
 		a.trayMgr.Stop()
 		a.trayMgr = nil

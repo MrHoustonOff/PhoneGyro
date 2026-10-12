@@ -91,6 +91,7 @@ func (a *App) applySettings(s AppSettings) {
 	a.silenceDisconnect.Store(s.SilenceDisconnect)
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	a.cemuNotice.hidden.Store(s.CemuNoticeHidden)
+	a.setCommunity(s.Community)
 	a.update.enabled.Store(s.CheckUpdates)
 	a.update.setSkipped(s.SkippedUpdate)
 	a.soundMode = s.SoundMode
@@ -179,6 +180,7 @@ func (a *App) settingsSnapshot() AppSettings {
 		SilenceDisconnect:     a.silenceDisconnect.Load(),
 		CemuDriftGuard:        a.cemuDriftGuard.Load(),
 		CemuNoticeHidden:      a.cemuNotice.hidden.Load(),
+		Community:             a.communitySnapshot(),
 		CheckUpdates:          a.update.enabled.Load(),
 		SkippedUpdate:         a.update.getSkipped(),
 		SoundMode:             soundMode,
@@ -498,6 +500,7 @@ func (a *App) SaveAppSettings(s AppSettings) (map[string]any, error) {
 	a.cemuDriftGuard.Store(s.CemuDriftGuard)
 	// CemuNoticeHidden is not a settings-window field: only the notice's own
 	// "don't show again" changes it (CloseCemuNotice). Same for SkippedUpdate.
+	// Community is the app's own record (community.go): never taken from the UI.
 	if a.update.enabled.Swap(s.CheckUpdates) != s.CheckUpdates {
 		a.update.wake() // switched on: check now; switched off: show "off"
 	}

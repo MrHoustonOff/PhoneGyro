@@ -16,8 +16,9 @@ const p = (key, vars) => `<p>${md(t(key, vars))}</p>`;
 const queue = [];
 let busy = false;
 
-// One dialog at a time; the next waits.
-function show(fn) {
+// One dialog at a time; the next waits. fn returns a promise that settles when
+// its dialog closed (the community window queues here too: ui/community.js).
+export function queueNotice(fn) {
   if (window.__pgNoPopups || getState()?.noPopups) return;
   queue.push(fn);
   if (!busy) next();
@@ -36,7 +37,7 @@ export function cemu(n) {
   const infoList = [t('cemu_notice.settings'), t('cemu_notice.upstream'), prMd].join('\n');
   const { html } = render([t('cemu_notice.bug'), statusMd, infoList].join('\n\n'));
 
-  return show(() => openModal({
+  return queueNotice(() => openModal({
     title: t('cemu_notice.title'),
     dialogClass: 'app-modal-dialog--notice',
     body: `<div class="pg-prose app-notice-prose">${html}</div>`,
@@ -49,7 +50,7 @@ export function cemu(n) {
 export function firewall(st) {
   const text = [t('firewall.alert_text'), st && st.network === 'public' ? t('firewall.alert_public') : ''].filter(Boolean).join('\n\n');
   const { html } = render(text);
-  return show(() => openModal({
+  return queueNotice(() => openModal({
     title: t('firewall.alert_title'),
     dialogClass: 'app-modal-dialog--notice',
     body: `<div class="pg-prose app-notice-prose">${html}</div>`,
@@ -61,7 +62,7 @@ export function firewall(st) {
 }
 
 export function update(info) {
-  show(() => openModal({
+  queueNotice(() => openModal({
     title: t('update_notice.title', { version: info.latest }),
     body: p('update_notice.versions', { current: info.current }) + `<ol class="app-steps"><li>${md(t('update_notice.step_download'))}</li><li>${md(t('update_notice.step_run'))}</li></ol>`
       + `<p class="app-modal-link"><a class="pg-link" href="${esc(info.releaseUrl)}">${esc(t('update_notice.release_page'))}</a></p>`,

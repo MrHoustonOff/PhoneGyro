@@ -566,6 +566,10 @@
     "title": "Initial Setup"
   },
   "settings_modal": {
+    "group_dev": "Development",
+    "dev_community": "GitHub star window",
+    "dev_community_tip": "Dev builds only: shows the community window. Nothing is counted.",
+    "dev_community_btn": "Show",
     "title": "Settings",
     "subtitle": "Server ports, network and motion filtering for advanced users",
     "group_network": "Network & Server Ports",
@@ -806,5 +810,15 @@
     "status_scanning": "Searching for USB IMU device...",
     "connected_name": "USB Controller",
     "direct_connection": "Direct USB connection"
+  },
+  "community": {
+    "title": "Looks like we’ve become friends",
+    "sub": "PhoneGyro is made by one person, for free, in the evenings. If you’ve reached this window, the app has really been useful to you. That’s the best news of my week.",
+    "main_b": "Star the project on GitHub.",
+    "main": "It takes one second and one click. It’s the only way for the project to learn that someone needs it, and to climb the search results so the people who need it can find it.",
+    "star": "Give a star",
+    "later": "Remind me later",
+    "never": "Don’t show again",
+    "close": "Close"
   }
 }

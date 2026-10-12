@@ -12,6 +12,7 @@ import (
 
 	"phonegyro/pkg/dsu"
 
+	"phonegyro-gui/internal/community"
 	"phonegyro-gui/internal/fsutil"
 )
 
@@ -67,6 +68,10 @@ type Settings struct {
 	MinimizeToTray    bool           `json:"minimizeToTray"` // kept for old readers: CloseAction == "minimize"
 	CloseAction       string         `json:"closeAction"`
 	InputMode         string         `json:"inputMode,omitempty"`
+	// Community is the one-time "star the project" ask (internal/community).
+	// Like CemuNoticeHidden and SkippedUpdate, only the app changes it: what the
+	// settings window sends back is ignored.
+	Community community.State `json:"community"`
 }
 
 // ValidAccent reports whether a is one of the UI accent colours.
@@ -215,6 +220,9 @@ type stored struct {
 	FontScale         *float64       `json:"fontScale,omitempty"`
 	CloseAction       string         `json:"closeAction,omitempty"`
 	InputMode         string         `json:"inputMode,omitempty"`
+	// Decoded on its own (see Load): a damaged value here must not cost the
+	// rest of the file.
+	Community json.RawMessage `json:"community,omitempty"`
 }
 
 // Load reads dir/settings.json over the defaults; invalid values keep their
@@ -282,6 +290,7 @@ func Load(dir string) (s Settings, found bool) {
 		s.CemuDriftGuard = *r.CemuDriftGuard
 	}
 	s.CemuNoticeHidden = r.CemuNoticeHidden
+	s.Community = loadCommunity(r.Community)
 	s.CheckUpdates = r.CheckUpdates
 	s.SkippedUpdate = strings.TrimSpace(r.SkippedUpdate)
 	if r.SoundMode != "" {
@@ -318,6 +327,23 @@ func Load(dir string) (s Settings, found bool) {
 		s.InputMode = "usb"
 	}
 	return s, true
+}
+
+// loadCommunity reads the "community" block field by field: one damaged value
+// (a hand-edited date, say) keeps its zero and the others are still read --
+// above all "done", so a user who answered is never asked again.
+func loadCommunity(raw json.RawMessage) community.State {
+	var c community.State
+	var m map[string]json.RawMessage
+	if len(raw) == 0 || json.Unmarshal(raw, &m) != nil {
+		return c
+	}
+	_ = json.Unmarshal(m["goodSessions"], &c.GoodSessions)
+	_ = json.Unmarshal(m["shownCount"], &c.ShownCount)
+	_ = json.Unmarshal(m["lastShown"], &c.LastShown)
+	_ = json.Unmarshal(m["done"], &c.Done)
+	c.Normalize()
+	return c
 }
 
 // Save writes s to dir/settings.json.

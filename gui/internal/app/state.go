@@ -289,6 +289,7 @@ func (a *App) bindDSUCallbacks(srv *dsu.Server) {
 	notify := func() {
 		clients := a.dsuClientViews()
 		count := len(clients)
+		a.communityObserve(count)
 		if a.trayMgr != nil {
 			a.trayMgr.UpdateState()
 		}

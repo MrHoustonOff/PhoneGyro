@@ -18,6 +18,7 @@ import { setZoom, onZoom } from '../ui/zoom.js';
 import { ACCENTS, applyAccent } from '../ui/accent.js';
 import { setDebugPanel } from '../debug/toggle.js';
 import { setSoundConfig, previewSound } from '../core/sound.js';
+import { previewCommunity } from '../ui/community.js';
 
 const DEADBAND = ['0.00', '0.05', '0.10', '0.20', '0.35', '0.50', '0.75', '1.00'];
 const dbKey = (v) => 'settings_modal.deadband_' + (v === '0.00' ? 'off' : v.replace('.', '')); // 0.05 → deadband_005
@@ -64,8 +65,13 @@ const COLUMNS = [
       { key: 'debugLog', type: 'toggle', label: 'ui.debug_log', tip: 'ui.debug_log_tip' },
       { key: 'splash', type: 'toggle', label: 'ui.splash', tip: 'ui.splash_tip', after: (v) => { try { localStorage.setItem('pg-splash', v ? '1' : '0'); } catch (e) { /* default next time */ } } },
     ] },
+    // Dev builds only (channel != "release"); last, so the row indexes above never shift.
+    { title: 'settings_modal.group_dev', dev: true, rows: [
+      { type: 'devcommunity', label: 'settings_modal.dev_community' },
+    ] },
   ],
 ];
+let devBuild = false; // GetAppVersion().channel != "release" (startSettings)
 
 let cur = null;      // AppSettings as Go last returned them
 let def = null;      // a first launch's settings: the "changed" marks and resets
@@ -113,6 +119,7 @@ function control(r, i) {
     case 'swatches': return `<div class="pg-swatches" role="radiogroup">${r.options.map((o) =>
       `<button type="button" class="pg-swatch" data-accent-pick="${o}" style="--sw:var(--sw-${o})" role="radio" aria-checked="${v === o}" aria-label="${esc(t('ui.accent_' + o))}" data-tip="${esc(t('ui.accent_' + o))}"></button>`).join('')}</div>`;
     case 'mixer': return `<button class="pg-btn pg-btn--sm app-mixbtn" type="button" data-mixer aria-expanded="${mixOpen}">${esc(t('settings_modal.sound_details_btn'))}${CHEV}</button>`;
+    case 'devcommunity': return `<button class="pg-btn pg-btn--sm" type="button" id="set-dev-community">${esc(t('settings_modal.dev_community_btn'))}</button>`;
     case 'datadir': return `<input class="pg-input pg-input--mono app-path" id="set-datadir" readonly><button class="pg-btn-icon" type="button" id="set-datadir-open" data-tip="${esc(t('settings_modal.data_dir_open'))}">${FOLDER}</button>`;
     default: return '';
   }
@@ -131,7 +138,7 @@ function render() {
   COLUMNS.forEach((groups, c) => {
     const target = c === 0 ? $('set-col-1') : ($('set-col-2-groups') || $('set-col-2'));
     if (!target) return;
-    target.innerHTML = groups.map((g) => `<div class="pg-group">
+    target.innerHTML = groups.filter((g) => !g.dev || devBuild).map((g) => `<div class="pg-group">
       <div class="pg-overline"><span class="pg-ring"></span>${esc(t(g.title))}</div>
       ${g.note ? `<div class="pg-notice"><span>${esc(t(g.note))}</span></div>` : ''}
       <div class="pg-group__list">${g.rows.map((r) => {
@@ -335,6 +342,7 @@ async function load() {
 
 export function startSettings() {
   const screen = $('screen-settings');
+  call('GetAppVersion').then((v) => { devBuild = !!v && v.channel !== 'release'; if (devBuild) render(); }).catch(() => {});
   on('firewall:status', () => refreshFirewall()); // the verdict after Windows' prompt was answered
   screen.addEventListener('input', onInput);
   screen.addEventListener('change', onInput);
@@ -361,6 +369,7 @@ export function startSettings() {
     else if (e.target.closest('#fw-allow')) openDocsAt(slug(t('firewall.docs_heading')));
     else if (e.target.closest('#set-datadir-open')) call('OpenDataDir');
     else if (e.target.closest('#btn-open-games')) go('games');
+    else if (e.target.closest('#set-dev-community')) previewCommunity();
   });
   document.addEventListener('click', (e) => {
     // the whole top strip of the card folds/unfolds it (not only the arrow); the axis switch keeps its own clicks
