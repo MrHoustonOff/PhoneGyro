@@ -1,7 +1,7 @@
 // The community window: asks, once or twice, for a star on GitHub. Go decides
 // when (internal/community, app/community.go) and raises "community:prompt";
 // the answer goes back with CommunityAnswer, which also spends the ask. Built on
-// the modal sheet (pg-overlay + pg-modal) and the design's own pieces:
+// the modal sheet (pg-overlay + pg-modal) and the design's own pieces
 // pg-callout, pg-btn and pg-link.
 
 import { on, call, openURL } from '../core/bridge.js';

@@ -2732,5 +2732,5 @@ html.is-hidden .app-comm *, html.is-hidden .app-comm *::before, html.is-hidden .
 html.is-blur .app-comm *, html.is-blur .app-comm *::before, html.is-blur .app-comm *::after { animation-play-state: paused !important; }
 @media (prefers-reduced-motion: reduce) {
   .app-comm, .app-comm *, .app-comm *::before, .app-comm *::after { animation: none !important; }
-  .app-comm__sonar, .app-comm__core i { display: none; }
+  .app-comm__core i { display: none; }
 }
