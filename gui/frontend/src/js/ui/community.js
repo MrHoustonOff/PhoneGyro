@@ -1,7 +1,7 @@
 // The community window: asks, once or twice, for a star on GitHub. Go decides
 // when (internal/community, app/community.go) and raises "community:prompt";
 // the answer goes back with CommunityAnswer, which also spends the ask. Built on
-// the modal sheet (pg-overlay + pg-modal) and the design's own pieces: pg-sonar,
+// the modal sheet (pg-overlay + pg-modal) and the design's own pieces:
 // pg-callout, pg-btn and pg-link.
 
 import { on, call, openURL } from '../core/bridge.js';
@@ -25,7 +25,6 @@ function markup() {
     <button type="button" class="pg-btn-icon app-comm__x" data-a="later" aria-label="${esc(t('community.close'))}">${X}</button>
     <div class="app-comm__top" aria-hidden="true">
       ${RINGS.map(([s, o, d]) => `<span class="app-comm__ring" style="--s:${s}rem;--o:${o};--d:${d}s"></span>`).join('')}
-      <span class="pg-sonar app-comm__sonar"><i></i><i></i><i></i></span>
       <span class="app-comm__dash"><b></b><b></b></span>
       <div class="app-comm__core">${STAR}<i></i><i></i><i></i></div>
     </div>

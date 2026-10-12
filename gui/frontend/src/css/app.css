@@ -2637,7 +2637,7 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 }
 
 /* ── Community window (ui/community.js): the GitHub star ask ────────────── */
-/* The modal sheet, wider, with the design's hero: rings, sonar, a spinning
+/* The modal sheet, wider, with the design's hero: rings, a spinning
    dashed ring and the star core. Pauses with the window (is-hidden/is-blur). */
 .app-overlay .pg-modal.app-comm { max-width: 45rem; max-height: 100%; display: flex; flex-direction: column; padding: 0; text-align: center;
   box-shadow: var(--shadow-pop), 0 0 5.625rem -1.875rem var(--accent); animation: app-comm-in .65s cubic-bezier(.2,.8,.2,1) both; }
@@ -2664,8 +2664,6 @@ html.is-calibrating[data-theme="dark"][data-accent] {
 .app-comm__ring, .app-comm__dash { position: absolute; left: 50%; top: 52%; border-radius: 50%; transform: translate(-50%, -50%); }
 .app-comm__ring { width: var(--s); height: var(--s); border: 0.09375rem solid var(--accent-line); opacity: var(--o); animation: app-comm-ring 1s cubic-bezier(.15,.7,.2,1) var(--d) backwards; }
 @keyframes app-comm-ring { from { opacity: 0; transform: translate(-50%, -50%) scale(.15); } }
-.app-comm__sonar { top: 52%; }
-.app-comm__sonar i { left: -4.6875rem; top: -4.6875rem; width: 9.375rem; height: 9.375rem; border-width: 0.09375rem; border-color: var(--accent); animation-duration: 5.4s; }
 .app-comm__dash { width: 11rem; height: 11rem; border: 0.09375rem dashed var(--accent-line); animation: app-comm-ring 1s .3s cubic-bezier(.15,.7,.2,1) backwards, app-comm-spin 46s linear infinite; }
 @keyframes app-comm-spin { from { transform: translate(-50%, -50%) rotate(0); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 .app-comm__dash b { position: absolute; left: 50%; top: -0.25rem; width: 0.4375rem; height: 0.4375rem; margin-left: -0.21875rem; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0.625rem 1px var(--accent); }
