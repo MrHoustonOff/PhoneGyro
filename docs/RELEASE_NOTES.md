@@ -1,7 +1,19 @@
 Changelog:
 
-**Fixed: very slow, steady movements no longer stick to one axis.** The gyroscope "auto-zero" took a slow, smooth turn for sensor drift and subtracted it, so after a few seconds the movement vanished from the output and the aim felt pulled onto the other axis. Most noticeable with the USB controller. The auto-zero is removed, together with its strip on the device card: the gyroscope zero now comes only from calibration.
+**Fixed: slow, steady movements no longer stick to one axis.** The gyro auto-zero mistook them for drift and has been removed; the gyro zero now comes only from calibration.
 
-- If the aim creeps by itself while a USB controller lies still, calibrate again about 5 minutes after connecting: the MPU-6050's zero shifts a little while the board warms up, and the rest step measures it anew. Profiles saved by older versions may also hold a zero the auto-zero had shifted; one calibration fixes it.
+- If the aim creeps by itself while a USB controller lies still, calibrate again about 5 minutes after connecting: the IMU's zero shifts a little while the board warms up, and the rest step measures it anew. Profiles saved by older versions may also hold a zero the auto-zero had shifted; one calibration fixes it.
 
-**New: a one-time "star on GitHub" window.** After a few long play sessions (with any DSU client), when the game disconnects, PhoneGyro asks once to star the project. "Remind me later" brings it back at most once, a week later; "Give a star" or "Don't show again" end it for good. It never appears during a game, calibration or while the window is in the tray.
+**New: a one-time "star on GitHub" window** that shows up after a few long play sessions, never during a game.
+
+### Which file to download
+| File | For |
+|---|---|
+| `PhoneGyro.exe` | **Most users.** Any regular PC or laptop with an Intel or AMD CPU |
+| `PhoneGyro-windows-amd64.exe` | **The same app as `PhoneGyro.exe`**, just named after its architecture. You don't need both |
+| `PhoneGyro-windows-arm64.exe` | Windows on ARM only (Snapdragon: Surface Pro X / Pro 11, Copilot+ laptops) |
+
+> "amd64" is the name of the x86-64 architecture, not a CPU brand: it runs on both Intel and AMD.
+
+### Antivirus warning?
+It's a false positive. PhoneGyro is a small open-source exe without a paid code-signing certificate, and it runs a local network server, which some antivirus heuristics and SmartScreen flag. Every release is built by GitHub Actions straight from this repository. Check the VirusTotal reports and SHA-256 hashes below. In SmartScreen, click "More info" → "Run anyway".
