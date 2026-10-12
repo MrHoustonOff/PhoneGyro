@@ -187,12 +187,7 @@
     "profile_deleted": "Профиль «{name}» удалён"
   },
   "ui": {
-    "bias_title": "Авто-ноль",
-    "bias_tip": "Автоподстройка нуля гироскопа в покое (anti-drift)",
     "accel_tip": "Акселерометр сейчас, в g: куда и насколько наклонено устройство по каждой оси",
-    "bias_moving": "ДВИЖЕНИЕ",
-    "bias_rest": "ПОКОЙ",
-    "bias_updated": "ОБНОВЛЁН",
     "stats_orbit_hint_rot": "вращение",
     "stats_orbit_hint_pan": "сдвиг",
     "stats_orbit_hint_zoom": "масштаб",

@@ -53,8 +53,9 @@ The first 50 bytes match the old 50-byte format. The server also accepts the pag
 
 1. **Watch**: sensor freeze detection, a buffer of recent frames, sample recording for the calibration wizard.
 2. **Matrix**: the profile's `activeMatrix`, or `previewMatrix` during the wizard.
-3. **Automatic bias refinement** (`gui/internal/motion/gyrobias.go`): a 1 s window counts as rest by the gyro spread (std ≤ 1°/s per axis), not by rate magnitude, plus |acc| near 1 g and a small accelerometer spread; the bias is pulled toward the window mean with a 5 s time constant.
-4. **Bias subtraction** from the raw gyro.
+3. **Bias subtraction** from the raw gyro. The bias is set only by the calibration "rest" step (and stored in `profiles.json`); motion frames never change it.
+
+There is no live auto-zero "at rest" (removed in 2.1.1). Slow steady rotation passes any rest test: it has no spread, and turning about the vertical does not move gravity at all. The auto-zero subtracted such rotation as bias, and the aim stuck to the other axes. Test: `TestSlowSteadyRotationIsNeverEatenAsBias` in `gui/internal/app`.
 
 ### Calibration wizard (`CaptureGesture`, `ValidateCalibration`)
 - Step 0, rest: bias and `calGravity` (the unit gravity vector in the rest pose).

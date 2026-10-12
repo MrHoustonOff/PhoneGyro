@@ -20,8 +20,6 @@ let rafId = 0;
 
 // Cache DOM refs once per startDevice() call.
 let dialEl, bubbleEl, yawEl, labelEl;
-let biasStatusEl, biasBarFill, biasValX, biasValY, biasValZ;
-let biasFlashTimeout;
 let accelEls = null;           // per axis: { neg, pos, val, last }
 const ACCEL_FULL_G = 1;        // a full bar is 1 g (DSU output, g)
 
@@ -115,7 +113,6 @@ function render(st) {
   setText($('dev-timer'), st.connectedTime || '00:00:00');
 
   updateDial(st); // only updates targets; rAF loop handles the visuals
-  updateBiasMeta(st);
   updateAccel(st);
 
   const pause = $('btn-pause');
@@ -129,11 +126,6 @@ export function startDevice() {
   bubbleEl = $('dial-bubble');
   yawEl    = $('dial-yaw');
   labelEl  = $('dial-label');
-  biasStatusEl = $('bias-status');
-  biasBarFill = $('bias-bar-fill');
-  biasValX = $('bias-val-x');
-  biasValY = $('bias-val-y');
-  biasValZ = $('bias-val-z');
 
   accelEls = ['x', 'y', 'z'].map((a) => ({ neg: $('accel-neg-' + a), pos: $('accel-pos-' + a), val: $('accel-val-' + a), last: Infinity, smooth: NaN }));
 
@@ -173,48 +165,4 @@ function updateAccel(st) {
     e.neg.style.transform = `translateX(${g < 0 ? (1 - f) * 100 : 100}%)`;
     e.val.textContent = (g >= 0 ? '+' : '−') + Math.abs(g).toFixed(2);
   }
-}
-
-// Writes only what changed: this runs on every state (15 Hz).
-const setCls = (el, c) => { if (el.className !== c) el.className = c; };
-let biasScale = -1;
-function setBiasScale(v) {
-  if (v === biasScale) return;
-  biasScale = v;
-  biasBarFill.style.transform = `scaleX(${v})`;
-}
-
-function updateBiasMeta(st) {
-  if (!biasStatusEl) return;
-
-  if (!st.biasAtRest) {
-    setCls(biasStatusEl, 'pg-badge app-bias-status pg-badge--danger pg-badge--dot');
-    setText(biasStatusEl, t('ui.bias_moving'));
-    setBiasScale(0);
-    if (biasBarFill.classList.contains('is-far')) biasBarFill.classList.remove('is-far');
-  } else {
-    // If recently flashed "UPDATED", keep that text temporarily.
-    if (!biasFlashTimeout) {
-      setCls(biasStatusEl, 'pg-badge app-bias-status pg-badge--ok pg-badge--dot');
-      setText(biasStatusEl, t('ui.bias_rest'));
-    }
-    setBiasScale(Math.round(Math.min(1, Math.max(0, st.biasRestProgress || 0)) * 100) / 100);
-    
-    // flash "ОБНОВЛЁН" when reaching 1
-    if (st.biasRestProgress >= 1 && !biasFlashTimeout) {
-      setCls(biasStatusEl, 'pg-badge app-bias-status pg-badge--ok');
-      setText(biasStatusEl, t('ui.bias_updated'));
-      biasFlashTimeout = setTimeout(() => {
-        biasFlashTimeout = null;
-        if (biasStatusEl) {
-           setCls(biasStatusEl, 'pg-badge app-bias-status pg-badge--ok pg-badge--dot');
-           setText(biasStatusEl, t('ui.bias_rest'));
-        }
-      }, 2000);
-    }
-  }
-
-  setText(biasValX, (st.biasX >= 0 ? '+' : '') + (st.biasX || 0).toFixed(1));
-  setText(biasValY, (st.biasY >= 0 ? '+' : '') + (st.biasY || 0).toFixed(1));
-  setText(biasValZ, (st.biasZ >= 0 ? '+' : '') + (st.biasZ || 0).toFixed(1));
 }

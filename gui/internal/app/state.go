@@ -47,12 +47,6 @@ type AppState struct {
 	DsuAccX float64 `json:"dsuAccX"`
 	DsuAccY float64 `json:"dsuAccY"`
 	DsuAccZ float64 `json:"dsuAccZ"`
-	// Gyro auto-bias state
-	BiasAtRest       bool    `json:"biasAtRest"`
-	BiasRestProgress float64 `json:"biasRestProgress"`
-	BiasX            float64 `json:"biasX"`
-	BiasY            float64 `json:"biasY"`
-	BiasZ            float64 `json:"biasZ"`
 	// Raw sensor orientation quaternion (live, latest sample from device)
 	Qx float64 `json:"qx"`
 	Qy float64 `json:"qy"`
@@ -398,53 +392,43 @@ func (a *App) GetState() AppState {
 		}
 	}
 
-	bank.biasMu.RLock()
-	biasSt := bank.biasTracker.Status()
-	bx, by, bz := bank.gyroBias[0], bank.gyroBias[1], bank.gyroBias[2]
-	bank.biasMu.RUnlock()
-
 	return AppState{
-		Status:           status,
-		IsPaused:         a.isPaused.Load(),
-		DeviceName:       devName,
-		Hz:               hz,
-		PingMs:           a.linkPingMs(),
-		ConnectedTime:    connectedDuration,
-		Pitch:            math.Float64frombits(bank.curPitch.Load()),
-		Roll:             math.Float64frombits(bank.curRoll.Load()),
-		Yaw:              math.Float64frombits(bank.curYaw.Load()),
-		IP:               a.primaryIP,
-		GamepadURL:       a.gamepadURL,
-		SetupURL:         a.setupURL,
-		QRCode:           a.qrCodePNG,
-		SetupQRCode:      a.setupQRPNG,
-		RawRotX:          math.Float64frombits(bank.curRotX.Load()),
-		RawRotY:          math.Float64frombits(bank.curRotY.Load()),
-		RawRotZ:          math.Float64frombits(bank.curRotZ.Load()),
-		RawAccX:          math.Float64frombits(bank.curAccX.Load()),
-		RawAccY:          math.Float64frombits(bank.curAccY.Load()),
-		RawAccZ:          math.Float64frombits(bank.curAccZ.Load()),
-		DsuAccX:          math.Float64frombits(bank.dsuAccX.Load()),
-		DsuAccY:          math.Float64frombits(bank.dsuAccY.Load()),
-		DsuAccZ:          math.Float64frombits(bank.dsuAccZ.Load()),
-		BiasAtRest:       biasSt.AtRest,
-		BiasRestProgress: biasSt.RestProgress,
-		BiasX:            bx,
-		BiasY:            by,
-		BiasZ:            bz,
-		Qx:               math.Float64frombits(bank.curQx.Load()),
-		Qy:               math.Float64frombits(bank.curQy.Load()),
-		Qz:               math.Float64frombits(bank.curQz.Load()),
-		Qw:               math.Float64frombits(bank.curQw.Load()),
-		Profiles:         profilesList,
-		ActiveSlot:       activeSlot,
-		ActiveMatrix:     effectiveMat,
-		AhrsQ0:           math.Float64frombits(bank.curAhrsQ0.Load()),
-		AhrsQ1:           math.Float64frombits(bank.curAhrsQ1.Load()),
-		AhrsQ2:           math.Float64frombits(bank.curAhrsQ2.Load()),
-		AhrsQ3:           math.Float64frombits(bank.curAhrsQ3.Load()),
-		FirstLaunch:      !a.firstLaunchDone,
-		HideAuthor:       a.hideAuthor,
+		Status:        status,
+		IsPaused:      a.isPaused.Load(),
+		DeviceName:    devName,
+		Hz:            hz,
+		PingMs:        a.linkPingMs(),
+		ConnectedTime: connectedDuration,
+		Pitch:         math.Float64frombits(bank.curPitch.Load()),
+		Roll:          math.Float64frombits(bank.curRoll.Load()),
+		Yaw:           math.Float64frombits(bank.curYaw.Load()),
+		IP:            a.primaryIP,
+		GamepadURL:    a.gamepadURL,
+		SetupURL:      a.setupURL,
+		QRCode:        a.qrCodePNG,
+		SetupQRCode:   a.setupQRPNG,
+		RawRotX:       math.Float64frombits(bank.curRotX.Load()),
+		RawRotY:       math.Float64frombits(bank.curRotY.Load()),
+		RawRotZ:       math.Float64frombits(bank.curRotZ.Load()),
+		RawAccX:       math.Float64frombits(bank.curAccX.Load()),
+		RawAccY:       math.Float64frombits(bank.curAccY.Load()),
+		RawAccZ:       math.Float64frombits(bank.curAccZ.Load()),
+		DsuAccX:       math.Float64frombits(bank.dsuAccX.Load()),
+		DsuAccY:       math.Float64frombits(bank.dsuAccY.Load()),
+		DsuAccZ:       math.Float64frombits(bank.dsuAccZ.Load()),
+		Qx:            math.Float64frombits(bank.curQx.Load()),
+		Qy:            math.Float64frombits(bank.curQy.Load()),
+		Qz:            math.Float64frombits(bank.curQz.Load()),
+		Qw:            math.Float64frombits(bank.curQw.Load()),
+		Profiles:      profilesList,
+		ActiveSlot:    activeSlot,
+		ActiveMatrix:  effectiveMat,
+		AhrsQ0:        math.Float64frombits(bank.curAhrsQ0.Load()),
+		AhrsQ1:        math.Float64frombits(bank.curAhrsQ1.Load()),
+		AhrsQ2:        math.Float64frombits(bank.curAhrsQ2.Load()),
+		AhrsQ3:        math.Float64frombits(bank.curAhrsQ3.Load()),
+		FirstLaunch:   !a.firstLaunchDone,
+		HideAuthor:    a.hideAuthor,
 		DsuClients: func() int {
 			if a.dsuSrv != nil {
 				return a.dsuSrv.ActiveClientCount()

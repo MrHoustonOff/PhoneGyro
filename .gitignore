@@ -26,6 +26,7 @@ ca_data/
 *.csv
 # ...except test fixtures (real recordings), which are part of the repo
 !gui/internal/motion/testdata/*.csv
+!gui/internal/app/testdata/*.csv
 tmp/
 
 

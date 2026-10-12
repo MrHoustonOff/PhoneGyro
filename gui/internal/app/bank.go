@@ -112,8 +112,6 @@ type motionBank struct {
 	resetAnchor   atomic.Bool
 	accFiltered   [3]float64
 	accFilterInit bool
-	// Живая подстройка нуля гироскопа в покое (motion/gyrobias.go), под biasMu.
-	biasTracker motion.GyroBiasTracker
 	// Потери канала для Live Debug (link/loss.go): USB — по SEQ, телефон — по
 	// счётчикам событий датчика со страницы.
 	loss link.Loss

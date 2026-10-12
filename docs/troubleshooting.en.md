@@ -48,6 +48,7 @@ Any sensor is a little noisy and hands tremble slightly. The ***tremor threshold
 
 * **It spins by itself although you do not move.** If this is Cemu, turn on **Cemu Drift Guard** in settings ([details](emulators.en.md#drift-guard)). If not, restart the game or the emulator: it may have "stuck".
 * **Motion goes along the wrong axis, backwards or too fast.** The wrong profile is selected or the device is not calibrated: ***calibrate again*** in the grip you play in.
+* **USB controller: the aim creeps slowly by itself while the device is still.** The MPU-6050's zero shifts a little while the board warms up in the first minutes. About 5 minutes after connecting, ***calibrate again***: the rest step measures the new zero.
 * **After a long session "straight ahead" drifted a bit.** Normal for any gyroscope. Recenter the aim with the game's or the emulator's own means. The **Recenter 3D View** button in PhoneGyro does not affect the game.
 
 ## The USB controller moves very slowly

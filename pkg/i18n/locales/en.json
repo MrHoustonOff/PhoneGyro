@@ -187,12 +187,7 @@
     "profile_deleted": "Profile “{name}” deleted"
   },
   "ui": {
-    "bias_title": "Auto-zero",
-    "bias_tip": "Automatic gyro zero-bias adjustment at rest (anti-drift)",
     "accel_tip": "Accelerometer now, in g: how far the device leans along each axis",
-    "bias_moving": "MOVING",
-    "bias_rest": "AT REST",
-    "bias_updated": "UPDATED",
     "stats_orbit_hint_rot": "rotate",
     "stats_orbit_hint_pan": "pan",
     "stats_orbit_hint_zoom": "zoom",

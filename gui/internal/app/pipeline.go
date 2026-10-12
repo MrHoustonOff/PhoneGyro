@@ -118,23 +118,12 @@ func (a *App) onMotionFrame(srv *server.Server, frame server.MotionFrame) {
 		bank.matrixMu.RUnlock()
 	}
 
-	// Живая подстройка нуля гироскопа в покое (см. motion/gyrobias.go). Не во время
-	// записи шага калибровки: там bias задаётся явно.
-	if !bank.isCapturing.Load() {
-		rawGyro := [3]float64{float64(frame.RotX), float64(frame.RotY), float64(frame.RotZ)}
-		rawAccel := [3]float64{float64(frame.AccX), float64(frame.AccY), float64(frame.AccZ)}
-		bank.biasMu.Lock()
-		if nb, ok := bank.biasTracker.Feed(startPipe, rawGyro, rawAccel, bank.gyroBias); ok {
-			bank.gyroBias = nb
-		}
-		bank.biasMu.Unlock()
-	} else {
-		bank.biasMu.Lock()
-		bank.biasTracker.Reset()
-		bank.biasMu.Unlock()
-	}
-
-	// Subtract gyro zero-bias before applying calibration matrix M (§1, §2 of spec)
+	// Subtract gyro zero-bias before applying calibration matrix M (§1, §2 of spec).
+	// The bias comes only from the calibration "rest" step and the saved profile:
+	// motion frames never change it. A live auto-zero used to follow it at "rest",
+	// but slow steady rotation passes any rest test (it has no spread, and turning
+	// about the vertical does not move gravity at all), so it was cancelled as bias
+	// and the aim stuck to the other axes (removed in 2.1.1).
 	bank.biasMu.RLock()
 	bx, by, bz := bank.gyroBias[0], bank.gyroBias[1], bank.gyroBias[2]
 	calGravity := bank.calGravity
