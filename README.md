@@ -16,7 +16,7 @@
 <p align="center">
   <a href="https://github.com/MrHoustonOff/PhoneGyro/releases/latest"><b>Download</b></a>
   &nbsp;&middot;&nbsp;
-  <a href="docs/SUMMARY.md"><b>Documentation</b></a>
+  <a href="docs/SUMMARY.en.md"><b>Documentation</b></a>
   &nbsp;&middot;&nbsp;
   <a href="https://youtu.be/hDeGmq4bSp0"><b>Video</b></a>
 </p>
@@ -116,7 +116,7 @@ Step-by-step instructions: [Quick start](docs/quickstart.en.md) and [Emulator se
 
 ## Documentation
 
-The full guide is at [`docs/SUMMARY.md`](docs/SUMMARY.md). The same pages are built into the app (the **Docs** tab) and work offline.
+The full guide is at [`docs/SUMMARY.en.md`](docs/SUMMARY.en.md). The same pages are built into the app (the **Docs** tab) and work offline.
 
 | Section | What it covers |
 |---|---|
